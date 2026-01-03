@@ -470,6 +470,191 @@ export function KurikulumTab() {
     e.target.value = '';
   };
 
+  // Export PLOs to Excel
+  const handleExportPlos = () => {
+    if (!plos || plos.length === 0) {
+      toast({ title: 'Info', description: 'Tidak ada CPL/PLO untuk diekspor' });
+      return;
+    }
+
+    const exportData = plos.map((plo, index) => ({
+      No: index + 1,
+      Kode: plo.code,
+      Deskripsi: plo.description,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    ws['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 60 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'CPL-PLO');
+    XLSX.writeFile(wb, `export_cpl_plo_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast({ title: 'Berhasil', description: `${plos.length} CPL/PLO berhasil diekspor` });
+  };
+
+  // Download PLO template
+  const handleDownloadPloTemplate = () => {
+    const templateData = [
+      { Kode: 'CPL-1', Deskripsi: 'Contoh deskripsi CPL pertama' },
+      { Kode: 'CPL-2', Deskripsi: 'Contoh deskripsi CPL kedua' },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    ws['!cols'] = [{ wch: 15 }, { wch: 60 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template CPL');
+    XLSX.writeFile(wb, 'template_import_cpl_plo.xlsx');
+    toast({ title: 'Template berhasil diunduh', description: 'Silakan isi data sesuai format template' });
+  };
+
+  // Import PLOs from Excel
+  const handleImportPlos = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json<any>(ws);
+
+        let addedCount = 0;
+        let errorCount = 0;
+
+        for (const row of data) {
+          const code = row['Kode']?.toString().trim();
+          const description = row['Deskripsi']?.toString().trim();
+
+          if (!code || !description) continue;
+
+          // Check if PLO with same code already exists
+          const existing = plos?.find(p => p.code === code);
+          if (existing) {
+            errorCount++;
+            continue;
+          }
+
+          const { error } = await supabase.from('plos').insert([{ code, description }]);
+          if (!error) addedCount++;
+          else errorCount++;
+        }
+
+        queryClient.invalidateQueries({ queryKey: ['plos'] });
+        toast({ 
+          title: 'Import selesai', 
+          description: `${addedCount} CPL/PLO berhasil ditambahkan${errorCount > 0 ? `, ${errorCount} diabaikan/gagal` : ''}` 
+        });
+      } catch (error: any) {
+        toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = '';
+  };
+
+  // Export Courses to Excel
+  const handleExportCourses = () => {
+    if (!courses || courses.length === 0) {
+      toast({ title: 'Info', description: 'Tidak ada mata kuliah untuk diekspor' });
+      return;
+    }
+
+    const exportData = courses.map((course, index) => ({
+      No: index + 1,
+      Kode: course.code,
+      Nama: course.name,
+      Kurikulum: getCurriculumName(course.curriculum_id) || '',
+      Semester: course.semester || '',
+      'Skor Minimum': course.passing_score,
+      'CPL Terkait': getCoursePloList(course.id).map(cp => cp.plo?.code).join(', '),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    ws['!cols'] = [{ wch: 5 }, { wch: 12 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 20 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Mata Kuliah');
+    XLSX.writeFile(wb, `export_mata_kuliah_${new Date().toISOString().split('T')[0]}.xlsx`);
+    toast({ title: 'Berhasil', description: `${courses.length} mata kuliah berhasil diekspor` });
+  };
+
+  // Download Course template
+  const handleDownloadCourseTemplate = () => {
+    const templateData = [
+      { Kode: 'PBA101', Nama: 'Contoh Mata Kuliah 1', Kurikulum: '', Semester: 'Semester 1', 'Skor Minimum': 60 },
+      { Kode: 'PBA102', Nama: 'Contoh Mata Kuliah 2', Kurikulum: '', Semester: 'Semester 2', 'Skor Minimum': 60 },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(templateData);
+    ws['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Template MK');
+    XLSX.writeFile(wb, 'template_import_mata_kuliah.xlsx');
+    toast({ title: 'Template berhasil diunduh', description: 'Silakan isi data sesuai format template' });
+  };
+
+  // Import Courses from Excel
+  const handleImportCourses = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json<any>(ws);
+
+        let addedCount = 0;
+        let errorCount = 0;
+
+        for (const row of data) {
+          const code = row['Kode']?.toString().trim();
+          const name = row['Nama']?.toString().trim();
+          const semester = row['Semester']?.toString().trim();
+          const passingScore = parseInt(row['Skor Minimum']) || 60;
+          const curriculumName = row['Kurikulum']?.toString().trim();
+
+          if (!code || !name) continue;
+
+          // Find curriculum by name
+          const curriculum = curriculumName ? curricula?.find(c => c.name === curriculumName) : null;
+
+          // Check if course with same code already exists
+          const existing = courses?.find(c => c.code === code);
+          if (existing) {
+            errorCount++;
+            continue;
+          }
+
+          const { error } = await supabase.from('courses').insert([{ 
+            code, 
+            name, 
+            semester: semester || null,
+            passing_score: passingScore,
+            curriculum_id: curriculum?.id || null
+          }]);
+          if (!error) addedCount++;
+          else errorCount++;
+        }
+
+        queryClient.invalidateQueries({ queryKey: ['admin-courses-kurikulum'] });
+        queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
+        toast({ 
+          title: 'Import selesai', 
+          description: `${addedCount} mata kuliah berhasil ditambahkan${errorCount > 0 ? `, ${errorCount} diabaikan/gagal` : ''}` 
+        });
+      } catch (error: any) {
+        toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = '';
+  };
+
   const openEditPlo = (plo: PLO) => {
     setEditingPlo(plo);
     setPloCode(plo.code);
@@ -551,18 +736,39 @@ export function KurikulumTab() {
         <TabsContent value="plo">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <CardTitle>CPL/PLO (Program Learning Outcomes)</CardTitle>
                   <CardDescription>Kelola Capaian Pembelajaran Lulusan</CardDescription>
                 </div>
-                <Dialog open={showPloDialog} onOpenChange={(open) => { if (!open) resetPloForm(); setShowPloDialog(open); }}>
-                  <DialogTrigger asChild>
-                    <Button size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Tambah CPL
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button variant="outline" size="sm" onClick={handleDownloadPloTemplate}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Template
+                  </Button>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={handleImportPlos}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <Button variant="outline" size="sm">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Import
                     </Button>
-                  </DialogTrigger>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleExportPlos}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                  <Dialog open={showPloDialog} onOpenChange={(open) => { if (!open) resetPloForm(); setShowPloDialog(open); }}>
+                    <DialogTrigger asChild>
+                      <Button size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Tambah CPL
+                      </Button>
+                    </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>{editingPlo ? 'Edit CPL/PLO' : 'Tambah CPL/PLO Baru'}</DialogTitle>
@@ -593,6 +799,7 @@ export function KurikulumTab() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -647,18 +854,39 @@ export function KurikulumTab() {
         <TabsContent value="courses">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
                   <CardTitle>Mata Kuliah</CardTitle>
                   <CardDescription>Kelola mata kuliah dan hubungkan dengan CPL/PLO</CardDescription>
                 </div>
-                <Dialog open={showCourseDialog} onOpenChange={(open) => { if (!open) resetCourseForm(); setShowCourseDialog(open); }}>
-                  <DialogTrigger asChild>
-                    <Button size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Tambah Mata Kuliah
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button variant="outline" size="sm" onClick={handleDownloadCourseTemplate}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Template
+                  </Button>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={handleImportCourses}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <Button variant="outline" size="sm">
+                      <Upload className="h-4 w-4 mr-2" />
+                      Import
                     </Button>
-                  </DialogTrigger>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleExportCourses}>
+                    <Download className="h-4 w-4 mr-2" />
+                    Export
+                  </Button>
+                  <Dialog open={showCourseDialog} onOpenChange={(open) => { if (!open) resetCourseForm(); setShowCourseDialog(open); }}>
+                    <DialogTrigger asChild>
+                      <Button size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Tambah Mata Kuliah
+                      </Button>
+                    </DialogTrigger>
                   <DialogContent className="max-w-lg">
                     <DialogHeader>
                       <DialogTitle>{editingCourse ? 'Edit Mata Kuliah' : 'Tambah Mata Kuliah Baru'}</DialogTitle>
@@ -736,6 +964,7 @@ export function KurikulumTab() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
