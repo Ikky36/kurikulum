@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil } from 'lucide-react';
+import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { Course, Profile, AppRole } from '@/lib/types';
 
@@ -51,6 +51,7 @@ export default function DashboardAdmin() {
   const [editingUser, setEditingUser] = useState<Profile | null>(null);
   const [userFullName, setUserFullName] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [userPassword, setUserPassword] = useState('');
   const [userRole, setUserRole] = useState<'mahasiswa' | 'dosen'>('mahasiswa');
   const [userNim, setUserNim] = useState('');
   const [userNip, setUserNip] = useState('');
@@ -58,6 +59,10 @@ export default function DashboardAdmin() {
   const [userClassGroup, setUserClassGroup] = useState('');
   const [showDeleteUserDialog, setShowDeleteUserDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
+  
+  // Filter and search state
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'mahasiswa' | 'dosen'>('all');
 
   // Fetch all courses
   const { data: courses, refetch: refetchCourses } = useQuery({
@@ -223,32 +228,22 @@ export default function DashboardAdmin() {
     mutationFn: async (userData: {
       full_name: string;
       email: string;
+      password: string;
       role: 'mahasiswa' | 'dosen';
       nim?: string;
       nip?: string;
       program?: string;
       class_group?: string;
     }) => {
-      // Generate a unique ID for the profile
-      const newId = crypto.randomUUID();
+      // Use edge function to create user with admin privileges
+      const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        body: userData,
+      });
       
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: newId,
-        full_name: userData.full_name,
-        email: userData.email,
-        role: userData.role,
-        nim: userData.nim || null,
-        nip: userData.nip || null,
-        program: userData.program || null,
-        class_group: userData.class_group || null,
-      });
-      if (profileError) throw profileError;
-
-      const { error: roleError } = await supabase.from('user_roles').insert({
-        user_id: newId,
-        role: userData.role,
-      });
-      if (roleError) throw roleError;
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
@@ -262,9 +257,19 @@ export default function DashboardAdmin() {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: async ({ id, ...userData }: Partial<Profile> & { id: string }) => {
+    mutationFn: async ({ id, password, ...userData }: Partial<Profile> & { id: string; password?: string }) => {
+      // Update profile data
       const { error } = await supabase.from('profiles').update(userData).eq('id', id);
       if (error) throw error;
+      
+      // If password is provided, update via edge function
+      if (password) {
+        const { data, error: pwError } = await supabase.functions.invoke('admin-update-password', {
+          body: { userId: id, password },
+        });
+        if (pwError) throw pwError;
+        if (data?.error) throw new Error(data.error);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
@@ -378,6 +383,7 @@ export default function DashboardAdmin() {
   const resetUserForm = () => {
     setUserFullName('');
     setUserEmail('');
+    setUserPassword('');
     setUserRole('mahasiswa');
     setUserNim('');
     setUserNip('');
@@ -386,6 +392,26 @@ export default function DashboardAdmin() {
     setEditingUser(null);
     setShowUserDialog(false);
   };
+
+  // Filter users based on search and role
+  const filteredUsers = allUsers?.filter(u => {
+    if (u.role === 'admin') return false;
+    
+    // Apply role filter
+    if (userRoleFilter !== 'all' && u.role !== userRoleFilter) return false;
+    
+    // Apply search filter
+    if (userSearchQuery) {
+      const query = userSearchQuery.toLowerCase();
+      const matchesName = u.full_name?.toLowerCase().includes(query);
+      const matchesEmail = u.email?.toLowerCase().includes(query);
+      const matchesNim = u.nim?.toLowerCase().includes(query);
+      const matchesNip = u.nip?.toLowerCase().includes(query);
+      return matchesName || matchesEmail || matchesNim || matchesNip;
+    }
+    
+    return true;
+  });
 
   const handleSaveCourse = () => {
     const courseData = {
@@ -403,20 +429,34 @@ export default function DashboardAdmin() {
   };
 
   const handleSaveUser = () => {
-    const userData = {
-      full_name: userFullName,
-      email: userEmail,
-      role: userRole as 'mahasiswa' | 'dosen',
-      nim: userRole === 'mahasiswa' ? userNim : undefined,
-      nip: userRole === 'dosen' ? userNip : undefined,
-      program: userProgram,
-      class_group: userRole === 'mahasiswa' ? userClassGroup : undefined,
-    };
-
     if (editingUser) {
-      updateUserMutation.mutate({ ...userData, id: editingUser.id });
+      // For update, password is optional
+      const updateData: any = {
+        full_name: userFullName,
+        email: userEmail,
+        role: userRole as 'mahasiswa' | 'dosen',
+        nim: userRole === 'mahasiswa' ? userNim : null,
+        nip: userRole === 'dosen' ? userNip : null,
+        program: userProgram,
+        class_group: userRole === 'mahasiswa' ? userClassGroup : null,
+        id: editingUser.id,
+      };
+      if (userPassword) {
+        updateData.password = userPassword;
+      }
+      updateUserMutation.mutate(updateData);
     } else {
-      createUserMutation.mutate(userData);
+      // For create, password is required
+      createUserMutation.mutate({
+        full_name: userFullName,
+        email: userEmail,
+        password: userPassword,
+        role: userRole as 'mahasiswa' | 'dosen',
+        nim: userRole === 'mahasiswa' ? userNim : undefined,
+        nip: userRole === 'dosen' ? userNip : undefined,
+        program: userProgram,
+        class_group: userRole === 'mahasiswa' ? userClassGroup : undefined,
+      });
     }
   };
 
@@ -494,68 +534,106 @@ export default function DashboardAdmin() {
           <TabsContent value="accounts">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Kelola Akun Dosen & Mahasiswa</CardTitle>
-                  <Dialog open={showUserDialog} onOpenChange={(open) => { if (!open) resetUserForm(); setShowUserDialog(open); }}>
-                    <DialogTrigger asChild>
-                      <Button size="sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Tambah Akun
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md">
-                      <DialogHeader>
-                        <DialogTitle>{editingUser ? 'Edit Akun' : 'Tambah Akun Baru'}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Tipe Akun</Label>
-                          <Select value={userRole} onValueChange={(v) => setUserRole(v as 'mahasiswa' | 'dosen')} disabled={!!editingUser}>
-                            <SelectTrigger><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="mahasiswa">Mahasiswa</SelectItem>
-                              <SelectItem value="dosen">Dosen</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Nama Lengkap</Label>
-                          <Input value={userFullName} onChange={(e) => setUserFullName(e.target.value)} placeholder="Nama lengkap" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Email</Label>
-                          <Input type="email" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} placeholder="email@example.com" disabled={!!editingUser} />
-                        </div>
-                        {userRole === 'mahasiswa' && (
-                          <>
-                            <div className="space-y-2">
-                              <Label>NIM</Label>
-                              <Input value={userNim} onChange={(e) => setUserNim(e.target.value)} placeholder="Nomor Induk Mahasiswa" />
-                            </div>
-                            <div className="space-y-2">
-                              <Label>Kelas</Label>
-                              <Input value={userClassGroup} onChange={(e) => setUserClassGroup(e.target.value)} placeholder="Contoh: A, B, C" />
-                            </div>
-                          </>
-                        )}
-                        {userRole === 'dosen' && (
-                          <div className="space-y-2">
-                            <Label>NIP</Label>
-                            <Input value={userNip} onChange={(e) => setUserNip(e.target.value)} placeholder="Nomor Induk Pegawai" />
-                          </div>
-                        )}
-                        <div className="space-y-2">
-                          <Label>Program Studi</Label>
-                          <Input value={userProgram} onChange={(e) => setUserProgram(e.target.value)} placeholder="Contoh: Pendidikan Bahasa Arab" />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button onClick={handleSaveUser} disabled={!userFullName || !userEmail}>
-                          {editingUser ? 'Simpan' : 'Tambah'}
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Kelola Akun Dosen & Mahasiswa</CardTitle>
+                    <Dialog open={showUserDialog} onOpenChange={(open) => { if (!open) resetUserForm(); setShowUserDialog(open); }}>
+                      <DialogTrigger asChild>
+                        <Button size="sm">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Tambah Akun
                         </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>{editingUser ? 'Edit Akun' : 'Tambah Akun Baru'}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>Tipe Akun</Label>
+                            <Select value={userRole} onValueChange={(v) => setUserRole(v as 'mahasiswa' | 'dosen')} disabled={!!editingUser}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="mahasiswa">Mahasiswa</SelectItem>
+                                <SelectItem value="dosen">Dosen</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Nama Lengkap</Label>
+                            <Input value={userFullName} onChange={(e) => setUserFullName(e.target.value)} placeholder="Nama lengkap" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Email</Label>
+                            <Input type="email" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} placeholder="email@example.com" disabled={!!editingUser} />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>{editingUser ? 'Password Baru (opsional)' : 'Password'}</Label>
+                            <Input 
+                              type="password" 
+                              value={userPassword} 
+                              onChange={(e) => setUserPassword(e.target.value)} 
+                              placeholder={editingUser ? 'Kosongkan jika tidak ingin mengubah' : 'Masukkan password'}
+                            />
+                          </div>
+                          {userRole === 'mahasiswa' && (
+                            <>
+                              <div className="space-y-2">
+                                <Label>NIM</Label>
+                                <Input value={userNim} onChange={(e) => setUserNim(e.target.value)} placeholder="Nomor Induk Mahasiswa" />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Kelas</Label>
+                                <Input value={userClassGroup} onChange={(e) => setUserClassGroup(e.target.value)} placeholder="Contoh: A, B, C" />
+                              </div>
+                            </>
+                          )}
+                          {userRole === 'dosen' && (
+                            <div className="space-y-2">
+                              <Label>NIP</Label>
+                              <Input value={userNip} onChange={(e) => setUserNip(e.target.value)} placeholder="Nomor Induk Pegawai" />
+                            </div>
+                          )}
+                          <div className="space-y-2">
+                            <Label>Program Studi</Label>
+                            <Input value={userProgram} onChange={(e) => setUserProgram(e.target.value)} placeholder="Contoh: Pendidikan Bahasa Arab" />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button 
+                            onClick={handleSaveUser} 
+                            disabled={!userFullName || !userEmail || (!editingUser && !userPassword)}
+                          >
+                            {editingUser ? 'Simpan' : 'Tambah'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                  
+                  {/* Search and Filter */}
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Cari nama, email, NIM, atau NIP..." 
+                        value={userSearchQuery}
+                        onChange={(e) => setUserSearchQuery(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                    <Select value={userRoleFilter} onValueChange={(v) => setUserRoleFilter(v as 'all' | 'mahasiswa' | 'dosen')}>
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                        <Filter className="h-4 w-4 mr-2" />
+                        <SelectValue placeholder="Filter Role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Role</SelectItem>
+                        <SelectItem value="mahasiswa">Mahasiswa</SelectItem>
+                        <SelectItem value="dosen">Dosen</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
@@ -571,7 +649,7 @@ export default function DashboardAdmin() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allUsers?.filter(u => u.role !== 'admin').map((u) => (
+                    {filteredUsers?.map((u) => (
                       <TableRow key={u.id}>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -610,10 +688,12 @@ export default function DashboardAdmin() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {(!allUsers || allUsers.filter(u => u.role !== 'admin').length === 0) && (
+                    {(!filteredUsers || filteredUsers.length === 0) && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          Belum ada akun dosen atau mahasiswa
+                          {userSearchQuery || userRoleFilter !== 'all' 
+                            ? 'Tidak ada akun yang sesuai dengan filter' 
+                            : 'Belum ada akun dosen atau mahasiswa'}
                         </TableCell>
                       </TableRow>
                     )}
