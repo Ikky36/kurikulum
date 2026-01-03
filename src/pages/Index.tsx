@@ -1,5 +1,6 @@
 import { Layout } from '@/components/layout/Layout';
 import { CourseScoreCard } from '@/components/charts/CourseScoreCard';
+import { PLOAchievementChart } from '@/components/charts/PLOAchievementChart';
 import { useCoursesWithStats } from '@/hooks/useCourses';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GraduationCap, BookOpen, Users, TrendingUp } from 'lucide-react';
@@ -59,8 +60,13 @@ export default function Index() {
         </div>
       </section>
 
+      {/* PLO Achievement Chart */}
+      <section className="container py-8">
+        <PLOAchievementChart />
+      </section>
+
       {/* Courses Grid */}
-      <section className="container py-12 lg:py-16">
+      <section className="container py-8 lg:py-12">
         <div className="mb-8">
           <h2 className="font-display text-2xl font-bold lg:text-3xl mb-2">
             Performa Mata Kuliah

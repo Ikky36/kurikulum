@@ -132,3 +132,14 @@ export interface AssessmentLLO {
   assessment?: Assessment;
   llo?: LLO;
 }
+
+// CLO-PLO relationship with weights
+export interface CLOPLO {
+  id: string;
+  clo_id: string;
+  plo_id: string;
+  weight_percentage: number;
+  created_at: string;
+  clo?: CLO;
+  plo?: PLO;
+}

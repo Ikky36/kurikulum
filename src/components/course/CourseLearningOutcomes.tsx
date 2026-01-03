@@ -35,6 +35,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
   const [editingClo, setEditingClo] = useState<CLO | null>(null);
   const [cloCode, setCloCode] = useState('');
   const [cloDescription, setCloDescription] = useState('');
+  const [selectedPlosForClo, setSelectedPlosForClo] = useState<string[]>([]);
 
   // LLO state
   const [showLloDialog, setShowLloDialog] = useState(false);
@@ -80,6 +81,21 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
       if (error) throw error;
       return data as CLO[];
     },
+  });
+
+  // Fetch CLO-PLO relationships
+  const { data: cloPlos, refetch: refetchCloPlos } = useQuery({
+    queryKey: ['clo-plos', courseId],
+    queryFn: async () => {
+      if (!clos || clos.length === 0) return [];
+      const { data, error } = await supabase
+        .from('clo_plos')
+        .select('*, plos:plo_id(*)')
+        .in('clo_id', clos.map(c => c.id));
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!clos && clos.length > 0,
   });
 
   // Fetch LLOs
@@ -130,14 +146,51 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
     },
   });
 
+  // Helper function to recalculate PLO weights when CLOs are added/removed
+  const recalculatePloWeights = async (ploIds: string[]) => {
+    for (const ploId of ploIds) {
+      // Get all CLO-PLO links for this PLO
+      const { data: links, error } = await supabase
+        .from('clo_plos')
+        .select('id')
+        .eq('plo_id', ploId);
+      
+      if (error || !links || links.length === 0) continue;
+      
+      // Calculate equal weight for each CLO
+      const equalWeight = 100 / links.length;
+      
+      // Update all links with equal weight
+      await supabase
+        .from('clo_plos')
+        .update({ weight_percentage: equalWeight })
+        .eq('plo_id', ploId);
+    }
+  };
+
   // CLO Mutations
   const createCloMutation = useMutation({
-    mutationFn: async (clo: { code: string; description: string; course_id: string }) => {
-      const { error } = await supabase.from('clos').insert([clo]);
+    mutationFn: async ({ ploIds, ...clo }: { code: string; description: string; course_id: string; ploIds: string[] }) => {
+      const { data, error } = await supabase.from('clos').insert([clo]).select().single();
       if (error) throw error;
+      
+      if (ploIds.length > 0) {
+        // First insert the links with placeholder weight
+        const linkData = ploIds.map(ploId => ({
+          clo_id: data.id,
+          plo_id: ploId,
+          weight_percentage: 0
+        }));
+        const { error: linkError } = await supabase.from('clo_plos').insert(linkData);
+        if (linkError) throw linkError;
+        
+        // Then recalculate weights for all affected PLOs
+        await recalculatePloWeights(ploIds);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clos', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['clo-plos', courseId] });
       toast({ title: 'Berhasil', description: 'CPMK/CLO berhasil ditambahkan' });
       resetCloForm();
     },
@@ -147,12 +200,44 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
   });
 
   const updateCloMutation = useMutation({
-    mutationFn: async ({ id, ...clo }: Partial<CLO> & { id: string }) => {
+    mutationFn: async ({ id, ploIds, ...clo }: Partial<CLO> & { id: string; ploIds?: string[] }) => {
       const { error } = await supabase.from('clos').update(clo).eq('id', id);
       if (error) throw error;
+
+      if (ploIds !== undefined) {
+        // Get existing links
+        const { data: existingLinks } = await supabase
+          .from('clo_plos')
+          .select('plo_id')
+          .eq('clo_id', id);
+        const existingPloIds = existingLinks?.map(l => l.plo_id) || [];
+        
+        // Delete removed links
+        const { error: deleteError } = await supabase
+          .from('clo_plos')
+          .delete()
+          .eq('clo_id', id);
+        if (deleteError) throw deleteError;
+
+        // Insert new links
+        if (ploIds.length > 0) {
+          const linkData = ploIds.map(ploId => ({
+            clo_id: id,
+            plo_id: ploId,
+            weight_percentage: 0
+          }));
+          const { error: linkError } = await supabase.from('clo_plos').insert(linkData);
+          if (linkError) throw linkError;
+        }
+        
+        // Recalculate weights for all affected PLOs (old and new)
+        const allAffectedPloIds = [...new Set([...existingPloIds, ...ploIds])];
+        await recalculatePloWeights(allAffectedPloIds);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clos', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['clo-plos', courseId] });
       toast({ title: 'Berhasil', description: 'CPMK/CLO berhasil diperbarui' });
       resetCloForm();
     },
@@ -302,6 +387,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
   const resetCloForm = () => {
     setCloCode('');
     setCloDescription('');
+    setSelectedPlosForClo([]);
     setEditingClo(null);
     setShowCloDialog(false);
   };
@@ -326,9 +412,11 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
 
   // Open edit dialogs
   const openEditClo = (clo: CLO) => {
+    const existingPlos = cloPlos?.filter(cp => cp.clo_id === clo.id).map(cp => cp.plo_id) || [];
     setEditingClo(clo);
     setCloCode(clo.code);
     setCloDescription(clo.description);
+    setSelectedPlosForClo(existingPlos);
     setShowCloDialog(true);
   };
 
@@ -354,9 +442,9 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
   // Save handlers
   const handleSaveClo = () => {
     if (editingClo) {
-      updateCloMutation.mutate({ id: editingClo.id, code: cloCode, description: cloDescription });
+      updateCloMutation.mutate({ id: editingClo.id, code: cloCode, description: cloDescription, ploIds: selectedPlosForClo });
     } else {
-      createCloMutation.mutate({ code: cloCode, description: cloDescription, course_id: courseId });
+      createCloMutation.mutate({ code: cloCode, description: cloDescription, course_id: courseId, ploIds: selectedPlosForClo });
     }
   };
 
@@ -462,7 +550,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                     Tambah CPMK
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-lg">
                   <DialogHeader>
                     <DialogTitle>{editingClo ? 'Edit CPMK/CLO' : 'Tambah CPMK/CLO Baru'}</DialogTitle>
                   </DialogHeader>
@@ -473,8 +561,36 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                     </div>
                     <div className="space-y-2">
                       <Label>Deskripsi</Label>
-                      <Textarea value={cloDescription} onChange={(e) => setCloDescription(e.target.value)} placeholder="Deskripsi capaian pembelajaran..." rows={4} />
+                      <Textarea value={cloDescription} onChange={(e) => setCloDescription(e.target.value)} placeholder="Deskripsi capaian pembelajaran..." rows={3} />
                     </div>
+                    {coursePlos && coursePlos.length > 0 && (
+                      <div className="space-y-2">
+                        <Label>CPL/PLO Terkait</Label>
+                        <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
+                          {coursePlos.map((cp) => (
+                            <div key={cp.plo?.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`plo-${cp.plo?.id}`}
+                                checked={selectedPlosForClo.includes(cp.plo?.id || '')}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedPlosForClo([...selectedPlosForClo, cp.plo?.id || '']);
+                                  } else {
+                                    setSelectedPlosForClo(selectedPlosForClo.filter(id => id !== cp.plo?.id));
+                                  }
+                                }}
+                              />
+                              <label htmlFor={`plo-${cp.plo?.id}`} className="text-sm cursor-pointer flex-1">
+                                <span className="font-mono font-medium">{cp.plo?.code}</span> - {cp.plo?.description?.substring(0, 60)}...
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Bobot setiap CPMK terhadap CPL akan dihitung otomatis secara merata.
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <DialogFooter>
                     <Button onClick={handleSaveClo} disabled={!cloCode || !cloDescription}>
@@ -492,11 +608,24 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
               {clos.map((clo) => {
                 const cloLlos = getLlosForClo(clo.id);
                 const cloTotalWeight = cloLlos.reduce((sum, llo) => sum + llo.weight_percentage, 0);
+                const linkedPlos = cloPlos?.filter(cp => cp.clo_id === clo.id).map(cp => ({
+                  plo: cp.plos as unknown as PLO,
+                  weight: Number(cp.weight_percentage) || 0
+                })) || [];
                 return (
                   <AccordionItem key={clo.id} value={clo.id}>
                     <AccordionTrigger className="hover:no-underline">
-                      <div className="flex items-center gap-3 flex-1 text-left">
+                      <div className="flex items-center gap-3 flex-1 text-left flex-wrap">
                         <Badge variant="secondary" className="font-mono">{clo.code}</Badge>
+                        {linkedPlos.length > 0 && (
+                          <div className="flex gap-1">
+                            {linkedPlos.map((lp) => (
+                              <Badge key={lp.plo?.id} variant="outline" className="text-xs bg-primary/10">
+                                {lp.plo?.code} ({lp.weight.toFixed(0)}%)
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                         <span className="text-sm flex-1">{clo.description}</span>
                         <Badge variant="outline" className="ml-2">
                           {cloLlos.length} SUB-CPMK ({cloTotalWeight.toFixed(1)}%)
