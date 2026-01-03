@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCourse, useCourseInstructors, useCourseGrades, useCourseEnrollments } from '@/hooks/useCourses';
+import { useCourse, useCourseInstructors, useCourseGrades, useCourseEnrollments, useCourseAssessments, useCourseAssessmentScores } from '@/hooks/useCourses';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -22,6 +22,8 @@ export default function CourseDetail() {
   const { data: instructors, isLoading: instructorsLoading } = useCourseInstructors(courseId!);
   const { data: grades, isLoading: gradesLoading } = useCourseGrades(courseId!);
   const { data: enrollments } = useCourseEnrollments(courseId!);
+  const { data: assessments } = useCourseAssessments(courseId!);
+  const { data: assessmentScores } = useCourseAssessmentScores(courseId!);
 
   const canEdit = role === 'admin' || role === 'dosen';
 
@@ -38,10 +40,21 @@ export default function CourseDetail() {
   // Get students with grades for table
   const studentsWithGrades = enrollments?.map(e => {
     const grade = grades?.find(g => g.student_profile_id === e.student_profile_id);
+    
+    // Build assessment scores map for this student
+    const studentAssessmentScores: Record<string, number | null> = {};
+    assessments?.forEach(assessment => {
+      const score = assessmentScores?.find(
+        s => s.assessment_id === assessment.id && s.student_profile_id === e.student_profile_id
+      );
+      studentAssessmentScores[assessment.id] = score?.score ?? null;
+    });
+    
     return {
       ...e.student,
       grade: grade?.final_score,
       isPassing: grade ? grade.final_score >= (course?.passing_score || 60) : null,
+      assessmentScores: studentAssessmentScores,
     };
   }) || [];
 
@@ -222,6 +235,14 @@ export default function CourseDetail() {
                         <TableHead className="font-semibold">Nama</TableHead>
                         <TableHead className="font-semibold">NIM</TableHead>
                         <TableHead className="font-semibold">Kelas</TableHead>
+                        {/* Dynamic assessment columns */}
+                        {assessments && assessments.length > 0 && assessments.map(assessment => (
+                          <TableHead key={assessment.id} className="font-semibold text-center min-w-[80px]">
+                            <div className="flex flex-col">
+                              <span>{assessment.code}</span>
+                            </div>
+                          </TableHead>
+                        ))}
                         <TableHead className="font-semibold text-center">Nilai Akhir</TableHead>
                         <TableHead className="font-semibold text-center">Status</TableHead>
                       </TableRow>
@@ -248,8 +269,26 @@ export default function CourseDetail() {
                               {student?.nim || '-'}
                             </TableCell>
                             <TableCell>{student?.class_group || '-'}</TableCell>
+                            {/* Assessment score cells */}
+                            {assessments && assessments.length > 0 && assessments.map(assessment => {
+                              const score = student?.assessmentScores?.[assessment.id];
+                              return (
+                                <TableCell key={assessment.id} className="text-center">
+                                  {score !== null && score !== undefined ? (
+                                    <span className={cn(
+                                      "font-medium",
+                                      score >= (course?.passing_score || 60) ? "text-success" : "text-destructive"
+                                    )}>
+                                      {score}
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground">-</span>
+                                  )}
+                                </TableCell>
+                              );
+                            })}
                             <TableCell className="text-center">
-                              {student?.grade !== undefined ? (
+                              {student?.grade !== undefined && student?.grade !== null ? (
                                 <div className="flex items-center justify-center gap-2">
                                   <Progress 
                                     value={student.grade} 
@@ -290,7 +329,7 @@ export default function CourseDetail() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={5 + (assessments?.length || 0)} className="text-center py-8 text-muted-foreground">
                             Belum ada mahasiswa terdaftar
                           </TableCell>
                         </TableRow>
