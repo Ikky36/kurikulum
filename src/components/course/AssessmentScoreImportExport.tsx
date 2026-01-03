@@ -5,6 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Download, Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
@@ -77,6 +78,16 @@ export function AssessmentScoreImportExport({
     capaian: true,
   });
 
+  // Export filters
+  const [exportFilters, setExportFilters] = useState({
+    angkatan: 'all',
+    kelas: 'all',
+  });
+
+  // Get unique values for filters
+  const uniqueAngkatan = [...new Set(students.filter(s => s.enrollment_year).map(s => s.enrollment_year))].sort((a, b) => (b || 0) - (a || 0));
+  const uniqueKelas = [...new Set(students.filter(s => s.class_group).map(s => s.class_group))].sort();
+
   // Download template Excel
   const handleDownloadTemplate = () => {
     const templateData = students.map(student => {
@@ -115,12 +126,23 @@ export function AssessmentScoreImportExport({
 
   // Export scores to Excel with selected fields
   const handleExportScores = () => {
-    if (!students || students.length === 0) {
-      toast({ title: 'Tidak ada data', description: 'Tidak ada mahasiswa untuk diekspor', variant: 'destructive' });
+    // Filter students based on selected filters
+    const filteredStudents = students.filter(student => {
+      if (exportFilters.angkatan !== 'all' && String(student.enrollment_year) !== exportFilters.angkatan) {
+        return false;
+      }
+      if (exportFilters.kelas !== 'all' && student.class_group !== exportFilters.kelas) {
+        return false;
+      }
+      return true;
+    });
+
+    if (filteredStudents.length === 0) {
+      toast({ title: 'Tidak ada data', description: 'Tidak ada mahasiswa yang sesuai dengan filter', variant: 'destructive' });
       return;
     }
 
-    const exportData = students.map((student, index) => {
+    const exportData = filteredStudents.map((student, index) => {
       const row: Record<string, any> = {};
       
       if (exportFields.no) row['No'] = index + 1;
@@ -178,8 +200,10 @@ export function AssessmentScoreImportExport({
     XLSX.utils.book_append_sheet(wb, ws, 'Nilai Mahasiswa');
     XLSX.writeFile(wb, `export_nilai_${courseName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
 
-    toast({ title: 'Export berhasil', description: `Nilai ${students.length} mahasiswa berhasil diekspor` });
+    toast({ title: 'Export berhasil', description: `Nilai ${filteredStudents.length} mahasiswa berhasil diekspor` });
     setShowExportDialog(false);
+    // Reset filters
+    setExportFilters({ angkatan: 'all', kelas: 'all' });
   };
 
   // Handle file upload
@@ -367,76 +391,118 @@ export function AssessmentScoreImportExport({
       </div>
 
       {/* Export Options Dialog */}
-      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+      <Dialog open={showExportDialog} onOpenChange={(open) => {
+        setShowExportDialog(open);
+        if (!open) setExportFilters({ angkatan: 'all', kelas: 'all' });
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Pilih Data yang Akan Diekspor</DialogTitle>
+            <DialogTitle>Export Data Mahasiswa</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="export-no" 
-                  checked={exportFields.no}
-                  onCheckedChange={() => toggleExportField('no')}
-                />
-                <Label htmlFor="export-no" className="cursor-pointer">No</Label>
+          <div className="space-y-6 py-4">
+            {/* Filter Section */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-muted-foreground">Filter Data</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Kelas</Label>
+                  <Select value={exportFilters.kelas} onValueChange={(value) => setExportFilters(prev => ({ ...prev, kelas: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Semua Kelas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Kelas</SelectItem>
+                      {uniqueKelas.map(kelas => (
+                        <SelectItem key={kelas} value={kelas || ''}>{kelas}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Angkatan</Label>
+                  <Select value={exportFilters.angkatan} onValueChange={(value) => setExportFilters(prev => ({ ...prev, angkatan: value }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Semua Angkatan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Angkatan</SelectItem>
+                      {uniqueAngkatan.map(year => (
+                        <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="export-nim" 
-                  checked={exportFields.nim}
-                  onCheckedChange={() => toggleExportField('nim')}
-                />
-                <Label htmlFor="export-nim" className="cursor-pointer">NIM</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="export-nama" 
-                  checked={exportFields.nama}
-                  onCheckedChange={() => toggleExportField('nama')}
-                />
-                <Label htmlFor="export-nama" className="cursor-pointer">Nama</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="export-angkatan" 
-                  checked={exportFields.angkatan}
-                  onCheckedChange={() => toggleExportField('angkatan')}
-                />
-                <Label htmlFor="export-angkatan" className="cursor-pointer">Angkatan</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="export-kelas" 
-                  checked={exportFields.kelas}
-                  onCheckedChange={() => toggleExportField('kelas')}
-                />
-                <Label htmlFor="export-kelas" className="cursor-pointer">Kelas</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="export-email" 
-                  checked={exportFields.email}
-                  onCheckedChange={() => toggleExportField('email')}
-                />
-                <Label htmlFor="export-email" className="cursor-pointer">Email</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="export-scores" 
-                  checked={exportFields.scores}
-                  onCheckedChange={() => toggleExportField('scores')}
-                />
-                <Label htmlFor="export-scores" className="cursor-pointer">Nilai Tugas</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox 
-                  id="export-capaian" 
-                  checked={exportFields.capaian}
-                  onCheckedChange={() => toggleExportField('capaian')}
-                />
-                <Label htmlFor="export-capaian" className="cursor-pointer">Capaian (%)</Label>
+            </div>
+
+            {/* Field Selection */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-medium text-muted-foreground">Pilih Kolom Data</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="export-no" 
+                    checked={exportFields.no}
+                    onCheckedChange={() => toggleExportField('no')}
+                  />
+                  <Label htmlFor="export-no" className="cursor-pointer">No</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="export-nim" 
+                    checked={exportFields.nim}
+                    onCheckedChange={() => toggleExportField('nim')}
+                  />
+                  <Label htmlFor="export-nim" className="cursor-pointer">NIM</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="export-nama" 
+                    checked={exportFields.nama}
+                    onCheckedChange={() => toggleExportField('nama')}
+                  />
+                  <Label htmlFor="export-nama" className="cursor-pointer">Nama</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="export-angkatan" 
+                    checked={exportFields.angkatan}
+                    onCheckedChange={() => toggleExportField('angkatan')}
+                  />
+                  <Label htmlFor="export-angkatan" className="cursor-pointer">Angkatan</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="export-kelas" 
+                    checked={exportFields.kelas}
+                    onCheckedChange={() => toggleExportField('kelas')}
+                  />
+                  <Label htmlFor="export-kelas" className="cursor-pointer">Kelas</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="export-email" 
+                    checked={exportFields.email}
+                    onCheckedChange={() => toggleExportField('email')}
+                  />
+                  <Label htmlFor="export-email" className="cursor-pointer">Email</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="export-scores" 
+                    checked={exportFields.scores}
+                    onCheckedChange={() => toggleExportField('scores')}
+                  />
+                  <Label htmlFor="export-scores" className="cursor-pointer">Nilai Tugas</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="export-capaian" 
+                    checked={exportFields.capaian}
+                    onCheckedChange={() => toggleExportField('capaian')}
+                  />
+                  <Label htmlFor="export-capaian" className="cursor-pointer">Capaian (%)</Label>
+                </div>
               </div>
             </div>
           </div>
