@@ -15,25 +15,33 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     
     // Create admin client with service role
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Create client with anon key to verify the user's JWT
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-      global: {
-        headers: { Authorization: req.headers.get("Authorization")! },
-      },
-    });
+    // Get the authorization header
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.log("No Authorization header provided");
+      return new Response(JSON.stringify({ error: "No authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // Verify the requesting user using the client with their token
-    const { data: { user: requestingUser }, error: authError } = await supabaseClient.auth.getUser();
+    // Extract the token from Bearer token
+    const token = authHeader.replace("Bearer ", "");
+    
+    // Verify the JWT using admin client
+    const { data: { user: requestingUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    console.log("Auth check:", { hasUser: !!requestingUser, error: authError?.message });
+    
     if (authError || !requestingUser) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      console.log("Auth failed:", authError?.message);
+      return new Response(JSON.stringify({ error: "Unauthorized", details: authError?.message }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
