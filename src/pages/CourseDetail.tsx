@@ -11,11 +11,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { ArrowLeft, Mail, User, CheckCircle2, XCircle, Users, Target } from 'lucide-react';
+import { ArrowLeft, Mail, User, CheckCircle2, XCircle, Users, Target, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { CourseLearningOutcomes } from '@/components/course/CourseLearningOutcomes';
+import { LearningAchievementStats } from '@/components/course/LearningAchievementStats';
 import { AssessmentScoreImportExport } from '@/components/course/AssessmentScoreImportExport';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
@@ -43,14 +44,6 @@ export default function CourseDetail() {
   // Calculate total weight from all assessments
   const totalWeight = assessments?.reduce((sum, a) => sum + (a.weight || 0), 0) || 0;
 
-  // Prepare chart data
-  const chartData = grades?.map(g => ({
-    name: g.student?.full_name?.split(' ')[0] || 'Unknown',
-    fullName: g.student?.full_name || 'Unknown',
-    score: g.final_score,
-    isPassing: g.final_score >= (course?.passing_score || 60),
-  })) || [];
-
   // Get students with grades for table
   const studentsWithGrades = enrollments?.map(e => {
     const grade = grades?.find(g => g.student_profile_id === e.student_profile_id);
@@ -58,7 +51,6 @@ export default function CourseDetail() {
     // Build assessment scores map for this student
     const studentAssessmentScores: Record<string, number | null> = {};
     let weightedSum = 0;
-    let totalWeightWithScores = 0;
 
     assessments?.forEach(assessment => {
       const score = assessmentScores?.find(
@@ -70,7 +62,6 @@ export default function CourseDetail() {
       if (scoreValue !== null) {
         const weight = assessment.weight || 0;
         weightedSum += (scoreValue / 100) * weight;
-        totalWeightWithScores += weight;
       }
     });
 
@@ -87,6 +78,16 @@ export default function CourseDetail() {
       achievementPercentage,
     };
   }) || [];
+
+  // Prepare chart data based on achievement percentage
+  const chartData = studentsWithGrades
+    .filter(s => s.achievementPercentage !== null)
+    .map(s => ({
+      name: s.full_name?.split(' ')[0] || 'Unknown',
+      fullName: s.full_name || 'Unknown',
+      score: s.achievementPercentage || 0,
+      isPassing: (s.achievementPercentage || 0) >= (course?.passing_score || 60),
+    }));
 
   const handleStartEdit = (studentId: string, assessmentId: string, currentScore: number | null) => {
     if (!canEdit) return;
@@ -222,6 +223,10 @@ export default function CourseDetail() {
               <Target className="h-4 w-4" />
               Capaian Pembelajaran
             </TabsTrigger>
+            <TabsTrigger value="statistics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Statistik Capaian
+            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -268,7 +273,7 @@ export default function CourseDetail() {
               {/* Chart Card */}
               <Card className="lg:col-span-2 animate-slide-up" style={{ animationDelay: '100ms' }}>
                 <CardHeader>
-                  <CardTitle className="text-lg">Distribusi Nilai Mahasiswa</CardTitle>
+                  <CardTitle className="text-lg">Distribusi Capaian Mahasiswa</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {chartData.length > 0 ? (
@@ -297,7 +302,7 @@ export default function CourseDetail() {
                                       "font-bold",
                                       data.isPassing ? "text-success" : "text-destructive"
                                     )}>
-                                      Nilai: {data.score}
+                                      Capaian: {data.score.toFixed(1)}%
                                     </p>
                                   </div>
                                 );
@@ -499,6 +504,11 @@ export default function CourseDetail() {
           {/* Learning Outcomes Tab */}
           <TabsContent value="learning-outcomes">
             <CourseLearningOutcomes courseId={courseId!} canEdit={canEdit} />
+          </TabsContent>
+
+          {/* Statistics Tab */}
+          <TabsContent value="statistics">
+            <LearningAchievementStats courseId={courseId!} />
           </TabsContent>
         </Tabs>
       </div>
