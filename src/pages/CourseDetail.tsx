@@ -1,5 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCourse, useCourseInstructors, useCourseGrades, useCourseEnrollments, useCourseAssessments, useCourseAssessmentScores } from '@/hooks/useCourses';
@@ -11,9 +11,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { ArrowLeft, Mail, User, CheckCircle2, XCircle, Users, Target, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Mail, User, CheckCircle2, XCircle, Users, Target, BarChart3, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { CourseLearningOutcomes } from '@/components/course/CourseLearningOutcomes';
 import { LearningAchievementStats } from '@/components/course/LearningAchievementStats';
@@ -36,6 +37,11 @@ export default function CourseDetail() {
   const [editingCell, setEditingCell] = useState<{ studentId: string; assessmentId: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Sorting and filtering state
+  const [sortColumn, setSortColumn] = useState<string | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [classFilter, setClassFilter] = useState<string>('all');
 
   const canEdit = role === 'admin' || role === 'dosen';
 
@@ -45,39 +51,124 @@ export default function CourseDetail() {
   const totalWeight = assessments?.reduce((sum, a) => sum + (a.weight || 0), 0) || 0;
 
   // Get students with grades for table
-  const studentsWithGrades = enrollments?.map(e => {
-    const grade = grades?.find(g => g.student_profile_id === e.student_profile_id);
-    
-    // Build assessment scores map for this student
-    const studentAssessmentScores: Record<string, number | null> = {};
-    let weightedSum = 0;
-
-    assessments?.forEach(assessment => {
-      const score = assessmentScores?.find(
-        s => s.assessment_id === assessment.id && s.student_profile_id === e.student_profile_id
-      );
-      const scoreValue = score?.score ?? null;
-      studentAssessmentScores[assessment.id] = scoreValue;
+  const studentsWithGrades = useMemo(() => {
+    return enrollments?.map(e => {
+      const grade = grades?.find(g => g.student_profile_id === e.student_profile_id);
       
-      if (scoreValue !== null) {
-        const weight = assessment.weight || 0;
-        weightedSum += (scoreValue / 100) * weight;
-      }
-    });
+      // Build assessment scores map for this student
+      const studentAssessmentScores: Record<string, number | null> = {};
+      let weightedSum = 0;
 
-    // Calculate achievement percentage: weighted sum / total weight * 100
-    const achievementPercentage = totalWeight > 0 
-      ? (weightedSum / totalWeight) * 100 
-      : null;
+      assessments?.forEach(assessment => {
+        const score = assessmentScores?.find(
+          s => s.assessment_id === assessment.id && s.student_profile_id === e.student_profile_id
+        );
+        const scoreValue = score?.score ?? null;
+        studentAssessmentScores[assessment.id] = scoreValue;
+        
+        if (scoreValue !== null) {
+          const weight = assessment.weight || 0;
+          weightedSum += (scoreValue / 100) * weight;
+        }
+      });
+
+      // Calculate achievement percentage: weighted sum / total weight * 100
+      const achievementPercentage = totalWeight > 0 
+        ? (weightedSum / totalWeight) * 100 
+        : null;
+      
+      return {
+        ...e.student,
+        grade: grade?.final_score,
+        isPassing: achievementPercentage !== null ? achievementPercentage >= (course?.passing_score || 60) : null,
+        assessmentScores: studentAssessmentScores,
+        achievementPercentage,
+      };
+    }) || [];
+  }, [enrollments, grades, assessments, assessmentScores, totalWeight, course?.passing_score]);
+
+  // Get unique class groups for filter
+  const classGroups = useMemo(() => {
+    const groups = new Set<string>();
+    studentsWithGrades.forEach(s => {
+      if (s?.class_group) groups.add(s.class_group);
+    });
+    return Array.from(groups).sort();
+  }, [studentsWithGrades]);
+
+  // Filtered and sorted students
+  const filteredAndSortedStudents = useMemo(() => {
+    let result = [...studentsWithGrades];
     
-    return {
-      ...e.student,
-      grade: grade?.final_score,
-      isPassing: achievementPercentage !== null ? achievementPercentage >= (course?.passing_score || 60) : null,
-      assessmentScores: studentAssessmentScores,
-      achievementPercentage,
-    };
-  }) || [];
+    // Apply class filter
+    if (classFilter !== 'all') {
+      result = result.filter(s => s?.class_group === classFilter);
+    }
+    
+    // Apply sorting
+    if (sortColumn) {
+      result.sort((a, b) => {
+        let valA: string | number | null = null;
+        let valB: string | number | null = null;
+        
+        switch (sortColumn) {
+          case 'name':
+            valA = a?.full_name?.toLowerCase() || '';
+            valB = b?.full_name?.toLowerCase() || '';
+            break;
+          case 'nim':
+            valA = a?.nim || '';
+            valB = b?.nim || '';
+            break;
+          case 'achievement':
+            valA = a?.achievementPercentage ?? -1;
+            valB = b?.achievementPercentage ?? -1;
+            break;
+          default:
+            // Assessment column sorting
+            if (sortColumn.startsWith('assessment_')) {
+              const assessmentId = sortColumn.replace('assessment_', '');
+              valA = a?.assessmentScores?.[assessmentId] ?? -1;
+              valB = b?.assessmentScores?.[assessmentId] ?? -1;
+            }
+        }
+        
+        if (valA === null || valB === null) return 0;
+        
+        if (typeof valA === 'string' && typeof valB === 'string') {
+          return sortDirection === 'asc' 
+            ? valA.localeCompare(valB) 
+            : valB.localeCompare(valA);
+        }
+        
+        return sortDirection === 'asc' 
+          ? (valA as number) - (valB as number) 
+          : (valB as number) - (valA as number);
+      });
+    }
+    
+    return result;
+  }, [studentsWithGrades, classFilter, sortColumn, sortDirection]);
+
+  // Toggle sort handler
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  // Render sort icon
+  const renderSortIcon = (column: string) => {
+    if (sortColumn !== column) {
+      return <ArrowUpDown className="h-3 w-3 ml-1 opacity-50" />;
+    }
+    return sortDirection === 'asc' 
+      ? <ArrowUp className="h-3 w-3 ml-1" /> 
+      : <ArrowDown className="h-3 w-3 ml-1" />;
+  };
 
   // Prepare chart data based on achievement percentage
   const chartData = studentsWithGrades
@@ -361,28 +452,70 @@ export default function CourseDetail() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-muted/50 hover:bg-muted/50">
-                        <TableHead className="font-semibold">Nama</TableHead>
-                        <TableHead className="font-semibold">NIM</TableHead>
-                        <TableHead className="font-semibold">Kelas</TableHead>
+                      <TableRow>
+                        <TableHead className="font-semibold">
+                          <button 
+                            onClick={() => handleSort('name')}
+                            className="flex items-center hover:opacity-80"
+                          >
+                            Nama
+                            {renderSortIcon('name')}
+                          </button>
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          <button 
+                            onClick={() => handleSort('nim')}
+                            className="flex items-center hover:opacity-80"
+                          >
+                            NIM
+                            {renderSortIcon('nim')}
+                          </button>
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          <Select value={classFilter} onValueChange={setClassFilter}>
+                            <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground">
+                              <SelectValue placeholder="Kelas" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Semua Kelas</SelectItem>
+                              {classGroups.map(group => (
+                                <SelectItem key={group} value={group}>{group}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableHead>
                         {/* Dynamic assessment columns with weight */}
                         {assessments && assessments.length > 0 && assessments.map(assessment => (
                           <TableHead key={assessment.id} className="font-semibold text-center min-w-[80px]">
-                            <div className="flex flex-col items-center">
-                              <span>{assessment.code}</span>
-                              <span className="text-xs text-muted-foreground font-normal">
+                            <button 
+                              onClick={() => handleSort(`assessment_${assessment.id}`)}
+                              className="flex flex-col items-center w-full hover:opacity-80"
+                            >
+                              <div className="flex items-center">
+                                <span>{assessment.code}</span>
+                                {renderSortIcon(`assessment_${assessment.id}`)}
+                              </div>
+                              <span className="text-xs text-primary-foreground/70 font-normal">
                                 ({assessment.weight || 0}%)
                               </span>
-                            </div>
+                            </button>
                           </TableHead>
                         ))}
-                        <TableHead className="font-semibold text-center">Capaian</TableHead>
+                        <TableHead className="font-semibold text-center">
+                          <button 
+                            onClick={() => handleSort('achievement')}
+                            className="flex items-center justify-center w-full hover:opacity-80"
+                          >
+                            Capaian
+                            {renderSortIcon('achievement')}
+                          </button>
+                        </TableHead>
                         <TableHead className="font-semibold text-center">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {studentsWithGrades.length > 0 ? (
-                        studentsWithGrades.map((student) => (
+                      {filteredAndSortedStudents.length > 0 ? (
+                        filteredAndSortedStudents.map((student) => (
                           <TableRow key={student?.id} className="hover:bg-muted/30">
                             <TableCell>
                               <Link 
