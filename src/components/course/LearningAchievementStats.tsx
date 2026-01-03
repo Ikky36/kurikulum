@@ -258,44 +258,53 @@ export function LearningAchievementStats({ courseId }: LearningAchievementStatsP
             Statistik CPL/PLO
           </CardTitle>
           <CardDescription>
-            Capaian Pembelajaran Lulusan berdasarkan rata-rata capaian CPMK terkait
+            Capaian Pembelajaran Lulusan
           </CardDescription>
         </CardHeader>
         <CardContent>
           {ploStats.length > 0 ? (
             <div className="space-y-4">
-              {ploStats.map((plo) => (
-                <div key={plo.id} className="p-4 rounded-lg bg-muted/50 border">
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <div className="flex items-start gap-3">
-                      <Badge variant="secondary" className="font-mono shrink-0">{plo.code}</Badge>
-                      <p className="text-sm text-muted-foreground">{plo.description}</p>
+              {ploStats.map((plo) => {
+                const totalCloWeight = plo.linkedCLOs.reduce((sum, item) => sum + item.weight, 0);
+                return (
+                  <div key={plo.id} className="p-4 rounded-lg bg-muted/50 border">
+                    <div className="flex items-start justify-between gap-4 mb-3">
+                      <div className="flex items-start gap-3">
+                        <Badge variant="secondary" className="font-mono shrink-0">{plo.code}</Badge>
+                        <p className="text-sm text-muted-foreground">{plo.description}</p>
+                      </div>
+                      <span className={cn(
+                        "text-lg font-bold shrink-0",
+                        plo.achievementPercentage >= 60 ? "text-success" : "text-destructive"
+                      )}>
+                        {plo.achievementPercentage.toFixed(1)}%
+                      </span>
                     </div>
-                    <span className={cn(
-                      "text-lg font-bold shrink-0",
-                      plo.achievementPercentage >= 60 ? "text-success" : "text-destructive"
-                    )}>
-                      {plo.achievementPercentage.toFixed(1)}%
-                    </span>
-                  </div>
-                  <Progress 
-                    value={plo.achievementPercentage} 
-                    className={cn(
-                      "h-3",
-                      plo.achievementPercentage >= 60 ? "[&>div]:bg-success" : "[&>div]:bg-destructive"
+                    <Progress 
+                      value={plo.achievementPercentage} 
+                      className={cn(
+                        "h-3",
+                        plo.achievementPercentage >= 60 ? "[&>div]:bg-success" : "[&>div]:bg-destructive"
+                      )}
+                    />
+                    {plo.linkedCLOs.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-border/50">
+                        <p className="text-xs font-medium text-muted-foreground mb-2">CPMK Terkait:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {plo.linkedCLOs.map((item) => (
+                            <Badge key={item.clo.id} variant="outline" className="text-xs">
+                              {item.clo.code}: {item.weight}%
+                            </Badge>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Total Bobot: {totalCloWeight.toFixed(1)}%
+                        </p>
+                      </div>
                     )}
-                  />
-                  {plo.linkedCLOs.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {plo.linkedCLOs.map((item) => (
-                        <Badge key={item.clo.id} variant="outline" className="text-xs">
-                          {item.clo.code} ({item.weight}%)
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <p className="text-muted-foreground text-center py-8">
@@ -313,7 +322,7 @@ export function LearningAchievementStats({ courseId }: LearningAchievementStatsP
             Statistik CPMK/CLO
           </CardTitle>
           <CardDescription>
-            Capaian Pembelajaran Mata Kuliah berdasarkan rata-rata capaian SUB-CPMK
+            Capaian Pembelajaran Mata Kuliah
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -351,9 +360,21 @@ export function LearningAchievementStats({ courseId }: LearningAchievementStatsP
                       clo.achievementPercentage >= 60 ? "[&>div]:bg-success" : "[&>div]:bg-destructive"
                     )}
                   />
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {clo.llos.length} SUB-CPMK • Total bobot: {clo.totalWeight.toFixed(1)}%
-                  </p>
+                  {clo.llos.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-border/50">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">SUB-CPMK Terkait:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {clo.llos.map((llo) => (
+                          <Badge key={llo.id} variant="outline" className="text-xs">
+                            {llo.code}: {llo.weight_percentage}%
+                          </Badge>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Total Bobot: {clo.totalWeight.toFixed(1)}%
+                      </p>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -373,7 +394,7 @@ export function LearningAchievementStats({ courseId }: LearningAchievementStatsP
             Statistik SUB-CPMK/LLO
           </CardTitle>
           <CardDescription>
-            Rata-rata capaian mahasiswa pada setiap SUB-CPMK
+            Sub Capaian Pembelajaran Mata Kuliah
           </CardDescription>
         </CardHeader>
         <CardContent>
