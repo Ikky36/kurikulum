@@ -88,6 +88,45 @@ export type Database = {
           },
         ]
       }
+      clo_plos: {
+        Row: {
+          clo_id: string
+          created_at: string
+          id: string
+          plo_id: string
+          weight_percentage: number
+        }
+        Insert: {
+          clo_id: string
+          created_at?: string
+          id?: string
+          plo_id: string
+          weight_percentage?: number
+        }
+        Update: {
+          clo_id?: string
+          created_at?: string
+          id?: string
+          plo_id?: string
+          weight_percentage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clo_plos_clo_id_fkey"
+            columns: ["clo_id"]
+            isOneToOne: false
+            referencedRelation: "clos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clo_plos_plo_id_fkey"
+            columns: ["plo_id"]
+            isOneToOne: false
+            referencedRelation: "plos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clos: {
         Row: {
           code: string
