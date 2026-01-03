@@ -159,3 +159,49 @@ export function useCourseEnrollments(courseId: string) {
     enabled: !!courseId,
   });
 }
+
+export function useCourseAssessments(courseId: string) {
+  return useQuery({
+    queryKey: ['course-assessments', courseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('*')
+        .eq('course_id', courseId)
+        .order('code');
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!courseId,
+  });
+}
+
+export function useCourseAssessmentScores(courseId: string) {
+  return useQuery({
+    queryKey: ['course-assessment-scores', courseId],
+    queryFn: async () => {
+      // First get all assessments for this course
+      const { data: assessments, error: assessmentsError } = await supabase
+        .from('assessments')
+        .select('id')
+        .eq('course_id', courseId);
+      
+      if (assessmentsError) throw assessmentsError;
+      
+      if (!assessments || assessments.length === 0) return [];
+      
+      const assessmentIds = assessments.map(a => a.id);
+      
+      // Then get all scores for these assessments
+      const { data, error } = await supabase
+        .from('student_assessment_scores')
+        .select('*')
+        .in('assessment_id', assessmentIds);
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!courseId,
+  });
+}
