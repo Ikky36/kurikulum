@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap } from 'lucide-react';
+import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { Course, Profile, AppRole } from '@/lib/types';
 
@@ -45,6 +45,19 @@ export default function DashboardAdmin() {
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [selectedUserForRole, setSelectedUserForRole] = useState<Profile | null>(null);
   const [newRole, setNewRole] = useState<AppRole>('mahasiswa');
+
+  // User account management state
+  const [showUserDialog, setShowUserDialog] = useState(false);
+  const [editingUser, setEditingUser] = useState<Profile | null>(null);
+  const [userFullName, setUserFullName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
+  const [userRole, setUserRole] = useState<'mahasiswa' | 'dosen'>('mahasiswa');
+  const [userNim, setUserNim] = useState('');
+  const [userNip, setUserNip] = useState('');
+  const [userProgram, setUserProgram] = useState('');
+  const [userClassGroup, setUserClassGroup] = useState('');
+  const [showDeleteUserDialog, setShowDeleteUserDialog] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
 
   // Fetch all courses
   const { data: courses, refetch: refetchCourses } = useQuery({
@@ -195,9 +208,91 @@ export default function DashboardAdmin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dosen'] });
       toast({ title: 'Berhasil', description: 'Role berhasil diperbarui' });
       setShowRoleDialog(false);
       setSelectedUserForRole(null);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // User account mutations
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: {
+      full_name: string;
+      email: string;
+      role: 'mahasiswa' | 'dosen';
+      nim?: string;
+      nip?: string;
+      program?: string;
+      class_group?: string;
+    }) => {
+      // Generate a unique ID for the profile
+      const newId = crypto.randomUUID();
+      
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: newId,
+        full_name: userData.full_name,
+        email: userData.email,
+        role: userData.role,
+        nim: userData.nim || null,
+        nip: userData.nip || null,
+        program: userData.program || null,
+        class_group: userData.class_group || null,
+      });
+      if (profileError) throw profileError;
+
+      const { error: roleError } = await supabase.from('user_roles').insert({
+        user_id: newId,
+        role: userData.role,
+      });
+      if (roleError) throw roleError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dosen'] });
+      toast({ title: 'Berhasil', description: 'Akun berhasil dibuat' });
+      resetUserForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ id, ...userData }: Partial<Profile> & { id: string }) => {
+      const { error } = await supabase.from('profiles').update(userData).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dosen'] });
+      toast({ title: 'Berhasil', description: 'Akun berhasil diperbarui' });
+      resetUserForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      // Delete from user_roles first
+      const { error: roleError } = await supabase.from('user_roles').delete().eq('user_id', userId);
+      if (roleError) throw roleError;
+      
+      // Delete from profiles
+      const { error: profileError } = await supabase.from('profiles').delete().eq('id', userId);
+      if (profileError) throw profileError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dosen'] });
+      toast({ title: 'Berhasil', description: 'Akun berhasil dihapus' });
+      setShowDeleteUserDialog(false);
+      setUserToDelete(null);
     },
     onError: (error: any) => {
       toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
@@ -280,6 +375,18 @@ export default function DashboardAdmin() {
     setShowCourseDialog(false);
   };
 
+  const resetUserForm = () => {
+    setUserFullName('');
+    setUserEmail('');
+    setUserRole('mahasiswa');
+    setUserNim('');
+    setUserNip('');
+    setUserProgram('');
+    setUserClassGroup('');
+    setEditingUser(null);
+    setShowUserDialog(false);
+  };
+
   const handleSaveCourse = () => {
     const courseData = {
       code: courseCode,
@@ -293,6 +400,36 @@ export default function DashboardAdmin() {
     } else {
       createCourseMutation.mutate(courseData);
     }
+  };
+
+  const handleSaveUser = () => {
+    const userData = {
+      full_name: userFullName,
+      email: userEmail,
+      role: userRole as 'mahasiswa' | 'dosen',
+      nim: userRole === 'mahasiswa' ? userNim : undefined,
+      nip: userRole === 'dosen' ? userNip : undefined,
+      program: userProgram,
+      class_group: userRole === 'mahasiswa' ? userClassGroup : undefined,
+    };
+
+    if (editingUser) {
+      updateUserMutation.mutate({ ...userData, id: editingUser.id });
+    } else {
+      createUserMutation.mutate(userData);
+    }
+  };
+
+  const openEditUser = (userProfile: Profile) => {
+    setEditingUser(userProfile);
+    setUserFullName(userProfile.full_name);
+    setUserEmail(userProfile.email);
+    setUserRole(userProfile.role as 'mahasiswa' | 'dosen');
+    setUserNim(userProfile.nim || '');
+    setUserNip(userProfile.nip || '');
+    setUserProgram(userProfile.program || '');
+    setUserClassGroup(userProfile.class_group || '');
+    setShowUserDialog(true);
   };
 
   const openEditCourse = (course: Course) => {
@@ -345,12 +482,166 @@ export default function DashboardAdmin() {
           ))}
         </div>
 
-        <Tabs defaultValue="courses" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="accounts" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="accounts">Kelola Akun</TabsTrigger>
             <TabsTrigger value="courses">Mata Kuliah</TabsTrigger>
             <TabsTrigger value="assignments">Penugasan Dosen</TabsTrigger>
             <TabsTrigger value="roles">Kelola Role</TabsTrigger>
           </TabsList>
+
+          {/* Accounts Tab */}
+          <TabsContent value="accounts">
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Kelola Akun Dosen & Mahasiswa</CardTitle>
+                  <Dialog open={showUserDialog} onOpenChange={(open) => { if (!open) resetUserForm(); setShowUserDialog(open); }}>
+                    <DialogTrigger asChild>
+                      <Button size="sm">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Tambah Akun
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-md">
+                      <DialogHeader>
+                        <DialogTitle>{editingUser ? 'Edit Akun' : 'Tambah Akun Baru'}</DialogTitle>
+                      </DialogHeader>
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label>Tipe Akun</Label>
+                          <Select value={userRole} onValueChange={(v) => setUserRole(v as 'mahasiswa' | 'dosen')} disabled={!!editingUser}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="mahasiswa">Mahasiswa</SelectItem>
+                              <SelectItem value="dosen">Dosen</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Nama Lengkap</Label>
+                          <Input value={userFullName} onChange={(e) => setUserFullName(e.target.value)} placeholder="Nama lengkap" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Email</Label>
+                          <Input type="email" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} placeholder="email@example.com" disabled={!!editingUser} />
+                        </div>
+                        {userRole === 'mahasiswa' && (
+                          <>
+                            <div className="space-y-2">
+                              <Label>NIM</Label>
+                              <Input value={userNim} onChange={(e) => setUserNim(e.target.value)} placeholder="Nomor Induk Mahasiswa" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Kelas</Label>
+                              <Input value={userClassGroup} onChange={(e) => setUserClassGroup(e.target.value)} placeholder="Contoh: A, B, C" />
+                            </div>
+                          </>
+                        )}
+                        {userRole === 'dosen' && (
+                          <div className="space-y-2">
+                            <Label>NIP</Label>
+                            <Input value={userNip} onChange={(e) => setUserNip(e.target.value)} placeholder="Nomor Induk Pegawai" />
+                          </div>
+                        )}
+                        <div className="space-y-2">
+                          <Label>Program Studi</Label>
+                          <Input value={userProgram} onChange={(e) => setUserProgram(e.target.value)} placeholder="Contoh: Pendidikan Bahasa Arab" />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <Button onClick={handleSaveUser} disabled={!userFullName || !userEmail}>
+                          {editingUser ? 'Simpan' : 'Tambah'}
+                        </Button>
+                      </DialogFooter>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>Nama</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>NIM/NIP</TableHead>
+                      <TableHead>Program</TableHead>
+                      <TableHead className="w-24">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {allUsers?.filter(u => u.role !== 'admin').map((u) => (
+                      <TableRow key={u.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8">
+                              <AvatarImage src={u.photo_url || undefined} />
+                              <AvatarFallback>{u.full_name?.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{u.full_name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                        <TableCell>
+                          <Badge variant={u.role === 'dosen' ? 'secondary' : 'outline'} className="capitalize">
+                            {u.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{u.role === 'mahasiswa' ? u.nim : u.nip || '-'}</TableCell>
+                        <TableCell>{u.program || '-'}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => openEditUser(u)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => {
+                                setUserToDelete(u);
+                                setShowDeleteUserDialog(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(!allUsers || allUsers.filter(u => u.role !== 'admin').length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          Belum ada akun dosen atau mahasiswa
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={showDeleteUserDialog} onOpenChange={setShowDeleteUserDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Konfirmasi Hapus Akun</DialogTitle>
+                </DialogHeader>
+                <p className="text-muted-foreground">
+                  Apakah Anda yakin ingin menghapus akun <span className="font-semibold text-foreground">{userToDelete?.full_name}</span>? Tindakan ini tidak dapat dibatalkan.
+                </p>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowDeleteUserDialog(false)}>
+                    Batal
+                  </Button>
+                  <Button variant="destructive" onClick={() => userToDelete && deleteUserMutation.mutate(userToDelete.id)}>
+                    Hapus
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </TabsContent>
 
           {/* Courses Tab */}
           <TabsContent value="courses">
