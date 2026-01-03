@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Download, Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
@@ -20,6 +22,9 @@ interface Student {
   id: string;
   full_name: string;
   nim: string | null;
+  enrollment_year?: number | null;
+  class_group?: string | null;
+  email?: string | null;
 }
 
 interface ImportRow {
@@ -55,9 +60,22 @@ export function AssessmentScoreImportExport({
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [showImportDialog, setShowImportDialog] = useState(false);
+  const [showExportDialog, setShowExportDialog] = useState(false);
   const [importData, setImportData] = useState<ImportRow[]>([]);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+
+  // Export field options
+  const [exportFields, setExportFields] = useState({
+    no: true,
+    nim: true,
+    nama: true,
+    angkatan: true,
+    kelas: true,
+    email: false,
+    scores: true,
+    capaian: true,
+  });
 
   // Download template Excel
   const handleDownloadTemplate = () => {
@@ -95,43 +113,73 @@ export function AssessmentScoreImportExport({
     toast({ title: 'Template berhasil diunduh', description: 'Silakan isi nilai sesuai format template' });
   };
 
-  // Export scores to Excel
+  // Export scores to Excel with selected fields
   const handleExportScores = () => {
     if (!students || students.length === 0) {
       toast({ title: 'Tidak ada data', description: 'Tidak ada mahasiswa untuk diekspor', variant: 'destructive' });
       return;
     }
 
-    const exportData = students.map(student => {
-      const row: Record<string, any> = {
-        nim: student.nim || '',
-        nama: student.full_name,
-      };
+    const exportData = students.map((student, index) => {
+      const row: Record<string, any> = {};
       
-      assessments.forEach(assessment => {
-        const score = existingScores.find(
-          s => s.assessment_id === assessment.id && s.student_profile_id === student.id
-        );
-        row[`${assessment.code} (${assessment.weight}%)`] = score?.score ?? '-';
-      });
+      if (exportFields.no) row['No'] = index + 1;
+      if (exportFields.nim) row['NIM'] = student.nim || '';
+      if (exportFields.nama) row['Nama'] = student.full_name;
+      if (exportFields.angkatan) row['Angkatan'] = student.enrollment_year || '';
+      if (exportFields.kelas) row['Kelas'] = student.class_group || '';
+      if (exportFields.email) row['Email'] = student.email || '';
+      
+      if (exportFields.scores) {
+        assessments.forEach(assessment => {
+          const score = existingScores.find(
+            s => s.assessment_id === assessment.id && s.student_profile_id === student.id
+          );
+          row[`${assessment.code} (${assessment.weight}%)`] = score?.score ?? '-';
+        });
+      }
+
+      if (exportFields.capaian) {
+        // Calculate achievement
+        let weightedSum = 0;
+        let totalWeight = 0;
+        assessments.forEach(assessment => {
+          const score = existingScores.find(
+            s => s.assessment_id === assessment.id && s.student_profile_id === student.id
+          );
+          if (score?.score !== undefined) {
+            totalWeight += assessment.weight;
+            weightedSum += (score.score / 100) * assessment.weight;
+          }
+        });
+        const achievement = totalWeight > 0 ? (weightedSum / totalWeight) * 100 : null;
+        row['Capaian (%)'] = achievement !== null ? achievement.toFixed(1) : '-';
+      }
       
       return row;
     });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     
-    const colWidths = [
-      { wch: 15 },
-      { wch: 25 },
-      ...assessments.map(() => ({ wch: 12 })),
-    ];
+    // Set column widths
+    const colWidths: { wch: number }[] = [];
+    if (exportFields.no) colWidths.push({ wch: 5 });
+    if (exportFields.nim) colWidths.push({ wch: 15 });
+    if (exportFields.nama) colWidths.push({ wch: 25 });
+    if (exportFields.angkatan) colWidths.push({ wch: 10 });
+    if (exportFields.kelas) colWidths.push({ wch: 10 });
+    if (exportFields.email) colWidths.push({ wch: 25 });
+    if (exportFields.scores) assessments.forEach(() => colWidths.push({ wch: 12 }));
+    if (exportFields.capaian) colWidths.push({ wch: 12 });
+    
     ws['!cols'] = colWidths;
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Nilai Tugas');
+    XLSX.utils.book_append_sheet(wb, ws, 'Nilai Mahasiswa');
     XLSX.writeFile(wb, `export_nilai_${courseName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`);
 
     toast({ title: 'Export berhasil', description: `Nilai ${students.length} mahasiswa berhasil diekspor` });
+    setShowExportDialog(false);
   };
 
   // Handle file upload
@@ -283,6 +331,10 @@ export function AssessmentScoreImportExport({
     }
   };
 
+  const toggleExportField = (field: keyof typeof exportFields) => {
+    setExportFields(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
   const validCount = importData.filter(r => r.isValid).length;
   const invalidCount = importData.filter(r => !r.isValid).length;
 
@@ -301,7 +353,7 @@ export function AssessmentScoreImportExport({
           <Upload className="h-4 w-4 mr-2" />
           Import Nilai
         </Button>
-        <Button variant="outline" size="sm" onClick={handleExportScores}>
+        <Button variant="outline" size="sm" onClick={() => setShowExportDialog(true)}>
           <Download className="h-4 w-4 mr-2" />
           Export Nilai
         </Button>
@@ -313,6 +365,92 @@ export function AssessmentScoreImportExport({
           onChange={handleFileUpload}
         />
       </div>
+
+      {/* Export Options Dialog */}
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pilih Data yang Akan Diekspor</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-no" 
+                  checked={exportFields.no}
+                  onCheckedChange={() => toggleExportField('no')}
+                />
+                <Label htmlFor="export-no" className="cursor-pointer">No</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-nim" 
+                  checked={exportFields.nim}
+                  onCheckedChange={() => toggleExportField('nim')}
+                />
+                <Label htmlFor="export-nim" className="cursor-pointer">NIM</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-nama" 
+                  checked={exportFields.nama}
+                  onCheckedChange={() => toggleExportField('nama')}
+                />
+                <Label htmlFor="export-nama" className="cursor-pointer">Nama</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-angkatan" 
+                  checked={exportFields.angkatan}
+                  onCheckedChange={() => toggleExportField('angkatan')}
+                />
+                <Label htmlFor="export-angkatan" className="cursor-pointer">Angkatan</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-kelas" 
+                  checked={exportFields.kelas}
+                  onCheckedChange={() => toggleExportField('kelas')}
+                />
+                <Label htmlFor="export-kelas" className="cursor-pointer">Kelas</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-email" 
+                  checked={exportFields.email}
+                  onCheckedChange={() => toggleExportField('email')}
+                />
+                <Label htmlFor="export-email" className="cursor-pointer">Email</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-scores" 
+                  checked={exportFields.scores}
+                  onCheckedChange={() => toggleExportField('scores')}
+                />
+                <Label htmlFor="export-scores" className="cursor-pointer">Nilai Tugas</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="export-capaian" 
+                  checked={exportFields.capaian}
+                  onCheckedChange={() => toggleExportField('capaian')}
+                />
+                <Label htmlFor="export-capaian" className="cursor-pointer">Capaian (%)</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExportDialog(false)}>
+              Batal
+            </Button>
+            <Button onClick={handleExportScores}>
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Import Preview Dialog */}
       <Dialog open={showImportDialog} onOpenChange={(open) => { if (!importing) setShowImportDialog(open); }}>

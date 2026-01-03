@@ -17,6 +17,7 @@ interface CLOWithPLOs extends CLO {
 
 interface LLOWithStats extends LLO {
   averageAchievement: number;
+  linkedAssessmentCodes: string[];
 }
 
 interface CLOWithStats extends CLO {
@@ -155,13 +156,18 @@ export function LearningAchievementStats({ courseId }: LearningAchievementStatsP
       ?.filter(al => al.llo_id === llo.id)
       .map(al => al.assessment_id) || [];
     
+    // Get assessment codes for this LLO
+    const linkedAssessmentCodes = assessments
+      ?.filter(a => linkedAssessmentIds.includes(a.id))
+      .map(a => a.code) || [];
+    
     if (linkedAssessmentIds.length === 0) {
-      return { ...llo, averageAchievement: 0 };
+      return { ...llo, averageAchievement: 0, linkedAssessmentCodes };
     }
 
     const studentIds = enrollments?.map(e => e.student_profile_id) || [];
     if (studentIds.length === 0) {
-      return { ...llo, averageAchievement: 0 };
+      return { ...llo, averageAchievement: 0, linkedAssessmentCodes };
     }
 
     let totalAchievement = 0;
@@ -180,7 +186,7 @@ export function LearningAchievementStats({ courseId }: LearningAchievementStatsP
     });
 
     const averageAchievement = studentCount > 0 ? totalAchievement / studentCount : 0;
-    return { ...llo, averageAchievement };
+    return { ...llo, averageAchievement, linkedAssessmentCodes };
   });
 
   // Calculate CLO achievement percentages
@@ -401,27 +407,41 @@ export function LearningAchievementStats({ courseId }: LearningAchievementStatsP
           {lloStats.length > 0 ? (
             <div className="space-y-3">
               {lloStats.map((llo) => (
-                <div key={llo.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 border">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <Badge variant="outline" className="font-mono shrink-0">{llo.code}</Badge>
-                    <span className="text-sm truncate">{llo.description}</span>
+                <div key={llo.id} className="p-3 rounded-lg bg-muted/30 border">
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <Badge variant="outline" className="font-mono shrink-0">{llo.code}</Badge>
+                      <span className="text-sm truncate">{llo.description}</span>
+                    </div>
+                    <Badge variant="secondary" className="shrink-0">{llo.weight_percentage}%</Badge>
+                    <div className="flex items-center gap-2 shrink-0 w-32">
+                      <Progress 
+                        value={llo.averageAchievement} 
+                        className={cn(
+                          "h-2 flex-1",
+                          llo.averageAchievement >= 60 ? "[&>div]:bg-success" : "[&>div]:bg-destructive"
+                        )}
+                      />
+                      <span className={cn(
+                        "font-bold text-sm w-12 text-right",
+                        llo.averageAchievement >= 60 ? "text-success" : "text-destructive"
+                      )}>
+                        {llo.averageAchievement.toFixed(1)}%
+                      </span>
+                    </div>
                   </div>
-                  <Badge variant="secondary" className="shrink-0">{llo.weight_percentage}%</Badge>
-                  <div className="flex items-center gap-2 shrink-0 w-32">
-                    <Progress 
-                      value={llo.averageAchievement} 
-                      className={cn(
-                        "h-2 flex-1",
-                        llo.averageAchievement >= 60 ? "[&>div]:bg-success" : "[&>div]:bg-destructive"
-                      )}
-                    />
-                    <span className={cn(
-                      "font-bold text-sm w-12 text-right",
-                      llo.averageAchievement >= 60 ? "text-success" : "text-destructive"
-                    )}>
-                      {llo.averageAchievement.toFixed(1)}%
-                    </span>
-                  </div>
+                  {llo.linkedAssessmentCodes.length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-border/50 flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Tugas Terkait:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {llo.linkedAssessmentCodes.map((code) => (
+                          <Badge key={code} variant="outline" className="text-xs font-mono">
+                            {code}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

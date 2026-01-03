@@ -42,6 +42,7 @@ export default function CourseDetail() {
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [classFilter, setClassFilter] = useState<string>('all');
+  const [yearFilter, setYearFilter] = useState<string>('all');
 
   const canEdit = role === 'admin' || role === 'dosen';
 
@@ -87,13 +88,21 @@ export default function CourseDetail() {
     }) || [];
   }, [enrollments, grades, assessments, assessmentScores, totalWeight, course?.passing_score]);
 
-  // Get unique class groups for filter
+  // Get unique class groups and enrollment years for filter
   const classGroups = useMemo(() => {
     const groups = new Set<string>();
     studentsWithGrades.forEach(s => {
       if (s?.class_group) groups.add(s.class_group);
     });
     return Array.from(groups).sort();
+  }, [studentsWithGrades]);
+
+  const enrollmentYears = useMemo(() => {
+    const years = new Set<number>();
+    studentsWithGrades.forEach(s => {
+      if (s?.enrollment_year) years.add(s.enrollment_year);
+    });
+    return Array.from(years).sort((a, b) => b - a);
   }, [studentsWithGrades]);
 
   // Filtered and sorted students
@@ -103,6 +112,11 @@ export default function CourseDetail() {
     // Apply class filter
     if (classFilter !== 'all') {
       result = result.filter(s => s?.class_group === classFilter);
+    }
+
+    // Apply year filter
+    if (yearFilter !== 'all') {
+      result = result.filter(s => s?.enrollment_year?.toString() === yearFilter);
     }
     
     // Apply sorting
@@ -148,7 +162,7 @@ export default function CourseDetail() {
     }
     
     return result;
-  }, [studentsWithGrades, classFilter, sortColumn, sortDirection]);
+  }, [studentsWithGrades, classFilter, yearFilter, sortColumn, sortDirection]);
 
   // Toggle sort handler
   const handleSort = (column: string) => {
@@ -439,6 +453,9 @@ export default function CourseDetail() {
                       id: e.student?.id || '',
                       full_name: e.student?.full_name || '',
                       nim: e.student?.nim || null,
+                      enrollment_year: e.student?.enrollment_year || null,
+                      class_group: e.student?.class_group || null,
+                      email: e.student?.email || null,
                     })) || []}
                     existingScores={assessmentScores?.map(s => ({
                       assessment_id: s.assessment_id,
@@ -471,6 +488,19 @@ export default function CourseDetail() {
                             NIM
                             {renderSortIcon('nim')}
                           </button>
+                        </TableHead>
+                        <TableHead className="font-semibold">
+                          <Select value={yearFilter} onValueChange={setYearFilter}>
+                            <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground mx-auto">
+                              <SelectValue placeholder="Angkatan" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Semua Angkatan</SelectItem>
+                              {enrollmentYears.map(year => (
+                                <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </TableHead>
                         <TableHead className="font-semibold">
                           <Select value={classFilter} onValueChange={setClassFilter}>
@@ -536,6 +566,7 @@ export default function CourseDetail() {
                             <TableCell className="font-mono text-sm text-center">
                               {student?.nim || '-'}
                             </TableCell>
+                            <TableCell className="text-center">{student?.enrollment_year || '-'}</TableCell>
                             <TableCell className="text-center">{student?.class_group || '-'}</TableCell>
                             {/* Assessment score cells */}
                             {assessments && assessments.length > 0 && assessments.map(assessment => {
@@ -624,7 +655,7 @@ export default function CourseDetail() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={6 + (assessments?.length || 0)} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={7 + (assessments?.length || 0)} className="text-center py-8 text-muted-foreground">
                             Belum ada mahasiswa terdaftar
                           </TableCell>
                         </TableRow>

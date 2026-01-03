@@ -1,12 +1,14 @@
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Target } from 'lucide-react';
+import { Target, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { PLO, CLO, LLO, Course } from '@/lib/types';
+import { PLO, CLO, LLO, Course, Curriculum } from '@/lib/types';
 
 interface PLOAchievementData {
   plo: PLO;
@@ -15,6 +17,9 @@ interface PLOAchievementData {
 }
 
 export function PLOAchievementChart() {
+  const [curriculumFilter, setCurriculumFilter] = useState<string>('all');
+  const [yearFilter, setYearFilter] = useState<string>('all');
+
   // Fetch all PLOs
   const { data: plos } = useQuery({
     queryKey: ['all-plos'],
@@ -38,6 +43,16 @@ export function PLOAchievementChart() {
         .order('code');
       if (error) throw error;
       return data as Course[];
+    },
+  });
+
+  // Fetch curricula
+  const { data: curricula } = useQuery({
+    queryKey: ['curricula'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('curricula').select('*').order('name');
+      if (error) throw error;
+      return data as Curriculum[];
     },
   });
 
@@ -113,13 +128,13 @@ export function PLOAchievementChart() {
     },
   });
 
-  // Fetch all enrollments
+  // Fetch all enrollments with student profile for year filter
   const { data: allEnrollments } = useQuery({
-    queryKey: ['all-enrollments'],
+    queryKey: ['all-enrollments-with-profiles'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('enrollments')
-        .select('*');
+        .select('*, profiles:student_profile_id(enrollment_year)');
       if (error) throw error;
       return data;
     },
@@ -137,95 +152,124 @@ export function PLOAchievementChart() {
     },
   });
 
-  // Calculate PLO achievements across all courses
-  const ploAchievements: PLOAchievementData[] = (plos || []).map(plo => {
-    // Get all courses linked to this PLO
-    const linkedCourseIds = coursePlos
-      ?.filter(cp => cp.plo_id === plo.id)
-      .map(cp => cp.course_id) || [];
+  // Get unique enrollment years
+  const enrollmentYears = useMemo(() => {
+    const years = new Set<number>();
+    allEnrollments?.forEach(e => {
+      const year = (e.profiles as any)?.enrollment_year;
+      if (year) years.add(year);
+    });
+    return Array.from(years).sort((a, b) => b - a);
+  }, [allEnrollments]);
 
-    const linkedCourses: { course: Course; achievement: number }[] = [];
+  // Filter courses by curriculum
+  const filteredCourses = useMemo(() => {
+    if (!courses) return [];
+    if (curriculumFilter === 'all') return courses;
+    return courses.filter(c => c.curriculum_id === curriculumFilter);
+  }, [courses, curriculumFilter]);
 
-    linkedCourseIds.forEach(courseId => {
-      const course = courses?.find(c => c.id === courseId);
-      if (!course) return;
+  // Filter enrollments by year
+  const filteredEnrollments = useMemo(() => {
+    if (!allEnrollments) return [];
+    if (yearFilter === 'all') return allEnrollments;
+    return allEnrollments.filter(e => {
+      const year = (e.profiles as any)?.enrollment_year;
+      return year?.toString() === yearFilter;
+    });
+  }, [allEnrollments, yearFilter]);
 
-      // Get CLOs for this course that are linked to this PLO
-      const courseClos = allClos?.filter(c => c.course_id === courseId) || [];
-      const ploLinkedCloPlos = allCloPlos?.filter(
-        cp => cp.plo_id === plo.id && courseClos.some(c => c.id === cp.clo_id)
-      ) || [];
+  // Calculate PLO achievements across filtered courses
+  const ploAchievements: PLOAchievementData[] = useMemo(() => {
+    return (plos || []).map(plo => {
+      // Get all courses linked to this PLO (filtered)
+      const linkedCourseIds = coursePlos
+        ?.filter(cp => cp.plo_id === plo.id && filteredCourses.some(c => c.id === cp.course_id))
+        .map(cp => cp.course_id) || [];
 
-      // Calculate CLO achievements for this course
-      let totalWeight = 0;
-      let weightedSum = 0;
+      const linkedCourses: { course: Course; achievement: number }[] = [];
 
-      ploLinkedCloPlos.forEach(cloPlo => {
-        const clo = courseClos.find(c => c.id === cloPlo.clo_id);
-        if (!clo) return;
+      linkedCourseIds.forEach(courseId => {
+        const course = filteredCourses?.find(c => c.id === courseId);
+        if (!course) return;
 
-        const cloWeight = Number(cloPlo.weight_percentage) || 0;
-        totalWeight += cloWeight;
+        // Get CLOs for this course that are linked to this PLO
+        const courseClos = allClos?.filter(c => c.course_id === courseId) || [];
+        const ploLinkedCloPlos = allCloPlos?.filter(
+          cp => cp.plo_id === plo.id && courseClos.some(c => c.id === cp.clo_id)
+        ) || [];
 
-        // Calculate CLO achievement
-        const cloLlos = allLlos?.filter(l => l.clo_id === clo.id) || [];
-        const lloTotalWeight = cloLlos.reduce((sum, l) => sum + l.weight_percentage, 0);
+        // Calculate CLO achievements for this course
+        let totalWeight = 0;
+        let weightedSum = 0;
 
-        let cloWeightedSum = 0;
-        cloLlos.forEach(llo => {
-          // Get assessments linked to this LLO
-          const linkedAssessmentIds = allAssessmentLlos
-            ?.filter(al => al.llo_id === llo.id)
-            .map(al => al.assessment_id) || [];
+        ploLinkedCloPlos.forEach(cloPlo => {
+          const clo = courseClos.find(c => c.id === cloPlo.clo_id);
+          if (!clo) return;
 
-          // Get enrolled students for this course
-          const courseEnrollments = allEnrollments?.filter(e => e.course_id === courseId) || [];
-          const studentIds = courseEnrollments.map(e => e.student_profile_id);
+          const cloWeight = Number(cloPlo.weight_percentage) || 0;
+          totalWeight += cloWeight;
 
-          if (studentIds.length === 0 || linkedAssessmentIds.length === 0) return;
+          // Calculate CLO achievement
+          const cloLlos = allLlos?.filter(l => l.clo_id === clo.id) || [];
+          const lloTotalWeight = cloLlos.reduce((sum, l) => sum + l.weight_percentage, 0);
 
-          let lloTotal = 0;
-          let lloCount = 0;
+          let cloWeightedSum = 0;
+          cloLlos.forEach(llo => {
+            // Get assessments linked to this LLO
+            const linkedAssessmentIds = allAssessmentLlos
+              ?.filter(al => al.llo_id === llo.id)
+              .map(al => al.assessment_id) || [];
 
-          studentIds.forEach(studentId => {
-            const studentScores = allScores?.filter(
-              s => linkedAssessmentIds.includes(s.assessment_id) && s.student_profile_id === studentId
-            ) || [];
+            // Get enrolled students for this course (filtered by year)
+            const courseEnrollments = filteredEnrollments?.filter(e => e.course_id === courseId) || [];
+            const studentIds = courseEnrollments.map(e => e.student_profile_id);
 
-            if (studentScores.length > 0) {
-              const avg = studentScores.reduce((sum, s) => sum + Number(s.score), 0) / studentScores.length;
-              lloTotal += avg;
-              lloCount++;
+            if (studentIds.length === 0 || linkedAssessmentIds.length === 0) return;
+
+            let lloTotal = 0;
+            let lloCount = 0;
+
+            studentIds.forEach(studentId => {
+              const studentScores = allScores?.filter(
+                s => linkedAssessmentIds.includes(s.assessment_id) && s.student_profile_id === studentId
+              ) || [];
+
+              if (studentScores.length > 0) {
+                const avg = studentScores.reduce((sum, s) => sum + Number(s.score), 0) / studentScores.length;
+                lloTotal += avg;
+                lloCount++;
+              }
+            });
+
+            const lloAvg = lloCount > 0 ? lloTotal / lloCount : 0;
+            if (lloTotalWeight > 0) {
+              cloWeightedSum += (lloAvg * llo.weight_percentage) / 100;
             }
           });
 
-          const lloAvg = lloCount > 0 ? lloTotal / lloCount : 0;
-          if (lloTotalWeight > 0) {
-            cloWeightedSum += (lloAvg * llo.weight_percentage) / 100;
+          const cloAchievement = lloTotalWeight > 0 ? (cloWeightedSum / lloTotalWeight) * 100 : 0;
+          if (totalWeight > 0) {
+            weightedSum += (cloAchievement * cloWeight) / 100;
           }
         });
 
-        const cloAchievement = lloTotalWeight > 0 ? (cloWeightedSum / lloTotalWeight) * 100 : 0;
-        if (totalWeight > 0) {
-          weightedSum += (cloAchievement * cloWeight) / 100;
-        }
+        const courseAchievement = totalWeight > 0 ? (weightedSum / totalWeight) * 100 : 0;
+        linkedCourses.push({ course, achievement: courseAchievement });
       });
 
-      const courseAchievement = totalWeight > 0 ? (weightedSum / totalWeight) * 100 : 0;
-      linkedCourses.push({ course, achievement: courseAchievement });
+      // Calculate average PLO achievement across all linked courses
+      const avgAchievement = linkedCourses.length > 0
+        ? linkedCourses.reduce((sum, lc) => sum + lc.achievement, 0) / linkedCourses.length
+        : 0;
+
+      return {
+        plo,
+        achievementPercentage: avgAchievement,
+        linkedCourses,
+      };
     });
-
-    // Calculate average PLO achievement across all linked courses
-    const avgAchievement = linkedCourses.length > 0
-      ? linkedCourses.reduce((sum, lc) => sum + lc.achievement, 0) / linkedCourses.length
-      : 0;
-
-    return {
-      plo,
-      achievementPercentage: avgAchievement,
-      linkedCourses,
-    };
-  });
+  }, [plos, coursePlos, filteredCourses, allClos, allCloPlos, allLlos, allAssessmentLlos, filteredEnrollments, allScores]);
 
   const chartData = ploAchievements.map(pa => ({
     code: pa.plo.code,
@@ -241,13 +285,42 @@ export function PLOAchievementChart() {
   return (
     <Card className="animate-slide-up">
       <CardHeader>
-        <CardTitle className="text-lg flex items-center gap-2">
-          <Target className="h-5 w-5 text-primary" />
-          Statistik Capaian CPL/PLO
-        </CardTitle>
-        <CardDescription>
-          Persentase capaian CPL berdasarkan rata-rata capaian pada setiap mata kuliah terkait
-        </CardDescription>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              Statistik Capaian CPL/PLO
+            </CardTitle>
+            <CardDescription>
+              Persentase capaian CPL berdasarkan rata-rata capaian pada setiap mata kuliah terkait
+            </CardDescription>
+          </div>
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Select value={curriculumFilter} onValueChange={setCurriculumFilter}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="Kurikulum" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Kurikulum</SelectItem>
+                {curricula?.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={yearFilter} onValueChange={setYearFilter}>
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="Angkatan" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Angkatan</SelectItem>
+                {enrollmentYears.map(year => (
+                  <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         {chartData.length > 0 ? (

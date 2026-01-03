@@ -1,16 +1,77 @@
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { useCoursesWithStats } from '@/hooks/useCourses';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, TrendingUp, ChevronRight } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Users, TrendingUp, ChevronRight, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { Curriculum } from '@/lib/types';
 
 export default function MataKuliah() {
   const { data: courses, isLoading, error } = useCoursesWithStats();
+  
+  // Filter states
+  const [codeFilter, setCodeFilter] = useState('all');
+  const [curriculumFilter, setCurriculumFilter] = useState('all');
+  const [semesterFilter, setSemesterFilter] = useState('all');
+  const [instructorFilter, setInstructorFilter] = useState('all');
+
+  // Fetch curricula for filter and display
+  const { data: curricula } = useQuery({
+    queryKey: ['curricula'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('curricula').select('*').order('name');
+      if (error) throw error;
+      return data as Curriculum[];
+    },
+  });
+
+  // Get unique values for filters
+  const filterOptions = useMemo(() => {
+    const codes = new Set<string>();
+    const semesters = new Set<string>();
+    const instructorNames = new Set<string>();
+    
+    courses?.forEach(course => {
+      codes.add(course.code);
+      if (course.semester) semesters.add(course.semester);
+      course.instructors.forEach(i => {
+        if (i.full_name) instructorNames.add(i.full_name);
+      });
+    });
+    
+    return {
+      codes: Array.from(codes).sort(),
+      semesters: Array.from(semesters).sort(),
+      instructors: Array.from(instructorNames).sort(),
+    };
+  }, [courses]);
+
+  // Get curriculum name helper
+  const getCurriculumName = (curriculumId?: string | null) => {
+    if (!curriculumId) return null;
+    return curricula?.find(c => c.id === curriculumId)?.name || null;
+  };
+
+  // Filtered courses
+  const filteredCourses = useMemo(() => {
+    if (!courses) return [];
+    
+    return courses.filter(course => {
+      if (codeFilter !== 'all' && course.code !== codeFilter) return false;
+      if (curriculumFilter !== 'all' && course.curriculum_id !== curriculumFilter) return false;
+      if (semesterFilter !== 'all' && course.semester !== semesterFilter) return false;
+      if (instructorFilter !== 'all' && !course.instructors.some(i => i.full_name === instructorFilter)) return false;
+      return true;
+    });
+  }, [courses, codeFilter, curriculumFilter, semesterFilter, instructorFilter]);
 
   return (
     <Layout>
@@ -20,7 +81,7 @@ export default function MataKuliah() {
             Daftar Mata Kuliah
           </h1>
           <p className="text-muted-foreground text-lg">
-            Program Bahasa Arab - 5 Mata Kuliah Utama
+            Program Bahasa Arab - {courses?.length || 0} Mata Kuliah
           </p>
         </div>
 
@@ -49,18 +110,67 @@ export default function MataKuliah() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/50 hover:bg-muted/50">
-                    <TableHead className="font-semibold">Kode</TableHead>
-                    <TableHead className="font-semibold">Nama Mata Kuliah</TableHead>
-                    <TableHead className="font-semibold">Dosen Pengajar</TableHead>
-                    <TableHead className="font-semibold text-center">Mahasiswa</TableHead>
-                    <TableHead className="font-semibold text-center">Rata-rata</TableHead>
-                    <TableHead className="font-semibold text-center">Semester</TableHead>
-                    <TableHead></TableHead>
+                  <TableRow className="bg-primary hover:bg-primary">
+                    <TableHead className="font-semibold text-primary-foreground">
+                      <Select value={codeFilter} onValueChange={setCodeFilter}>
+                        <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground">
+                          <SelectValue placeholder="Kode" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Semua Kode</SelectItem>
+                          {filterOptions.codes.map(code => (
+                            <SelectItem key={code} value={code}>{code}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableHead>
+                    <TableHead className="font-semibold text-primary-foreground">Nama Mata Kuliah</TableHead>
+                    <TableHead className="font-semibold text-primary-foreground">
+                      <Select value={curriculumFilter} onValueChange={setCurriculumFilter}>
+                        <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground">
+                          <SelectValue placeholder="Kurikulum" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Semua Kurikulum</SelectItem>
+                          {curricula?.map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableHead>
+                    <TableHead className="font-semibold text-primary-foreground">
+                      <Select value={instructorFilter} onValueChange={setInstructorFilter}>
+                        <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground">
+                          <SelectValue placeholder="Dosen Pengajar" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Semua Dosen</SelectItem>
+                          {filterOptions.instructors.map(name => (
+                            <SelectItem key={name} value={name}>{name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableHead>
+                    <TableHead className="font-semibold text-primary-foreground text-center">Mahasiswa</TableHead>
+                    <TableHead className="font-semibold text-primary-foreground text-center">Rata-rata</TableHead>
+                    <TableHead className="font-semibold text-primary-foreground">
+                      <Select value={semesterFilter} onValueChange={setSemesterFilter}>
+                        <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground mx-auto">
+                          <SelectValue placeholder="Semester" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Semua Semester</SelectItem>
+                          {filterOptions.semesters.map(sem => (
+                            <SelectItem key={sem} value={sem}>{sem}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </TableHead>
+                    <TableHead className="text-primary-foreground"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {courses?.map((course, i) => (
+                  {filteredCourses.map((course, i) => (
                     <TableRow 
                       key={course.id} 
                       className="group cursor-pointer hover:bg-muted/30 transition-colors"
@@ -75,6 +185,13 @@ export default function MataKuliah() {
                         <Link to={`/mata-kuliah/${course.id}`} className="font-medium hover:text-primary transition-colors">
                           {course.name}
                         </Link>
+                      </TableCell>
+                      <TableCell>
+                        {getCurriculumName(course.curriculum_id) ? (
+                          <Badge variant="outline">{getCurriculumName(course.curriculum_id)}</Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -128,6 +245,13 @@ export default function MataKuliah() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {filteredCourses.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        Tidak ada mata kuliah yang sesuai filter
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>
