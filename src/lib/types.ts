@@ -10,6 +10,15 @@ export interface Profile {
   program?: string;
   class_group?: string;
   photo_url?: string;
+  enrollment_year?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClassGroup {
+  id: string;
+  name: string;
+  description?: string;
   created_at: string;
   updated_at: string;
 }

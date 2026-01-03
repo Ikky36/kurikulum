@@ -13,8 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Pencil, Target, BookOpen, Link2 } from 'lucide-react';
-import { PLO, Course, CoursePLO } from '@/lib/types';
+import { Plus, Trash2, Pencil, Target, BookOpen, Link2, Users, Download, Upload } from 'lucide-react';
+import { PLO, Course, CoursePLO, ClassGroup, Profile } from '@/lib/types';
+import * as XLSX from 'xlsx';
 
 export function KurikulumTab() {
   const { toast } = useToast();
@@ -40,6 +41,13 @@ export function KurikulumTab() {
   const [showLinkPloDialog, setShowLinkPloDialog] = useState(false);
   const [selectedCourseForLink, setSelectedCourseForLink] = useState<Course | null>(null);
   const [linkingPlos, setLinkingPlos] = useState<string[]>([]);
+
+  // Class state
+  const [showClassDialog, setShowClassDialog] = useState(false);
+  const [editingClass, setEditingClass] = useState<ClassGroup | null>(null);
+  const [className, setClassName] = useState('');
+  const [classDescription, setClassDescription] = useState('');
+  const [selectedClassForStudents, setSelectedClassForStudents] = useState<string>('');
 
   // Fetch PLOs
   const { data: plos } = useQuery({
@@ -80,6 +88,40 @@ export function KurikulumTab() {
         plo: cp.plos as unknown as PLO
       })) as CoursePLO[];
     },
+  });
+
+  // Fetch Class Groups
+  const { data: classGroups, refetch: refetchClasses } = useQuery({
+    queryKey: ['class-groups'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('class_groups')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      return data as ClassGroup[];
+    },
+  });
+
+  // Fetch Students (mahasiswa only)
+  const { data: students, refetch: refetchStudents } = useQuery({
+    queryKey: ['students-for-class', selectedClassForStudents],
+    queryFn: async () => {
+      let query = supabase
+        .from('profiles')
+        .select('*')
+        .eq('role', 'mahasiswa')
+        .order('full_name');
+      
+      if (selectedClassForStudents && selectedClassForStudents !== 'all') {
+        query = query.eq('class_group', selectedClassForStudents);
+      }
+      
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as Profile[];
+    },
+    enabled: true,
   });
 
   // PLO mutations
@@ -220,6 +262,51 @@ export function KurikulumTab() {
     },
   });
 
+  // Class mutations
+  const createClassMutation = useMutation({
+    mutationFn: async (classData: { name: string; description?: string }) => {
+      const { error } = await supabase.from('class_groups').insert([classData]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['class-groups'] });
+      toast({ title: 'Berhasil', description: 'Kelas berhasil ditambahkan' });
+      resetClassForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const updateClassMutation = useMutation({
+    mutationFn: async ({ id, ...classData }: Partial<ClassGroup> & { id: string }) => {
+      const { error } = await supabase.from('class_groups').update(classData).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['class-groups'] });
+      toast({ title: 'Berhasil', description: 'Kelas berhasil diperbarui' });
+      resetClassForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const deleteClassMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('class_groups').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['class-groups'] });
+      toast({ title: 'Berhasil', description: 'Kelas berhasil dihapus' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const resetPloForm = () => {
     setPloCode('');
     setPloDescription('');
@@ -236,6 +323,90 @@ export function KurikulumTab() {
     setSelectedPlos([]);
     setEditingCourse(null);
     setShowCourseDialog(false);
+  };
+
+  const resetClassForm = () => {
+    setClassName('');
+    setClassDescription('');
+    setEditingClass(null);
+    setShowClassDialog(false);
+  };
+
+  const openEditClass = (classItem: ClassGroup) => {
+    setEditingClass(classItem);
+    setClassName(classItem.name);
+    setClassDescription(classItem.description || '');
+    setShowClassDialog(true);
+  };
+
+  const handleSaveClass = () => {
+    if (editingClass) {
+      updateClassMutation.mutate({ id: editingClass.id, name: className, description: classDescription || undefined });
+    } else {
+      createClassMutation.mutate({ name: className, description: classDescription || undefined });
+    }
+  };
+
+  // Export students of a class
+  const handleExportClassStudents = (classGroupName: string) => {
+    const classStudents = students?.filter(s => s.class_group === classGroupName) || [];
+    if (classStudents.length === 0) {
+      toast({ title: 'Info', description: 'Tidak ada mahasiswa di kelas ini' });
+      return;
+    }
+
+    const exportData = classStudents.map((s, index) => ({
+      No: index + 1,
+      NIM: s.nim || '',
+      'Nama Lengkap': s.full_name,
+      Email: s.email,
+      Kelas: s.class_group || '',
+      Angkatan: s.enrollment_year || '',
+      'Program Studi': s.program || '',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Mahasiswa');
+    XLSX.writeFile(wb, `Mahasiswa_Kelas_${classGroupName}.xlsx`);
+    toast({ title: 'Berhasil', description: `Data mahasiswa kelas ${classGroupName} berhasil diekspor` });
+  };
+
+  // Import students to a class
+  const handleImportClassStudents = async (e: React.ChangeEvent<HTMLInputElement>, classGroupName: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json<any>(ws);
+
+        let updatedCount = 0;
+        for (const row of data) {
+          const nim = row['NIM']?.toString();
+          if (!nim) continue;
+
+          const { error } = await supabase
+            .from('profiles')
+            .update({ class_group: classGroupName })
+            .eq('nim', nim);
+
+          if (!error) updatedCount++;
+        }
+
+        toast({ title: 'Berhasil', description: `${updatedCount} mahasiswa berhasil diperbarui ke kelas ${classGroupName}` });
+        refetchStudents();
+      } catch (error: any) {
+        toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = '';
   };
 
   const openEditPlo = (plo: PLO) => {
@@ -291,7 +462,7 @@ export function KurikulumTab() {
   return (
     <div className="space-y-6">
       <Tabs defaultValue="plo" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="plo" className="flex items-center gap-2">
             <Target className="h-4 w-4" />
             CPL/PLO
@@ -299,6 +470,10 @@ export function KurikulumTab() {
           <TabsTrigger value="courses" className="flex items-center gap-2">
             <BookOpen className="h-4 w-4" />
             Mata Kuliah
+          </TabsTrigger>
+          <TabsTrigger value="classes" className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Kelas
           </TabsTrigger>
         </TabsList>
 
@@ -354,14 +529,16 @@ export function KurikulumTab() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
+                    <TableHead className="w-12">No</TableHead>
                     <TableHead className="w-32">Kode</TableHead>
                     <TableHead>Deskripsi</TableHead>
                     <TableHead className="w-24">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {plos?.map((plo) => (
+                  {plos?.map((plo, index) => (
                     <TableRow key={plo.id}>
+                      <TableCell className="text-center">{index + 1}</TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="font-mono">{plo.code}</Badge>
                       </TableCell>
@@ -385,7 +562,7 @@ export function KurikulumTab() {
                   ))}
                   {(!plos || plos.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                         Belum ada CPL/PLO. Klik "Tambah CPL" untuk menambahkan.
                       </TableCell>
                     </TableRow>
@@ -480,6 +657,7 @@ export function KurikulumTab() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
+                    <TableHead className="w-12">No</TableHead>
                     <TableHead className="w-28">Kode</TableHead>
                     <TableHead>Nama</TableHead>
                     <TableHead>Semester</TableHead>
@@ -488,10 +666,11 @@ export function KurikulumTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {courses?.map((course) => {
+                  {courses?.map((course, index) => {
                     const linkedPlos = getCoursePloList(course.id);
                     return (
                       <TableRow key={course.id}>
+                        <TableCell className="text-center">{index + 1}</TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="font-mono">{course.code}</Badge>
                         </TableCell>
@@ -533,8 +712,135 @@ export function KurikulumTab() {
                   })}
                   {(!courses || courses.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         Belum ada mata kuliah. Klik "Tambah Mata Kuliah" untuk menambahkan.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Classes Tab */}
+        <TabsContent value="classes">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Kelola Kelas</CardTitle>
+                  <CardDescription>Buat kelas dan kelola mahasiswa tiap kelas</CardDescription>
+                </div>
+                <Dialog open={showClassDialog} onOpenChange={(open) => { if (!open) resetClassForm(); setShowClassDialog(open); }}>
+                  <DialogTrigger asChild>
+                    <Button size="sm">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Tambah Kelas
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>{editingClass ? 'Edit Kelas' : 'Tambah Kelas Baru'}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Nama Kelas</Label>
+                        <Input 
+                          value={className} 
+                          onChange={(e) => setClassName(e.target.value)} 
+                          placeholder="Contoh: A, B, C, atau 2024-A" 
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Deskripsi (opsional)</Label>
+                        <Textarea 
+                          value={classDescription} 
+                          onChange={(e) => setClassDescription(e.target.value)} 
+                          placeholder="Deskripsi kelas..."
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button onClick={handleSaveClass} disabled={!className}>
+                        {editingClass ? 'Simpan' : 'Tambah'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="w-12">No</TableHead>
+                    <TableHead>Nama Kelas</TableHead>
+                    <TableHead>Deskripsi</TableHead>
+                    <TableHead>Jumlah Mahasiswa</TableHead>
+                    <TableHead className="w-48">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {classGroups?.map((classItem, index) => {
+                    const studentCount = students?.filter(s => s.class_group === classItem.name).length || 0;
+                    return (
+                      <TableRow key={classItem.id}>
+                        <TableCell className="text-center">{index + 1}</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{classItem.name}</Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">{classItem.description || '-'}</TableCell>
+                        <TableCell>{studentCount} mahasiswa</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleExportClassStudents(classItem.name)}
+                              title="Export mahasiswa"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <label>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                asChild
+                                title="Import mahasiswa"
+                              >
+                                <span>
+                                  <Upload className="h-4 w-4" />
+                                </span>
+                              </Button>
+                              <input
+                                type="file"
+                                accept=".xlsx,.xls"
+                                className="hidden"
+                                onChange={(e) => handleImportClassStudents(e, classItem.name)}
+                              />
+                            </label>
+                            <Button variant="ghost" size="icon" onClick={() => openEditClass(classItem)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="text-destructive hover:text-destructive"
+                              onClick={() => deleteClassMutation.mutate(classItem.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  {(!classGroups || classGroups.length === 0) && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        Belum ada kelas. Klik "Tambah Kelas" untuk menambahkan.
                       </TableCell>
                     </TableRow>
                   )}

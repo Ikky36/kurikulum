@@ -62,7 +62,7 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { email, password, full_name, role, nim, nip, program, class_group } = await req.json();
+    const { email, password, full_name, role, nim, nip, program, class_group, enrollment_year } = await req.json();
 
     if (!email || !password || !full_name || !role) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -94,6 +94,7 @@ serve(async (req) => {
         nip: nip || null,
         program: program || null,
         class_group: class_group || null,
+        enrollment_year: enrollment_year || null,
       })
       .eq("id", newUser.user.id);
 
