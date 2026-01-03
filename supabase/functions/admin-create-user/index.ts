@@ -15,17 +15,23 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
     
-    // Create admin client
+    // Create admin client with service role
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Verify the requesting user is an admin
-    const authHeader = req.headers.get("Authorization")!;
-    const token = authHeader.replace("Bearer ", "");
-    
-    const { data: { user: requestingUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    // Create client with anon key to verify the user's JWT
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+      global: {
+        headers: { Authorization: req.headers.get("Authorization")! },
+      },
+    });
+
+    // Verify the requesting user using the client with their token
+    const { data: { user: requestingUser }, error: authError } = await supabaseClient.auth.getUser();
     if (authError || !requestingUser) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
