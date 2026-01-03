@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -14,9 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target, Eye, EyeOff } from 'lucide-react';
-import { Navigate } from 'react-router-dom';
-import { Course, Profile, AppRole } from '@/lib/types';
+import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target, Eye, EyeOff, Settings } from 'lucide-react';
+import { Navigate, Link } from 'react-router-dom';
+import { Course, Profile, AppRole, Program } from '@/lib/types';
 import { UserImportExport } from '@/components/admin/UserImportExport';
 import { UserPagination } from '@/components/admin/UserPagination';
 import { KurikulumTab } from '@/components/admin/KurikulumTab';
@@ -31,18 +31,10 @@ export default function DashboardAdmin() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // Course management state
-  const [showCourseDialog, setShowCourseDialog] = useState(false);
-  const [courseCode, setCourseCode] = useState('');
-  const [courseName, setCourseName] = useState('');
-  const [courseSemester, setCourseSemester] = useState('');
-  const [coursePassingScore, setCoursePassingScore] = useState('60');
-  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
-
   // Assignment state
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [selectedCourseForAssign, setSelectedCourseForAssign] = useState('');
-  const [selectedDosenForAssign, setSelectedDosenForAssign] = useState('');
+  const [selectedDosenForAssign, setSelectedDosenForAssign] = useState<string[]>([]);
 
   // Role management state
   const [showRoleDialog, setShowRoleDialog] = useState(false);
@@ -58,18 +50,17 @@ export default function DashboardAdmin() {
   const [userPasswordConfirm, setUserPasswordConfirm] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
-  const [userRole, setUserRole] = useState<'mahasiswa' | 'dosen'>('mahasiswa');
+  const [userRole, setUserRole] = useState<'mahasiswa' | 'dosen' | 'admin' | 'sub_admin'>('mahasiswa');
   const [userNim, setUserNim] = useState('');
   const [userNip, setUserNip] = useState('');
   const [userProgram, setUserProgram] = useState('');
-  const [userClassGroup, setUserClassGroup] = useState('');
   const [userEnrollmentYear, setUserEnrollmentYear] = useState('');
   const [showDeleteUserDialog, setShowDeleteUserDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
   
   // Filter and search state
   const [userSearchQuery, setUserSearchQuery] = useState('');
-  const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'mahasiswa' | 'dosen'>('all');
+  const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'mahasiswa' | 'dosen' | 'admin' | 'sub_admin'>('all');
   
   // Pagination state
   const [userCurrentPage, setUserCurrentPage] = useState(1);
@@ -121,57 +112,25 @@ export default function DashboardAdmin() {
     },
   });
 
-  // Course mutations
-  const createCourseMutation = useMutation({
-    mutationFn: async (course: { code: string; name: string; semester?: string; passing_score?: number }) => {
-      const { error } = await supabase.from('courses').insert([course]);
+  // Fetch programs from settings
+  const { data: programs } = useQuery({
+    queryKey: ['programs'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('programs').select('*').order('name');
       if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
-      toast({ title: 'Berhasil', description: 'Mata kuliah berhasil dibuat' });
-      resetCourseForm();
-    },
-    onError: (error: any) => {
-      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const updateCourseMutation = useMutation({
-    mutationFn: async ({ id, ...course }: Partial<Course> & { id: string }) => {
-      const { error } = await supabase.from('courses').update(course).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
-      toast({ title: 'Berhasil', description: 'Mata kuliah berhasil diperbarui' });
-      resetCourseForm();
-    },
-    onError: (error: any) => {
-      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const deleteCourseMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('courses').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
-      toast({ title: 'Berhasil', description: 'Mata kuliah berhasil dihapus' });
-    },
-    onError: (error: any) => {
-      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+      return data as Program[];
     },
   });
 
   // Assignment mutations
   const assignInstructorMutation = useMutation({
-    mutationFn: async ({ courseId, instructorId }: { courseId: string; instructorId: string }) => {
-      const { error } = await supabase
-        .from('course_instructors')
-        .insert({ course_id: courseId, instructor_profile_id: instructorId });
+    mutationFn: async ({ courseId, instructorIds }: { courseId: string; instructorIds: string[] }) => {
+      // Insert multiple instructors
+      const insertData = instructorIds.map(id => ({
+        course_id: courseId,
+        instructor_profile_id: id,
+      }));
+      const { error } = await supabase.from('course_instructors').insert(insertData);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -179,7 +138,7 @@ export default function DashboardAdmin() {
       toast({ title: 'Berhasil', description: 'Dosen berhasil ditugaskan' });
       setShowAssignDialog(false);
       setSelectedCourseForAssign('');
-      setSelectedDosenForAssign('');
+      setSelectedDosenForAssign([]);
     },
     onError: (error: any) => {
       toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
@@ -240,11 +199,10 @@ export default function DashboardAdmin() {
       full_name: string;
       email: string;
       password: string;
-      role: 'mahasiswa' | 'dosen';
+      role: 'mahasiswa' | 'dosen' | 'admin' | 'sub_admin';
       nim?: string;
       nip?: string;
       program?: string;
-      class_group?: string;
       enrollment_year?: number;
     }) => {
       // Use edge function to create user with admin privileges
@@ -324,7 +282,7 @@ export default function DashboardAdmin() {
     return <Navigate to="/auth" replace />;
   }
 
-  if (role && role !== 'admin') {
+  if (role && role !== 'admin' && role !== 'sub_admin') {
     return <Navigate to={`/dashboard/${role}`} replace />;
   }
 
@@ -383,15 +341,6 @@ export default function DashboardAdmin() {
     }
   };
 
-  const resetCourseForm = () => {
-    setCourseCode('');
-    setCourseName('');
-    setCourseSemester('');
-    setCoursePassingScore('60');
-    setEditingCourse(null);
-    setShowCourseDialog(false);
-  };
-
   const resetUserForm = () => {
     setUserFullName('');
     setUserEmail('');
@@ -403,7 +352,6 @@ export default function DashboardAdmin() {
     setUserNim('');
     setUserNip('');
     setUserProgram('');
-    setUserClassGroup('');
     setUserEnrollmentYear('');
     setEditingUser(null);
     setShowUserDialog(false);
@@ -412,7 +360,8 @@ export default function DashboardAdmin() {
   // Filter users based on search and role
   const filteredUsers = useMemo(() => {
     return allUsers?.filter(u => {
-      if (u.role === 'admin') return false;
+      // Exclude current user if they're admin
+      if (u.id === user?.id) return false;
       
       // Apply role filter
       if (userRoleFilter !== 'all' && u.role !== userRoleFilter) return false;
@@ -429,7 +378,7 @@ export default function DashboardAdmin() {
       
       return true;
     }) || [];
-  }, [allUsers, userRoleFilter, userSearchQuery]);
+  }, [allUsers, userRoleFilter, userSearchQuery, user?.id]);
 
   // Paginated users
   const totalUserPages = Math.ceil(filteredUsers.length / userPageSize);
@@ -444,7 +393,7 @@ export default function DashboardAdmin() {
     setUserCurrentPage(1);
   };
 
-  const handleUserRoleFilterChange = (filter: 'all' | 'mahasiswa' | 'dosen') => {
+  const handleUserRoleFilterChange = (filter: 'all' | 'mahasiswa' | 'dosen' | 'admin' | 'sub_admin') => {
     setUserRoleFilter(filter);
     setUserCurrentPage(1);
   };
@@ -452,21 +401,6 @@ export default function DashboardAdmin() {
   const handleUserPageSizeChange = (size: number) => {
     setUserPageSize(size);
     setUserCurrentPage(1);
-  };
-
-  const handleSaveCourse = () => {
-    const courseData = {
-      code: courseCode,
-      name: courseName,
-      semester: courseSemester,
-      passing_score: parseInt(coursePassingScore) || 60,
-    };
-
-    if (editingCourse) {
-      updateCourseMutation.mutate({ ...courseData, id: editingCourse.id });
-    } else {
-      createCourseMutation.mutate(courseData);
-    }
   };
 
   const handleSaveUser = () => {
@@ -481,11 +415,10 @@ export default function DashboardAdmin() {
       const updateData: any = {
         full_name: userFullName,
         email: userEmail,
-        role: userRole as 'mahasiswa' | 'dosen',
+        role: userRole,
         nim: userRole === 'mahasiswa' ? userNim : null,
         nip: userRole === 'dosen' ? userNip : null,
-        program: userProgram,
-        class_group: userRole === 'mahasiswa' ? userClassGroup : null,
+        program: userRole === 'mahasiswa' ? userProgram : null,
         enrollment_year: userRole === 'mahasiswa' && userEnrollmentYear ? parseInt(userEnrollmentYear) : null,
         id: editingUser.id,
       };
@@ -499,11 +432,10 @@ export default function DashboardAdmin() {
         full_name: userFullName,
         email: userEmail,
         password: userPassword,
-        role: userRole as 'mahasiswa' | 'dosen',
+        role: userRole,
         nim: userRole === 'mahasiswa' ? userNim : undefined,
         nip: userRole === 'dosen' ? userNip : undefined,
-        program: userProgram,
-        class_group: userRole === 'mahasiswa' ? userClassGroup : undefined,
+        program: userRole === 'mahasiswa' ? userProgram : undefined,
         enrollment_year: userRole === 'mahasiswa' && userEnrollmentYear ? parseInt(userEnrollmentYear) : undefined,
       });
     }
@@ -513,22 +445,20 @@ export default function DashboardAdmin() {
     setEditingUser(userProfile);
     setUserFullName(userProfile.full_name);
     setUserEmail(userProfile.email);
-    setUserRole(userProfile.role as 'mahasiswa' | 'dosen');
+    setUserRole(userProfile.role as 'mahasiswa' | 'dosen' | 'admin' | 'sub_admin');
     setUserNim(userProfile.nim || '');
     setUserNip(userProfile.nip || '');
     setUserProgram(userProfile.program || '');
-    setUserClassGroup(userProfile.class_group || '');
     setUserEnrollmentYear(userProfile.enrollment_year?.toString() || '');
     setShowUserDialog(true);
   };
 
-  const openEditCourse = (course: Course) => {
-    setEditingCourse(course);
-    setCourseCode(course.code);
-    setCourseName(course.name);
-    setCourseSemester(course.semester || '');
-    setCoursePassingScore(course.passing_score.toString());
-    setShowCourseDialog(true);
+  // Get available dosen for assignment (exclude already assigned to selected course)
+  const getAvailableDosenForCourse = (courseId: string) => {
+    const assignedIds = courseInstructors
+      ?.filter(ci => ci.course?.id === courseId)
+      .map(ci => ci.instructor?.id) || [];
+    return allDosen?.filter(d => !assignedIds.includes(d.id)) || [];
   };
 
   const stats = {
@@ -538,16 +468,38 @@ export default function DashboardAdmin() {
     totalCourses: courses?.length || 0,
   };
 
+  // Role options based on current user's role
+  const getRoleOptions = () => {
+    const options = [
+      { value: 'mahasiswa', label: 'Mahasiswa' },
+      { value: 'dosen', label: 'Dosen' },
+    ];
+    // Only admin can create admin and sub_admin accounts
+    if (role === 'admin') {
+      options.push({ value: 'sub_admin', label: 'Sub-Admin' });
+      options.push({ value: 'admin', label: 'Admin' });
+    }
+    return options;
+  };
+
   return (
     <Layout>
       <div className="container py-8 lg:py-12">
-        <div className="mb-8 animate-fade-in">
-          <h1 className="font-display text-3xl font-bold lg:text-4xl mb-2">
-            Dashboard Admin
-          </h1>
-          <p className="text-muted-foreground">
-            Kelola mata kuliah, penugasan dosen, dan role pengguna
-          </p>
+        <div className="mb-8 animate-fade-in flex items-center justify-between">
+          <div>
+            <h1 className="font-display text-3xl font-bold lg:text-4xl mb-2">
+              Dashboard Admin
+            </h1>
+            <p className="text-muted-foreground">
+              Kelola kurikulum, akun pengguna, dan penugasan dosen
+            </p>
+          </div>
+          <Link to="/settings">
+            <Button variant="outline" size="sm">
+              <Settings className="h-4 w-4 mr-2" />
+              Pengaturan
+            </Button>
+          </Link>
         </div>
 
         {/* Stats */}
@@ -573,13 +525,12 @@ export default function DashboardAdmin() {
         </div>
 
         <Tabs defaultValue="kurikulum" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="kurikulum" className="flex items-center gap-1">
               <Target className="h-4 w-4" />
               <span className="hidden sm:inline">Kurikulum</span>
             </TabsTrigger>
             <TabsTrigger value="accounts">Kelola Akun</TabsTrigger>
-            <TabsTrigger value="courses">Mata Kuliah</TabsTrigger>
             <TabsTrigger value="assignments">Penugasan</TabsTrigger>
             <TabsTrigger value="roles">Role</TabsTrigger>
           </TabsList>
@@ -595,7 +546,7 @@ export default function DashboardAdmin() {
               <CardHeader>
                 <div className="flex flex-col gap-4">
                   <div className="flex items-center justify-between">
-                    <CardTitle>Kelola Akun Dosen & Mahasiswa</CardTitle>
+                    <CardTitle>Kelola Akun Pengguna</CardTitle>
                     <Dialog open={showUserDialog} onOpenChange={(open) => { if (!open) resetUserForm(); setShowUserDialog(open); }}>
                       <DialogTrigger asChild>
                         <Button size="sm">
@@ -610,11 +561,12 @@ export default function DashboardAdmin() {
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <Label>Tipe Akun</Label>
-                            <Select value={userRole} onValueChange={(v) => setUserRole(v as 'mahasiswa' | 'dosen')} disabled={!!editingUser}>
+                            <Select value={userRole} onValueChange={(v) => setUserRole(v as any)} disabled={!!editingUser}>
                               <SelectTrigger><SelectValue /></SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="mahasiswa">Mahasiswa</SelectItem>
-                                <SelectItem value="dosen">Dosen</SelectItem>
+                                {getRoleOptions().map(opt => (
+                                  <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
@@ -682,8 +634,18 @@ export default function DashboardAdmin() {
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label>Kelas</Label>
-                                <Input value={userClassGroup} onChange={(e) => setUserClassGroup(e.target.value)} placeholder="Contoh: A, B, C" />
+                                <Label>Program Studi</Label>
+                                <Select value={userProgram} onValueChange={setUserProgram}>
+                                  <SelectTrigger><SelectValue placeholder="Pilih program studi" /></SelectTrigger>
+                                  <SelectContent>
+                                    {programs?.map(p => (
+                                      <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
+                                    ))}
+                                    {(!programs || programs.length === 0) && (
+                                      <SelectItem value="" disabled>Belum ada prodi. Buat di Pengaturan.</SelectItem>
+                                    )}
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </>
                           )}
@@ -693,10 +655,6 @@ export default function DashboardAdmin() {
                               <Input value={userNip} onChange={(e) => setUserNip(e.target.value)} placeholder="Nomor Induk Dosen Nasional/Khusus" />
                             </div>
                           )}
-                          <div className="space-y-2">
-                            <Label>Program Studi</Label>
-                            <Input value={userProgram} onChange={(e) => setUserProgram(e.target.value)} placeholder="Contoh: Pendidikan Bahasa Arab" />
-                          </div>
                         </div>
                         <DialogFooter>
                           <Button 
@@ -724,13 +682,13 @@ export default function DashboardAdmin() {
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input 
-                        placeholder="Cari nama, email, NIM, atau NIP..." 
+                        placeholder="Cari nama, email, NIM, atau NIDN..." 
                         value={userSearchQuery}
                         onChange={(e) => handleUserSearchChange(e.target.value)}
                         className="pl-9"
                       />
                     </div>
-                    <Select value={userRoleFilter} onValueChange={(v) => handleUserRoleFilterChange(v as 'all' | 'mahasiswa' | 'dosen')}>
+                    <Select value={userRoleFilter} onValueChange={(v) => handleUserRoleFilterChange(v as any)}>
                       <SelectTrigger className="w-full sm:w-[180px]">
                         <Filter className="h-4 w-4 mr-2" />
                         <SelectValue placeholder="Filter Role" />
@@ -739,6 +697,8 @@ export default function DashboardAdmin() {
                         <SelectItem value="all">Semua Role</SelectItem>
                         <SelectItem value="mahasiswa">Mahasiswa</SelectItem>
                         <SelectItem value="dosen">Dosen</SelectItem>
+                        <SelectItem value="sub_admin">Sub-Admin</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -773,13 +733,13 @@ export default function DashboardAdmin() {
                         </TableCell>
                         <TableCell className="text-muted-foreground">{u.email}</TableCell>
                         <TableCell>
-                          <Badge variant={u.role === 'dosen' ? 'secondary' : 'outline'} className="capitalize">
-                            {u.role}
+                          <Badge variant={u.role === 'admin' ? 'default' : u.role === 'sub_admin' ? 'default' : u.role === 'dosen' ? 'secondary' : 'outline'} className="capitalize">
+                            {u.role === 'sub_admin' ? 'Sub-Admin' : u.role}
                           </Badge>
                         </TableCell>
                         <TableCell>{u.role === 'mahasiswa' ? u.nim : u.nip || '-'}</TableCell>
                         <TableCell>{u.role === 'mahasiswa' ? (u.enrollment_year || '-') : '-'}</TableCell>
-                        <TableCell>{u.program || '-'}</TableCell>
+                        <TableCell>{u.role === 'mahasiswa' ? (u.program || '-') : '-'}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="icon" onClick={() => openEditUser(u)}>
@@ -805,7 +765,7 @@ export default function DashboardAdmin() {
                         <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           {userSearchQuery || userRoleFilter !== 'all' 
                             ? 'Tidak ada akun yang sesuai dengan filter' 
-                            : 'Belum ada akun dosen atau mahasiswa'}
+                            : 'Belum ada akun pengguna'}
                         </TableCell>
                       </TableRow>
                     )}
@@ -845,94 +805,6 @@ export default function DashboardAdmin() {
             </Dialog>
           </TabsContent>
 
-          {/* Courses Tab */}
-          <TabsContent value="courses">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Daftar Mata Kuliah</CardTitle>
-                  <Dialog open={showCourseDialog} onOpenChange={(open) => { if (!open) resetCourseForm(); setShowCourseDialog(open); }}>
-                    <DialogTrigger asChild>
-                      <Button size="sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Tambah
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>{editingCourse ? 'Edit Mata Kuliah' : 'Tambah Mata Kuliah'}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Kode</Label>
-                          <Input value={courseCode} onChange={(e) => setCourseCode(e.target.value)} placeholder="PBA101" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Nama</Label>
-                          <Input value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="Nama mata kuliah" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Semester</Label>
-                          <Select value={courseSemester} onValueChange={setCourseSemester}>
-                            <SelectTrigger><SelectValue placeholder="Pilih semester" /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Ganjil">Ganjil</SelectItem>
-                              <SelectItem value="Genap">Genap</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Passing Score</Label>
-                          <Input type="number" min="0" max="100" value={coursePassingScore} onChange={(e) => setCoursePassingScore(e.target.value)} />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button onClick={handleSaveCourse} disabled={!courseCode || !courseName}>
-                          {editingCourse ? 'Simpan' : 'Tambah'}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-12">No</TableHead>
-                      <TableHead>Kode</TableHead>
-                      <TableHead>Nama</TableHead>
-                      <TableHead>Semester</TableHead>
-                      <TableHead>Passing Score</TableHead>
-                      <TableHead className="w-24">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {courses?.map((course, index) => (
-                      <TableRow key={course.id}>
-                        <TableCell className="text-center">{index + 1}</TableCell>
-                        <TableCell><Badge variant="secondary" className="font-mono">{course.code}</Badge></TableCell>
-                        <TableCell className="font-medium">{course.name}</TableCell>
-                        <TableCell>{course.semester || '-'}</TableCell>
-                        <TableCell>{course.passing_score}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openEditCourse(course)}>
-                              <UserCog className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => deleteCourseMutation.mutate(course.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           {/* Assignments Tab */}
           <TabsContent value="assignments">
             <Card>
@@ -953,7 +825,7 @@ export default function DashboardAdmin() {
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <Label>Mata Kuliah</Label>
-                          <Select value={selectedCourseForAssign} onValueChange={setSelectedCourseForAssign}>
+                          <Select value={selectedCourseForAssign} onValueChange={(v) => { setSelectedCourseForAssign(v); setSelectedDosenForAssign([]); }}>
                             <SelectTrigger><SelectValue placeholder="Pilih mata kuliah" /></SelectTrigger>
                             <SelectContent>
                               {courses?.map((course) => (
@@ -963,19 +835,40 @@ export default function DashboardAdmin() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label>Dosen</Label>
-                          <Select value={selectedDosenForAssign} onValueChange={setSelectedDosenForAssign}>
-                            <SelectTrigger><SelectValue placeholder="Pilih dosen" /></SelectTrigger>
-                            <SelectContent>
-                              {allDosen?.map((dosen) => (
-                                <SelectItem key={dosen.id} value={dosen.id}>{dosen.full_name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Label>Dosen (dapat memilih lebih dari satu)</Label>
+                          <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
+                            {selectedCourseForAssign ? (
+                              getAvailableDosenForCourse(selectedCourseForAssign).map(dosen => (
+                                <label key={dosen.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted p-1 rounded">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedDosenForAssign.includes(dosen.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setSelectedDosenForAssign([...selectedDosenForAssign, dosen.id]);
+                                      } else {
+                                        setSelectedDosenForAssign(selectedDosenForAssign.filter(id => id !== dosen.id));
+                                      }
+                                    }}
+                                    className="rounded"
+                                  />
+                                  <span>{dosen.full_name}</span>
+                                </label>
+                              ))
+                            ) : (
+                              <p className="text-muted-foreground text-sm">Pilih mata kuliah terlebih dahulu</p>
+                            )}
+                            {selectedCourseForAssign && getAvailableDosenForCourse(selectedCourseForAssign).length === 0 && (
+                              <p className="text-muted-foreground text-sm">Semua dosen sudah ditugaskan ke mata kuliah ini</p>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <DialogFooter>
-                        <Button onClick={() => assignInstructorMutation.mutate({ courseId: selectedCourseForAssign, instructorId: selectedDosenForAssign })} disabled={!selectedCourseForAssign || !selectedDosenForAssign}>
+                        <Button 
+                          onClick={() => assignInstructorMutation.mutate({ courseId: selectedCourseForAssign, instructorIds: selectedDosenForAssign })} 
+                          disabled={!selectedCourseForAssign || selectedDosenForAssign.length === 0}
+                        >
                           Tugaskan
                         </Button>
                       </DialogFooter>
@@ -1048,7 +941,7 @@ export default function DashboardAdmin() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allUsers?.map((u, index) => (
+                    {allUsers?.filter(u => u.id !== user?.id).map((u, index) => (
                       <TableRow key={u.id}>
                         <TableCell className="text-center">{index + 1}</TableCell>
                         <TableCell>
@@ -1062,8 +955,8 @@ export default function DashboardAdmin() {
                         </TableCell>
                         <TableCell>{u.email}</TableCell>
                         <TableCell>
-                          <Badge variant={u.role === 'admin' ? 'default' : u.role === 'dosen' ? 'secondary' : 'outline'} className="capitalize">
-                            {u.role}
+                          <Badge variant={u.role === 'admin' || u.role === 'sub_admin' ? 'default' : u.role === 'dosen' ? 'secondary' : 'outline'} className="capitalize">
+                            {u.role === 'sub_admin' ? 'Sub-Admin' : u.role}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -1075,7 +968,6 @@ export default function DashboardAdmin() {
                               setNewRole(u.role);
                               setShowRoleDialog(true);
                             }}
-                            disabled={u.id === user?.id}
                           >
                             <UserCog className="h-4 w-4" />
                           </Button>
@@ -1101,7 +993,12 @@ export default function DashboardAdmin() {
                       <SelectContent>
                         <SelectItem value="mahasiswa">Mahasiswa</SelectItem>
                         <SelectItem value="dosen">Dosen</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
+                        {role === 'admin' && (
+                          <>
+                            <SelectItem value="sub_admin">Sub-Admin</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </>
+                        )}
                       </SelectContent>
                     </Select>
                   </div>

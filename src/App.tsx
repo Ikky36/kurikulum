@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import DashboardMahasiswa from "./pages/dashboard/DashboardMahasiswa";
 import DashboardDosen from "./pages/dashboard/DashboardDosen";
 import DashboardAdmin from "./pages/dashboard/DashboardAdmin";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
             <Route path="/dashboard/dosen" element={<DashboardDosen />} />
             <Route path="/dashboard/admin" element={<DashboardAdmin />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

@@ -54,8 +54,17 @@ serve(async (req) => {
       .eq("id", requestingUser.id)
       .single();
 
-    if (adminProfile?.role !== "admin") {
+    if (adminProfile?.role !== "admin" && adminProfile?.role !== "sub_admin") {
       return new Response(JSON.stringify({ error: "Forbidden: Admin access required" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Sub-admin cannot create admin or sub_admin accounts
+    const requestedRole = (await req.clone().json()).role;
+    if (adminProfile?.role === "sub_admin" && (requestedRole === "admin" || requestedRole === "sub_admin")) {
+      return new Response(JSON.stringify({ error: "Forbidden: Sub-admin cannot create admin accounts" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

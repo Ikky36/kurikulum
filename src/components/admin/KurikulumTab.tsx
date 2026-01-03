@@ -13,8 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Pencil, Target, BookOpen, Link2, Users, Download, Upload } from 'lucide-react';
-import { PLO, Course, CoursePLO, ClassGroup, Profile } from '@/lib/types';
+import { Plus, Trash2, Pencil, Target, BookOpen, Link2, Users, Download, Upload, UserPlus, UserMinus } from 'lucide-react';
+import { PLO, Course, CoursePLO, ClassGroup, Profile, Curriculum, ClassStudent } from '@/lib/types';
 import * as XLSX from 'xlsx';
 
 export function KurikulumTab() {
@@ -32,8 +32,8 @@ export function KurikulumTab() {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [courseCode, setCourseCode] = useState('');
   const [courseName, setCourseName] = useState('');
-  const [courseDescription, setCourseDescription] = useState('');
   const [courseSemester, setCourseSemester] = useState('');
+  const [courseCurriculumId, setCourseCurriculumId] = useState('');
   const [coursePassingScore, setCoursePassingScore] = useState('60');
   const [selectedPlos, setSelectedPlos] = useState<string[]>([]);
 
@@ -47,7 +47,8 @@ export function KurikulumTab() {
   const [editingClass, setEditingClass] = useState<ClassGroup | null>(null);
   const [className, setClassName] = useState('');
   const [classDescription, setClassDescription] = useState('');
-  const [selectedClassForStudents, setSelectedClassForStudents] = useState<string>('');
+  const [selectedClassForManage, setSelectedClassForManage] = useState<ClassGroup | null>(null);
+  const [showManageStudentsDialog, setShowManageStudentsDialog] = useState(false);
 
   // Fetch PLOs
   const { data: plos } = useQuery({
@@ -62,7 +63,7 @@ export function KurikulumTab() {
     },
   });
 
-  // Fetch Courses
+  // Fetch Courses with curriculum
   const { data: courses } = useQuery({
     queryKey: ['admin-courses-kurikulum'],
     queryFn: async () => {
@@ -105,23 +106,38 @@ export function KurikulumTab() {
 
   // Fetch Students (mahasiswa only)
   const { data: students, refetch: refetchStudents } = useQuery({
-    queryKey: ['students-for-class', selectedClassForStudents],
+    queryKey: ['all-students'],
     queryFn: async () => {
-      let query = supabase
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('role', 'mahasiswa')
         .order('full_name');
-      
-      if (selectedClassForStudents && selectedClassForStudents !== 'all') {
-        query = query.eq('class_group', selectedClassForStudents);
-      }
-      
-      const { data, error } = await query;
       if (error) throw error;
       return data as Profile[];
     },
-    enabled: true,
+  });
+
+  // Fetch class_students relationships
+  const { data: classStudents, refetch: refetchClassStudents } = useQuery({
+    queryKey: ['class-students'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('class_students')
+        .select('*');
+      if (error) throw error;
+      return data as ClassStudent[];
+    },
+  });
+
+  // Fetch curricula from settings
+  const { data: curricula } = useQuery({
+    queryKey: ['curricula'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('curricula').select('*').order('name');
+      if (error) throw error;
+      return data as Curriculum[];
+    },
   });
 
   // PLO mutations
@@ -172,7 +188,7 @@ export function KurikulumTab() {
 
   // Course mutations
   const createCourseMutation = useMutation({
-    mutationFn: async ({ plos: ploIds, ...course }: { code: string; name: string; semester?: string; passing_score?: number; plos: string[] }) => {
+    mutationFn: async ({ plos: ploIds, ...course }: { code: string; name: string; semester?: string; passing_score?: number; curriculum_id?: string; plos: string[] }) => {
       const { data, error } = await supabase.from('courses').insert([course]).select().single();
       if (error) throw error;
       
@@ -307,6 +323,35 @@ export function KurikulumTab() {
     },
   });
 
+  // Class student mutations
+  const addStudentToClassMutation = useMutation({
+    mutationFn: async ({ classGroupId, studentId }: { classGroupId: string; studentId: string }) => {
+      const { error } = await supabase.from('class_students').insert([{ class_group_id: classGroupId, student_profile_id: studentId }]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['class-students'] });
+      toast({ title: 'Berhasil', description: 'Mahasiswa berhasil ditambahkan ke kelas' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const removeStudentFromClassMutation = useMutation({
+    mutationFn: async ({ classGroupId, studentId }: { classGroupId: string; studentId: string }) => {
+      const { error } = await supabase.from('class_students').delete().eq('class_group_id', classGroupId).eq('student_profile_id', studentId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['class-students'] });
+      toast({ title: 'Berhasil', description: 'Mahasiswa berhasil dihapus dari kelas' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
   const resetPloForm = () => {
     setPloCode('');
     setPloDescription('');
@@ -317,8 +362,8 @@ export function KurikulumTab() {
   const resetCourseForm = () => {
     setCourseCode('');
     setCourseName('');
-    setCourseDescription('');
     setCourseSemester('');
+    setCourseCurriculumId('');
     setCoursePassingScore('60');
     setSelectedPlos([]);
     setEditingCourse(null);
@@ -347,20 +392,31 @@ export function KurikulumTab() {
     }
   };
 
+  // Get students in a class
+  const getStudentsInClass = (classGroupId: string) => {
+    const studentIds = classStudents?.filter(cs => cs.class_group_id === classGroupId).map(cs => cs.student_profile_id) || [];
+    return students?.filter(s => studentIds.includes(s.id)) || [];
+  };
+
+  // Get students not in a class
+  const getStudentsNotInClass = (classGroupId: string) => {
+    const studentIds = classStudents?.filter(cs => cs.class_group_id === classGroupId).map(cs => cs.student_profile_id) || [];
+    return students?.filter(s => !studentIds.includes(s.id)) || [];
+  };
+
   // Export students of a class
-  const handleExportClassStudents = (classGroupName: string) => {
-    const classStudents = students?.filter(s => s.class_group === classGroupName) || [];
-    if (classStudents.length === 0) {
+  const handleExportClassStudents = (classGroup: ClassGroup) => {
+    const classStudentList = getStudentsInClass(classGroup.id);
+    if (classStudentList.length === 0) {
       toast({ title: 'Info', description: 'Tidak ada mahasiswa di kelas ini' });
       return;
     }
 
-    const exportData = classStudents.map((s, index) => ({
+    const exportData = classStudentList.map((s, index) => ({
       No: index + 1,
       NIM: s.nim || '',
       'Nama Lengkap': s.full_name,
       Email: s.email,
-      Kelas: s.class_group || '',
       Angkatan: s.enrollment_year || '',
       'Program Studi': s.program || '',
     }));
@@ -368,12 +424,12 @@ export function KurikulumTab() {
     const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Mahasiswa');
-    XLSX.writeFile(wb, `Mahasiswa_Kelas_${classGroupName}.xlsx`);
-    toast({ title: 'Berhasil', description: `Data mahasiswa kelas ${classGroupName} berhasil diekspor` });
+    XLSX.writeFile(wb, `Mahasiswa_Kelas_${classGroup.name}.xlsx`);
+    toast({ title: 'Berhasil', description: `Data mahasiswa kelas ${classGroup.name} berhasil diekspor` });
   };
 
   // Import students to a class
-  const handleImportClassStudents = async (e: React.ChangeEvent<HTMLInputElement>, classGroupName: string) => {
+  const handleImportClassStudents = async (e: React.ChangeEvent<HTMLInputElement>, classGroup: ClassGroup) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -386,21 +442,26 @@ export function KurikulumTab() {
         const ws = wb.Sheets[wsname];
         const data = XLSX.utils.sheet_to_json<any>(ws);
 
-        let updatedCount = 0;
+        let addedCount = 0;
         for (const row of data) {
           const nim = row['NIM']?.toString();
           if (!nim) continue;
 
-          const { error } = await supabase
-            .from('profiles')
-            .update({ class_group: classGroupName })
-            .eq('nim', nim);
+          // Find student by NIM
+          const student = students?.find(s => s.nim === nim);
+          if (!student) continue;
 
-          if (!error) updatedCount++;
+          // Check if already in class
+          const alreadyInClass = classStudents?.some(cs => cs.class_group_id === classGroup.id && cs.student_profile_id === student.id);
+          if (alreadyInClass) continue;
+
+          // Add to class
+          const { error } = await supabase.from('class_students').insert([{ class_group_id: classGroup.id, student_profile_id: student.id }]);
+          if (!error) addedCount++;
         }
 
-        toast({ title: 'Berhasil', description: `${updatedCount} mahasiswa berhasil diperbarui ke kelas ${classGroupName}` });
-        refetchStudents();
+        toast({ title: 'Berhasil', description: `${addedCount} mahasiswa berhasil ditambahkan ke kelas ${classGroup.name}` });
+        refetchClassStudents();
       } catch (error: any) {
         toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
       }
@@ -421,6 +482,7 @@ export function KurikulumTab() {
     setCourseCode(course.code);
     setCourseName(course.name);
     setCourseSemester(course.semester || '');
+    setCourseCurriculumId(course.curriculum_id || '');
     setCoursePassingScore(course.passing_score.toString());
     setShowCourseDialog(true);
   };
@@ -445,6 +507,7 @@ export function KurikulumTab() {
       code: courseCode,
       name: courseName,
       semester: courseSemester || undefined,
+      curriculum_id: courseCurriculumId || undefined,
       passing_score: parseInt(coursePassingScore) || 60,
     };
 
@@ -458,6 +521,13 @@ export function KurikulumTab() {
   const getCoursePloList = (courseId: string) => {
     return coursePlos?.filter(cp => cp.course_id === courseId) || [];
   };
+
+  const getCurriculumName = (curriculumId?: string | null) => {
+    if (!curriculumId) return null;
+    return curricula?.find(c => c.id === curriculumId)?.name;
+  };
+
+  const semesterOptions = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'];
 
   return (
     <div className="space-y-6">
@@ -604,8 +674,9 @@ export function KurikulumTab() {
                           <Select value={courseSemester} onValueChange={setCourseSemester}>
                             <SelectTrigger><SelectValue placeholder="Pilih" /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Ganjil">Ganjil</SelectItem>
-                              <SelectItem value="Genap">Genap</SelectItem>
+                              {semesterOptions.map(sem => (
+                                <SelectItem key={sem} value={sem}>{sem}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
@@ -613,6 +684,20 @@ export function KurikulumTab() {
                       <div className="space-y-2">
                         <Label>Nama Mata Kuliah</Label>
                         <Input value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="Nama mata kuliah" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Kurikulum</Label>
+                        <Select value={courseCurriculumId} onValueChange={setCourseCurriculumId}>
+                          <SelectTrigger><SelectValue placeholder="Pilih kurikulum" /></SelectTrigger>
+                          <SelectContent>
+                            {curricula?.map(c => (
+                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                            ))}
+                            {(!curricula || curricula.length === 0) && (
+                              <SelectItem value="" disabled>Belum ada kurikulum. Buat di Pengaturan.</SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
                         <Label>Passing Score</Label>
@@ -660,6 +745,7 @@ export function KurikulumTab() {
                     <TableHead className="w-12">No</TableHead>
                     <TableHead className="w-28">Kode</TableHead>
                     <TableHead>Nama</TableHead>
+                    <TableHead>Kurikulum</TableHead>
                     <TableHead>Semester</TableHead>
                     <TableHead>CPL/PLO Terkait</TableHead>
                     <TableHead className="w-32">Aksi</TableHead>
@@ -668,6 +754,7 @@ export function KurikulumTab() {
                 <TableBody>
                   {courses?.map((course, index) => {
                     const linkedPlos = getCoursePloList(course.id);
+                    const curriculumName = getCurriculumName(course.curriculum_id);
                     return (
                       <TableRow key={course.id}>
                         <TableCell className="text-center">{index + 1}</TableCell>
@@ -675,6 +762,13 @@ export function KurikulumTab() {
                           <Badge variant="secondary" className="font-mono">{course.code}</Badge>
                         </TableCell>
                         <TableCell className="font-medium">{course.name}</TableCell>
+                        <TableCell>
+                          {curriculumName ? (
+                            <Badge variant="outline">{curriculumName}</Badge>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
                         <TableCell>{course.semester || '-'}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
@@ -712,7 +806,7 @@ export function KurikulumTab() {
                   })}
                   {(!courses || courses.length === 0) && (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                         Belum ada mata kuliah. Klik "Tambah Mata Kuliah" untuk menambahkan.
                       </TableCell>
                     </TableRow>
@@ -779,12 +873,12 @@ export function KurikulumTab() {
                     <TableHead>Nama Kelas</TableHead>
                     <TableHead>Deskripsi</TableHead>
                     <TableHead>Jumlah Mahasiswa</TableHead>
-                    <TableHead className="w-48">Aksi</TableHead>
+                    <TableHead className="w-56">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {classGroups?.map((classItem, index) => {
-                    const studentCount = students?.filter(s => s.class_group === classItem.name).length || 0;
+                    const studentCount = getStudentsInClass(classItem.id).length;
                     return (
                       <TableRow key={classItem.id}>
                         <TableCell className="text-center">{index + 1}</TableCell>
@@ -798,7 +892,18 @@ export function KurikulumTab() {
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              onClick={() => handleExportClassStudents(classItem.name)}
+                              onClick={() => {
+                                setSelectedClassForManage(classItem);
+                                setShowManageStudentsDialog(true);
+                              }}
+                              title="Kelola mahasiswa"
+                            >
+                              <Users className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => handleExportClassStudents(classItem)}
                               title="Export mahasiswa"
                             >
                               <Download className="h-4 w-4" />
@@ -818,7 +923,7 @@ export function KurikulumTab() {
                                 type="file"
                                 accept=".xlsx,.xls"
                                 className="hidden"
-                                onChange={(e) => handleImportClassStudents(e, classItem.name)}
+                                onChange={(e) => handleImportClassStudents(e, classItem)}
                               />
                             </label>
                             <Button variant="ghost" size="icon" onClick={() => openEditClass(classItem)}>
@@ -895,6 +1000,73 @@ export function KurikulumTab() {
               })}
             >
               Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Students Dialog */}
+      <Dialog open={showManageStudentsDialog} onOpenChange={setShowManageStudentsDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Kelola Mahasiswa Kelas {selectedClassForManage?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 overflow-hidden grid grid-cols-2 gap-4">
+            {/* Students in class */}
+            <div className="flex flex-col">
+              <h4 className="font-medium mb-2">Mahasiswa di Kelas</h4>
+              <div className="border rounded-lg p-2 flex-1 overflow-y-auto max-h-[300px] space-y-1">
+                {selectedClassForManage && getStudentsInClass(selectedClassForManage.id).map(student => (
+                  <div key={student.id} className="flex items-center justify-between p-2 hover:bg-muted rounded">
+                    <div className="text-sm">
+                      <p className="font-medium">{student.full_name}</p>
+                      <p className="text-muted-foreground text-xs">{student.nim}</p>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="text-destructive hover:text-destructive h-8 w-8"
+                      onClick={() => removeStudentFromClassMutation.mutate({ classGroupId: selectedClassForManage.id, studentId: student.id })}
+                    >
+                      <UserMinus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                {selectedClassForManage && getStudentsInClass(selectedClassForManage.id).length === 0 && (
+                  <p className="text-muted-foreground text-sm text-center py-4">Belum ada mahasiswa</p>
+                )}
+              </div>
+            </div>
+            
+            {/* Students not in class */}
+            <div className="flex flex-col">
+              <h4 className="font-medium mb-2">Mahasiswa Tersedia</h4>
+              <div className="border rounded-lg p-2 flex-1 overflow-y-auto max-h-[300px] space-y-1">
+                {selectedClassForManage && getStudentsNotInClass(selectedClassForManage.id).map(student => (
+                  <div key={student.id} className="flex items-center justify-between p-2 hover:bg-muted rounded">
+                    <div className="text-sm">
+                      <p className="font-medium">{student.full_name}</p>
+                      <p className="text-muted-foreground text-xs">{student.nim}</p>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="text-primary hover:text-primary h-8 w-8"
+                      onClick={() => addStudentToClassMutation.mutate({ classGroupId: selectedClassForManage.id, studentId: student.id })}
+                    >
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                {selectedClassForManage && getStudentsNotInClass(selectedClassForManage.id).length === 0 && (
+                  <p className="text-muted-foreground text-sm text-center py-4">Semua mahasiswa sudah di kelas</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowManageStudentsDialog(false)}>
+              Tutup
             </Button>
           </DialogFooter>
         </DialogContent>

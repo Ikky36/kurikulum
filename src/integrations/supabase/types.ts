@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_settings: {
+        Row: {
+          created_at: string
+          id: string
+          setting_key: string
+          setting_value: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          setting_key: string
+          setting_value?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          setting_key?: string
+          setting_value?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       assessment_llos: {
         Row: {
           assessment_id: string
@@ -111,6 +135,42 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      class_students: {
+        Row: {
+          class_group_id: string
+          created_at: string
+          id: string
+          student_profile_id: string
+        }
+        Insert: {
+          class_group_id: string
+          created_at?: string
+          id?: string
+          student_profile_id: string
+        }
+        Update: {
+          class_group_id?: string
+          created_at?: string
+          id?: string
+          student_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "class_students_class_group_id_fkey"
+            columns: ["class_group_id"]
+            isOneToOne: false
+            referencedRelation: "class_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "class_students_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clo_plos: {
         Row: {
@@ -262,6 +322,7 @@ export type Database = {
         Row: {
           code: string
           created_at: string
+          curriculum_id: string | null
           id: string
           name: string
           passing_score: number
@@ -271,6 +332,7 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           name: string
           passing_score?: number
@@ -280,10 +342,43 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           name?: string
           passing_score?: number
           semester?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courses_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      curricula: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
           updated_at?: string
         }
         Relationships: []
@@ -475,6 +570,30 @@ export type Database = {
           photo_url?: string | null
           program?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      programs: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
           updated_at?: string
         }
         Relationships: []
