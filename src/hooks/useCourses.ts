@@ -164,14 +164,44 @@ export function useCourseAssessments(courseId: string) {
   return useQuery({
     queryKey: ['course-assessments', courseId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Get assessments with their linked LLOs for weight calculation
+      const { data: assessments, error: assessmentsError } = await supabase
         .from('assessments')
         .select('*')
         .eq('course_id', courseId)
         .order('code');
       
-      if (error) throw error;
-      return data;
+      if (assessmentsError) throw assessmentsError;
+      
+      if (!assessments || assessments.length === 0) return [];
+      
+      // Get assessment_llos with LLO weights
+      const { data: assessmentLlos, error: llosError } = await supabase
+        .from('assessment_llos')
+        .select(`
+          assessment_id,
+          llos:llo_id (
+            id,
+            weight_percentage
+          )
+        `)
+        .in('assessment_id', assessments.map(a => a.id));
+      
+      if (llosError) throw llosError;
+      
+      // Calculate total weight for each assessment
+      return assessments.map(assessment => {
+        const linkedLlos = assessmentLlos?.filter(al => al.assessment_id === assessment.id) || [];
+        const totalWeight = linkedLlos.reduce((sum, al) => {
+          const llo = al.llos as unknown as { id: string; weight_percentage: number } | null;
+          return sum + (llo?.weight_percentage || 0);
+        }, 0);
+        
+        return {
+          ...assessment,
+          weight: totalWeight,
+        };
+      });
     },
     enabled: !!courseId,
   });

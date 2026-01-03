@@ -14,6 +14,7 @@ import { ArrowLeft, Mail, User, CheckCircle2, XCircle, Users, Target } from 'luc
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { CourseLearningOutcomes } from '@/components/course/CourseLearningOutcomes';
+import { AssessmentScoreImportExport } from '@/components/course/AssessmentScoreImportExport';
 
 export default function CourseDetail() {
   const { courseId } = useParams<{ courseId: string }>();
@@ -224,8 +225,30 @@ export default function CourseDetail() {
 
             {/* Students Table */}
             <Card className="animate-slide-up" style={{ animationDelay: '200ms' }}>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="text-lg">Daftar Mahasiswa</CardTitle>
+                {canEdit && assessments && assessments.length > 0 && (
+                  <AssessmentScoreImportExport
+                    courseId={courseId!}
+                    courseName={course?.name || ''}
+                    assessments={assessments.map(a => ({
+                      id: a.id,
+                      code: a.code,
+                      name: a.name,
+                      weight: a.weight || 0,
+                    }))}
+                    students={enrollments?.map(e => ({
+                      id: e.student?.id || '',
+                      full_name: e.student?.full_name || '',
+                      nim: e.student?.nim || null,
+                    })) || []}
+                    existingScores={assessmentScores?.map(s => ({
+                      assessment_id: s.assessment_id,
+                      student_profile_id: s.student_profile_id,
+                      score: Number(s.score),
+                    })) || []}
+                  />
+                )}
               </CardHeader>
               <CardContent className="p-0">
                 <div className="overflow-x-auto">
@@ -235,11 +258,14 @@ export default function CourseDetail() {
                         <TableHead className="font-semibold">Nama</TableHead>
                         <TableHead className="font-semibold">NIM</TableHead>
                         <TableHead className="font-semibold">Kelas</TableHead>
-                        {/* Dynamic assessment columns */}
+                        {/* Dynamic assessment columns with weight */}
                         {assessments && assessments.length > 0 && assessments.map(assessment => (
                           <TableHead key={assessment.id} className="font-semibold text-center min-w-[80px]">
-                            <div className="flex flex-col">
+                            <div className="flex flex-col items-center">
                               <span>{assessment.code}</span>
+                              <span className="text-xs text-muted-foreground font-normal">
+                                ({assessment.weight || 0}%)
+                              </span>
                             </div>
                           </TableHead>
                         ))}
