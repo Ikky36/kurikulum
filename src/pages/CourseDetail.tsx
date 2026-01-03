@@ -453,10 +453,11 @@ export default function CourseDetail() {
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        <TableHead className="w-12 font-semibold">No</TableHead>
                         <TableHead className="font-semibold">
                           <button 
                             onClick={() => handleSort('name')}
-                            className="flex items-center hover:opacity-80"
+                            className="flex items-center justify-center w-full hover:opacity-80"
                           >
                             Nama
                             {renderSortIcon('name')}
@@ -465,7 +466,7 @@ export default function CourseDetail() {
                         <TableHead className="font-semibold">
                           <button 
                             onClick={() => handleSort('nim')}
-                            className="flex items-center hover:opacity-80"
+                            className="flex items-center justify-center w-full hover:opacity-80"
                           >
                             NIM
                             {renderSortIcon('nim')}
@@ -473,7 +474,7 @@ export default function CourseDetail() {
                         </TableHead>
                         <TableHead className="font-semibold">
                           <Select value={classFilter} onValueChange={setClassFilter}>
-                            <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground">
+                            <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground mx-auto">
                               <SelectValue placeholder="Kelas" />
                             </SelectTrigger>
                             <SelectContent>
@@ -486,7 +487,7 @@ export default function CourseDetail() {
                         </TableHead>
                         {/* Dynamic assessment columns with weight */}
                         {assessments && assessments.length > 0 && assessments.map(assessment => (
-                          <TableHead key={assessment.id} className="font-semibold text-center min-w-[80px]">
+                          <TableHead key={assessment.id} className="font-semibold min-w-[80px]">
                             <button 
                               onClick={() => handleSort(`assessment_${assessment.id}`)}
                               className="flex flex-col items-center w-full hover:opacity-80"
@@ -501,7 +502,7 @@ export default function CourseDetail() {
                             </button>
                           </TableHead>
                         ))}
-                        <TableHead className="font-semibold text-center">
+                        <TableHead className="font-semibold">
                           <button 
                             onClick={() => handleSort('achievement')}
                             className="flex items-center justify-center w-full hover:opacity-80"
@@ -510,13 +511,14 @@ export default function CourseDetail() {
                             {renderSortIcon('achievement')}
                           </button>
                         </TableHead>
-                        <TableHead className="font-semibold text-center">Status</TableHead>
+                        <TableHead className="font-semibold">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredAndSortedStudents.length > 0 ? (
-                        filteredAndSortedStudents.map((student) => (
+                        filteredAndSortedStudents.map((student, index) => (
                           <TableRow key={student?.id} className="hover:bg-muted/30">
+                            <TableCell className="text-center">{index + 1}</TableCell>
                             <TableCell>
                               <Link 
                                 to={`/nilai-mahasiswa/${student?.id}`}
@@ -531,10 +533,10 @@ export default function CourseDetail() {
                                 <span className="font-medium">{student?.full_name}</span>
                               </Link>
                             </TableCell>
-                            <TableCell className="font-mono text-sm">
+                            <TableCell className="font-mono text-sm text-center">
                               {student?.nim || '-'}
                             </TableCell>
-                            <TableCell>{student?.class_group || '-'}</TableCell>
+                            <TableCell className="text-center">{student?.class_group || '-'}</TableCell>
                             {/* Assessment score cells */}
                             {assessments && assessments.length > 0 && assessments.map(assessment => {
                               const score = student?.assessmentScores?.[assessment.id];
@@ -622,7 +624,7 @@ export default function CourseDetail() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={5 + (assessments?.length || 0)} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={6 + (assessments?.length || 0)} className="text-center py-8 text-muted-foreground">
                             Belum ada mahasiswa terdaftar
                           </TableCell>
                         </TableRow>

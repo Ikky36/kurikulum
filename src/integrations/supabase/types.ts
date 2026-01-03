@@ -88,6 +88,30 @@ export type Database = {
           },
         ]
       }
+      class_groups: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clo_plos: {
         Row: {
           clo_id: string
@@ -415,6 +439,7 @@ export type Database = {
           class_group: string | null
           created_at: string
           email: string
+          enrollment_year: number | null
           full_name: string
           id: string
           nim: string | null
@@ -428,6 +453,7 @@ export type Database = {
           class_group?: string | null
           created_at?: string
           email: string
+          enrollment_year?: number | null
           full_name: string
           id: string
           nim?: string | null
@@ -441,6 +467,7 @@ export type Database = {
           class_group?: string | null
           created_at?: string
           email?: string
+          enrollment_year?: number | null
           full_name?: string
           id?: string
           nim?: string | null

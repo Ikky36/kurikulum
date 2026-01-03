@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target } from 'lucide-react';
+import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target, Eye, EyeOff } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { Course, Profile, AppRole } from '@/lib/types';
 import { UserImportExport } from '@/components/admin/UserImportExport';
@@ -55,11 +55,15 @@ export default function DashboardAdmin() {
   const [userFullName, setUserFullName] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [userPassword, setUserPassword] = useState('');
+  const [userPasswordConfirm, setUserPasswordConfirm] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
   const [userRole, setUserRole] = useState<'mahasiswa' | 'dosen'>('mahasiswa');
   const [userNim, setUserNim] = useState('');
   const [userNip, setUserNip] = useState('');
   const [userProgram, setUserProgram] = useState('');
   const [userClassGroup, setUserClassGroup] = useState('');
+  const [userEnrollmentYear, setUserEnrollmentYear] = useState('');
   const [showDeleteUserDialog, setShowDeleteUserDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
   
@@ -241,6 +245,7 @@ export default function DashboardAdmin() {
       nip?: string;
       program?: string;
       class_group?: string;
+      enrollment_year?: number;
     }) => {
       // Use edge function to create user with admin privileges
       const { data, error } = await supabase.functions.invoke('admin-create-user', {
@@ -391,11 +396,15 @@ export default function DashboardAdmin() {
     setUserFullName('');
     setUserEmail('');
     setUserPassword('');
+    setUserPasswordConfirm('');
+    setShowPassword(false);
+    setShowPasswordConfirm(false);
     setUserRole('mahasiswa');
     setUserNim('');
     setUserNip('');
     setUserProgram('');
     setUserClassGroup('');
+    setUserEnrollmentYear('');
     setEditingUser(null);
     setShowUserDialog(false);
   };
@@ -461,6 +470,12 @@ export default function DashboardAdmin() {
   };
 
   const handleSaveUser = () => {
+    // Validate password confirmation
+    if (userPassword && userPassword !== userPasswordConfirm) {
+      toast({ title: 'Gagal', description: 'Password dan konfirmasi password tidak cocok', variant: 'destructive' });
+      return;
+    }
+
     if (editingUser) {
       // For update, password is optional
       const updateData: any = {
@@ -471,6 +486,7 @@ export default function DashboardAdmin() {
         nip: userRole === 'dosen' ? userNip : null,
         program: userProgram,
         class_group: userRole === 'mahasiswa' ? userClassGroup : null,
+        enrollment_year: userRole === 'mahasiswa' && userEnrollmentYear ? parseInt(userEnrollmentYear) : null,
         id: editingUser.id,
       };
       if (userPassword) {
@@ -488,6 +504,7 @@ export default function DashboardAdmin() {
         nip: userRole === 'dosen' ? userNip : undefined,
         program: userProgram,
         class_group: userRole === 'mahasiswa' ? userClassGroup : undefined,
+        enrollment_year: userRole === 'mahasiswa' && userEnrollmentYear ? parseInt(userEnrollmentYear) : undefined,
       });
     }
   };
@@ -501,6 +518,7 @@ export default function DashboardAdmin() {
     setUserNip(userProfile.nip || '');
     setUserProgram(userProfile.program || '');
     setUserClassGroup(userProfile.class_group || '');
+    setUserEnrollmentYear(userProfile.enrollment_year?.toString() || '');
     setShowUserDialog(true);
   };
 
@@ -610,18 +628,58 @@ export default function DashboardAdmin() {
                           </div>
                           <div className="space-y-2">
                             <Label>{editingUser ? 'Password Baru (opsional)' : 'Password'}</Label>
-                            <Input 
-                              type="password" 
-                              value={userPassword} 
-                              onChange={(e) => setUserPassword(e.target.value)} 
-                              placeholder={editingUser ? 'Kosongkan jika tidak ingin mengubah' : 'Masukkan password'}
-                            />
+                            <div className="relative">
+                              <Input 
+                                type={showPassword ? "text" : "password"}
+                                value={userPassword} 
+                                onChange={(e) => setUserPassword(e.target.value)} 
+                                placeholder={editingUser ? 'Kosongkan jika tidak ingin mengubah' : 'Masukkan password'}
+                                className="pr-10"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                              >
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </button>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>{editingUser ? 'Konfirmasi Password Baru' : 'Konfirmasi Password'}</Label>
+                            <div className="relative">
+                              <Input 
+                                type={showPasswordConfirm ? "text" : "password"}
+                                value={userPasswordConfirm} 
+                                onChange={(e) => setUserPasswordConfirm(e.target.value)} 
+                                placeholder="Masukkan ulang password"
+                                className="pr-10"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPasswordConfirm(!showPasswordConfirm)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                              >
+                                {showPasswordConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </button>
+                            </div>
                           </div>
                           {userRole === 'mahasiswa' && (
                             <>
                               <div className="space-y-2">
                                 <Label>NIM</Label>
                                 <Input value={userNim} onChange={(e) => setUserNim(e.target.value)} placeholder="Nomor Induk Mahasiswa" />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Angkatan</Label>
+                                <Input 
+                                  type="number" 
+                                  value={userEnrollmentYear} 
+                                  onChange={(e) => setUserEnrollmentYear(e.target.value)} 
+                                  placeholder="Contoh: 2024"
+                                  min="2000"
+                                  max="2099"
+                                />
                               </div>
                               <div className="space-y-2">
                                 <Label>Kelas</Label>
@@ -631,8 +689,8 @@ export default function DashboardAdmin() {
                           )}
                           {userRole === 'dosen' && (
                             <div className="space-y-2">
-                              <Label>NIP</Label>
-                              <Input value={userNip} onChange={(e) => setUserNip(e.target.value)} placeholder="Nomor Induk Pegawai" />
+                              <Label>NIDN/NIDK</Label>
+                              <Input value={userNip} onChange={(e) => setUserNip(e.target.value)} placeholder="Nomor Induk Dosen Nasional/Khusus" />
                             </div>
                           )}
                           <div className="space-y-2">
@@ -643,7 +701,7 @@ export default function DashboardAdmin() {
                         <DialogFooter>
                           <Button 
                             onClick={handleSaveUser} 
-                            disabled={!userFullName || !userEmail || (!editingUser && !userPassword)}
+                            disabled={!userFullName || !userEmail || (!editingUser && !userPassword) || (userPassword && userPassword !== userPasswordConfirm)}
                           >
                             {editingUser ? 'Simpan' : 'Tambah'}
                           </Button>
@@ -690,17 +748,20 @@ export default function DashboardAdmin() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
+                      <TableHead className="w-12">No</TableHead>
                       <TableHead>Nama</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
-                      <TableHead>NIM/NIP</TableHead>
+                      <TableHead>NIM/NIDN</TableHead>
+                      <TableHead>Angkatan</TableHead>
                       <TableHead>Program</TableHead>
                       <TableHead className="w-24">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {paginatedUsers.map((u) => (
+                    {paginatedUsers.map((u, index) => (
                       <TableRow key={u.id}>
+                        <TableCell className="text-center">{(userCurrentPage - 1) * userPageSize + index + 1}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
@@ -717,6 +778,7 @@ export default function DashboardAdmin() {
                           </Badge>
                         </TableCell>
                         <TableCell>{u.role === 'mahasiswa' ? u.nim : u.nip || '-'}</TableCell>
+                        <TableCell>{u.role === 'mahasiswa' ? (u.enrollment_year || '-') : '-'}</TableCell>
                         <TableCell>{u.program || '-'}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
@@ -740,7 +802,7 @@ export default function DashboardAdmin() {
                     ))}
                     {filteredUsers.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           {userSearchQuery || userRoleFilter !== 'all' 
                             ? 'Tidak ada akun yang sesuai dengan filter' 
                             : 'Belum ada akun dosen atau mahasiswa'}
@@ -837,6 +899,7 @@ export default function DashboardAdmin() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
+                      <TableHead className="w-12">No</TableHead>
                       <TableHead>Kode</TableHead>
                       <TableHead>Nama</TableHead>
                       <TableHead>Semester</TableHead>
@@ -845,8 +908,9 @@ export default function DashboardAdmin() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {courses?.map((course) => (
+                    {courses?.map((course, index) => (
                       <TableRow key={course.id}>
+                        <TableCell className="text-center">{index + 1}</TableCell>
                         <TableCell><Badge variant="secondary" className="font-mono">{course.code}</Badge></TableCell>
                         <TableCell className="font-medium">{course.name}</TableCell>
                         <TableCell>{course.semester || '-'}</TableCell>
@@ -923,14 +987,16 @@ export default function DashboardAdmin() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
+                      <TableHead className="w-12">No</TableHead>
                       <TableHead>Mata Kuliah</TableHead>
                       <TableHead>Dosen</TableHead>
                       <TableHead className="w-24">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {courseInstructors?.map((ci) => (
+                    {courseInstructors?.map((ci, index) => (
                       <TableRow key={ci.id}>
+                        <TableCell className="text-center">{index + 1}</TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="font-mono mr-2">{ci.course?.code}</Badge>
                           {ci.course?.name}
@@ -953,7 +1019,7 @@ export default function DashboardAdmin() {
                     ))}
                     {(!courseInstructors || courseInstructors.length === 0) && (
                       <TableRow>
-                        <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
                           Belum ada penugasan
                         </TableCell>
                       </TableRow>
@@ -974,6 +1040,7 @@ export default function DashboardAdmin() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
+                      <TableHead className="w-12">No</TableHead>
                       <TableHead>Nama</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
@@ -981,8 +1048,9 @@ export default function DashboardAdmin() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allUsers?.map((u) => (
+                    {allUsers?.map((u, index) => (
                       <TableRow key={u.id}>
+                        <TableCell className="text-center">{index + 1}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
