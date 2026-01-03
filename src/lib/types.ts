@@ -1,4 +1,4 @@
-export type AppRole = 'mahasiswa' | 'dosen' | 'admin';
+export type AppRole = 'mahasiswa' | 'dosen' | 'admin' | 'sub_admin';
 
 export interface Profile {
   id: string;
@@ -23,12 +23,20 @@ export interface ClassGroup {
   updated_at: string;
 }
 
+export interface ClassStudent {
+  id: string;
+  class_group_id: string;
+  student_profile_id: string;
+  created_at?: string;
+}
+
 export interface Course {
   id: string;
   code: string;
   name: string;
   semester?: string;
   passing_score: number;
+  curriculum_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -151,4 +159,31 @@ export interface CLOPLO {
   created_at: string;
   clo?: CLO;
   plo?: PLO;
+}
+
+// Curriculum
+export interface Curriculum {
+  id: string;
+  name: string;
+  description?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Program (Prodi)
+export interface Program {
+  id: string;
+  name: string;
+  description?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// App Settings
+export interface AppSetting {
+  id: string;
+  setting_key: string;
+  setting_value?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
