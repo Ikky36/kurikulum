@@ -14,11 +14,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter } from 'lucide-react';
+import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { Course, Profile, AppRole } from '@/lib/types';
 import { UserImportExport } from '@/components/admin/UserImportExport';
 import { UserPagination } from '@/components/admin/UserPagination';
+import { KurikulumTab } from '@/components/admin/KurikulumTab';
 
 export default function DashboardAdmin() {
   const { user, profile, role, refreshProfile, loading } = useAuth();
@@ -553,13 +554,22 @@ export default function DashboardAdmin() {
           ))}
         </div>
 
-        <Tabs defaultValue="accounts" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="kurikulum" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="kurikulum" className="flex items-center gap-1">
+              <Target className="h-4 w-4" />
+              <span className="hidden sm:inline">Kurikulum</span>
+            </TabsTrigger>
             <TabsTrigger value="accounts">Kelola Akun</TabsTrigger>
             <TabsTrigger value="courses">Mata Kuliah</TabsTrigger>
-            <TabsTrigger value="assignments">Penugasan Dosen</TabsTrigger>
-            <TabsTrigger value="roles">Kelola Role</TabsTrigger>
+            <TabsTrigger value="assignments">Penugasan</TabsTrigger>
+            <TabsTrigger value="roles">Role</TabsTrigger>
           </TabsList>
+
+          {/* Kurikulum Tab */}
+          <TabsContent value="kurikulum">
+            <KurikulumTab />
+          </TabsContent>
 
           {/* Accounts Tab */}
           <TabsContent value="accounts">
