@@ -1,4 +1,5 @@
 import { useParams, Link } from 'react-router-dom';
+import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCourse, useCourseInstructors, useCourseGrades, useCourseEnrollments, useCourseAssessments, useCourseAssessmentScores } from '@/hooks/useCourses';
@@ -12,23 +13,35 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ArrowLeft, Mail, User, CheckCircle2, XCircle, Users, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { CourseLearningOutcomes } from '@/components/course/CourseLearningOutcomes';
 import { AssessmentScoreImportExport } from '@/components/course/AssessmentScoreImportExport';
+import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 export default function CourseDetail() {
   const { courseId } = useParams<{ courseId: string }>();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
+  const queryClient = useQueryClient();
   const { data: course, isLoading: courseLoading } = useCourse(courseId!);
   const { data: instructors, isLoading: instructorsLoading } = useCourseInstructors(courseId!);
   const { data: grades, isLoading: gradesLoading } = useCourseGrades(courseId!);
   const { data: enrollments } = useCourseEnrollments(courseId!);
   const { data: assessments } = useCourseAssessments(courseId!);
-  const { data: assessmentScores } = useCourseAssessmentScores(courseId!);
+  const { data: assessmentScores, refetch: refetchScores } = useCourseAssessmentScores(courseId!);
+
+  const [editingCell, setEditingCell] = useState<{ studentId: string; assessmentId: string } | null>(null);
+  const [editValue, setEditValue] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const canEdit = role === 'admin' || role === 'dosen';
 
   const isLoading = courseLoading || instructorsLoading || gradesLoading;
+
+  // Calculate total weight from all assessments
+  const totalWeight = assessments?.reduce((sum, a) => sum + (a.weight || 0), 0) || 0;
 
   // Prepare chart data
   const chartData = grades?.map(g => ({
@@ -44,20 +57,109 @@ export default function CourseDetail() {
     
     // Build assessment scores map for this student
     const studentAssessmentScores: Record<string, number | null> = {};
+    let weightedSum = 0;
+    let totalWeightWithScores = 0;
+
     assessments?.forEach(assessment => {
       const score = assessmentScores?.find(
         s => s.assessment_id === assessment.id && s.student_profile_id === e.student_profile_id
       );
-      studentAssessmentScores[assessment.id] = score?.score ?? null;
+      const scoreValue = score?.score ?? null;
+      studentAssessmentScores[assessment.id] = scoreValue;
+      
+      if (scoreValue !== null) {
+        const weight = assessment.weight || 0;
+        weightedSum += (scoreValue / 100) * weight;
+        totalWeightWithScores += weight;
+      }
     });
+
+    // Calculate achievement percentage: weighted sum / total weight * 100
+    const achievementPercentage = totalWeight > 0 
+      ? (weightedSum / totalWeight) * 100 
+      : null;
     
     return {
       ...e.student,
       grade: grade?.final_score,
-      isPassing: grade ? grade.final_score >= (course?.passing_score || 60) : null,
+      isPassing: achievementPercentage !== null ? achievementPercentage >= (course?.passing_score || 60) : null,
       assessmentScores: studentAssessmentScores,
+      achievementPercentage,
     };
   }) || [];
+
+  const handleStartEdit = (studentId: string, assessmentId: string, currentScore: number | null) => {
+    if (!canEdit) return;
+    setEditingCell({ studentId, assessmentId });
+    setEditValue(currentScore !== null ? String(currentScore) : '');
+  };
+
+  const handleSaveScore = async () => {
+    if (!editingCell || !user) return;
+    
+    const score = editValue === '' ? null : parseFloat(editValue);
+    if (score !== null && (isNaN(score) || score < 0 || score > 100)) {
+      toast.error('Nilai harus antara 0-100');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const existingScore = assessmentScores?.find(
+        s => s.assessment_id === editingCell.assessmentId && s.student_profile_id === editingCell.studentId
+      );
+
+      if (score === null) {
+        // Delete if exists
+        if (existingScore) {
+          const { error } = await supabase
+            .from('student_assessment_scores')
+            .delete()
+            .eq('id', existingScore.id);
+          if (error) throw error;
+        }
+      } else if (existingScore) {
+        // Update existing
+        const { error } = await supabase
+          .from('student_assessment_scores')
+          .update({ 
+            score, 
+            updated_by_profile_id: user.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingScore.id);
+        if (error) throw error;
+      } else {
+        // Insert new
+        const { error } = await supabase
+          .from('student_assessment_scores')
+          .insert({
+            assessment_id: editingCell.assessmentId,
+            student_profile_id: editingCell.studentId,
+            score,
+            updated_by_profile_id: user.id,
+          });
+        if (error) throw error;
+      }
+
+      await refetchScores();
+      queryClient.invalidateQueries({ queryKey: ['course-assessment-scores', courseId] });
+      toast.success('Nilai berhasil disimpan');
+    } catch (error: any) {
+      toast.error('Gagal menyimpan nilai: ' + error.message);
+    } finally {
+      setIsSaving(false);
+      setEditingCell(null);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSaveScore();
+    } else if (e.key === 'Escape') {
+      setEditingCell(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -269,7 +371,7 @@ export default function CourseDetail() {
                             </div>
                           </TableHead>
                         ))}
-                        <TableHead className="font-semibold text-center">Nilai Akhir</TableHead>
+                        <TableHead className="font-semibold text-center">Capaian</TableHead>
                         <TableHead className="font-semibold text-center">Status</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -298,26 +400,53 @@ export default function CourseDetail() {
                             {/* Assessment score cells */}
                             {assessments && assessments.length > 0 && assessments.map(assessment => {
                               const score = student?.assessmentScores?.[assessment.id];
+                              const isEditing = editingCell?.studentId === student?.id && editingCell?.assessmentId === assessment.id;
+                              
                               return (
-                                <TableCell key={assessment.id} className="text-center">
-                                  {score !== null && score !== undefined ? (
-                                    <span className={cn(
-                                      "font-medium",
-                                      score >= (course?.passing_score || 60) ? "text-success" : "text-destructive"
-                                    )}>
-                                      {score}
-                                    </span>
+                                <TableCell key={assessment.id} className="text-center p-1">
+                                  {isEditing ? (
+                                    <Input
+                                      type="number"
+                                      min="0"
+                                      max="100"
+                                      value={editValue}
+                                      onChange={(e) => setEditValue(e.target.value)}
+                                      onBlur={handleSaveScore}
+                                      onKeyDown={handleKeyDown}
+                                      disabled={isSaving}
+                                      className="w-16 h-8 text-center mx-auto"
+                                      autoFocus
+                                    />
                                   ) : (
-                                    <span className="text-muted-foreground">-</span>
+                                    <button
+                                      onClick={() => handleStartEdit(student?.id || '', assessment.id, score ?? null)}
+                                      className={cn(
+                                        "w-full h-8 flex items-center justify-center rounded transition-colors",
+                                        canEdit && "hover:bg-muted cursor-pointer",
+                                        !canEdit && "cursor-default"
+                                      )}
+                                      disabled={!canEdit}
+                                    >
+                                      {score !== null && score !== undefined ? (
+                                        <span className={cn(
+                                          "font-medium",
+                                          score >= (course?.passing_score || 60) ? "text-success" : "text-destructive"
+                                        )}>
+                                          {score}
+                                        </span>
+                                      ) : (
+                                        <span className="text-muted-foreground">-</span>
+                                      )}
+                                    </button>
                                   )}
                                 </TableCell>
                               );
                             })}
                             <TableCell className="text-center">
-                              {student?.grade !== undefined && student?.grade !== null ? (
+                              {student?.achievementPercentage !== undefined && student?.achievementPercentage !== null ? (
                                 <div className="flex items-center justify-center gap-2">
                                   <Progress 
-                                    value={student.grade} 
+                                    value={student.achievementPercentage} 
                                     className={cn(
                                       "w-16 h-2",
                                       student.isPassing ? "[&>div]:bg-success" : "[&>div]:bg-destructive"
@@ -327,7 +456,7 @@ export default function CourseDetail() {
                                     "font-bold",
                                     student.isPassing ? "text-success" : "text-destructive"
                                   )}>
-                                    {student.grade}
+                                    {student.achievementPercentage.toFixed(1)}%
                                   </span>
                                 </div>
                               ) : (
