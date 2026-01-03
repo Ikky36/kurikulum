@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -17,6 +17,8 @@ import { useToast } from '@/hooks/use-toast';
 import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 import { Course, Profile, AppRole } from '@/lib/types';
+import { UserImportExport } from '@/components/admin/UserImportExport';
+import { UserPagination } from '@/components/admin/UserPagination';
 
 export default function DashboardAdmin() {
   const { user, profile, role, refreshProfile, loading } = useAuth();
@@ -63,6 +65,10 @@ export default function DashboardAdmin() {
   // Filter and search state
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'mahasiswa' | 'dosen'>('all');
+  
+  // Pagination state
+  const [userCurrentPage, setUserCurrentPage] = useState(1);
+  const [userPageSize, setUserPageSize] = useState(10);
 
   // Fetch all courses
   const { data: courses, refetch: refetchCourses } = useQuery({
@@ -394,24 +400,49 @@ export default function DashboardAdmin() {
   };
 
   // Filter users based on search and role
-  const filteredUsers = allUsers?.filter(u => {
-    if (u.role === 'admin') return false;
-    
-    // Apply role filter
-    if (userRoleFilter !== 'all' && u.role !== userRoleFilter) return false;
-    
-    // Apply search filter
-    if (userSearchQuery) {
-      const query = userSearchQuery.toLowerCase();
-      const matchesName = u.full_name?.toLowerCase().includes(query);
-      const matchesEmail = u.email?.toLowerCase().includes(query);
-      const matchesNim = u.nim?.toLowerCase().includes(query);
-      const matchesNip = u.nip?.toLowerCase().includes(query);
-      return matchesName || matchesEmail || matchesNim || matchesNip;
-    }
-    
-    return true;
-  });
+  const filteredUsers = useMemo(() => {
+    return allUsers?.filter(u => {
+      if (u.role === 'admin') return false;
+      
+      // Apply role filter
+      if (userRoleFilter !== 'all' && u.role !== userRoleFilter) return false;
+      
+      // Apply search filter
+      if (userSearchQuery) {
+        const query = userSearchQuery.toLowerCase();
+        const matchesName = u.full_name?.toLowerCase().includes(query);
+        const matchesEmail = u.email?.toLowerCase().includes(query);
+        const matchesNim = u.nim?.toLowerCase().includes(query);
+        const matchesNip = u.nip?.toLowerCase().includes(query);
+        return matchesName || matchesEmail || matchesNim || matchesNip;
+      }
+      
+      return true;
+    }) || [];
+  }, [allUsers, userRoleFilter, userSearchQuery]);
+
+  // Paginated users
+  const totalUserPages = Math.ceil(filteredUsers.length / userPageSize);
+  const paginatedUsers = useMemo(() => {
+    const start = (userCurrentPage - 1) * userPageSize;
+    return filteredUsers.slice(start, start + userPageSize);
+  }, [filteredUsers, userCurrentPage, userPageSize]);
+
+  // Reset page when filter changes
+  const handleUserSearchChange = (query: string) => {
+    setUserSearchQuery(query);
+    setUserCurrentPage(1);
+  };
+
+  const handleUserRoleFilterChange = (filter: 'all' | 'mahasiswa' | 'dosen') => {
+    setUserRoleFilter(filter);
+    setUserCurrentPage(1);
+  };
+
+  const handleUserPageSizeChange = (size: number) => {
+    setUserPageSize(size);
+    setUserCurrentPage(1);
+  };
 
   const handleSaveCourse = () => {
     const courseData = {
@@ -611,6 +642,15 @@ export default function DashboardAdmin() {
                     </Dialog>
                   </div>
                   
+                  {/* Import/Export buttons */}
+                  <UserImportExport 
+                    users={allUsers || []} 
+                    onImportSuccess={() => {
+                      refetchUsers();
+                      queryClient.invalidateQueries({ queryKey: ['admin-dosen'] });
+                    }} 
+                  />
+                  
                   {/* Search and Filter */}
                   <div className="flex flex-col sm:flex-row gap-3">
                     <div className="relative flex-1">
@@ -618,11 +658,11 @@ export default function DashboardAdmin() {
                       <Input 
                         placeholder="Cari nama, email, NIM, atau NIP..." 
                         value={userSearchQuery}
-                        onChange={(e) => setUserSearchQuery(e.target.value)}
+                        onChange={(e) => handleUserSearchChange(e.target.value)}
                         className="pl-9"
                       />
                     </div>
-                    <Select value={userRoleFilter} onValueChange={(v) => setUserRoleFilter(v as 'all' | 'mahasiswa' | 'dosen')}>
+                    <Select value={userRoleFilter} onValueChange={(v) => handleUserRoleFilterChange(v as 'all' | 'mahasiswa' | 'dosen')}>
                       <SelectTrigger className="w-full sm:w-[180px]">
                         <Filter className="h-4 w-4 mr-2" />
                         <SelectValue placeholder="Filter Role" />
@@ -649,7 +689,7 @@ export default function DashboardAdmin() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredUsers?.map((u) => (
+                    {paginatedUsers.map((u) => (
                       <TableRow key={u.id}>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -688,7 +728,7 @@ export default function DashboardAdmin() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {(!filteredUsers || filteredUsers.length === 0) && (
+                    {filteredUsers.length === 0 && (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                           {userSearchQuery || userRoleFilter !== 'all' 
@@ -699,6 +739,16 @@ export default function DashboardAdmin() {
                     )}
                   </TableBody>
                 </Table>
+                
+                {/* Pagination */}
+                <UserPagination
+                  currentPage={userCurrentPage}
+                  totalPages={totalUserPages}
+                  pageSize={userPageSize}
+                  totalItems={filteredUsers.length}
+                  onPageChange={setUserCurrentPage}
+                  onPageSizeChange={handleUserPageSizeChange}
+                />
               </CardContent>
             </Card>
 
