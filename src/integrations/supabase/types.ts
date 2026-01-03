@@ -14,6 +14,115 @@ export type Database = {
   }
   public: {
     Tables: {
+      assessment_llos: {
+        Row: {
+          assessment_id: string
+          created_at: string
+          id: string
+          llo_id: string
+        }
+        Insert: {
+          assessment_id: string
+          created_at?: string
+          id?: string
+          llo_id: string
+        }
+        Update: {
+          assessment_id?: string
+          created_at?: string
+          id?: string
+          llo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_llos_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_llos_llo_id_fkey"
+            columns: ["llo_id"]
+            isOneToOne: false
+            referencedRelation: "llos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assessments: {
+        Row: {
+          code: string
+          course_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          course_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          course_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clos: {
+        Row: {
+          code: string
+          course_id: string
+          created_at: string
+          description: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          course_id: string
+          created_at?: string
+          description: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          course_id?: string
+          created_at?: string
+          description?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clos_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_instructors: {
         Row: {
           course_id: string
@@ -46,6 +155,42 @@ export type Database = {
             columns: ["instructor_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_plos: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          plo_id: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          plo_id: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          plo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_plos_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_plos_plo_id_fkey"
+            columns: ["plo_id"]
+            isOneToOne: false
+            referencedRelation: "plos"
             referencedColumns: ["id"]
           },
         ]
@@ -163,6 +308,68 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      llos: {
+        Row: {
+          clo_id: string
+          code: string
+          created_at: string
+          description: string
+          id: string
+          updated_at: string
+          weight_percentage: number
+        }
+        Insert: {
+          clo_id: string
+          code: string
+          created_at?: string
+          description: string
+          id?: string
+          updated_at?: string
+          weight_percentage: number
+        }
+        Update: {
+          clo_id?: string
+          code?: string
+          created_at?: string
+          description?: string
+          id?: string
+          updated_at?: string
+          weight_percentage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "llos_clo_id_fkey"
+            columns: ["clo_id"]
+            isOneToOne: false
+            referencedRelation: "clos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plos: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

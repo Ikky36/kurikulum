@@ -1,0 +1,829 @@
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { useToast } from '@/hooks/use-toast';
+import { Plus, Trash2, Pencil, ChevronDown, Target, BookMarked, ClipboardList, AlertCircle, Link2 } from 'lucide-react';
+import { CLO, LLO, Assessment, CoursePLO, PLO } from '@/lib/types';
+import { cn } from '@/lib/utils';
+
+interface CourseLearningOutcomesProps {
+  courseId: string;
+  canEdit: boolean;
+}
+
+export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutcomesProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const { role } = useAuth();
+
+  // CLO state
+  const [showCloDialog, setShowCloDialog] = useState(false);
+  const [editingClo, setEditingClo] = useState<CLO | null>(null);
+  const [cloCode, setCloCode] = useState('');
+  const [cloDescription, setCloDescription] = useState('');
+
+  // LLO state
+  const [showLloDialog, setShowLloDialog] = useState(false);
+  const [editingLlo, setEditingLlo] = useState<LLO | null>(null);
+  const [lloCode, setLloCode] = useState('');
+  const [lloDescription, setLloDescription] = useState('');
+  const [lloWeight, setLloWeight] = useState('');
+  const [selectedCloForLlo, setSelectedCloForLlo] = useState('');
+
+  // Assessment state
+  const [showAssessmentDialog, setShowAssessmentDialog] = useState(false);
+  const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
+  const [assessmentCode, setAssessmentCode] = useState('');
+  const [assessmentName, setAssessmentName] = useState('');
+  const [assessmentDescription, setAssessmentDescription] = useState('');
+  const [selectedLlosForAssessment, setSelectedLlosForAssessment] = useState<string[]>([]);
+
+  // Fetch Course PLOs
+  const { data: coursePlos } = useQuery({
+    queryKey: ['course-plos', courseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('course_plos')
+        .select('*, plos:plo_id(*)')
+        .eq('course_id', courseId);
+      if (error) throw error;
+      return data.map(cp => ({
+        ...cp,
+        plo: cp.plos as unknown as PLO
+      })) as CoursePLO[];
+    },
+  });
+
+  // Fetch CLOs
+  const { data: clos } = useQuery({
+    queryKey: ['clos', courseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('clos')
+        .select('*')
+        .eq('course_id', courseId)
+        .order('code');
+      if (error) throw error;
+      return data as CLO[];
+    },
+  });
+
+  // Fetch LLOs
+  const { data: llos } = useQuery({
+    queryKey: ['llos', courseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('llos')
+        .select('*, clos:clo_id(*)')
+        .order('code');
+      if (error) throw error;
+      
+      // Filter LLOs that belong to this course's CLOs
+      const cloIds = clos?.map(c => c.id) || [];
+      return data
+        .filter(llo => cloIds.includes(llo.clo_id))
+        .map(llo => ({
+          ...llo,
+          clo: llo.clos as unknown as CLO
+        })) as LLO[];
+    },
+    enabled: !!clos,
+  });
+
+  // Fetch Assessments
+  const { data: assessments } = useQuery({
+    queryKey: ['assessments', courseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('assessments')
+        .select('*')
+        .eq('course_id', courseId)
+        .order('code');
+      if (error) throw error;
+      return data as Assessment[];
+    },
+  });
+
+  // Fetch Assessment-LLO links
+  const { data: assessmentLlos } = useQuery({
+    queryKey: ['assessment-llos', courseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('assessment_llos')
+        .select('*, llos:llo_id(*)');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // CLO Mutations
+  const createCloMutation = useMutation({
+    mutationFn: async (clo: { code: string; description: string; course_id: string }) => {
+      const { error } = await supabase.from('clos').insert([clo]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clos', courseId] });
+      toast({ title: 'Berhasil', description: 'CPMK/CLO berhasil ditambahkan' });
+      resetCloForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const updateCloMutation = useMutation({
+    mutationFn: async ({ id, ...clo }: Partial<CLO> & { id: string }) => {
+      const { error } = await supabase.from('clos').update(clo).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clos', courseId] });
+      toast({ title: 'Berhasil', description: 'CPMK/CLO berhasil diperbarui' });
+      resetCloForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const deleteCloMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('clos').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clos', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['llos', courseId] });
+      toast({ title: 'Berhasil', description: 'CPMK/CLO berhasil dihapus' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // LLO Mutations
+  const createLloMutation = useMutation({
+    mutationFn: async (llo: { code: string; description: string; weight_percentage: number; clo_id: string }) => {
+      const { error } = await supabase.from('llos').insert([llo]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['llos', courseId] });
+      toast({ title: 'Berhasil', description: 'SUB-CPMK/LLO berhasil ditambahkan' });
+      resetLloForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const updateLloMutation = useMutation({
+    mutationFn: async ({ id, ...llo }: Partial<LLO> & { id: string }) => {
+      const { error } = await supabase.from('llos').update(llo).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['llos', courseId] });
+      toast({ title: 'Berhasil', description: 'SUB-CPMK/LLO berhasil diperbarui' });
+      resetLloForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const deleteLloMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('llos').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['llos', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['assessment-llos', courseId] });
+      toast({ title: 'Berhasil', description: 'SUB-CPMK/LLO berhasil dihapus' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Assessment Mutations
+  const createAssessmentMutation = useMutation({
+    mutationFn: async ({ lloIds, ...assessment }: { code: string; name: string; description?: string; course_id: string; lloIds: string[] }) => {
+      const { data, error } = await supabase.from('assessments').insert([assessment]).select().single();
+      if (error) throw error;
+      
+      if (lloIds.length > 0) {
+        const linkData = lloIds.map(lloId => ({
+          assessment_id: data.id,
+          llo_id: lloId
+        }));
+        const { error: linkError } = await supabase.from('assessment_llos').insert(linkData);
+        if (linkError) throw linkError;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assessments', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['assessment-llos', courseId] });
+      toast({ title: 'Berhasil', description: 'Tugas/Quiz berhasil ditambahkan' });
+      resetAssessmentForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const updateAssessmentMutation = useMutation({
+    mutationFn: async ({ id, lloIds, ...assessment }: Partial<Assessment> & { id: string; lloIds?: string[] }) => {
+      const { error } = await supabase.from('assessments').update(assessment).eq('id', id);
+      if (error) throw error;
+
+      if (lloIds) {
+        // Remove existing links
+        const { error: deleteError } = await supabase
+          .from('assessment_llos')
+          .delete()
+          .eq('assessment_id', id);
+        if (deleteError) throw deleteError;
+
+        // Add new links
+        if (lloIds.length > 0) {
+          const linkData = lloIds.map(lloId => ({
+            assessment_id: id,
+            llo_id: lloId
+          }));
+          const { error: linkError } = await supabase.from('assessment_llos').insert(linkData);
+          if (linkError) throw linkError;
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assessments', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['assessment-llos', courseId] });
+      toast({ title: 'Berhasil', description: 'Tugas/Quiz berhasil diperbarui' });
+      resetAssessmentForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const deleteAssessmentMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('assessments').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assessments', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['assessment-llos', courseId] });
+      toast({ title: 'Berhasil', description: 'Tugas/Quiz berhasil dihapus' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Reset forms
+  const resetCloForm = () => {
+    setCloCode('');
+    setCloDescription('');
+    setEditingClo(null);
+    setShowCloDialog(false);
+  };
+
+  const resetLloForm = () => {
+    setLloCode('');
+    setLloDescription('');
+    setLloWeight('');
+    setSelectedCloForLlo('');
+    setEditingLlo(null);
+    setShowLloDialog(false);
+  };
+
+  const resetAssessmentForm = () => {
+    setAssessmentCode('');
+    setAssessmentName('');
+    setAssessmentDescription('');
+    setSelectedLlosForAssessment([]);
+    setEditingAssessment(null);
+    setShowAssessmentDialog(false);
+  };
+
+  // Open edit dialogs
+  const openEditClo = (clo: CLO) => {
+    setEditingClo(clo);
+    setCloCode(clo.code);
+    setCloDescription(clo.description);
+    setShowCloDialog(true);
+  };
+
+  const openEditLlo = (llo: LLO) => {
+    setEditingLlo(llo);
+    setLloCode(llo.code);
+    setLloDescription(llo.description);
+    setLloWeight(llo.weight_percentage.toString());
+    setSelectedCloForLlo(llo.clo_id);
+    setShowLloDialog(true);
+  };
+
+  const openEditAssessment = (assessment: Assessment) => {
+    const existingLlos = assessmentLlos?.filter(al => al.assessment_id === assessment.id).map(al => al.llo_id) || [];
+    setEditingAssessment(assessment);
+    setAssessmentCode(assessment.code);
+    setAssessmentName(assessment.name);
+    setAssessmentDescription(assessment.description || '');
+    setSelectedLlosForAssessment(existingLlos);
+    setShowAssessmentDialog(true);
+  };
+
+  // Save handlers
+  const handleSaveClo = () => {
+    if (editingClo) {
+      updateCloMutation.mutate({ id: editingClo.id, code: cloCode, description: cloDescription });
+    } else {
+      createCloMutation.mutate({ code: cloCode, description: cloDescription, course_id: courseId });
+    }
+  };
+
+  const handleSaveLlo = () => {
+    if (editingLlo) {
+      updateLloMutation.mutate({ 
+        id: editingLlo.id, 
+        code: lloCode, 
+        description: lloDescription,
+        weight_percentage: parseFloat(lloWeight),
+        clo_id: selectedCloForLlo
+      });
+    } else {
+      createLloMutation.mutate({ 
+        code: lloCode, 
+        description: lloDescription, 
+        weight_percentage: parseFloat(lloWeight),
+        clo_id: selectedCloForLlo 
+      });
+    }
+  };
+
+  const handleSaveAssessment = () => {
+    if (editingAssessment) {
+      updateAssessmentMutation.mutate({ 
+        id: editingAssessment.id, 
+        code: assessmentCode, 
+        name: assessmentName,
+        description: assessmentDescription || undefined,
+        lloIds: selectedLlosForAssessment
+      });
+    } else {
+      createAssessmentMutation.mutate({ 
+        code: assessmentCode, 
+        name: assessmentName,
+        description: assessmentDescription || undefined,
+        course_id: courseId,
+        lloIds: selectedLlosForAssessment
+      });
+    }
+  };
+
+  // Get LLOs for a CLO
+  const getLlosForClo = (cloId: string) => llos?.filter(llo => llo.clo_id === cloId) || [];
+
+  // Get assessment weight (sum of related LLO weights)
+  const getAssessmentWeight = (assessmentId: string) => {
+    const linkedLloIds = assessmentLlos?.filter(al => al.assessment_id === assessmentId).map(al => al.llo_id) || [];
+    return llos?.filter(llo => linkedLloIds.includes(llo.id)).reduce((sum, llo) => sum + llo.weight_percentage, 0) || 0;
+  };
+
+  // Get linked LLOs for assessment
+  const getLinkedLlosForAssessment = (assessmentId: string) => {
+    const linkedLloIds = assessmentLlos?.filter(al => al.assessment_id === assessmentId).map(al => al.llo_id) || [];
+    return llos?.filter(llo => linkedLloIds.includes(llo.id)) || [];
+  };
+
+  // Calculate total LLO weight
+  const totalLloWeight = llos?.reduce((sum, llo) => sum + llo.weight_percentage, 0) || 0;
+  const isWeightValid = Math.abs(totalLloWeight - 100) < 0.01;
+
+  return (
+    <div className="space-y-6">
+      {/* Course PLOs */}
+      {coursePlos && coursePlos.length > 0 && (
+        <Card className="animate-slide-up">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Target className="h-5 w-5 text-primary" />
+              CPL/PLO Terkait
+            </CardTitle>
+            <CardDescription>Capaian Pembelajaran Lulusan yang terkait dengan mata kuliah ini</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {coursePlos.map((cp) => (
+                <div key={cp.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/50">
+                  <Badge variant="secondary" className="font-mono shrink-0">{cp.plo?.code}</Badge>
+                  <p className="text-sm text-muted-foreground">{cp.plo?.description}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* CLO Section */}
+      <Card className="animate-slide-up" style={{ animationDelay: '100ms' }}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <BookMarked className="h-5 w-5 text-primary" />
+                CPMK/CLO (Course Learning Outcomes)
+              </CardTitle>
+              <CardDescription>Capaian Pembelajaran Mata Kuliah</CardDescription>
+            </div>
+            {canEdit && (
+              <Dialog open={showCloDialog} onOpenChange={(open) => { if (!open) resetCloForm(); setShowCloDialog(open); }}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Tambah CPMK
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingClo ? 'Edit CPMK/CLO' : 'Tambah CPMK/CLO Baru'}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Kode CPMK</Label>
+                      <Input value={cloCode} onChange={(e) => setCloCode(e.target.value)} placeholder="Contoh: CPMK-1" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Deskripsi</Label>
+                      <Textarea value={cloDescription} onChange={(e) => setCloDescription(e.target.value)} placeholder="Deskripsi capaian pembelajaran..." rows={4} />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={handleSaveClo} disabled={!cloCode || !cloDescription}>
+                      {editingClo ? 'Simpan' : 'Tambah'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {clos && clos.length > 0 ? (
+            <Accordion type="multiple" className="w-full">
+              {clos.map((clo) => {
+                const cloLlos = getLlosForClo(clo.id);
+                const cloTotalWeight = cloLlos.reduce((sum, llo) => sum + llo.weight_percentage, 0);
+                return (
+                  <AccordionItem key={clo.id} value={clo.id}>
+                    <AccordionTrigger className="hover:no-underline">
+                      <div className="flex items-center gap-3 flex-1 text-left">
+                        <Badge variant="secondary" className="font-mono">{clo.code}</Badge>
+                        <span className="text-sm flex-1">{clo.description}</span>
+                        <Badge variant="outline" className="ml-2">
+                          {cloLlos.length} SUB-CPMK ({cloTotalWeight.toFixed(1)}%)
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                      <div className="pl-4 pt-2 space-y-2">
+                        {canEdit && (
+                          <div className="flex gap-2 mb-3">
+                            <Button variant="outline" size="sm" onClick={() => openEditClo(clo)}>
+                              <Pencil className="h-3 w-3 mr-1" /> Edit
+                            </Button>
+                            <Button variant="outline" size="sm" className="text-destructive" onClick={() => deleteCloMutation.mutate(clo.id)}>
+                              <Trash2 className="h-3 w-3 mr-1" /> Hapus
+                            </Button>
+                          </div>
+                        )}
+                        {cloLlos.length > 0 ? (
+                          <div className="space-y-2">
+                            {cloLlos.map((llo) => (
+                              <div key={llo.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border">
+                                <div className="flex items-center gap-3">
+                                  <Badge variant="outline" className="font-mono">{llo.code}</Badge>
+                                  <span className="text-sm">{llo.description}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Badge>{llo.weight_percentage}%</Badge>
+                                  {canEdit && (
+                                    <div className="flex gap-1">
+                                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditLlo(llo)}>
+                                        <Pencil className="h-3 w-3" />
+                                      </Button>
+                                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteLloMutation.mutate(llo.id)}>
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Belum ada SUB-CPMK/LLO</p>
+                        )}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
+          ) : (
+            <p className="text-muted-foreground text-center py-8">
+              Belum ada CPMK/CLO. {canEdit && 'Klik "Tambah CPMK" untuk menambahkan.'}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* LLO Section */}
+      <Card className="animate-slide-up" style={{ animationDelay: '200ms' }}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Target className="h-5 w-5 text-primary" />
+                SUB-CPMK/LLO (Lesson Learning Outcomes)
+              </CardTitle>
+              <CardDescription className="flex items-center gap-2">
+                Capaian Pembelajaran Pertemuan
+                {llos && llos.length > 0 && (
+                  <Badge variant={isWeightValid ? 'default' : 'destructive'} className="ml-2">
+                    Total: {totalLloWeight.toFixed(1)}%
+                  </Badge>
+                )}
+                {!isWeightValid && llos && llos.length > 0 && (
+                  <span className="text-destructive text-xs flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" />
+                    Total bobot harus 100%
+                  </span>
+                )}
+              </CardDescription>
+            </div>
+            {canEdit && clos && clos.length > 0 && (
+              <Dialog open={showLloDialog} onOpenChange={(open) => { if (!open) resetLloForm(); setShowLloDialog(open); }}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Tambah SUB-CPMK
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{editingLlo ? 'Edit SUB-CPMK/LLO' : 'Tambah SUB-CPMK/LLO Baru'}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>CPMK/CLO Terkait</Label>
+                      <Select value={selectedCloForLlo} onValueChange={setSelectedCloForLlo}>
+                        <SelectTrigger><SelectValue placeholder="Pilih CPMK/CLO" /></SelectTrigger>
+                        <SelectContent>
+                          {clos?.map((clo) => (
+                            <SelectItem key={clo.id} value={clo.id}>
+                              {clo.code} - {clo.description.substring(0, 50)}...
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Kode SUB-CPMK</Label>
+                      <Input value={lloCode} onChange={(e) => setLloCode(e.target.value)} placeholder="Contoh: SUB-CPMK-1.1" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Deskripsi</Label>
+                      <Textarea value={lloDescription} onChange={(e) => setLloDescription(e.target.value)} placeholder="Deskripsi capaian pembelajaran pertemuan..." rows={3} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Bobot (%)</Label>
+                      <Input type="number" min="0" max="100" step="0.1" value={lloWeight} onChange={(e) => setLloWeight(e.target.value)} placeholder="Contoh: 10" />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={handleSaveLlo} disabled={!lloCode || !lloDescription || !lloWeight || !selectedCloForLlo}>
+                      {editingLlo ? 'Simpan' : 'Tambah'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {llos && llos.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="w-28">Kode</TableHead>
+                  <TableHead>Deskripsi</TableHead>
+                  <TableHead className="w-24">CPMK</TableHead>
+                  <TableHead className="w-20 text-center">Bobot</TableHead>
+                  {canEdit && <TableHead className="w-20">Aksi</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {llos.map((llo) => (
+                  <TableRow key={llo.id}>
+                    <TableCell><Badge variant="outline" className="font-mono">{llo.code}</Badge></TableCell>
+                    <TableCell className="text-sm">{llo.description}</TableCell>
+                    <TableCell><Badge variant="secondary">{llo.clo?.code}</Badge></TableCell>
+                    <TableCell className="text-center">
+                      <Badge>{llo.weight_percentage}%</Badge>
+                    </TableCell>
+                    {canEdit && (
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditLlo(llo)}>
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteLloMutation.mutate(llo.id)}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-muted-foreground text-center py-8 px-4">
+              {clos && clos.length > 0 
+                ? `Belum ada SUB-CPMK/LLO. ${canEdit ? 'Klik "Tambah SUB-CPMK" untuk menambahkan.' : ''}`
+                : 'Tambahkan CPMK/CLO terlebih dahulu sebelum menambahkan SUB-CPMK/LLO.'
+              }
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Assessment Section */}
+      <Card className="animate-slide-up" style={{ animationDelay: '300ms' }}>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ClipboardList className="h-5 w-5 text-primary" />
+                Tugas/Quiz
+              </CardTitle>
+              <CardDescription>Penilaian yang terkait dengan SUB-CPMK/LLO</CardDescription>
+            </div>
+            {canEdit && llos && llos.length > 0 && (
+              <Dialog open={showAssessmentDialog} onOpenChange={(open) => { if (!open) resetAssessmentForm(); setShowAssessmentDialog(open); }}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Tambah Tugas/Quiz
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-lg">
+                  <DialogHeader>
+                    <DialogTitle>{editingAssessment ? 'Edit Tugas/Quiz' : 'Tambah Tugas/Quiz Baru'}</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Kode</Label>
+                        <Input value={assessmentCode} onChange={(e) => setAssessmentCode(e.target.value)} placeholder="T1" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Nama</Label>
+                        <Input value={assessmentName} onChange={(e) => setAssessmentName(e.target.value)} placeholder="Tugas 1" />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Deskripsi (Opsional)</Label>
+                      <Textarea value={assessmentDescription} onChange={(e) => setAssessmentDescription(e.target.value)} placeholder="Deskripsi tugas..." rows={2} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>SUB-CPMK/LLO Terkait</Label>
+                      <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                        {llos?.map((llo) => (
+                          <div key={llo.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`llo-${llo.id}`}
+                              checked={selectedLlosForAssessment.includes(llo.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedLlosForAssessment([...selectedLlosForAssessment, llo.id]);
+                                } else {
+                                  setSelectedLlosForAssessment(selectedLlosForAssessment.filter(id => id !== llo.id));
+                                }
+                              }}
+                            />
+                            <label htmlFor={`llo-${llo.id}`} className="text-sm cursor-pointer flex-1">
+                              <span className="font-mono font-medium">{llo.code}</span> ({llo.weight_percentage}%) - {llo.description.substring(0, 40)}...
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                      {selectedLlosForAssessment.length > 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          Total bobot: {llos?.filter(llo => selectedLlosForAssessment.includes(llo.id)).reduce((sum, llo) => sum + llo.weight_percentage, 0).toFixed(1)}%
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button onClick={handleSaveAssessment} disabled={!assessmentCode || !assessmentName}>
+                      {editingAssessment ? 'Simpan' : 'Tambah'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {assessments && assessments.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="w-20">Kode</TableHead>
+                  <TableHead>Nama</TableHead>
+                  <TableHead>SUB-CPMK Terkait</TableHead>
+                  <TableHead className="w-24 text-center">Bobot</TableHead>
+                  {canEdit && <TableHead className="w-20">Aksi</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {assessments.map((assessment) => {
+                  const linkedLlos = getLinkedLlosForAssessment(assessment.id);
+                  const weight = getAssessmentWeight(assessment.id);
+                  return (
+                    <TableRow key={assessment.id}>
+                      <TableCell><Badge variant="outline" className="font-mono">{assessment.code}</Badge></TableCell>
+                      <TableCell>
+                        <div>
+                          <span className="font-medium">{assessment.name}</span>
+                          {assessment.description && (
+                            <p className="text-xs text-muted-foreground">{assessment.description}</p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {linkedLlos.length > 0 ? (
+                            linkedLlos.map(llo => (
+                              <Badge key={llo.id} variant="secondary" className="text-xs">
+                                {llo.code}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-muted-foreground text-sm">-</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={weight > 0 ? 'default' : 'outline'}>{weight.toFixed(1)}%</Badge>
+                      </TableCell>
+                      {canEdit && (
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditAssessment(assessment)}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteAssessmentMutation.mutate(assessment.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          ) : (
+            <div className="text-muted-foreground text-center py-8 px-4">
+              {llos && llos.length > 0 
+                ? `Belum ada Tugas/Quiz. ${canEdit ? 'Klik "Tambah Tugas/Quiz" untuk menambahkan.' : ''}`
+                : 'Tambahkan SUB-CPMK/LLO terlebih dahulu sebelum menambahkan Tugas/Quiz.'
+              }
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
