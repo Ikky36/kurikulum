@@ -14,6 +14,7 @@ import DashboardMahasiswa from "./pages/dashboard/DashboardMahasiswa";
 import DashboardDosen from "./pages/dashboard/DashboardDosen";
 import DashboardAdmin from "./pages/dashboard/DashboardAdmin";
 import Settings from "./pages/Settings";
+import Kurikulum from "./pages/Kurikulum";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/kurikulum" element={<Kurikulum />} />
             <Route path="/mata-kuliah" element={<MataKuliah />} />
             <Route path="/mata-kuliah/:courseId" element={<CourseDetail />} />
             <Route path="/nilai-mahasiswa/:studentId" element={<StudentGrades />} />
