@@ -455,15 +455,16 @@ export default function DashboardDosen() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-muted/50">
-                        <TableHead>Nama Mahasiswa</TableHead>
-                        <TableHead>NIM</TableHead>
-                        <TableHead className="w-32">Nilai (0-100)</TableHead>
-                        <TableHead className="w-24">Aksi</TableHead>
+                      <TableRow className="bg-primary hover:bg-primary">
+                        <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                        <TableHead className="text-primary-foreground">Nama Mahasiswa</TableHead>
+                        <TableHead className="text-primary-foreground">NIM</TableHead>
+                        <TableHead className="w-32 text-primary-foreground">Nilai (0-100)</TableHead>
+                        <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {enrollments?.map((enrollment) => {
+                      {enrollments?.map((enrollment, index) => {
                         const currentGrade = getStudentGrade(enrollment.student?.id || '');
                         return (
                           <GradeRow 
@@ -473,12 +474,13 @@ export default function DashboardDosen() {
                             passingScore={selectedCourse?.passing_score || 60}
                             onSave={(score) => updateGradeMutation.mutate({ studentId: enrollment.student!.id, score })}
                             isSaving={updateGradeMutation.isPending}
+                            rowNumber={index + 1}
                           />
                         );
                       })}
                       {(!enrollments || enrollments.length === 0) && (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                             Belum ada mahasiswa terdaftar pada mata kuliah ini
                           </TableCell>
                         </TableRow>
@@ -521,16 +523,18 @@ export default function DashboardDosen() {
                 </div>
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Kode MK</TableHead>
-                      <TableHead>NIM</TableHead>
-                      <TableHead>Nama</TableHead>
-                      <TableHead>Nilai</TableHead>
+                    <TableRow className="bg-primary hover:bg-primary">
+                      <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                      <TableHead className="text-primary-foreground">Kode MK</TableHead>
+                      <TableHead className="text-primary-foreground">NIM</TableHead>
+                      <TableHead className="text-primary-foreground">Nama</TableHead>
+                      <TableHead className="text-primary-foreground">Nilai</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {importPreview.slice(0, 10).map((item, i) => (
                       <TableRow key={i}>
+                        <TableCell className="text-center">{i + 1}</TableCell>
                         <TableCell>{item.course_code}</TableCell>
                         <TableCell>{item.student_nim}</TableCell>
                         <TableCell>{item.student_name}</TableCell>
@@ -567,13 +571,15 @@ function GradeRow({
   currentGrade, 
   passingScore,
   onSave, 
-  isSaving 
+  isSaving,
+  rowNumber
 }: { 
   student: Profile; 
   currentGrade?: number;
   passingScore: number;
   onSave: (score: number) => void;
   isSaving: boolean;
+  rowNumber: number;
 }) {
   const [score, setScore] = useState(currentGrade?.toString() || '');
   const [hasChanged, setHasChanged] = useState(false);
@@ -593,6 +599,7 @@ function GradeRow({
 
   return (
     <TableRow>
+      <TableCell className="text-center">{rowNumber}</TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
           <Avatar className="h-8 w-8">

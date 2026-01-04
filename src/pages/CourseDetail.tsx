@@ -469,9 +469,9 @@ export default function CourseDetail() {
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-12 font-semibold">No</TableHead>
-                        <TableHead className="font-semibold">
+                      <TableRow className="bg-primary hover:bg-primary">
+                        <TableHead className="w-12 font-semibold text-primary-foreground">No</TableHead>
+                        <TableHead className="font-semibold text-primary-foreground">
                           <button 
                             onClick={() => handleSort('name')}
                             className="flex items-center justify-center w-full hover:opacity-80"
@@ -480,7 +480,7 @@ export default function CourseDetail() {
                             {renderSortIcon('name')}
                           </button>
                         </TableHead>
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold text-primary-foreground">
                           <button 
                             onClick={() => handleSort('nim')}
                             className="flex items-center justify-center w-full hover:opacity-80"
@@ -489,7 +489,7 @@ export default function CourseDetail() {
                             {renderSortIcon('nim')}
                           </button>
                         </TableHead>
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold text-primary-foreground">
                           <Select value={yearFilter} onValueChange={setYearFilter}>
                             <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground mx-auto">
                               <SelectValue placeholder="Angkatan" />
@@ -502,7 +502,7 @@ export default function CourseDetail() {
                             </SelectContent>
                           </Select>
                         </TableHead>
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold text-primary-foreground">
                           <Select value={classFilter} onValueChange={setClassFilter}>
                             <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground mx-auto">
                               <SelectValue placeholder="Kelas" />
@@ -517,7 +517,7 @@ export default function CourseDetail() {
                         </TableHead>
                         {/* Dynamic assessment columns with weight */}
                         {assessments && assessments.length > 0 && assessments.map(assessment => (
-                          <TableHead key={assessment.id} className="font-semibold min-w-[80px]">
+                          <TableHead key={assessment.id} className="font-semibold min-w-[80px] text-primary-foreground">
                             <button 
                               onClick={() => handleSort(`assessment_${assessment.id}`)}
                               className="flex flex-col items-center w-full hover:opacity-80"
@@ -532,7 +532,7 @@ export default function CourseDetail() {
                             </button>
                           </TableHead>
                         ))}
-                        <TableHead className="font-semibold">
+                        <TableHead className="font-semibold text-primary-foreground">
                           <button 
                             onClick={() => handleSort('achievement')}
                             className="flex items-center justify-center w-full hover:opacity-80"
@@ -541,7 +541,7 @@ export default function CourseDetail() {
                             {renderSortIcon('achievement')}
                           </button>
                         </TableHead>
-                        <TableHead className="font-semibold">Status</TableHead>
+                        <TableHead className="font-semibold text-primary-foreground">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>

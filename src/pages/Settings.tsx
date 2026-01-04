@@ -419,11 +419,11 @@ export default function Settings() {
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">No</TableHead>
-                      <TableHead>Nama Kurikulum</TableHead>
-                      <TableHead>Deskripsi</TableHead>
-                      <TableHead className="w-24">Aksi</TableHead>
+                    <TableRow className="bg-primary hover:bg-primary">
+                      <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                      <TableHead className="text-primary-foreground">Nama Kurikulum</TableHead>
+                      <TableHead className="text-primary-foreground">Deskripsi</TableHead>
+                      <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -515,11 +515,11 @@ export default function Settings() {
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-12">No</TableHead>
-                      <TableHead>Nama Program Studi</TableHead>
-                      <TableHead>Deskripsi</TableHead>
-                      <TableHead className="w-24">Aksi</TableHead>
+                    <TableRow className="bg-primary hover:bg-primary">
+                      <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                      <TableHead className="text-primary-foreground">Nama Program Studi</TableHead>
+                      <TableHead className="text-primary-foreground">Deskripsi</TableHead>
+                      <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

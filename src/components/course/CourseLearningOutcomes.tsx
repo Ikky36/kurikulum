@@ -641,7 +641,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
         <CardContent>
           {clos && clos.length > 0 ? (
             <div className="space-y-2">
-              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-primary/10 rounded-lg text-sm font-medium">
+              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-primary rounded-lg text-sm font-medium text-primary-foreground">
                 <div className="col-span-1 text-center">No</div>
                 <div className="col-span-2">Kode</div>
                 <div className="col-span-4">CPMK/CLO</div>
@@ -929,17 +929,17 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
           {llos && llos.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow className="bg-primary/10">
-                  <TableHead className="w-12">No</TableHead>
-                  <TableHead className="w-28">Kode</TableHead>
-                  <TableHead>SUB-CPMK/LLO</TableHead>
-                  <TableHead className="w-24">CPMK</TableHead>
-                  <TableHead>Bahan Kajian</TableHead>
-                  <TableHead>Indikator</TableHead>
-                  <TableHead>Metode</TableHead>
-                  <TableHead>Referensi</TableHead>
-                  <TableHead className="w-20 text-center">Bobot</TableHead>
-                  {canEdit && <TableHead className="w-20">Aksi</TableHead>}
+                <TableRow className="bg-primary hover:bg-primary">
+                  <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                  <TableHead className="w-28 text-primary-foreground">Kode</TableHead>
+                  <TableHead className="text-primary-foreground">SUB-CPMK/LLO</TableHead>
+                  <TableHead className="w-24 text-primary-foreground">CPMK</TableHead>
+                  <TableHead className="text-primary-foreground">Bahan Kajian</TableHead>
+                  <TableHead className="text-primary-foreground">Indikator</TableHead>
+                  <TableHead className="text-primary-foreground">Metode</TableHead>
+                  <TableHead className="text-primary-foreground">Referensi</TableHead>
+                  <TableHead className="w-20 text-center text-primary-foreground">Bobot</TableHead>
+                  {canEdit && <TableHead className="w-20 text-primary-foreground">Aksi</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1091,13 +1091,13 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
           {assessments && assessments.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow className="bg-primary/10">
-                  <TableHead className="w-12">No</TableHead>
-                  <TableHead className="w-20">Kode</TableHead>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>SUB-CPMK Terkait</TableHead>
-                  <TableHead className="w-24 text-center">Bobot</TableHead>
-                  {canEdit && <TableHead className="w-20">Aksi</TableHead>}
+                <TableRow className="bg-primary hover:bg-primary">
+                  <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                  <TableHead className="w-20 text-primary-foreground">Kode</TableHead>
+                  <TableHead className="text-primary-foreground">Nama</TableHead>
+                  <TableHead className="text-primary-foreground">SUB-CPMK Terkait</TableHead>
+                  <TableHead className="w-24 text-center text-primary-foreground">Bobot</TableHead>
+                  {canEdit && <TableHead className="w-20 text-primary-foreground">Aksi</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>

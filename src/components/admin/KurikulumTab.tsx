@@ -805,11 +805,11 @@ export function KurikulumTab() {
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-12">No</TableHead>
-                    <TableHead className="w-32">Kode</TableHead>
-                    <TableHead>CPL/PLO</TableHead>
-                    <TableHead className="w-24">Aksi</TableHead>
+                  <TableRow className="bg-primary hover:bg-primary">
+                    <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                    <TableHead className="w-32 text-primary-foreground">Kode</TableHead>
+                    <TableHead className="text-primary-foreground">CPL/PLO</TableHead>
+                    <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -970,14 +970,14 @@ export function KurikulumTab() {
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-12">No</TableHead>
-                    <TableHead className="w-28">Kode</TableHead>
-                    <TableHead>Nama</TableHead>
-                    <TableHead>Kurikulum</TableHead>
-                    <TableHead>Semester</TableHead>
-                    <TableHead>CPL/PLO Terkait</TableHead>
-                    <TableHead className="w-32">Aksi</TableHead>
+                  <TableRow className="bg-primary hover:bg-primary">
+                    <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                    <TableHead className="w-28 text-primary-foreground">Kode</TableHead>
+                    <TableHead className="text-primary-foreground">Nama</TableHead>
+                    <TableHead className="text-primary-foreground">Kurikulum</TableHead>
+                    <TableHead className="text-primary-foreground">Semester</TableHead>
+                    <TableHead className="text-primary-foreground">CPL/PLO Terkait</TableHead>
+                    <TableHead className="w-32 text-primary-foreground">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -1097,12 +1097,12 @@ export function KurikulumTab() {
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-12">No</TableHead>
-                    <TableHead>Nama Kelas</TableHead>
-                    <TableHead>Deskripsi</TableHead>
-                    <TableHead>Jumlah Mahasiswa</TableHead>
-                    <TableHead className="w-56">Aksi</TableHead>
+                  <TableRow className="bg-primary hover:bg-primary">
+                    <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                    <TableHead className="text-primary-foreground">Nama Kelas</TableHead>
+                    <TableHead className="text-primary-foreground">Deskripsi</TableHead>
+                    <TableHead className="text-primary-foreground">Jumlah Mahasiswa</TableHead>
+                    <TableHead className="w-56 text-primary-foreground">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

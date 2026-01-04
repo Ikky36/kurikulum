@@ -252,18 +252,20 @@ export default function StudentGrades() {
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/50 hover:bg-muted/50">
-                    <TableHead className="font-semibold">Kode</TableHead>
-                    <TableHead className="font-semibold">Mata Kuliah</TableHead>
-                    <TableHead className="font-semibold text-center">Passing Score</TableHead>
-                    <TableHead className="font-semibold text-center">Nilai Akhir</TableHead>
-                    <TableHead className="font-semibold text-center">Status</TableHead>
+                  <TableRow className="bg-primary hover:bg-primary">
+                    <TableHead className="w-12 text-primary-foreground font-semibold">No</TableHead>
+                    <TableHead className="text-primary-foreground font-semibold">Kode</TableHead>
+                    <TableHead className="text-primary-foreground font-semibold">Mata Kuliah</TableHead>
+                    <TableHead className="text-primary-foreground font-semibold text-center">Passing Score</TableHead>
+                    <TableHead className="text-primary-foreground font-semibold text-center">Nilai Akhir</TableHead>
+                    <TableHead className="text-primary-foreground font-semibold text-center">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {grades && grades.length > 0 ? (
-                    grades.map((grade) => (
+                    grades.map((grade, index) => (
                       <TableRow key={grade.id} className="hover:bg-muted/30">
+                        <TableCell className="text-center">{index + 1}</TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="font-mono">
                             {grade.course?.code}
@@ -318,7 +320,7 @@ export default function StudentGrades() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                         Belum ada nilai
                       </TableCell>
                     </TableRow>
