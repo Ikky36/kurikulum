@@ -534,7 +534,13 @@ export default function Kurikulum() {
                 <TableRow key={item.id}>
                   <TableCell>{idx + 1}</TableCell>
                   <TableCell>{item.kelompok}</TableCell>
-                  <TableCell>{item.bahan_kajian}</TableCell>
+                  <TableCell>
+                    <ul className="list-disc list-inside space-y-1">
+                      {item.bahan_kajian.split(', ').map((bk, i) => (
+                        <li key={i} className="text-sm">{bk.trim()}</li>
+                      ))}
+                    </ul>
+                  </TableCell>
                   {isAdmin && (
                     <TableCell>
                       <div className="flex gap-1">
