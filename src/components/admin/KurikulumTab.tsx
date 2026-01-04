@@ -808,7 +808,7 @@ export function KurikulumTab() {
                   <TableRow className="bg-muted/50">
                     <TableHead className="w-12">No</TableHead>
                     <TableHead className="w-32">Kode</TableHead>
-                    <TableHead>Deskripsi</TableHead>
+                    <TableHead>CPL/PLO</TableHead>
                     <TableHead className="w-24">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
