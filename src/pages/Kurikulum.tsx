@@ -860,23 +860,27 @@ export default function Kurikulum() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Profil Lulusan (PL)</label>
-                <Select
-                  value={formData.profil_lulusan_id || '__none__'}
-                  onValueChange={(v) => setFormData({ ...formData, profil_lulusan_id: v === '__none__' ? '' : v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih Profil Lulusan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__none__">Tidak ada</SelectItem>
-                    {profilLulusan.map((pl) => (
-                      <SelectItem key={pl.id} value={pl.id}>
-                        {pl.code} - {pl.profil}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <label className="text-sm font-medium">Profil Lulusan (PL) - Dapat Memilih Lebih dari 1</label>
+                <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-2">
+                  {profilLulusan.map((pl) => {
+                    const selectedPlIds = (formData.profil_lulusan_ids as unknown as string[]) || [];
+                    return (
+                      <label key={pl.id} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedPlIds.includes(pl.id)}
+                          onChange={(e) => {
+                            const newIds = e.target.checked
+                              ? [...selectedPlIds, pl.id]
+                              : selectedPlIds.filter((id) => id !== pl.id);
+                            setFormData({ ...formData, profil_lulusan_ids: newIds as any });
+                          }}
+                        />
+                        <span className="text-sm">{pl.code} - {pl.profil}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
             </div>
             <DialogFooter>
