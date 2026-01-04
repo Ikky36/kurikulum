@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { GraduationCap, BookOpen, LayoutDashboard, LogOut, User, Menu, X } from 'lucide-react';
+import { GraduationCap, BookOpen, LayoutDashboard, LogOut, User, Menu, X, FileText } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -27,6 +27,7 @@ export function Navbar() {
 
   const navLinks = [
     { href: '/', label: 'Beranda', icon: GraduationCap },
+    { href: '/kurikulum', label: 'Kurikulum', icon: FileText },
     { href: '/mata-kuliah', label: 'Mata Kuliah', icon: BookOpen },
   ];
 

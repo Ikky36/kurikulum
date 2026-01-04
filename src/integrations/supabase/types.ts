@@ -112,6 +112,30 @@ export type Database = {
           },
         ]
       }
+      bahan_kajian_kelompok: {
+        Row: {
+          bahan_kajian: string
+          created_at: string
+          id: string
+          kelompok: string
+          updated_at: string
+        }
+        Insert: {
+          bahan_kajian: string
+          created_at?: string
+          id?: string
+          kelompok: string
+          updated_at?: string
+        }
+        Update: {
+          bahan_kajian?: string
+          created_at?: string
+          id?: string
+          kelompok?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       class_groups: {
         Row: {
           created_at: string
@@ -523,6 +547,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          profil_lulusan_id: string | null
           updated_at: string
         }
         Insert: {
@@ -530,6 +555,7 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
+          profil_lulusan_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -537,6 +563,42 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          profil_lulusan_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plos_profil_lulusan_id_fkey"
+            columns: ["profil_lulusan_id"]
+            isOneToOne: false
+            referencedRelation: "profil_lulusan"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profil_lulusan: {
+        Row: {
+          code: string
+          created_at: string
+          deskripsi: string | null
+          id: string
+          profil: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          deskripsi?: string | null
+          id?: string
+          profil: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          deskripsi?: string | null
+          id?: string
+          profil?: string
           updated_at?: string
         }
         Relationships: []
@@ -713,6 +775,192 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      vmts_ps_misi: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          misi: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          misi: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          misi?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vmts_ps_strategi: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          strategi: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          strategi: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          strategi?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vmts_ps_tujuan: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          tujuan: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          tujuan: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          tujuan?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vmts_ps_visi: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          visi: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          visi: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          visi?: string
+        }
+        Relationships: []
+      }
+      vmts_pt_misi: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          misi: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          misi: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          misi?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vmts_pt_strategi: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          strategi: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          strategi: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          strategi?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vmts_pt_tujuan: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          tujuan: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          id?: string
+          tujuan: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          tujuan?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      vmts_pt_visi: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          visi: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          visi: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          visi?: string
         }
         Relationships: []
       }
