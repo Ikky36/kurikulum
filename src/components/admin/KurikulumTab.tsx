@@ -783,11 +783,11 @@ export function KurikulumTab() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Deskripsi</Label>
+                        <Label>Rumusan CPL/PLO</Label>
                         <Textarea 
                           value={ploDescription} 
                           onChange={(e) => setPloDescription(e.target.value)} 
-                          placeholder="Deskripsi capaian pembelajaran..."
+                          placeholder="Rumusan CPL/PLO..."
                           rows={4}
                         />
                       </div>

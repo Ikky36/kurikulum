@@ -596,8 +596,8 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                       <Input value={cloCode} onChange={(e) => setCloCode(e.target.value)} placeholder="Contoh: CPMK-1" />
                     </div>
                     <div className="space-y-2">
-                      <Label>CPMK/CLO</Label>
-                      <Textarea value={cloDescription} onChange={(e) => setCloDescription(e.target.value)} placeholder="Deskripsi capaian pembelajaran..." rows={3} />
+                      <Label>Rumusan CPMK/CLO</Label>
+                      <Textarea value={cloDescription} onChange={(e) => setCloDescription(e.target.value)} placeholder="Rumusan CPMK/CLO..." rows={3} />
                     </div>
                     {coursePlos && coursePlos.length > 0 && (
                       <div className="space-y-2">
@@ -641,10 +641,12 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
         <CardContent>
           {clos && clos.length > 0 ? (
             <div className="space-y-2">
-              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-muted/50 rounded-lg text-sm font-medium text-muted-foreground">
+              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-primary/10 rounded-lg text-sm font-medium">
+                <div className="col-span-1 text-center">No</div>
                 <div className="col-span-2">Kode</div>
-                <div className="col-span-6">CPMK/CLO</div>
-                <div className="col-span-4">CPL/PLO</div>
+                <div className="col-span-4">CPMK/CLO</div>
+                <div className="col-span-3">CPL/PLO</div>
+                {canEdit && <div className="col-span-2 text-right">Aksi</div>}
               </div>
               <Accordion type="multiple" className="w-full">
               {clos.map((clo) => {
@@ -658,16 +660,17 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                   <AccordionItem key={clo.id} value={clo.id}>
                     <AccordionTrigger className="hover:no-underline px-0">
                       <div className="grid grid-cols-12 gap-2 flex-1 text-left items-center">
+                        <div className="col-span-1 text-sm text-center">{(clos?.indexOf(clo) || 0) + 1}</div>
                         <div className="col-span-2">
                           <Badge variant="secondary" className="font-mono">{clo.code}</Badge>
                         </div>
-                        <div className="col-span-6 text-sm flex items-center gap-2">
+                        <div className="col-span-4 text-sm flex items-center gap-2">
                           {clo.description}
                           <Badge variant="outline" className="text-xs shrink-0">
                             {cloLlos.length} SUB-CPMK ({cloTotalWeight.toFixed(1)}%)
                           </Badge>
                         </div>
-                        <div className="col-span-4 flex flex-wrap gap-1">
+                        <div className="col-span-3 flex flex-wrap gap-1">
                           {linkedPlos.length > 0 ? (
                             linkedPlos.map((lp) => (
                               <Badge key={lp.plo?.id} variant="outline" className="text-xs bg-primary/10">
@@ -678,20 +681,20 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                             <span className="text-xs text-muted-foreground">-</span>
                           )}
                         </div>
+                        {canEdit && (
+                          <div className="col-span-2 flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditClo(clo)}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteCloMutation.mutate(clo.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
                       <div className="pl-4 pt-2 space-y-2">
-                        {canEdit && (
-                          <div className="flex gap-2 mb-3">
-                            <Button variant="outline" size="sm" onClick={() => openEditClo(clo)}>
-                              <Pencil className="h-3 w-3 mr-1" /> Edit
-                            </Button>
-                            <Button variant="outline" size="sm" className="text-destructive" onClick={() => deleteCloMutation.mutate(clo.id)}>
-                              <Trash2 className="h-3 w-3 mr-1" /> Hapus
-                            </Button>
-                          </div>
-                        )}
                         {cloLlos.length > 0 ? (
                           <div className="space-y-2">
                             {cloLlos.map((llo) => (
@@ -791,8 +794,8 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>SUB-CPMK/LLO</Label>
-                      <Textarea value={lloDescription} onChange={(e) => setLloDescription(e.target.value)} placeholder="Deskripsi capaian pembelajaran pertemuan..." rows={2} />
+                      <Label>Rumusan SUB-CPMK/LLO</Label>
+                      <Textarea value={lloDescription} onChange={(e) => setLloDescription(e.target.value)} placeholder="Rumusan SUB-CPMK/LLO..." rows={2} />
                     </div>
                     <div className="space-y-2">
                       <Label>Bobot (%)</Label>
@@ -926,7 +929,8 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
           {llos && llos.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
+                <TableRow className="bg-primary/10">
+                  <TableHead className="w-12">No</TableHead>
                   <TableHead className="w-28">Kode</TableHead>
                   <TableHead>SUB-CPMK/LLO</TableHead>
                   <TableHead className="w-24">CPMK</TableHead>
@@ -939,10 +943,11 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {llos.map((llo) => {
+                {llos.map((llo, index) => {
                   const lloData = llo as LLO & { bahan_kajian?: string[]; indikator?: string[]; metode?: string[]; referensi?: string[] };
                   return (
                     <TableRow key={llo.id}>
+                      <TableCell className="text-center">{index + 1}</TableCell>
                       <TableCell><Badge variant="outline" className="font-mono">{llo.code}</Badge></TableCell>
                       <TableCell className="text-sm max-w-xs">{llo.description}</TableCell>
                       <TableCell><Badge variant="secondary">{llo.clo?.code}</Badge></TableCell>
@@ -1086,7 +1091,8 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
           {assessments && assessments.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
+                <TableRow className="bg-primary/10">
+                  <TableHead className="w-12">No</TableHead>
                   <TableHead className="w-20">Kode</TableHead>
                   <TableHead>Nama</TableHead>
                   <TableHead>SUB-CPMK Terkait</TableHead>
@@ -1095,11 +1101,12 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assessments.map((assessment) => {
+                {assessments.map((assessment, index) => {
                   const linkedLlos = getLinkedLlosForAssessment(assessment.id);
                   const weight = getAssessmentWeight(assessment.id);
                   return (
                     <TableRow key={assessment.id}>
+                      <TableCell className="text-center">{index + 1}</TableCell>
                       <TableCell><Badge variant="outline" className="font-mono">{assessment.code}</Badge></TableCell>
                       <TableCell>
                         <div>
