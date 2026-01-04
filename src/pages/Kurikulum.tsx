@@ -453,12 +453,67 @@ export default function Kurikulum() {
     </Card>
   );
 
+  // State for Bahan Kajian dialog
+  const [bkDialog, setBkDialog] = useState(false);
+  const [selectedCourseForBk, setSelectedCourseForBk] = useState<string>('');
+  const [selectedBahanKajian, setSelectedBahanKajian] = useState<string[]>([]);
+  const [bkKelompok, setBkKelompok] = useState('');
+  const [editingBk, setEditingBk] = useState<BahanKajianKelompok | null>(null);
+
+  // Get LLOs for selected course
+  const llosForSelectedCourse = selectedCourseForBk
+    ? llos.filter((llo: any) => {
+        const cloData = llo.clos;
+        return cloData && cloData.course_id === selectedCourseForBk;
+      })
+    : [];
+
+  // Get all unique bahan_kajian from LLOs
+  const availableBahanKajian = llosForSelectedCourse.flatMap((llo: any) => llo.bahan_kajian || []).filter(Boolean);
+
+  const resetBkForm = () => {
+    setBkDialog(false);
+    setSelectedCourseForBk('');
+    setSelectedBahanKajian([]);
+    setBkKelompok('');
+    setEditingBk(null);
+  };
+
+  const handleSaveBk = () => {
+    if (!bkKelompok || selectedBahanKajian.length === 0) return;
+    
+    const bahanKajianStr = selectedBahanKajian.join(', ');
+    
+    if (editingBk) {
+      saveMutation.mutate({ 
+        table: 'bahan_kajian_kelompok', 
+        data: { kelompok: bkKelompok, bahan_kajian: bahanKajianStr }, 
+        isNew: false, 
+        id: editingBk.id 
+      });
+    } else {
+      saveMutation.mutate({ 
+        table: 'bahan_kajian_kelompok', 
+        data: { kelompok: bkKelompok, bahan_kajian: bahanKajianStr }, 
+        isNew: true 
+      });
+    }
+    resetBkForm();
+  };
+
+  const openEditBk = (item: BahanKajianKelompok) => {
+    setEditingBk(item);
+    setBkKelompok(item.kelompok);
+    setSelectedBahanKajian(item.bahan_kajian.split(', ').map(s => s.trim()));
+    setBkDialog(true);
+  };
+
   const renderBahanKajianTable = () => (
     <Card className="mb-6">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">BK - Bahan Kajian</CardTitle>
         {isAdmin && (
-          <Button size="sm" onClick={() => openEdit('bahan_kajian_kelompok', { kelompok: '', bahan_kajian: '' }, true)}>
+          <Button size="sm" onClick={() => setBkDialog(true)}>
             <Plus className="h-4 w-4 mr-1" /> Tambah
           </Button>
         )}
@@ -483,7 +538,7 @@ export default function Kurikulum() {
                   {isAdmin && (
                     <TableCell>
                       <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit('bahan_kajian_kelompok', item, false)}>
+                        <Button variant="ghost" size="icon" onClick={() => openEditBk(item)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button variant="ghost" size="icon" onClick={() => handleDelete('bahan_kajian_kelompok', item.id)}>
@@ -503,6 +558,79 @@ export default function Kurikulum() {
             )}
           </TableBody>
         </Table>
+
+        {/* Bahan Kajian Dialog */}
+        <Dialog open={bkDialog} onOpenChange={(open) => { if (!open) resetBkForm(); }}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{editingBk ? 'Edit Bahan Kajian' : 'Tambah Bahan Kajian'}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Kelompok BK</label>
+                <Input 
+                  value={bkKelompok} 
+                  onChange={(e) => setBkKelompok(e.target.value)} 
+                  placeholder="Contoh: Kelompok A"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Pilih Mata Kuliah</label>
+                <Select value={selectedCourseForBk} onValueChange={setSelectedCourseForBk}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih mata kuliah..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {courses.map((course: any) => (
+                      <SelectItem key={course.id} value={course.id}>
+                        {course.code} - {course.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              {selectedCourseForBk && (
+                <div>
+                  <label className="text-sm font-medium">Pilih Bahan Kajian dari SUB-CPMK/LLO</label>
+                  {availableBahanKajian.length > 0 ? (
+                    <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2 mt-2">
+                      {[...new Set(availableBahanKajian)].map((bk: string, idx: number) => (
+                        <div key={idx} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`bk-${idx}`}
+                            checked={selectedBahanKajian.includes(bk)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedBahanKajian([...selectedBahanKajian, bk]);
+                              } else {
+                                setSelectedBahanKajian(selectedBahanKajian.filter(s => s !== bk));
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-gray-300"
+                          />
+                          <label htmlFor={`bk-${idx}`} className="text-sm cursor-pointer flex-1">
+                            {bk}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Tidak ada bahan kajian pada mata kuliah ini. Silakan tambahkan bahan kajian di SUB-CPMK/LLO mata kuliah.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={resetBkForm}>Batal</Button>
+              <Button onClick={handleSaveBk} disabled={!bkKelompok || selectedBahanKajian.length === 0}>
+                {editingBk ? 'Simpan' : 'Tambah'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

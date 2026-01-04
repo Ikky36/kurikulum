@@ -601,26 +601,40 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                     </div>
                     {coursePlos && coursePlos.length > 0 && (
                       <div className="space-y-2">
-                        <Label>CPL/PLO Terkait</Label>
-                        <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
-                          {coursePlos.map((cp) => (
-                            <div key={cp.plo?.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`plo-${cp.plo?.id}`}
-                                checked={selectedPlosForClo.includes(cp.plo?.id || '')}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedPlosForClo([...selectedPlosForClo, cp.plo?.id || '']);
-                                  } else {
-                                    setSelectedPlosForClo(selectedPlosForClo.filter(id => id !== cp.plo?.id));
-                                  }
-                                }}
-                              />
-                              <label htmlFor={`plo-${cp.plo?.id}`} className="text-sm cursor-pointer flex-1">
-                                <span className="font-mono font-medium">{cp.plo?.code}</span> - {cp.plo?.description?.substring(0, 60)}...
-                              </label>
-                            </div>
-                          ))}
+                        <Label>CPL/PLO</Label>
+                        <div className="border rounded-lg overflow-hidden">
+                          <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-primary text-sm font-medium text-primary-foreground">
+                            <div className="col-span-1 text-center">No</div>
+                            <div className="col-span-2">Kode</div>
+                            <div className="col-span-9">CPL/PLO</div>
+                          </div>
+                          <div className="max-h-40 overflow-y-auto">
+                            {coursePlos.map((cp, idx) => (
+                              <div key={cp.plo?.id} className="grid grid-cols-12 gap-2 px-3 py-2 border-b last:border-b-0 items-center">
+                                <div className="col-span-1 text-center">
+                                  <Checkbox
+                                    id={`plo-${cp.plo?.id}`}
+                                    checked={selectedPlosForClo.includes(cp.plo?.id || '')}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setSelectedPlosForClo([...selectedPlosForClo, cp.plo?.id || '']);
+                                      } else {
+                                        setSelectedPlosForClo(selectedPlosForClo.filter(id => id !== cp.plo?.id));
+                                      }
+                                    }}
+                                  />
+                                </div>
+                                <div className="col-span-2">
+                                  <span className="font-mono text-sm font-medium">{cp.plo?.code}</span>
+                                </div>
+                                <div className="col-span-9">
+                                  <label htmlFor={`plo-${cp.plo?.id}`} className="text-sm cursor-pointer">
+                                    {cp.plo?.description?.substring(0, 80)}...
+                                  </label>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                         <p className="text-xs text-muted-foreground">
                           Bobot setiap CPMK terhadap CPL akan dihitung otomatis secara merata.
@@ -641,7 +655,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
         <CardContent>
           {clos && clos.length > 0 ? (
             <div className="space-y-2">
-              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-primary rounded-lg text-sm font-medium text-primary-foreground">
+              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-primary text-sm font-medium text-primary-foreground">
                 <div className="col-span-1 text-center">No</div>
                 <div className="col-span-2">Kode</div>
                 <div className="col-span-4">CPMK/CLO</div>
