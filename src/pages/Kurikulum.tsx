@@ -862,14 +862,14 @@ export default function Kurikulum() {
               <div>
                 <label className="text-sm font-medium">Profil Lulusan (PL)</label>
                 <Select
-                  value={formData.profil_lulusan_id || ''}
-                  onValueChange={(v) => setFormData({ ...formData, profil_lulusan_id: v })}
+                  value={formData.profil_lulusan_id || '__none__'}
+                  onValueChange={(v) => setFormData({ ...formData, profil_lulusan_id: v === '__none__' ? '' : v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih Profil Lulusan" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tidak ada</SelectItem>
+                    <SelectItem value="__none__">Tidak ada</SelectItem>
                     {profilLulusan.map((pl) => (
                       <SelectItem key={pl.id} value={pl.id}>
                         {pl.code} - {pl.profil}
@@ -950,14 +950,14 @@ export default function Kurikulum() {
               <div>
                 <label className="text-sm font-medium">Kurikulum</label>
                 <Select
-                  value={formData.curriculum_id || ''}
-                  onValueChange={(v) => setFormData({ ...formData, curriculum_id: v })}
+                  value={formData.curriculum_id || '__none__'}
+                  onValueChange={(v) => setFormData({ ...formData, curriculum_id: v === '__none__' ? '' : v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Pilih kurikulum" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tidak ada</SelectItem>
+                    <SelectItem value="__none__">Tidak ada</SelectItem>
                     {curricula.map((c: any) => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
