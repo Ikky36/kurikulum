@@ -14,8 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield } from 'lucide-react';
 import { Curriculum, Program, AppSetting } from '@/lib/types';
+import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
 
 export default function Settings() {
   const { user, role, loading } = useAuth();
@@ -290,7 +291,7 @@ export default function Settings() {
         </div>
 
         <Tabs defaultValue={canAccessTheme ? "theme" : "curriculum"} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className={`grid w-full ${canAccessTheme ? 'grid-cols-4' : 'grid-cols-3'}`}>
             {canAccessTheme && (
               <TabsTrigger value="theme" className="flex items-center gap-2">
                 <Palette className="h-4 w-4" />
@@ -305,6 +306,12 @@ export default function Settings() {
               <GraduationCap className="h-4 w-4" />
               Program Studi
             </TabsTrigger>
+            {canAccessTheme && (
+              <TabsTrigger value="permissions" className="flex items-center gap-2">
+                <Shield className="h-4 w-4" />
+                Perizinan Role
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Theme Tab - Only for admin */}
@@ -552,6 +559,13 @@ export default function Settings() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Permissions Tab - Only for admin */}
+          {canAccessTheme && (
+            <TabsContent value="permissions">
+              <RolePermissionsTab />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </Layout>
