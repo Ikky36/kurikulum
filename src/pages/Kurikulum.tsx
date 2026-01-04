@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 
@@ -407,6 +408,11 @@ export default function Kurikulum() {
     <Card className="mb-6">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">CPL - Capaian Pembelajaran Lulusan</CardTitle>
+        {isAdmin && (
+          <Button size="sm" onClick={() => openEdit('plos', { code: '', description: '', profil_lulusan_id: '' }, true)}>
+            <Plus className="h-4 w-4 mr-1" /> Tambah
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         <Table>
@@ -424,18 +430,56 @@ export default function Kurikulum() {
               plos.map((item: any, idx: number) => (
                 <TableRow key={item.id}>
                   <TableCell>{idx + 1}</TableCell>
-                  <TableCell>{item.code}</TableCell>
+                  <TableCell>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help font-medium">{item.code}</span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-sm">
+                          <p>{item.description}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
                   <TableCell>{item.description}</TableCell>
-                  <TableCell>{item.profil_lulusan?.code || '-'}</TableCell>
+                  <TableCell>
+                    {item.profil_lulusan ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-help">{item.profil_lulusan.code}</span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-sm">
+                            <p>{item.profil_lulusan.profil}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : '-'}
+                  </TableCell>
                   {isAdmin && (
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEdit('cpl_pl', { id: item.id, profil_lulusan_id: item.profil_lulusan_id }, false)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEdit('plos', { 
+                            id: item.id, 
+                            code: item.code, 
+                            description: item.description, 
+                            profil_lulusan_id: item.profil_lulusan_id || '' 
+                          }, false)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete('plos', item.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
@@ -641,10 +685,17 @@ export default function Kurikulum() {
     </Card>
   );
 
+  const semesterOptions = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'];
+
   const renderMataKuliahTable = () => (
     <Card className="mb-6">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">MK - Mata Kuliah</CardTitle>
+        {isAdmin && (
+          <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', ploIds: [] }, true)}>
+            <Plus className="h-4 w-4 mr-1" /> Tambah
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         <Table>
@@ -664,37 +715,102 @@ export default function Kurikulum() {
             {courses.length > 0 ? (
               courses.map((course: any, idx: number) => {
                 const coursePlos = course.course_plos?.map((cp: any) => cp.plos) || [];
-                const cplCodes = coursePlos.map((p: any) => p?.code).filter(Boolean).join(', ');
+                const cplCodes = coursePlos.map((p: any) => p?.code).filter(Boolean);
                 const plCodes = coursePlos
                   .map((p: any) => {
                     const pl = profilLulusan.find(pl => pl.id === p?.profil_lulusan_id);
-                    return pl?.code;
+                    return pl ? { code: pl.code, profil: pl.profil } : null;
                   })
                   .filter(Boolean);
-                const uniquePlCodes = [...new Set(plCodes)].join(', ');
+                const uniquePlCodes = [...new Set(plCodes.map((p: any) => p?.code))];
                 return (
                   <TableRow key={course.id}>
                     <TableCell>{idx + 1}</TableCell>
-                    <TableCell>{course.code}</TableCell>
+                    <TableCell>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-help font-medium">{course.code}</span>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-sm">
+                            <p>{course.name}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableCell>
                     <TableCell>{course.name}</TableCell>
                     <TableCell>{course.curricula?.name || '-'}</TableCell>
                     <TableCell>{course.semester || '-'}</TableCell>
-                    <TableCell>{cplCodes || '-'}</TableCell>
-                    <TableCell>{uniquePlCodes || '-'}</TableCell>
+                    <TableCell>
+                      {cplCodes.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {cplCodes.map((code: string, i: number) => {
+                            const plo = plos.find((p: any) => p.code === code);
+                            return (
+                              <TooltipProvider key={i}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-help bg-muted px-1.5 py-0.5 rounded text-xs">{code}</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-sm">
+                                    <p>{plo?.description || code}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })}
+                        </div>
+                      ) : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {uniquePlCodes.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {uniquePlCodes.map((code: any, i: number) => {
+                            const pl = profilLulusan.find(p => p.code === code);
+                            return (
+                              <TooltipProvider key={i}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-help bg-muted px-1.5 py-0.5 rounded text-xs">{code}</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-sm">
+                                    <p>{pl?.profil || code}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            );
+                          })}
+                        </div>
+                      ) : '-'}
+                    </TableCell>
                     {isAdmin && (
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() =>
-                            openEdit('course_plo_pl', {
-                              id: course.id,
-                              ploIds: course.course_plos?.map((cp: any) => cp.plo_id) || [],
-                            }, false)
-                          }
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() =>
+                              openEdit('courses', {
+                                id: course.id,
+                                code: course.code,
+                                name: course.name,
+                                semester: course.semester || '',
+                                curriculum_id: course.curriculum_id || '',
+                                passing_score: course.passing_score?.toString() || '60',
+                                ploIds: course.course_plos?.map((cp: any) => cp.plo_id) || [],
+                              }, false)
+                            }
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDelete('courses', course.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </TableCell>
                     )}
                   </TableRow>
@@ -716,6 +832,233 @@ export default function Kurikulum() {
   const renderEditDialog = () => {
     if (!editDialog) return null;
     const { type, isNew } = editDialog;
+
+    // CPL/PLO Dialog
+    if (type === 'plos') {
+      return (
+        <Dialog open onOpenChange={() => setEditDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{isNew ? 'Tambah' : 'Edit'} CPL/PLO</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Kode CPL</label>
+                <Input
+                  value={formData.code || ''}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  placeholder="Contoh: CPL-1"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Rumusan CPL/PLO</label>
+                <Textarea
+                  value={formData.description || ''}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Masukkan rumusan CPL/PLO..."
+                  rows={4}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Profil Lulusan (PL)</label>
+                <Select
+                  value={formData.profil_lulusan_id || ''}
+                  onValueChange={(v) => setFormData({ ...formData, profil_lulusan_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Profil Lulusan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tidak ada</SelectItem>
+                    {profilLulusan.map((pl) => (
+                      <SelectItem key={pl.id} value={pl.id}>
+                        {pl.code} - {pl.profil}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDialog(null)}>
+                Batal
+              </Button>
+              <Button 
+                onClick={() => {
+                  const { id, code, description, profil_lulusan_id } = formData;
+                  saveMutation.mutate({ 
+                    table: 'plos', 
+                    data: { code, description, profil_lulusan_id: profil_lulusan_id || null }, 
+                    isNew, 
+                    id 
+                  });
+                }}
+                disabled={!formData.code || !formData.description}
+              >
+                Simpan
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      );
+    }
+
+    // Courses Dialog
+    if (type === 'courses') {
+      const selectedPloIds = (formData.ploIds as unknown as string[]) || [];
+      return (
+        <Dialog open onOpenChange={() => setEditDialog(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>{isNew ? 'Tambah' : 'Edit'} Mata Kuliah</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Kode</label>
+                  <Input
+                    value={formData.code || ''}
+                    onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                    placeholder="PBA101"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Semester</label>
+                  <Select
+                    value={formData.semester || ''}
+                    onValueChange={(v) => setFormData({ ...formData, semester: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {semesterOptions.map(sem => (
+                        <SelectItem key={sem} value={sem}>{sem}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Nama Mata Kuliah</label>
+                <Input
+                  value={formData.name || ''}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Nama mata kuliah"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Kurikulum</label>
+                <Select
+                  value={formData.curriculum_id || ''}
+                  onValueChange={(v) => setFormData({ ...formData, curriculum_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih kurikulum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Tidak ada</SelectItem>
+                    {curricula.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">CPL/PLO Terkait</label>
+                <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-2">
+                  {plos.map((plo: any) => (
+                    <label key={plo.id} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedPloIds.includes(plo.id)}
+                        onChange={(e) => {
+                          const newIds = e.target.checked
+                            ? [...selectedPloIds, plo.id]
+                            : selectedPloIds.filter((id) => id !== plo.id);
+                          setFormData({ ...formData, ploIds: newIds as any });
+                        }}
+                      />
+                      <span className="text-sm">{plo.code} - {plo.description}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDialog(null)}>
+                Batal
+              </Button>
+              <Button 
+                onClick={async () => {
+                  const { id, code, name, semester, curriculum_id, passing_score } = formData;
+                  if (isNew) {
+                    // Create course
+                    const { data: newCourse, error } = await supabase
+                      .from('courses')
+                      .insert({ 
+                        code, 
+                        name, 
+                        semester: semester || null, 
+                        curriculum_id: curriculum_id || null,
+                        passing_score: parseInt(passing_score) || 60
+                      })
+                      .select()
+                      .single();
+                    
+                    if (error) {
+                      toast.error('Gagal membuat mata kuliah: ' + error.message);
+                      return;
+                    }
+                    
+                    // Link PLOs
+                    if (selectedPloIds.length > 0) {
+                      const inserts = selectedPloIds.map(plo_id => ({ course_id: newCourse.id, plo_id }));
+                      await supabase.from('course_plos').insert(inserts);
+                    }
+                    
+                    queryClient.invalidateQueries();
+                    toast.success('Mata kuliah berhasil ditambahkan');
+                    setEditDialog(null);
+                  } else {
+                    // Update course
+                    const { error } = await supabase
+                      .from('courses')
+                      .update({ 
+                        code, 
+                        name, 
+                        semester: semester || null, 
+                        curriculum_id: curriculum_id || null,
+                        passing_score: parseInt(passing_score) || 60
+                      })
+                      .eq('id', id);
+                    
+                    if (error) {
+                      toast.error('Gagal mengupdate mata kuliah: ' + error.message);
+                      return;
+                    }
+                    
+                    // Update PLO links
+                    await supabase.from('course_plos').delete().eq('course_id', id);
+                    if (selectedPloIds.length > 0) {
+                      const inserts = selectedPloIds.map(plo_id => ({ course_id: id, plo_id }));
+                      await supabase.from('course_plos').insert(inserts);
+                    }
+                    
+                    queryClient.invalidateQueries();
+                    toast.success('Mata kuliah berhasil diupdate');
+                    setEditDialog(null);
+                  }
+                }}
+                disabled={!formData.code || !formData.name}
+              >
+                Simpan
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      );
+    }
 
     if (type === 'cpl_pl') {
       return (

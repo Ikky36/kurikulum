@@ -524,19 +524,19 @@ export default function DashboardAdmin() {
           ))}
         </div>
 
-        <Tabs defaultValue="kurikulum" className="space-y-6">
+        <Tabs defaultValue="kelas" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="kurikulum" className="flex items-center gap-1">
+            <TabsTrigger value="kelas" className="flex items-center gap-1">
               <Target className="h-4 w-4" />
-              <span className="hidden sm:inline">Kurikulum</span>
+              <span className="hidden sm:inline">Kelas</span>
             </TabsTrigger>
             <TabsTrigger value="accounts">Kelola Akun</TabsTrigger>
             <TabsTrigger value="assignments">Penugasan</TabsTrigger>
             <TabsTrigger value="roles">Role</TabsTrigger>
           </TabsList>
 
-          {/* Kurikulum Tab */}
-          <TabsContent value="kurikulum">
+          {/* Kelas Tab */}
+          <TabsContent value="kelas">
             <KurikulumTab />
           </TabsContent>
 

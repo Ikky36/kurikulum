@@ -9,38 +9,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Pencil, Target, BookOpen, Link2, Users, Download, Upload, UserPlus, UserMinus } from 'lucide-react';
-import { PLO, Course, CoursePLO, ClassGroup, Profile, Curriculum, ClassStudent } from '@/lib/types';
+import { Plus, Trash2, Pencil, Users, Download, Upload, UserPlus, UserMinus } from 'lucide-react';
+import { ClassGroup, Profile, ClassStudent } from '@/lib/types';
 import * as XLSX from 'xlsx';
 
 export function KurikulumTab() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // PLO state
-  const [showPloDialog, setShowPloDialog] = useState(false);
-  const [editingPlo, setEditingPlo] = useState<PLO | null>(null);
-  const [ploCode, setPloCode] = useState('');
-  const [ploDescription, setPloDescription] = useState('');
-
-  // Course state
-  const [showCourseDialog, setShowCourseDialog] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<Course | null>(null);
-  const [courseCode, setCourseCode] = useState('');
-  const [courseName, setCourseName] = useState('');
-  const [courseSemester, setCourseSemester] = useState('');
-  const [courseCurriculumId, setCourseCurriculumId] = useState('');
-  const [coursePassingScore, setCoursePassingScore] = useState('60');
-  const [selectedPlos, setSelectedPlos] = useState<string[]>([]);
-
-  // Link PLO dialog state
-  const [showLinkPloDialog, setShowLinkPloDialog] = useState(false);
-  const [selectedCourseForLink, setSelectedCourseForLink] = useState<Course | null>(null);
-  const [linkingPlos, setLinkingPlos] = useState<string[]>([]);
 
   // Class state
   const [showClassDialog, setShowClassDialog] = useState(false);
@@ -49,47 +25,6 @@ export function KurikulumTab() {
   const [classDescription, setClassDescription] = useState('');
   const [selectedClassForManage, setSelectedClassForManage] = useState<ClassGroup | null>(null);
   const [showManageStudentsDialog, setShowManageStudentsDialog] = useState(false);
-
-  // Fetch PLOs
-  const { data: plos } = useQuery({
-    queryKey: ['plos'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('plos')
-        .select('*')
-        .order('code');
-      if (error) throw error;
-      return data as PLO[];
-    },
-  });
-
-  // Fetch Courses with curriculum
-  const { data: courses } = useQuery({
-    queryKey: ['admin-courses-kurikulum'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .order('code');
-      if (error) throw error;
-      return data as Course[];
-    },
-  });
-
-  // Fetch Course-PLO relationships
-  const { data: coursePlos } = useQuery({
-    queryKey: ['course-plos'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('course_plos')
-        .select('*, plos:plo_id(*)');
-      if (error) throw error;
-      return data.map(cp => ({
-        ...cp,
-        plo: cp.plos as unknown as PLO
-      })) as CoursePLO[];
-    },
-  });
 
   // Fetch Class Groups
   const { data: classGroups, refetch: refetchClasses } = useQuery({
@@ -127,154 +62,6 @@ export function KurikulumTab() {
         .select('*');
       if (error) throw error;
       return data as ClassStudent[];
-    },
-  });
-
-  // Fetch curricula from settings
-  const { data: curricula } = useQuery({
-    queryKey: ['curricula'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('curricula').select('*').order('name');
-      if (error) throw error;
-      return data as Curriculum[];
-    },
-  });
-
-  // PLO mutations
-  const createPloMutation = useMutation({
-    mutationFn: async (plo: { code: string; description: string }) => {
-      const { error } = await supabase.from('plos').insert([plo]);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plos'] });
-      toast({ title: 'Berhasil', description: 'CPL/PLO berhasil ditambahkan' });
-      resetPloForm();
-    },
-    onError: (error: any) => {
-      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const updatePloMutation = useMutation({
-    mutationFn: async ({ id, ...plo }: Partial<PLO> & { id: string }) => {
-      const { error } = await supabase.from('plos').update(plo).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plos'] });
-      toast({ title: 'Berhasil', description: 'CPL/PLO berhasil diperbarui' });
-      resetPloForm();
-    },
-    onError: (error: any) => {
-      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const deletePloMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('plos').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['plos'] });
-      queryClient.invalidateQueries({ queryKey: ['course-plos'] });
-      toast({ title: 'Berhasil', description: 'CPL/PLO berhasil dihapus' });
-    },
-    onError: (error: any) => {
-      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  // Course mutations
-  const createCourseMutation = useMutation({
-    mutationFn: async ({ plos: ploIds, ...course }: { code: string; name: string; semester?: string; passing_score?: number; curriculum_id?: string; plos: string[] }) => {
-      const { data, error } = await supabase.from('courses').insert([course]).select().single();
-      if (error) throw error;
-      
-      // Link PLOs to course
-      if (ploIds.length > 0) {
-        const coursePloData = ploIds.map(ploId => ({
-          course_id: data.id,
-          plo_id: ploId
-        }));
-        const { error: linkError } = await supabase.from('course_plos').insert(coursePloData);
-        if (linkError) throw linkError;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-courses-kurikulum'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
-      queryClient.invalidateQueries({ queryKey: ['course-plos'] });
-      toast({ title: 'Berhasil', description: 'Mata kuliah berhasil ditambahkan' });
-      resetCourseForm();
-    },
-    onError: (error: any) => {
-      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const updateCourseMutation = useMutation({
-    mutationFn: async ({ id, ...course }: Partial<Course> & { id: string }) => {
-      const { error } = await supabase.from('courses').update(course).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-courses-kurikulum'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
-      toast({ title: 'Berhasil', description: 'Mata kuliah berhasil diperbarui' });
-      resetCourseForm();
-    },
-    onError: (error: any) => {
-      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  const deleteCourseMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('courses').delete().eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-courses-kurikulum'] });
-      queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
-      queryClient.invalidateQueries({ queryKey: ['course-plos'] });
-      toast({ title: 'Berhasil', description: 'Mata kuliah berhasil dihapus' });
-    },
-    onError: (error: any) => {
-      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
-    },
-  });
-
-  // Course-PLO link mutations
-  const updateCoursePlosMutation = useMutation({
-    mutationFn: async ({ courseId, ploIds }: { courseId: string; ploIds: string[] }) => {
-      // Remove existing links
-      const { error: deleteError } = await supabase
-        .from('course_plos')
-        .delete()
-        .eq('course_id', courseId);
-      if (deleteError) throw deleteError;
-      
-      // Add new links
-      if (ploIds.length > 0) {
-        const coursePloData = ploIds.map(ploId => ({
-          course_id: courseId,
-          plo_id: ploId
-        }));
-        const { error: insertError } = await supabase.from('course_plos').insert(coursePloData);
-        if (insertError) throw insertError;
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['course-plos'] });
-      toast({ title: 'Berhasil', description: 'CPL/PLO mata kuliah berhasil diperbarui' });
-      setShowLinkPloDialog(false);
-      setSelectedCourseForLink(null);
-      setLinkingPlos([]);
-    },
-    onError: (error: any) => {
-      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -351,24 +138,6 @@ export function KurikulumTab() {
       toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
     },
   });
-
-  const resetPloForm = () => {
-    setPloCode('');
-    setPloDescription('');
-    setEditingPlo(null);
-    setShowPloDialog(false);
-  };
-
-  const resetCourseForm = () => {
-    setCourseCode('');
-    setCourseName('');
-    setCourseSemester('');
-    setCourseCurriculumId('');
-    setCoursePassingScore('60');
-    setSelectedPlos([]);
-    setEditingCourse(null);
-    setShowCourseDialog(false);
-  };
 
   const resetClassForm = () => {
     setClassName('');
@@ -470,769 +239,142 @@ export function KurikulumTab() {
     e.target.value = '';
   };
 
-  // Export PLOs to Excel
-  const handleExportPlos = () => {
-    if (!plos || plos.length === 0) {
-      toast({ title: 'Info', description: 'Tidak ada CPL/PLO untuk diekspor' });
-      return;
-    }
-
-    const exportData = plos.map((plo, index) => ({
-      No: index + 1,
-      Kode: plo.code,
-      Deskripsi: plo.description,
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    ws['!cols'] = [{ wch: 5 }, { wch: 15 }, { wch: 60 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'CPL-PLO');
-    XLSX.writeFile(wb, `export_cpl_plo_${new Date().toISOString().split('T')[0]}.xlsx`);
-    toast({ title: 'Berhasil', description: `${plos.length} CPL/PLO berhasil diekspor` });
-  };
-
-  // Download PLO template
-  const handleDownloadPloTemplate = () => {
-    const templateData = [
-      { Kode: 'CPL-1', Deskripsi: 'Contoh deskripsi CPL pertama' },
-      { Kode: 'CPL-2', Deskripsi: 'Contoh deskripsi CPL kedua' },
-    ];
-
-    const ws = XLSX.utils.json_to_sheet(templateData);
-    ws['!cols'] = [{ wch: 15 }, { wch: 60 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Template CPL');
-    XLSX.writeFile(wb, 'template_import_cpl_plo.xlsx');
-    toast({ title: 'Template berhasil diunduh', description: 'Silakan isi data sesuai format template' });
-  };
-
-  // Import PLOs from Excel
-  const handleImportPlos = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        const data = XLSX.utils.sheet_to_json<any>(ws);
-
-        let addedCount = 0;
-        let errorCount = 0;
-
-        for (const row of data) {
-          const code = row['Kode']?.toString().trim();
-          const description = row['Deskripsi']?.toString().trim();
-
-          if (!code || !description) continue;
-
-          // Check if PLO with same code already exists
-          const existing = plos?.find(p => p.code === code);
-          if (existing) {
-            errorCount++;
-            continue;
-          }
-
-          const { error } = await supabase.from('plos').insert([{ code, description }]);
-          if (!error) addedCount++;
-          else errorCount++;
-        }
-
-        queryClient.invalidateQueries({ queryKey: ['plos'] });
-        toast({ 
-          title: 'Import selesai', 
-          description: `${addedCount} CPL/PLO berhasil ditambahkan${errorCount > 0 ? `, ${errorCount} diabaikan/gagal` : ''}` 
-        });
-      } catch (error: any) {
-        toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
-      }
-    };
-    reader.readAsBinaryString(file);
-    e.target.value = '';
-  };
-
-  // Export Courses to Excel
-  const handleExportCourses = () => {
-    if (!courses || courses.length === 0) {
-      toast({ title: 'Info', description: 'Tidak ada mata kuliah untuk diekspor' });
-      return;
-    }
-
-    const exportData = courses.map((course, index) => ({
-      No: index + 1,
-      Kode: course.code,
-      Nama: course.name,
-      Kurikulum: getCurriculumName(course.curriculum_id) || '',
-      Semester: course.semester || '',
-      'Skor Minimum': course.passing_score,
-      'CPL Terkait': getCoursePloList(course.id).map(cp => cp.plo?.code).join(', '),
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    ws['!cols'] = [{ wch: 5 }, { wch: 12 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, { wch: 12 }, { wch: 20 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Mata Kuliah');
-    XLSX.writeFile(wb, `export_mata_kuliah_${new Date().toISOString().split('T')[0]}.xlsx`);
-    toast({ title: 'Berhasil', description: `${courses.length} mata kuliah berhasil diekspor` });
-  };
-
-  // Download Course template
-  const handleDownloadCourseTemplate = () => {
-    const templateData = [
-      { Kode: 'PBA101', Nama: 'Contoh Mata Kuliah 1', Kurikulum: '', Semester: 'Semester 1', 'Skor Minimum': 60 },
-      { Kode: 'PBA102', Nama: 'Contoh Mata Kuliah 2', Kurikulum: '', Semester: 'Semester 2', 'Skor Minimum': 60 },
-    ];
-
-    const ws = XLSX.utils.json_to_sheet(templateData);
-    ws['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 15 }, { wch: 12 }, { wch: 12 }];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Template MK');
-    XLSX.writeFile(wb, 'template_import_mata_kuliah.xlsx');
-    toast({ title: 'Template berhasil diunduh', description: 'Silakan isi data sesuai format template' });
-  };
-
-  // Import Courses from Excel
-  const handleImportCourses = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (evt) => {
-      try {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        const data = XLSX.utils.sheet_to_json<any>(ws);
-
-        let addedCount = 0;
-        let errorCount = 0;
-
-        for (const row of data) {
-          const code = row['Kode']?.toString().trim();
-          const name = row['Nama']?.toString().trim();
-          const semester = row['Semester']?.toString().trim();
-          const passingScore = parseInt(row['Skor Minimum']) || 60;
-          const curriculumName = row['Kurikulum']?.toString().trim();
-
-          if (!code || !name) continue;
-
-          // Find curriculum by name
-          const curriculum = curriculumName ? curricula?.find(c => c.name === curriculumName) : null;
-
-          // Check if course with same code already exists
-          const existing = courses?.find(c => c.code === code);
-          if (existing) {
-            errorCount++;
-            continue;
-          }
-
-          const { error } = await supabase.from('courses').insert([{ 
-            code, 
-            name, 
-            semester: semester || null,
-            passing_score: passingScore,
-            curriculum_id: curriculum?.id || null
-          }]);
-          if (!error) addedCount++;
-          else errorCount++;
-        }
-
-        queryClient.invalidateQueries({ queryKey: ['admin-courses-kurikulum'] });
-        queryClient.invalidateQueries({ queryKey: ['admin-courses'] });
-        toast({ 
-          title: 'Import selesai', 
-          description: `${addedCount} mata kuliah berhasil ditambahkan${errorCount > 0 ? `, ${errorCount} diabaikan/gagal` : ''}` 
-        });
-      } catch (error: any) {
-        toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
-      }
-    };
-    reader.readAsBinaryString(file);
-    e.target.value = '';
-  };
-
-  const openEditPlo = (plo: PLO) => {
-    setEditingPlo(plo);
-    setPloCode(plo.code);
-    setPloDescription(plo.description);
-    setShowPloDialog(true);
-  };
-
-  const openEditCourse = (course: Course) => {
-    setEditingCourse(course);
-    setCourseCode(course.code);
-    setCourseName(course.name);
-    setCourseSemester(course.semester || '');
-    setCourseCurriculumId(course.curriculum_id || '');
-    setCoursePassingScore(course.passing_score.toString());
-    setShowCourseDialog(true);
-  };
-
-  const openLinkPloDialog = (course: Course) => {
-    const existingPlos = coursePlos?.filter(cp => cp.course_id === course.id).map(cp => cp.plo_id) || [];
-    setSelectedCourseForLink(course);
-    setLinkingPlos(existingPlos);
-    setShowLinkPloDialog(true);
-  };
-
-  const handleSavePlo = () => {
-    if (editingPlo) {
-      updatePloMutation.mutate({ id: editingPlo.id, code: ploCode, description: ploDescription });
-    } else {
-      createPloMutation.mutate({ code: ploCode, description: ploDescription });
-    }
-  };
-
-  const handleSaveCourse = () => {
-    const courseData = {
-      code: courseCode,
-      name: courseName,
-      semester: courseSemester || undefined,
-      curriculum_id: courseCurriculumId || undefined,
-      passing_score: parseInt(coursePassingScore) || 60,
-    };
-
-    if (editingCourse) {
-      updateCourseMutation.mutate({ ...courseData, id: editingCourse.id });
-    } else {
-      createCourseMutation.mutate({ ...courseData, plos: selectedPlos });
-    }
-  };
-
-  const getCoursePloList = (courseId: string) => {
-    return coursePlos?.filter(cp => cp.course_id === courseId) || [];
-  };
-
-  const getCurriculumName = (curriculumId?: string | null) => {
-    if (!curriculumId) return null;
-    return curricula?.find(c => c.id === curriculumId)?.name;
-  };
-
-  const semesterOptions = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'];
-
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="plo" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="plo" className="flex items-center gap-2">
-            <Target className="h-4 w-4" />
-            CPL/PLO
-          </TabsTrigger>
-          <TabsTrigger value="courses" className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4" />
-            Mata Kuliah
-          </TabsTrigger>
-          <TabsTrigger value="classes" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Kelas
-          </TabsTrigger>
-        </TabsList>
-
-        {/* PLO Tab */}
-        <TabsContent value="plo">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <CardTitle>CPL/PLO (Program Learning Outcomes)</CardTitle>
-                  <CardDescription>Kelola Capaian Pembelajaran Lulusan</CardDescription>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button variant="outline" size="sm" onClick={handleDownloadPloTemplate}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Template
-                  </Button>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      accept=".xlsx,.xls"
-                      onChange={handleImportPlos}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Kelola Kelas</CardTitle>
+              <CardDescription>Buat kelas dan kelola mahasiswa tiap kelas</CardDescription>
+            </div>
+            <Dialog open={showClassDialog} onOpenChange={(open) => { if (!open) resetClassForm(); setShowClassDialog(open); }}>
+              <DialogTrigger asChild>
+                <Button size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Tambah Kelas
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingClass ? 'Edit Kelas' : 'Tambah Kelas Baru'}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Nama Kelas</Label>
+                    <Input 
+                      value={className} 
+                      onChange={(e) => setClassName(e.target.value)} 
+                      placeholder="Contoh: A, B, C, atau 2024-A" 
                     />
-                    <Button variant="outline" size="sm">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Import
-                    </Button>
                   </div>
-                  <Button variant="outline" size="sm" onClick={handleExportPlos}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
-                  <Dialog open={showPloDialog} onOpenChange={(open) => { if (!open) resetPloForm(); setShowPloDialog(open); }}>
-                    <DialogTrigger asChild>
-                      <Button size="sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Tambah CPL
-                      </Button>
-                    </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{editingPlo ? 'Edit CPL/PLO' : 'Tambah CPL/PLO Baru'}</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Kode CPL</Label>
-                        <Input 
-                          value={ploCode} 
-                          onChange={(e) => setPloCode(e.target.value)} 
-                          placeholder="Contoh: CPL-1" 
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Rumusan CPL/PLO</Label>
-                        <Textarea 
-                          value={ploDescription} 
-                          onChange={(e) => setPloDescription(e.target.value)} 
-                          placeholder="Rumusan CPL/PLO..."
-                          rows={4}
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={handleSavePlo} disabled={!ploCode || !ploDescription}>
-                        {editingPlo ? 'Simpan' : 'Tambah'}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
+                  <div className="space-y-2">
+                    <Label>Deskripsi (opsional)</Label>
+                    <Textarea 
+                      value={classDescription} 
+                      onChange={(e) => setClassDescription(e.target.value)} 
+                      placeholder="Deskripsi kelas..."
+                      rows={2}
+                    />
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-primary hover:bg-primary">
-                    <TableHead className="w-12 text-primary-foreground">No</TableHead>
-                    <TableHead className="w-32 text-primary-foreground">Kode</TableHead>
-                    <TableHead className="text-primary-foreground">CPL/PLO</TableHead>
-                    <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {plos?.map((plo, index) => (
-                    <TableRow key={plo.id}>
-                      <TableCell className="text-center">{index + 1}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="font-mono">{plo.code}</Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{plo.description}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEditPlo(plo)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
+                <DialogFooter>
+                  <Button onClick={handleSaveClass} disabled={!className}>
+                    {editingClass ? 'Simpan' : 'Tambah'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-primary hover:bg-primary">
+                <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                <TableHead className="text-primary-foreground">Nama Kelas</TableHead>
+                <TableHead className="text-primary-foreground">Deskripsi</TableHead>
+                <TableHead className="text-primary-foreground">Jumlah Mahasiswa</TableHead>
+                <TableHead className="w-56 text-primary-foreground">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {classGroups?.map((classItem, index) => {
+                const studentCount = getStudentsInClass(classItem.id).length;
+                return (
+                  <TableRow key={classItem.id}>
+                    <TableCell className="text-center">{index + 1}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{classItem.name}</Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{classItem.description || '-'}</TableCell>
+                    <TableCell>{studentCount} mahasiswa</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => {
+                            setSelectedClassForManage(classItem);
+                            setShowManageStudentsDialog(true);
+                          }}
+                          title="Kelola mahasiswa"
+                        >
+                          <Users className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={() => handleExportClassStudents(classItem)}
+                          title="Export mahasiswa"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <label>
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => deletePloMutation.mutate(plo.id)}
+                            asChild
+                            title="Import mahasiswa"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <span>
+                              <Upload className="h-4 w-4" />
+                            </span>
                           </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {(!plos || plos.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                        Belum ada CPL/PLO. Klik "Tambah CPL" untuk menambahkan.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Courses Tab */}
-        <TabsContent value="courses">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div>
-                  <CardTitle>Mata Kuliah</CardTitle>
-                  <CardDescription>Kelola mata kuliah dan hubungkan dengan CPL/PLO</CardDescription>
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button variant="outline" size="sm" onClick={handleDownloadCourseTemplate}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Template
-                  </Button>
-                  <div className="relative">
-                    <input
-                      type="file"
-                      accept=".xlsx,.xls"
-                      onChange={handleImportCourses}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                    />
-                    <Button variant="outline" size="sm">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Import
-                    </Button>
-                  </div>
-                  <Button variant="outline" size="sm" onClick={handleExportCourses}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
-                  <Dialog open={showCourseDialog} onOpenChange={(open) => { if (!open) resetCourseForm(); setShowCourseDialog(open); }}>
-                    <DialogTrigger asChild>
-                      <Button size="sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Tambah Mata Kuliah
-                      </Button>
-                    </DialogTrigger>
-                  <DialogContent className="max-w-lg">
-                    <DialogHeader>
-                      <DialogTitle>{editingCourse ? 'Edit Mata Kuliah' : 'Tambah Mata Kuliah Baru'}</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Kode</Label>
-                          <Input value={courseCode} onChange={(e) => setCourseCode(e.target.value)} placeholder="PBA101" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Semester</Label>
-                          <Select value={courseSemester} onValueChange={setCourseSemester}>
-                            <SelectTrigger><SelectValue placeholder="Pilih" /></SelectTrigger>
-                            <SelectContent>
-                              {semesterOptions.map(sem => (
-                                <SelectItem key={sem} value={sem}>{sem}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                          <input
+                            type="file"
+                            accept=".xlsx,.xls"
+                            className="hidden"
+                            onChange={(e) => handleImportClassStudents(e, classItem)}
+                          />
+                        </label>
+                        <Button variant="ghost" size="icon" onClick={() => openEditClass(classItem)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => deleteClassMutation.mutate(classItem.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <div className="space-y-2">
-                        <Label>Nama Mata Kuliah</Label>
-                        <Input value={courseName} onChange={(e) => setCourseName(e.target.value)} placeholder="Nama mata kuliah" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Kurikulum</Label>
-                        <Select value={courseCurriculumId} onValueChange={setCourseCurriculumId}>
-                          <SelectTrigger><SelectValue placeholder="Pilih kurikulum" /></SelectTrigger>
-                          <SelectContent>
-                            {curricula?.map(c => (
-                              <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                            ))}
-                            {(!curricula || curricula.length === 0) && (
-                              <SelectItem value="" disabled>Belum ada kurikulum. Buat di Pengaturan.</SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Passing Score</Label>
-                        <Input type="number" min="0" max="100" value={coursePassingScore} onChange={(e) => setCoursePassingScore(e.target.value)} />
-                      </div>
-                      {!editingCourse && plos && plos.length > 0 && (
-                        <div className="space-y-2">
-                          <Label>CPL/PLO Terkait</Label>
-                          <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
-                            {plos.map((plo) => (
-                              <div key={plo.id} className="flex items-center space-x-2">
-                                <Checkbox
-                                  id={`plo-${plo.id}`}
-                                  checked={selectedPlos.includes(plo.id)}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      setSelectedPlos([...selectedPlos, plo.id]);
-                                    } else {
-                                      setSelectedPlos(selectedPlos.filter(id => id !== plo.id));
-                                    }
-                                  }}
-                                />
-                                <label htmlFor={`plo-${plo.id}`} className="text-sm cursor-pointer">
-                                  <span className="font-mono font-medium">{plo.code}</span> - {plo.description}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={handleSaveCourse} disabled={!courseCode || !courseName}>
-                        {editingCourse ? 'Simpan' : 'Tambah'}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-primary hover:bg-primary">
-                    <TableHead className="w-12 text-primary-foreground">No</TableHead>
-                    <TableHead className="w-28 text-primary-foreground">Kode</TableHead>
-                    <TableHead className="text-primary-foreground">Nama</TableHead>
-                    <TableHead className="text-primary-foreground">Kurikulum</TableHead>
-                    <TableHead className="text-primary-foreground">Semester</TableHead>
-                    <TableHead className="text-primary-foreground">CPL/PLO Terkait</TableHead>
-                    <TableHead className="w-32 text-primary-foreground">Aksi</TableHead>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {courses?.map((course, index) => {
-                    const linkedPlos = getCoursePloList(course.id);
-                    const curriculumName = getCurriculumName(course.curriculum_id);
-                    return (
-                      <TableRow key={course.id}>
-                        <TableCell className="text-center">{index + 1}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="font-mono">{course.code}</Badge>
-                        </TableCell>
-                        <TableCell className="font-medium">{course.name}</TableCell>
-                        <TableCell>
-                          {curriculumName ? (
-                            <Badge variant="outline">{curriculumName}</Badge>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{course.semester || '-'}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {linkedPlos.length > 0 ? (
-                              linkedPlos.map(cp => (
-                                <Badge key={cp.id} variant="outline" className="text-xs">
-                                  {cp.plo?.code}
-                                </Badge>
-                              ))
-                            ) : (
-                              <span className="text-muted-foreground text-sm">Belum ada</span>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openLinkPloDialog(course)} title="Hubungkan CPL">
-                              <Link2 className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" onClick={() => openEditCourse(course)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => deleteCourseMutation.mutate(course.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {(!courses || courses.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                        Belum ada mata kuliah. Klik "Tambah Mata Kuliah" untuk menambahkan.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Classes Tab */}
-        <TabsContent value="classes">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Kelola Kelas</CardTitle>
-                  <CardDescription>Buat kelas dan kelola mahasiswa tiap kelas</CardDescription>
-                </div>
-                <Dialog open={showClassDialog} onOpenChange={(open) => { if (!open) resetClassForm(); setShowClassDialog(open); }}>
-                  <DialogTrigger asChild>
-                    <Button size="sm">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Tambah Kelas
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>{editingClass ? 'Edit Kelas' : 'Tambah Kelas Baru'}</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Nama Kelas</Label>
-                        <Input 
-                          value={className} 
-                          onChange={(e) => setClassName(e.target.value)} 
-                          placeholder="Contoh: A, B, C, atau 2024-A" 
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Deskripsi (opsional)</Label>
-                        <Textarea 
-                          value={classDescription} 
-                          onChange={(e) => setClassDescription(e.target.value)} 
-                          placeholder="Deskripsi kelas..."
-                          rows={2}
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={handleSaveClass} disabled={!className}>
-                        {editingClass ? 'Simpan' : 'Tambah'}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-primary hover:bg-primary">
-                    <TableHead className="w-12 text-primary-foreground">No</TableHead>
-                    <TableHead className="text-primary-foreground">Nama Kelas</TableHead>
-                    <TableHead className="text-primary-foreground">Deskripsi</TableHead>
-                    <TableHead className="text-primary-foreground">Jumlah Mahasiswa</TableHead>
-                    <TableHead className="w-56 text-primary-foreground">Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {classGroups?.map((classItem, index) => {
-                    const studentCount = getStudentsInClass(classItem.id).length;
-                    return (
-                      <TableRow key={classItem.id}>
-                        <TableCell className="text-center">{index + 1}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{classItem.name}</Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{classItem.description || '-'}</TableCell>
-                        <TableCell>{studentCount} mahasiswa</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => {
-                                setSelectedClassForManage(classItem);
-                                setShowManageStudentsDialog(true);
-                              }}
-                              title="Kelola mahasiswa"
-                            >
-                              <Users className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => handleExportClassStudents(classItem)}
-                              title="Export mahasiswa"
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                            <label>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                asChild
-                                title="Import mahasiswa"
-                              >
-                                <span>
-                                  <Upload className="h-4 w-4" />
-                                </span>
-                              </Button>
-                              <input
-                                type="file"
-                                accept=".xlsx,.xls"
-                                className="hidden"
-                                onChange={(e) => handleImportClassStudents(e, classItem)}
-                              />
-                            </label>
-                            <Button variant="ghost" size="icon" onClick={() => openEditClass(classItem)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => deleteClassMutation.mutate(classItem.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  {(!classGroups || classGroups.length === 0) && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        Belum ada kelas. Klik "Tambah Kelas" untuk menambahkan.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Link PLO Dialog */}
-      <Dialog open={showLinkPloDialog} onOpenChange={setShowLinkPloDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Hubungkan CPL/PLO ke {selectedCourseForLink?.name}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="border rounded-lg p-3 max-h-60 overflow-y-auto space-y-2">
-              {plos?.map((plo) => (
-                <div key={plo.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={`link-plo-${plo.id}`}
-                    checked={linkingPlos.includes(plo.id)}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setLinkingPlos([...linkingPlos, plo.id]);
-                      } else {
-                        setLinkingPlos(linkingPlos.filter(id => id !== plo.id));
-                      }
-                    }}
-                  />
-                  <label htmlFor={`link-plo-${plo.id}`} className="text-sm cursor-pointer flex-1">
-                    <span className="font-mono font-medium">{plo.code}</span> - {plo.description}
-                  </label>
-                </div>
-              ))}
-              {(!plos || plos.length === 0) && (
-                <p className="text-muted-foreground text-center py-4">
-                  Belum ada CPL/PLO. Tambahkan CPL/PLO terlebih dahulu.
-                </p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowLinkPloDialog(false)}>
-              Batal
-            </Button>
-            <Button 
-              onClick={() => selectedCourseForLink && updateCoursePlosMutation.mutate({ 
-                courseId: selectedCourseForLink.id, 
-                ploIds: linkingPlos 
+                );
               })}
-            >
-              Simpan
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              {(!classGroups || classGroups.length === 0) && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Belum ada kelas. Klik "Tambah Kelas" untuk menambahkan.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* Manage Students Dialog */}
       <Dialog open={showManageStudentsDialog} onOpenChange={setShowManageStudentsDialog}>
