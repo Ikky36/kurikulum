@@ -469,29 +469,41 @@ export type Database = {
       }
       llos: {
         Row: {
+          bahan_kajian: string[] | null
           clo_id: string
           code: string
           created_at: string
           description: string
           id: string
+          indikator: string[] | null
+          metode: string[] | null
+          referensi: string[] | null
           updated_at: string
           weight_percentage: number
         }
         Insert: {
+          bahan_kajian?: string[] | null
           clo_id: string
           code: string
           created_at?: string
           description: string
           id?: string
+          indikator?: string[] | null
+          metode?: string[] | null
+          referensi?: string[] | null
           updated_at?: string
           weight_percentage: number
         }
         Update: {
+          bahan_kajian?: string[] | null
           clo_id?: string
           code?: string
           created_at?: string
           description?: string
           id?: string
+          indikator?: string[] | null
+          metode?: string[] | null
+          referensi?: string[] | null
           updated_at?: string
           weight_percentage?: number
         }

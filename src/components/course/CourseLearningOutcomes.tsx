@@ -44,6 +44,10 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
   const [lloDescription, setLloDescription] = useState('');
   const [lloWeight, setLloWeight] = useState('');
   const [selectedCloForLlo, setSelectedCloForLlo] = useState('');
+  const [lloBahanKajian, setLloBahanKajian] = useState<string[]>([]);
+  const [lloIndikator, setLloIndikator] = useState<string[]>([]);
+  const [lloMetode, setLloMetode] = useState<string[]>([]);
+  const [lloReferensi, setLloReferensi] = useState<string[]>([]);
 
   // Assessment state
   const [showAssessmentDialog, setShowAssessmentDialog] = useState(false);
@@ -263,7 +267,16 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
 
   // LLO Mutations
   const createLloMutation = useMutation({
-    mutationFn: async (llo: { code: string; description: string; weight_percentage: number; clo_id: string }) => {
+    mutationFn: async (llo: { 
+      code: string; 
+      description: string; 
+      weight_percentage: number; 
+      clo_id: string;
+      bahan_kajian?: string[];
+      indikator?: string[];
+      metode?: string[];
+      referensi?: string[];
+    }) => {
       const { error } = await supabase.from('llos').insert([llo]);
       if (error) throw error;
     },
@@ -278,7 +291,13 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
   });
 
   const updateLloMutation = useMutation({
-    mutationFn: async ({ id, ...llo }: Partial<LLO> & { id: string }) => {
+    mutationFn: async ({ id, ...llo }: Partial<LLO> & { 
+      id: string; 
+      bahan_kajian?: string[];
+      indikator?: string[];
+      metode?: string[];
+      referensi?: string[];
+    }) => {
       const { error } = await supabase.from('llos').update(llo).eq('id', id);
       if (error) throw error;
     },
@@ -397,6 +416,10 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
     setLloDescription('');
     setLloWeight('');
     setSelectedCloForLlo('');
+    setLloBahanKajian([]);
+    setLloIndikator([]);
+    setLloMetode([]);
+    setLloReferensi([]);
     setEditingLlo(null);
     setShowLloDialog(false);
   };
@@ -421,11 +444,16 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
   };
 
   const openEditLlo = (llo: LLO) => {
+    const lloData = llo as LLO & { bahan_kajian?: string[]; indikator?: string[]; metode?: string[]; referensi?: string[] };
     setEditingLlo(llo);
     setLloCode(llo.code);
     setLloDescription(llo.description);
     setLloWeight(llo.weight_percentage.toString());
     setSelectedCloForLlo(llo.clo_id);
+    setLloBahanKajian(lloData.bahan_kajian || []);
+    setLloIndikator(lloData.indikator || []);
+    setLloMetode(lloData.metode || []);
+    setLloReferensi(lloData.referensi || []);
     setShowLloDialog(true);
   };
 
@@ -455,14 +483,22 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
         code: lloCode, 
         description: lloDescription,
         weight_percentage: parseFloat(lloWeight),
-        clo_id: selectedCloForLlo
+        clo_id: selectedCloForLlo,
+        bahan_kajian: lloBahanKajian,
+        indikator: lloIndikator,
+        metode: lloMetode,
+        referensi: lloReferensi
       });
     } else {
       createLloMutation.mutate({ 
         code: lloCode, 
         description: lloDescription, 
         weight_percentage: parseFloat(lloWeight),
-        clo_id: selectedCloForLlo 
+        clo_id: selectedCloForLlo,
+        bahan_kajian: lloBahanKajian,
+        indikator: lloIndikator,
+        metode: lloMetode,
+        referensi: lloReferensi
       });
     }
   };
@@ -560,7 +596,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                       <Input value={cloCode} onChange={(e) => setCloCode(e.target.value)} placeholder="Contoh: CPMK-1" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Deskripsi</Label>
+                      <Label>CPMK/CLO</Label>
                       <Textarea value={cloDescription} onChange={(e) => setCloDescription(e.target.value)} placeholder="Deskripsi capaian pembelajaran..." rows={3} />
                     </div>
                     {coursePlos && coursePlos.length > 0 && (
@@ -604,7 +640,13 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
         </CardHeader>
         <CardContent>
           {clos && clos.length > 0 ? (
-            <Accordion type="multiple" className="w-full">
+            <div className="space-y-2">
+              <div className="grid grid-cols-12 gap-2 px-4 py-2 bg-muted/50 rounded-lg text-sm font-medium text-muted-foreground">
+                <div className="col-span-2">Kode</div>
+                <div className="col-span-6">CPMK/CLO</div>
+                <div className="col-span-4">CPL/PLO</div>
+              </div>
+              <Accordion type="multiple" className="w-full">
               {clos.map((clo) => {
                 const cloLlos = getLlosForClo(clo.id);
                 const cloTotalWeight = cloLlos.reduce((sum, llo) => sum + llo.weight_percentage, 0);
@@ -614,22 +656,28 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                 })) || [];
                 return (
                   <AccordionItem key={clo.id} value={clo.id}>
-                    <AccordionTrigger className="hover:no-underline">
-                      <div className="flex items-center gap-3 flex-1 text-left flex-wrap">
-                        <Badge variant="secondary" className="font-mono">{clo.code}</Badge>
-                        {linkedPlos.length > 0 && (
-                          <div className="flex gap-1">
-                            {linkedPlos.map((lp) => (
+                    <AccordionTrigger className="hover:no-underline px-0">
+                      <div className="grid grid-cols-12 gap-2 flex-1 text-left items-center">
+                        <div className="col-span-2">
+                          <Badge variant="secondary" className="font-mono">{clo.code}</Badge>
+                        </div>
+                        <div className="col-span-6 text-sm flex items-center gap-2">
+                          {clo.description}
+                          <Badge variant="outline" className="text-xs shrink-0">
+                            {cloLlos.length} SUB-CPMK ({cloTotalWeight.toFixed(1)}%)
+                          </Badge>
+                        </div>
+                        <div className="col-span-4 flex flex-wrap gap-1">
+                          {linkedPlos.length > 0 ? (
+                            linkedPlos.map((lp) => (
                               <Badge key={lp.plo?.id} variant="outline" className="text-xs bg-primary/10">
                                 {lp.plo?.code} ({lp.weight.toFixed(0)}%)
                               </Badge>
-                            ))}
-                          </div>
-                        )}
-                        <span className="text-sm flex-1">{clo.description}</span>
-                        <Badge variant="outline" className="ml-2">
-                          {cloLlos.length} SUB-CPMK ({cloTotalWeight.toFixed(1)}%)
-                        </Badge>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </div>
                       </div>
                     </AccordionTrigger>
                     <AccordionContent>
@@ -676,7 +724,8 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                   </AccordionItem>
                 );
               })}
-            </Accordion>
+              </Accordion>
+            </div>
           ) : (
             <p className="text-muted-foreground text-center py-8">
               Belum ada CPMK/CLO. {canEdit && 'Klik "Tambah CPMK" untuk menambahkan.'}
@@ -717,35 +766,150 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                     Tambah SUB-CPMK
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                   <DialogHeader>
                     <DialogTitle>{editingLlo ? 'Edit SUB-CPMK/LLO' : 'Tambah SUB-CPMK/LLO Baru'}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>CPMK/CLO Terkait</Label>
-                      <Select value={selectedCloForLlo} onValueChange={setSelectedCloForLlo}>
-                        <SelectTrigger><SelectValue placeholder="Pilih CPMK/CLO" /></SelectTrigger>
-                        <SelectContent>
-                          {clos?.map((clo) => (
-                            <SelectItem key={clo.id} value={clo.id}>
-                              {clo.code} - {clo.description.substring(0, 50)}...
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>CPMK/CLO Terkait</Label>
+                        <Select value={selectedCloForLlo} onValueChange={setSelectedCloForLlo}>
+                          <SelectTrigger><SelectValue placeholder="Pilih CPMK/CLO" /></SelectTrigger>
+                          <SelectContent>
+                            {clos?.map((clo) => (
+                              <SelectItem key={clo.id} value={clo.id}>
+                                {clo.code} - {clo.description.substring(0, 50)}...
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Kode SUB-CPMK</Label>
+                        <Input value={lloCode} onChange={(e) => setLloCode(e.target.value)} placeholder="Contoh: SUB-CPMK-1.1" />
+                      </div>
                     </div>
                     <div className="space-y-2">
-                      <Label>Kode SUB-CPMK</Label>
-                      <Input value={lloCode} onChange={(e) => setLloCode(e.target.value)} placeholder="Contoh: SUB-CPMK-1.1" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Deskripsi</Label>
-                      <Textarea value={lloDescription} onChange={(e) => setLloDescription(e.target.value)} placeholder="Deskripsi capaian pembelajaran pertemuan..." rows={3} />
+                      <Label>SUB-CPMK/LLO</Label>
+                      <Textarea value={lloDescription} onChange={(e) => setLloDescription(e.target.value)} placeholder="Deskripsi capaian pembelajaran pertemuan..." rows={2} />
                     </div>
                     <div className="space-y-2">
                       <Label>Bobot (%)</Label>
-                      <Input type="number" min="0" max="100" step="0.1" value={lloWeight} onChange={(e) => setLloWeight(e.target.value)} placeholder="Contoh: 10" />
+                      <Input type="number" min="0" max="100" step="0.1" value={lloWeight} onChange={(e) => setLloWeight(e.target.value)} placeholder="Contoh: 10" className="w-32" />
+                    </div>
+                    
+                    {/* Bahan Kajian */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center justify-between">
+                        Bahan Kajian
+                        <Button type="button" variant="outline" size="sm" onClick={() => setLloBahanKajian([...lloBahanKajian, ''])}>
+                          <Plus className="h-3 w-3 mr-1" /> Tambah
+                        </Button>
+                      </Label>
+                      <div className="space-y-2">
+                        {lloBahanKajian.map((item, index) => (
+                          <div key={index} className="flex gap-2">
+                            <Input 
+                              value={item} 
+                              onChange={(e) => {
+                                const newItems = [...lloBahanKajian];
+                                newItems[index] = e.target.value;
+                                setLloBahanKajian(newItems);
+                              }} 
+                              placeholder={`Bahan kajian ${index + 1}`}
+                            />
+                            <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => setLloBahanKajian(lloBahanKajian.filter((_, i) => i !== index))}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Indikator */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center justify-between">
+                        Indikator
+                        <Button type="button" variant="outline" size="sm" onClick={() => setLloIndikator([...lloIndikator, ''])}>
+                          <Plus className="h-3 w-3 mr-1" /> Tambah
+                        </Button>
+                      </Label>
+                      <div className="space-y-2">
+                        {lloIndikator.map((item, index) => (
+                          <div key={index} className="flex gap-2">
+                            <Input 
+                              value={item} 
+                              onChange={(e) => {
+                                const newItems = [...lloIndikator];
+                                newItems[index] = e.target.value;
+                                setLloIndikator(newItems);
+                              }} 
+                              placeholder={`Indikator ${index + 1}`}
+                            />
+                            <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => setLloIndikator(lloIndikator.filter((_, i) => i !== index))}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Metode */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center justify-between">
+                        Metode
+                        <Button type="button" variant="outline" size="sm" onClick={() => setLloMetode([...lloMetode, ''])}>
+                          <Plus className="h-3 w-3 mr-1" /> Tambah
+                        </Button>
+                      </Label>
+                      <div className="space-y-2">
+                        {lloMetode.map((item, index) => (
+                          <div key={index} className="flex gap-2">
+                            <Input 
+                              value={item} 
+                              onChange={(e) => {
+                                const newItems = [...lloMetode];
+                                newItems[index] = e.target.value;
+                                setLloMetode(newItems);
+                              }} 
+                              placeholder={`Metode ${index + 1}`}
+                            />
+                            <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => setLloMetode(lloMetode.filter((_, i) => i !== index))}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Referensi */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center justify-between">
+                        Referensi (Link)
+                        <Button type="button" variant="outline" size="sm" onClick={() => setLloReferensi([...lloReferensi, ''])}>
+                          <Plus className="h-3 w-3 mr-1" /> Tambah
+                        </Button>
+                      </Label>
+                      <div className="space-y-2">
+                        {lloReferensi.map((item, index) => (
+                          <div key={index} className="flex gap-2">
+                            <Input 
+                              type="url"
+                              value={item} 
+                              onChange={(e) => {
+                                const newItems = [...lloReferensi];
+                                newItems[index] = e.target.value;
+                                setLloReferensi(newItems);
+                              }} 
+                              placeholder={`https://... (Link ${index + 1})`}
+                            />
+                            <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => setLloReferensi(lloReferensi.filter((_, i) => i !== index))}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                   <DialogFooter>
@@ -764,35 +928,70 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="w-28">Kode</TableHead>
-                  <TableHead>Deskripsi</TableHead>
+                  <TableHead>SUB-CPMK/LLO</TableHead>
                   <TableHead className="w-24">CPMK</TableHead>
+                  <TableHead>Bahan Kajian</TableHead>
+                  <TableHead>Indikator</TableHead>
+                  <TableHead>Metode</TableHead>
+                  <TableHead>Referensi</TableHead>
                   <TableHead className="w-20 text-center">Bobot</TableHead>
                   {canEdit && <TableHead className="w-20">Aksi</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {llos.map((llo) => (
-                  <TableRow key={llo.id}>
-                    <TableCell><Badge variant="outline" className="font-mono">{llo.code}</Badge></TableCell>
-                    <TableCell className="text-sm">{llo.description}</TableCell>
-                    <TableCell><Badge variant="secondary">{llo.clo?.code}</Badge></TableCell>
-                    <TableCell className="text-center">
-                      <Badge>{llo.weight_percentage}%</Badge>
-                    </TableCell>
-                    {canEdit && (
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditLlo(llo)}>
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteLloMutation.mutate(llo.id)}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
+                {llos.map((llo) => {
+                  const lloData = llo as LLO & { bahan_kajian?: string[]; indikator?: string[]; metode?: string[]; referensi?: string[] };
+                  return (
+                    <TableRow key={llo.id}>
+                      <TableCell><Badge variant="outline" className="font-mono">{llo.code}</Badge></TableCell>
+                      <TableCell className="text-sm max-w-xs">{llo.description}</TableCell>
+                      <TableCell><Badge variant="secondary">{llo.clo?.code}</Badge></TableCell>
+                      <TableCell className="text-sm">
+                        {lloData.bahan_kajian && lloData.bahan_kajian.length > 0 
+                          ? lloData.bahan_kajian.map((item, i) => <div key={i} className="text-xs">• {item}</div>)
+                          : <span className="text-muted-foreground">-</span>
+                        }
                       </TableCell>
-                    )}
-                  </TableRow>
-                ))}
+                      <TableCell className="text-sm">
+                        {lloData.indikator && lloData.indikator.length > 0 
+                          ? lloData.indikator.map((item, i) => <div key={i} className="text-xs">• {item}</div>)
+                          : <span className="text-muted-foreground">-</span>
+                        }
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {lloData.metode && lloData.metode.length > 0 
+                          ? lloData.metode.map((item, i) => <div key={i} className="text-xs">• {item}</div>)
+                          : <span className="text-muted-foreground">-</span>
+                        }
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {lloData.referensi && lloData.referensi.length > 0 
+                          ? lloData.referensi.map((link, i) => (
+                              <a key={i} href={link} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline block">
+                                Link {i + 1}
+                              </a>
+                            ))
+                          : <span className="text-muted-foreground">-</span>
+                        }
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge>{llo.weight_percentage}%</Badge>
+                      </TableCell>
+                      {canEdit && (
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEditLlo(llo)}>
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => deleteLloMutation.mutate(llo.id)}>
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           ) : (
