@@ -111,6 +111,7 @@ export default function MataKuliah() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-primary hover:bg-primary">
+                    <TableHead className="w-12 font-semibold text-primary-foreground">No</TableHead>
                     <TableHead className="font-semibold text-primary-foreground">
                       <Select value={codeFilter} onValueChange={setCodeFilter}>
                         <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground">
@@ -176,6 +177,7 @@ export default function MataKuliah() {
                       className="group cursor-pointer hover:bg-muted/30 transition-colors"
                       style={{ animationDelay: `${i * 50}ms` }}
                     >
+                      <TableCell className="text-center">{i + 1}</TableCell>
                       <TableCell>
                         <Badge variant="secondary" className="font-mono">
                           {course.code}
@@ -247,7 +249,7 @@ export default function MataKuliah() {
                   ))}
                   {filteredCourses.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                         Tidak ada mata kuliah yang sesuai filter
                       </TableCell>
                     </TableRow>

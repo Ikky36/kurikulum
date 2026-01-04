@@ -541,19 +541,21 @@ export function AssessmentScoreImportExport({
           <div className="overflow-auto flex-1 border rounded-md">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-12">Status</TableHead>
-                  <TableHead>NIM</TableHead>
-                  <TableHead>Nama</TableHead>
+                <TableRow className="bg-primary hover:bg-primary">
+                  <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                  <TableHead className="w-12 text-primary-foreground">Status</TableHead>
+                  <TableHead className="text-primary-foreground">NIM</TableHead>
+                  <TableHead className="text-primary-foreground">Nama</TableHead>
                   {assessments.map(a => (
-                    <TableHead key={a.id} className="text-center">{a.code}</TableHead>
+                    <TableHead key={a.id} className="text-center text-primary-foreground">{a.code}</TableHead>
                   ))}
-                  <TableHead>Error</TableHead>
+                  <TableHead className="text-primary-foreground">Error</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {importData.map((row, idx) => (
                   <TableRow key={idx} className={row.isValid ? '' : 'bg-destructive/5'}>
+                    <TableCell className="text-center">{idx + 1}</TableCell>
                     <TableCell>
                       {row.isValid ? (
                         <CheckCircle className="h-4 w-4 text-green-500" />

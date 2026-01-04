@@ -707,15 +707,15 @@ export default function DashboardAdmin() {
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-12">No</TableHead>
-                      <TableHead>Nama</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>NIM/NIDN</TableHead>
-                      <TableHead>Angkatan</TableHead>
-                      <TableHead>Program</TableHead>
-                      <TableHead className="w-24">Aksi</TableHead>
+                    <TableRow className="bg-primary hover:bg-primary">
+                      <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                      <TableHead className="text-primary-foreground">Nama</TableHead>
+                      <TableHead className="text-primary-foreground">Email</TableHead>
+                      <TableHead className="text-primary-foreground">Role</TableHead>
+                      <TableHead className="text-primary-foreground">NIM/NIDN</TableHead>
+                      <TableHead className="text-primary-foreground">Angkatan</TableHead>
+                      <TableHead className="text-primary-foreground">Program</TableHead>
+                      <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -879,11 +879,11 @@ export default function DashboardAdmin() {
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-12">No</TableHead>
-                      <TableHead>Mata Kuliah</TableHead>
-                      <TableHead>Dosen</TableHead>
-                      <TableHead className="w-24">Aksi</TableHead>
+                    <TableRow className="bg-primary hover:bg-primary">
+                      <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                      <TableHead className="text-primary-foreground">Mata Kuliah</TableHead>
+                      <TableHead className="text-primary-foreground">Dosen</TableHead>
+                      <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -932,12 +932,12 @@ export default function DashboardAdmin() {
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead className="w-12">No</TableHead>
-                      <TableHead>Nama</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead className="w-24">Aksi</TableHead>
+                    <TableRow className="bg-primary hover:bg-primary">
+                      <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                      <TableHead className="text-primary-foreground">Nama</TableHead>
+                      <TableHead className="text-primary-foreground">Email</TableHead>
+                      <TableHead className="text-primary-foreground">Role</TableHead>
+                      <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

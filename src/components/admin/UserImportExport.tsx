@@ -307,18 +307,20 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
           <div className="overflow-auto flex-1 border rounded-md">
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead className="w-12">Status</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>NIM/NIP</TableHead>
-                  <TableHead>Error</TableHead>
+                <TableRow className="bg-primary hover:bg-primary">
+                  <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                  <TableHead className="w-12 text-primary-foreground">Status</TableHead>
+                  <TableHead className="text-primary-foreground">Email</TableHead>
+                  <TableHead className="text-primary-foreground">Nama</TableHead>
+                  <TableHead className="text-primary-foreground">Role</TableHead>
+                  <TableHead className="text-primary-foreground">NIM/NIP</TableHead>
+                  <TableHead className="text-primary-foreground">Error</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {importData.map((row, idx) => (
                   <TableRow key={idx} className={row.isValid ? '' : 'bg-destructive/5'}>
+                    <TableCell className="text-center">{idx + 1}</TableCell>
                     <TableCell>
                       {row.isValid ? (
                         <CheckCircle className="h-4 w-4 text-green-500" />
