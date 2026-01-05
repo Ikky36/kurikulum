@@ -45,31 +45,33 @@ export default function Index() {
 
         {/* Stats Section */}
         <section className="container -mt-8 relative z-10">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { icon: BookOpen, label: 'Mata Kuliah', value: courses?.length || 0, color: 'text-primary', tooltip: 'Total mata kuliah yang tersedia' },
-              { icon: Users, label: 'Total Mahasiswa', value: totalStudents, color: 'text-secondary-foreground', tooltip: 'Total mahasiswa terdaftar di semua mata kuliah' },
-              { icon: TrendingUp, label: 'Rata-rata Nilai', value: averageAllCourses.toFixed(1), color: 'text-success', tooltip: 'Rata-rata nilai akhir dari semua mahasiswa' },
-            ].map((stat, i) => (
-              <Tooltip key={stat.label}>
-                <TooltipTrigger asChild>
-                  <Card className="animate-slide-up cursor-help" style={{ animationDelay: `${i * 100}ms` }}>
-                    <CardContent className="flex items-center gap-4 p-5">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
-                        <stat.icon className={`h-6 w-6 ${stat.color}`} />
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">{stat.label}</p>
-                        <p className="text-2xl font-bold font-display">{stat.value}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{stat.tooltip}</p>
-                </TooltipContent>
-              </Tooltip>
-            ))}
+          <div className="flex justify-center">
+            <div className="grid gap-4 sm:grid-cols-3 max-w-3xl w-full">
+              {[
+                { icon: BookOpen, label: 'Mata Kuliah', value: courses?.length || 0, color: 'text-primary', tooltip: 'Total mata kuliah yang tersedia' },
+                { icon: Users, label: 'Total Mahasiswa', value: totalStudents, color: 'text-secondary-foreground', tooltip: 'Total mahasiswa terdaftar di semua mata kuliah' },
+                { icon: TrendingUp, label: 'Rata-rata Nilai', value: averageAllCourses.toFixed(1), color: 'text-success', tooltip: 'Rata-rata nilai akhir dari semua mahasiswa' },
+              ].map((stat, i) => (
+                <Tooltip key={stat.label}>
+                  <TooltipTrigger asChild>
+                    <Card className="animate-slide-up cursor-help" style={{ animationDelay: `${i * 100}ms` }}>
+                      <CardContent className="flex items-center gap-4 p-5">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-muted">
+                          <stat.icon className={`h-6 w-6 ${stat.color}`} />
+                        </div>
+                        <div>
+                          <p className="text-sm text-muted-foreground">{stat.label}</p>
+                          <p className="text-2xl font-bold font-display">{stat.value}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{stat.tooltip}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
           </div>
         </section>
 
