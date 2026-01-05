@@ -60,6 +60,7 @@ export default function Settings() {
   const [instrumenMin, setInstrumenMin] = useState('');
   const [instrumenMax, setInstrumenMax] = useState('');
   const [instrumenPredikat, setInstrumenPredikat] = useState('');
+  const [instrumenColor, setInstrumenColor] = useState('#22c55e');
 
   // Fetch curricula
   const { data: curricula } = useQuery({
@@ -215,7 +216,7 @@ export default function Settings() {
 
   // Instrumen mutations
   const createInstrumenMutation = useMutation({
-    mutationFn: async (data: { rentang_min: number; rentang_max: number; predikat: string }) => {
+    mutationFn: async (data: { rentang_min: number; rentang_max: number; predikat: string; color?: string }) => {
       const { error } = await supabase.from('instrumen_penilaian').insert([data]);
       if (error) throw error;
     },
@@ -319,6 +320,7 @@ export default function Settings() {
     setInstrumenMin('');
     setInstrumenMax('');
     setInstrumenPredikat('');
+    setInstrumenColor('#22c55e');
     setEditingInstrumen(null);
     setShowInstrumenDialog(false);
   };
@@ -328,6 +330,7 @@ export default function Settings() {
     setInstrumenMin(instrumen.rentang_min.toString());
     setInstrumenMax(instrumen.rentang_max.toString());
     setInstrumenPredikat(instrumen.predikat);
+    setInstrumenColor(instrumen.color || '#22c55e');
     setShowInstrumenDialog(true);
   };
 
@@ -343,9 +346,9 @@ export default function Settings() {
       return;
     }
     if (editingInstrumen) {
-      updateInstrumenMutation.mutate({ id: editingInstrumen.id, rentang_min: min, rentang_max: max, predikat: instrumenPredikat });
+      updateInstrumenMutation.mutate({ id: editingInstrumen.id, rentang_min: min, rentang_max: max, predikat: instrumenPredikat, color: instrumenColor });
     } else {
-      createInstrumenMutation.mutate({ rentang_min: min, rentang_max: max, predikat: instrumenPredikat });
+      createInstrumenMutation.mutate({ rentang_min: min, rentang_max: max, predikat: instrumenPredikat, color: instrumenColor });
     }
   };
 
@@ -898,7 +901,7 @@ export default function Settings() {
                     <div className="flex items-center justify-between">
                       <div>
                         <CardTitle>Instrumen Penilaian</CardTitle>
-                        <CardDescription>Atur rentang nilai dan predikat untuk penilaian mahasiswa</CardDescription>
+                        <CardDescription>Atur rentang nilai dan predikat untuk penilaian mahasiswa. Rentang nilai berupa bilangan bulat (0-100).</CardDescription>
                       </div>
                       <Dialog open={showInstrumenDialog} onOpenChange={(open) => { if (!open) resetInstrumenForm(); setShowInstrumenDialog(open); }}>
                         <DialogTrigger asChild>
@@ -914,7 +917,7 @@ export default function Settings() {
                           <div className="space-y-4">
                             <div className="grid grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <Label>Rentang Minimal (%)</Label>
+                                <Label>Rentang Minimal</Label>
                                 <Input 
                                   type="number" 
                                   min="0" 
@@ -925,7 +928,7 @@ export default function Settings() {
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label>Rentang Maksimal (%)</Label>
+                                <Label>Rentang Maksimal</Label>
                                 <Input 
                                   type="number" 
                                   min="0" 
@@ -936,13 +939,32 @@ export default function Settings() {
                                 />
                               </div>
                             </div>
-                            <div className="space-y-2">
-                              <Label>Predikat</Label>
-                              <Input 
-                                value={instrumenPredikat} 
-                                onChange={(e) => setInstrumenPredikat(e.target.value)} 
-                                placeholder="Contoh: A, B, C, Sangat Baik, dll."
-                              />
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Predikat</Label>
+                                <Input 
+                                  value={instrumenPredikat} 
+                                  onChange={(e) => setInstrumenPredikat(e.target.value)} 
+                                  placeholder="Contoh: A, B, C, Sangat Baik, dll."
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Warna Predikat</Label>
+                                <div className="flex items-center gap-2">
+                                  <input 
+                                    type="color" 
+                                    value={instrumenColor} 
+                                    onChange={(e) => setInstrumenColor(e.target.value)}
+                                    className="w-10 h-10 rounded border cursor-pointer"
+                                  />
+                                  <Input 
+                                    value={instrumenColor} 
+                                    onChange={(e) => setInstrumenColor(e.target.value)}
+                                    placeholder="#22c55e"
+                                    className="flex-1"
+                                  />
+                                </div>
+                              </div>
                             </div>
                           </div>
                           <DialogFooter>
@@ -963,6 +985,7 @@ export default function Settings() {
                             <TableHead>Rentang Minimal</TableHead>
                             <TableHead>Rentang Maksimal</TableHead>
                             <TableHead>Predikat</TableHead>
+                            <TableHead>Warna</TableHead>
                             <TableHead className="w-24">Aksi</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -970,10 +993,24 @@ export default function Settings() {
                           {instrumenList.map((instrumen, index) => (
                             <TableRow key={instrumen.id}>
                               <TableCell>{index + 1}</TableCell>
-                              <TableCell>{instrumen.rentang_min}%</TableCell>
-                              <TableCell>{instrumen.rentang_max}%</TableCell>
+                              <TableCell>{instrumen.rentang_min}</TableCell>
+                              <TableCell>{instrumen.rentang_max}</TableCell>
                               <TableCell>
-                                <Badge variant="secondary">{instrumen.predikat}</Badge>
+                                <Badge 
+                                  variant="secondary"
+                                  style={{ 
+                                    backgroundColor: instrumen.color || undefined,
+                                    color: instrumen.color ? '#fff' : undefined
+                                  }}
+                                >
+                                  {instrumen.predikat}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div 
+                                  className="w-6 h-6 rounded border"
+                                  style={{ backgroundColor: instrumen.color || '#888' }}
+                                />
                               </TableCell>
                               <TableCell>
                                 <div className="flex gap-1">

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { CourseWithStats } from '@/lib/types';
-import { CheckCircle2, XCircle, Users, TrendingUp } from 'lucide-react';
+import { CheckCircle2, XCircle, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface CourseScoreCardProps {
@@ -55,7 +55,16 @@ export function CourseScoreCard({ course, delay = 0 }: CourseScoreCardProps) {
                 "font-bold text-lg",
                 isPassing ? "text-success" : "text-destructive"
               )}>
-                {course.average_score.toFixed(1)}%
+                {course.average_score.toFixed(1)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Capaian</span>
+              <span className={cn(
+                "font-bold",
+                passingPercentage >= 50 ? "text-success" : "text-warning"
+              )}>
+                {passingPercentage}%
               </span>
             </div>
             <Progress 
@@ -67,24 +76,12 @@ export function CourseScoreCard({ course, delay = 0 }: CourseScoreCardProps) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+          <div className="pt-2 border-t">
             <div className="flex items-center gap-2">
               <Users className="h-4 w-4 text-muted-foreground" />
               <div className="text-sm">
                 <span className="font-semibold">{course.total_students}</span>
                 <span className="text-muted-foreground"> Mahasiswa</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              <div className="text-sm">
-                <span className={cn(
-                  "font-semibold",
-                  passingPercentage >= 50 ? "text-success" : "text-warning"
-                )}>
-                  {passingPercentage}%
-                </span>
-                <span className="text-muted-foreground"> Lulus</span>
               </div>
             </div>
           </div>

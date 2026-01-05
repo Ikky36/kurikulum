@@ -548,6 +548,7 @@ export type Database = {
       }
       instrumen_penilaian: {
         Row: {
+          color: string | null
           created_at: string
           id: string
           predikat: string
@@ -556,6 +557,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          color?: string | null
           created_at?: string
           id?: string
           predikat: string
@@ -564,6 +566,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          color?: string | null
           created_at?: string
           id?: string
           predikat?: string

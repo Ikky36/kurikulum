@@ -70,6 +70,8 @@ export default function CourseDetail() {
       // Build assessment scores map for this student
       const studentAssessmentScores: Record<string, number | null> = {};
       let weightedSum = 0;
+      let totalScoresSum = 0;
+      let assessmentCount = 0;
 
       assessments?.forEach(assessment => {
         const score = assessmentScores?.find(
@@ -81,6 +83,8 @@ export default function CourseDetail() {
         if (scoreValue !== null) {
           const weight = assessment.weight || 0;
           weightedSum += (scoreValue / 100) * weight;
+          totalScoresSum += scoreValue;
+          assessmentCount++;
         }
       });
 
@@ -89,25 +93,29 @@ export default function CourseDetail() {
         ? (weightedSum / totalWeight) * 100 
         : null;
       
+      // Calculate Poin: average of all assessment scores
+      const poin = assessmentCount > 0 ? totalScoresSum / assessmentCount : null;
+      
       return {
         ...e.student,
         grade: grade?.final_score,
         isPassing: achievementPercentage !== null ? achievementPercentage >= (course?.passing_score || 60) : null,
         assessmentScores: studentAssessmentScores,
         achievementPercentage,
+        poin,
       };
     }) || [];
   }, [enrollments, grades, assessments, assessmentScores, totalWeight, course?.passing_score]);
 
-  // Function to get predikat based on achievement percentage
-  const getPredikat = (achievementPercentage: number | null) => {
-    if (achievementPercentage === null || !instrumenList || instrumenList.length === 0) {
+  // Function to get predikat based on average score (poin)
+  const getPredikat = (poin: number | null) => {
+    if (poin === null || !instrumenList || instrumenList.length === 0) {
       return null;
     }
     const instrumen = instrumenList.find(
-      i => achievementPercentage >= i.rentang_min && achievementPercentage <= i.rentang_max
+      i => poin >= i.rentang_min && poin <= i.rentang_max
     );
-    return instrumen?.predikat || null;
+    return instrumen ? { predikat: instrumen.predikat, color: instrumen.color } : null;
   };
 
   // Get unique class groups and enrollment years for filter
@@ -164,6 +172,10 @@ export default function CourseDetail() {
           case 'achievement':
             valA = a?.achievementPercentage ?? -1;
             valB = b?.achievementPercentage ?? -1;
+            break;
+          case 'poin':
+            valA = (a as any)?.poin ?? -1;
+            valB = (b as any)?.poin ?? -1;
             break;
           default:
             // Assessment column sorting
@@ -341,7 +353,7 @@ export default function CourseDetail() {
             </h1>
           </div>
           <p className="text-muted-foreground mt-2">
-            Semester {course.semester} • Passing Score: {course.passing_score}%
+            Semester {course.semester}
           </p>
         </div>
 
@@ -489,7 +501,7 @@ export default function CourseDetail() {
             {/* Students Table */}
             <Card className="animate-slide-up" style={{ animationDelay: '200ms' }}>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">Daftar Mahasiswa</CardTitle>
+                <CardTitle className="text-lg">Nilai Mahasiswa</CardTitle>
                 {canEdit && assessments && assessments.length > 0 && (
                   <AssessmentScoreImportExport
                     courseId={courseId!}
@@ -604,6 +616,15 @@ export default function CourseDetail() {
                             {renderSortIcon('achievement')}
                           </button>
                         </TableHead>
+                        <TableHead className="font-semibold text-primary-foreground">
+                          <button 
+                            onClick={() => handleSort('poin')}
+                            className="flex items-center justify-center w-full hover:opacity-80"
+                          >
+                            Poin
+                            {renderSortIcon('poin')}
+                          </button>
+                        </TableHead>
                         <TableHead className="font-semibold text-primary-foreground">Predikat</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -701,14 +722,26 @@ export default function CourseDetail() {
                               )}
                             </TableCell>
                             <TableCell className="text-center">
-                              {student?.achievementPercentage !== null && student?.achievementPercentage !== undefined ? (
+                              {(student as any)?.poin !== null && (student as any)?.poin !== undefined ? (
+                                <span className="font-bold">
+                                  {(student as any).poin.toFixed(1)}
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {(student as any)?.poin !== null && (student as any)?.poin !== undefined ? (
                                 (() => {
-                                  const predikat = getPredikat(student.achievementPercentage);
-                                  return predikat ? (
-                                    <Badge variant={student.isPassing ? "default" : "secondary"} className={cn(
-                                      student.isPassing && "bg-success/10 text-success border-success/20"
-                                    )}>
-                                      {predikat}
+                                  const predikatData = getPredikat((student as any).poin);
+                                  return predikatData ? (
+                                    <Badge 
+                                      style={{ 
+                                        backgroundColor: predikatData.color || undefined,
+                                        color: predikatData.color ? '#fff' : undefined
+                                      }}
+                                    >
+                                      {predikatData.predikat}
                                     </Badge>
                                   ) : (
                                     <Badge variant="outline">-</Badge>
@@ -722,7 +755,7 @@ export default function CourseDetail() {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={7 + (assessments?.length || 0)} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={8 + (assessments?.length || 0)} className="text-center py-8 text-muted-foreground">
                             Belum ada mahasiswa terdaftar
                           </TableCell>
                         </TableRow>
