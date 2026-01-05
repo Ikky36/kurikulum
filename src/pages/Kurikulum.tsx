@@ -143,7 +143,7 @@ export default function Kurikulum() {
   const { data: courses = [] } = useQuery({
     queryKey: ['courses_kurikulum'],
     queryFn: async () => {
-      const { data } = await supabase.from('courses').select('*, curricula:curriculum_id(*), course_plos(plo_id, plos(*))').order('code');
+      const { data } = await supabase.from('courses').select('*, curricula:curriculum_id(*), course_plos(plo_id, plos(*)), course_profil_lulusan(profil_lulusan_id, profil_lulusan:profil_lulusan_id(*))').order('code');
       return data || [];
     },
   });
@@ -732,13 +732,8 @@ export default function Kurikulum() {
               courses.map((course: any, idx: number) => {
                 const coursePlos = course.course_plos?.map((cp: any) => cp.plos) || [];
                 const cplCodes = coursePlos.map((p: any) => p?.code).filter(Boolean);
-                const plCodes = coursePlos
-                  .map((p: any) => {
-                    const pl = profilLulusan.find(pl => pl.id === p?.profil_lulusan_id);
-                    return pl ? { code: pl.code, profil: pl.profil } : null;
-                  })
-                  .filter(Boolean);
-                const uniquePlCodes = [...new Set(plCodes.map((p: any) => p?.code))];
+                // Get PL from course_profil_lulusan junction
+                const coursePls = course.course_profil_lulusan?.map((cpl: any) => cpl.profil_lulusan) || [];
                 return (
                   <TableRow key={course.id}>
                     <TableCell>{idx + 1}</TableCell>
@@ -779,23 +774,20 @@ export default function Kurikulum() {
                       ) : '-'}
                     </TableCell>
                     <TableCell>
-                      {uniquePlCodes.length > 0 ? (
+                      {coursePls.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
-                          {uniquePlCodes.map((code: any, i: number) => {
-                            const pl = profilLulusan.find(p => p.code === code);
-                            return (
-                              <TooltipProvider key={i}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="cursor-help bg-muted px-1.5 py-0.5 rounded text-xs">{code}</span>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="max-w-sm">
-                                    <p>{pl?.profil || code}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            );
-                          })}
+                          {coursePls.map((pl: any, i: number) => (
+                            <TooltipProvider key={i}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help bg-muted px-1.5 py-0.5 rounded text-xs">{pl?.code}</span>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-sm">
+                                  <p>{pl?.profil || pl?.code}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ))}
                         </div>
                       ) : '-'}
                     </TableCell>
@@ -806,8 +798,8 @@ export default function Kurikulum() {
                             variant="ghost"
                             size="icon"
                             onClick={() => {
-                              // Get PL IDs from the selected PLOs via profil_lulusan_id
-                              const existingPlIds = course.course_plos?.map((cp: any) => cp.plos?.profil_lulusan_id).filter(Boolean) || [];
+                              // Get PL IDs from course_profil_lulusan junction
+                              const existingPlIds = course.course_profil_lulusan?.map((cpl: any) => cpl.profil_lulusan_id) || [];
                               openEdit('courses', {
                                 id: course.id,
                                 code: course.code,
@@ -816,7 +808,7 @@ export default function Kurikulum() {
                                 curriculum_id: course.curriculum_id || '',
                                 passing_score: course.passing_score?.toString() || '60',
                                 ploIds: course.course_plos?.map((cp: any) => cp.plo_id) || [],
-                                plIds: [...new Set(existingPlIds)],
+                                plIds: existingPlIds,
                               }, false);
                             }}
                           >
@@ -1107,6 +1099,13 @@ export default function Kurikulum() {
                       await supabase.from('course_plos').insert(inserts);
                     }
                     
+                    // Link PLs (Profil Lulusan)
+                    const selectedPlIdsList = (formData.plIds as unknown as string[]) || [];
+                    if (selectedPlIdsList.length > 0) {
+                      const plInserts = selectedPlIdsList.map(profil_lulusan_id => ({ course_id: newCourse.id, profil_lulusan_id }));
+                      await supabase.from('course_profil_lulusan').insert(plInserts);
+                    }
+                    
                     queryClient.invalidateQueries();
                     toast.success('Mata kuliah berhasil ditambahkan');
                     setEditDialog(null);
@@ -1133,6 +1132,14 @@ export default function Kurikulum() {
                     if (selectedPloIds.length > 0) {
                       const inserts = selectedPloIds.map(plo_id => ({ course_id: id, plo_id }));
                       await supabase.from('course_plos').insert(inserts);
+                    }
+                    
+                    // Update PL (Profil Lulusan) links
+                    const selectedPlIdsList = (formData.plIds as unknown as string[]) || [];
+                    await supabase.from('course_profil_lulusan').delete().eq('course_id', id);
+                    if (selectedPlIdsList.length > 0) {
+                      const plInserts = selectedPlIdsList.map(profil_lulusan_id => ({ course_id: id, profil_lulusan_id }));
+                      await supabase.from('course_profil_lulusan').insert(plInserts);
                     }
                     
                     queryClient.invalidateQueries();
