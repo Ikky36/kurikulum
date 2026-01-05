@@ -81,7 +81,9 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          indikator: string[] | null
           name: string
+          teknik: string[] | null
           updated_at: string
         }
         Insert: {
@@ -90,7 +92,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          indikator?: string[] | null
           name: string
+          teknik?: string[] | null
           updated_at?: string
         }
         Update: {
@@ -99,7 +103,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          indikator?: string[] | null
           name?: string
+          teknik?: string[] | null
           updated_at?: string
         }
         Relationships: [

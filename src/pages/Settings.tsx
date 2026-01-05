@@ -11,10 +11,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { Curriculum, Program, AppSetting } from '@/lib/types';
 import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
 
@@ -43,6 +44,14 @@ export default function Settings() {
   const [logoUrl, setLogoUrl] = useState('');
   const [primaryColor, setPrimaryColor] = useState('');
   const [uploading, setUploading] = useState(false);
+
+  // AI API Key state
+  const [aiApiKey, setAiApiKey] = useState('');
+  const [aiProvider, setAiProvider] = useState('gemini');
+  const [showApiKey, setShowApiKey] = useState(false);
+
+  // Prompts state
+  const [prompts, setPrompts] = useState<Record<string, string>>({});
 
   // Fetch curricula
   const { data: curricula } = useQuery({
@@ -82,6 +91,15 @@ export default function Settings() {
       setFooterText(settingsMap['footer_text'] || '© 2024 Student Achievement Tracker PBA. Semua hak dilindungi.');
       setLogoUrl(settingsMap['logo_url'] || '');
       setPrimaryColor(settingsMap['primary_color'] || '');
+      setAiApiKey(settingsMap['ai_api_key'] || '');
+      setAiProvider(settingsMap['ai_provider'] || 'gemini');
+      
+      // Load prompts
+      const promptSettings: Record<string, string> = {};
+      Object.keys(settingsMap).filter(key => key.startsWith('prompt_')).forEach(key => {
+        promptSettings[key] = settingsMap[key];
+      });
+      setPrompts(promptSettings);
       
       return settingsMap;
     },
@@ -270,6 +288,40 @@ export default function Settings() {
     await updateSettingMutation.mutateAsync({ key: 'footer_text', value: footerText });
   };
 
+  const handleSaveAiSettings = async () => {
+    await updateSettingMutation.mutateAsync({ key: 'ai_api_key', value: aiApiKey });
+    await updateSettingMutation.mutateAsync({ key: 'ai_provider', value: aiProvider });
+  };
+
+  const handleSavePrompt = async (key: string, value: string) => {
+    await updateSettingMutation.mutateAsync({ key, value });
+    setPrompts(prev => ({ ...prev, [key]: value }));
+  };
+
+  // Default prompts for each field
+  const defaultPrompts: Record<string, { label: string; defaultValue: string }> = {
+    'prompt_clo_description': { 
+      label: 'Deskripsi CPMK/CLO', 
+      defaultValue: 'Buatkan rumusan CPMK (Capaian Pembelajaran Mata Kuliah) untuk mata kuliah tingkat universitas. Rumusan harus menggunakan kata kerja operasional yang terukur.' 
+    },
+    'prompt_llo_description': { 
+      label: 'Deskripsi SUB-CPMK/LLO', 
+      defaultValue: 'Buatkan rumusan Sub-CPMK (Lesson Learning Outcome) yang spesifik dan terukur. Harus mendukung pencapaian CPMK yang lebih tinggi.' 
+    },
+    'prompt_assessment_description': { 
+      label: 'Deskripsi Tugas/Quiz', 
+      defaultValue: 'Buatkan deskripsi tugas atau quiz untuk menilai pencapaian pembelajaran mahasiswa. Sertakan kriteria penilaian yang jelas.' 
+    },
+    'prompt_bahan_kajian': { 
+      label: 'Bahan Kajian', 
+      defaultValue: 'Buatkan daftar bahan kajian yang relevan untuk topik pembelajaran ini. Fokus pada konsep-konsep utama yang perlu dipelajari.' 
+    },
+    'prompt_indikator': { 
+      label: 'Indikator Pembelajaran', 
+      defaultValue: 'Buatkan indikator pencapaian pembelajaran yang spesifik dan dapat diukur. Gunakan kata kerja operasional sesuai taksonomi Bloom.' 
+    },
+  };
+
   if (loading) {
     return <Layout><div className="container py-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div></Layout>;
   }
@@ -325,6 +377,13 @@ export default function Settings() {
               <span className="hidden md:inline">Program Studi</span>
               <span className="md:hidden">Prodi</span>
             </TabsTrigger>
+            {canAccessTheme && (
+              <TabsTrigger value="ai" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Sparkles className="h-4 w-4" />
+                <span className="hidden md:inline">AI & Prompts</span>
+                <span className="md:hidden">AI</span>
+              </TabsTrigger>
+            )}
             {canAccessTheme && (
               <TabsTrigger value="permissions" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Shield className="h-4 w-4" />
@@ -620,6 +679,99 @@ export default function Settings() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {/* AI & Prompts Tab - Only for admin */}
+            {canAccessTheme && (
+              <TabsContent value="ai" className="mt-0 space-y-6">
+                {/* API Key Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Key className="h-5 w-5" />
+                      API Key AI
+                    </CardTitle>
+                    <CardDescription>Konfigurasi API Key untuk integrasi AI yang membantu generate data</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Provider AI</Label>
+                      <Select value={aiProvider} onValueChange={setAiProvider}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="gemini">Google Gemini</SelectItem>
+                          <SelectItem value="openai">OpenAI GPT</SelectItem>
+                          <SelectItem value="anthropic">Anthropic Claude</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>API Key</Label>
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <Input 
+                            type={showApiKey ? 'text' : 'password'}
+                            value={aiApiKey} 
+                            onChange={(e) => setAiApiKey(e.target.value)} 
+                            placeholder={aiProvider === 'gemini' ? 'AIza...' : aiProvider === 'openai' ? 'sk-...' : 'sk-ant-...'}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7"
+                            onClick={() => setShowApiKey(!showApiKey)}
+                          >
+                            {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                        <Button onClick={handleSaveAiSettings}>Simpan</Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        API Key digunakan untuk mengakses AI yang membantu generate deskripsi CPMK, LLO, dan lainnya.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Prompts Editor Section */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="h-5 w-5" />
+                      Editor Prompt AI
+                    </CardTitle>
+                    <CardDescription>Kustomisasi prompt yang digunakan AI untuk generate setiap field</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {Object.entries(defaultPrompts).map(([key, { label, defaultValue }]) => (
+                      <div key={key} className="space-y-2">
+                        <Label>{label}</Label>
+                        <Textarea 
+                          value={prompts[key] || defaultValue}
+                          onChange={(e) => setPrompts(prev => ({ ...prev, [key]: e.target.value }))}
+                          rows={3}
+                          placeholder={defaultValue}
+                        />
+                        <div className="flex justify-between items-center">
+                          <p className="text-xs text-muted-foreground">
+                            Prompt ini digunakan saat AI generate {label.toLowerCase()}
+                          </p>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleSavePrompt(key, prompts[key] || defaultValue)}
+                          >
+                            Simpan Prompt
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
 
             {/* Permissions Tab - Only for admin */}
             {canAccessTheme && (

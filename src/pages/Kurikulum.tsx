@@ -708,7 +708,7 @@ export default function Kurikulum() {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">MK - Mata Kuliah</CardTitle>
         {isAdmin && (
-          <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', ploIds: [] }, true)}>
+          <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', ploIds: [], plIds: [] }, true)}>
             <Plus className="h-4 w-4 mr-1" /> Tambah
           </Button>
         )}
@@ -805,7 +805,9 @@ export default function Kurikulum() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() =>
+                            onClick={() => {
+                              // Get PL IDs from the selected PLOs via profil_lulusan_id
+                              const existingPlIds = course.course_plos?.map((cp: any) => cp.plos?.profil_lulusan_id).filter(Boolean) || [];
                               openEdit('courses', {
                                 id: course.id,
                                 code: course.code,
@@ -814,8 +816,9 @@ export default function Kurikulum() {
                                 curriculum_id: course.curriculum_id || '',
                                 passing_score: course.passing_score?.toString() || '60',
                                 ploIds: course.course_plos?.map((cp: any) => cp.plo_id) || [],
-                              }, false)
-                            }
+                                plIds: [...new Set(existingPlIds)],
+                              }, false);
+                            }}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -1046,6 +1049,29 @@ export default function Kurikulum() {
                       <span className="text-sm">{plo.code} - {plo.description}</span>
                     </label>
                   ))}
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium">PL - Profil Lulusan (Multi-select)</label>
+                <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-2">
+                  {profilLulusan.map((pl) => {
+                    const selectedPlIds = (formData.plIds as unknown as string[]) || [];
+                    return (
+                      <label key={pl.id} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={selectedPlIds.includes(pl.id)}
+                          onChange={(e) => {
+                            const newIds = e.target.checked
+                              ? [...selectedPlIds, pl.id]
+                              : selectedPlIds.filter((id) => id !== pl.id);
+                            setFormData({ ...formData, plIds: newIds as any });
+                          }}
+                        />
+                        <span className="text-sm">{pl.code} - {pl.profil}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             </div>
