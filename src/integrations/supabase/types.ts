@@ -83,6 +83,7 @@ export type Database = {
           id: string
           indikator: string[] | null
           name: string
+          pertemuan: string | null
           teknik: string[] | null
           updated_at: string
         }
@@ -94,6 +95,7 @@ export type Database = {
           id?: string
           indikator?: string[] | null
           name: string
+          pertemuan?: string | null
           teknik?: string[] | null
           updated_at?: string
         }
@@ -105,6 +107,7 @@ export type Database = {
           id?: string
           indikator?: string[] | null
           name?: string
+          pertemuan?: string | null
           teknik?: string[] | null
           updated_at?: string
         }
@@ -532,6 +535,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      instrumen_penilaian: {
+        Row: {
+          created_at: string
+          id: string
+          predikat: string
+          rentang_max: number
+          rentang_min: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          predikat: string
+          rentang_max: number
+          rentang_min: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          predikat?: string
+          rentang_max?: number
+          rentang_min?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       llos: {
         Row: {

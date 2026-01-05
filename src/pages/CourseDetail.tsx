@@ -20,7 +20,7 @@ import { CourseLearningOutcomes } from '@/components/course/CourseLearningOutcom
 import { LearningAchievementStats } from '@/components/course/LearningAchievementStats';
 import { AssessmentScoreImportExport } from '@/components/course/AssessmentScoreImportExport';
 import { supabase } from '@/integrations/supabase/client';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
 export default function CourseDetail() {
@@ -33,6 +33,16 @@ export default function CourseDetail() {
   const { data: enrollments } = useCourseEnrollments(courseId!);
   const { data: assessments } = useCourseAssessments(courseId!);
   const { data: assessmentScores, refetch: refetchScores } = useCourseAssessmentScores(courseId!);
+  
+  // Fetch instrumen penilaian for grading
+  const { data: instrumenList } = useQuery({
+    queryKey: ['instrumen-penilaian'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('instrumen_penilaian').select('*').order('rentang_min');
+      if (error) throw error;
+      return data;
+    },
+  });
 
   const [editingCell, setEditingCell] = useState<{ studentId: string; assessmentId: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
@@ -88,6 +98,17 @@ export default function CourseDetail() {
       };
     }) || [];
   }, [enrollments, grades, assessments, assessmentScores, totalWeight, course?.passing_score]);
+
+  // Function to get predikat based on achievement percentage
+  const getPredikat = (achievementPercentage: number | null) => {
+    if (achievementPercentage === null || !instrumenList || instrumenList.length === 0) {
+      return null;
+    }
+    const instrumen = instrumenList.find(
+      i => achievementPercentage >= i.rentang_min && achievementPercentage <= i.rentang_max
+    );
+    return instrumen?.predikat || null;
+  };
 
   // Get unique class groups and enrollment years for filter
   const classGroups = useMemo(() => {
@@ -559,7 +580,7 @@ export default function CourseDetail() {
                             {renderSortIcon('achievement')}
                           </button>
                         </TableHead>
-                        <TableHead className="font-semibold text-primary-foreground">Status</TableHead>
+                        <TableHead className="font-semibold text-primary-foreground">Predikat</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -656,18 +677,19 @@ export default function CourseDetail() {
                               )}
                             </TableCell>
                             <TableCell className="text-center">
-                              {student?.isPassing !== null ? (
-                                student.isPassing ? (
-                                  <Badge className="bg-success/10 text-success border-success/20">
-                                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                                    Lulus
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="destructive" className="bg-destructive/10 text-destructive border-destructive/20">
-                                    <XCircle className="h-3 w-3 mr-1" />
-                                    Belum Lulus
-                                  </Badge>
-                                )
+                              {student?.achievementPercentage !== null && student?.achievementPercentage !== undefined ? (
+                                (() => {
+                                  const predikat = getPredikat(student.achievementPercentage);
+                                  return predikat ? (
+                                    <Badge variant={student.isPassing ? "default" : "secondary"} className={cn(
+                                      student.isPassing && "bg-success/10 text-success border-success/20"
+                                    )}>
+                                      {predikat}
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="outline">-</Badge>
+                                  );
+                                })()
                               ) : (
                                 <Badge variant="outline">Belum dinilai</Badge>
                               )}

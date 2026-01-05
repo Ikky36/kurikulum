@@ -137,10 +137,21 @@ export interface Assessment {
   description?: string;
   indikator?: string[];
   teknik?: string[];
+  pertemuan?: string | null;
   created_at: string;
   updated_at: string;
   course?: Course;
   llos?: LLO[];
+}
+
+// Instrumen Penilaian (Grading Scale)
+export interface InstrumenPenilaian {
+  id: string;
+  rentang_min: number;
+  rentang_max: number;
+  predikat: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Assessment-LLO relationship
