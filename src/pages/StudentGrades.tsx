@@ -1,7 +1,8 @@
 import { useParams, Link } from 'react-router-dom';
+import { useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useStudent, useStudentGrades } from '@/hooks/useStudents';
-import { useCourses } from '@/hooks/useCourses';
+import { useCourses, useCourseAssessments } from '@/hooks/useCourses';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,7 +13,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
-import { ArrowLeft, Mail, User, BookOpen, CheckCircle2, XCircle } from 'lucide-react';
+import { ArrowLeft, Mail, User, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
@@ -35,6 +36,20 @@ export default function StudentGrades() {
     },
   });
 
+  // Fetch all assessment scores for this student
+  const { data: studentAssessmentScores } = useQuery({
+    queryKey: ['student-assessment-scores', studentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('student_assessment_scores')
+        .select('*, assessments(id, course_id)')
+        .eq('student_profile_id', studentId!);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!studentId,
+  });
+
   // Function to get predikat based on score
   const getPredikat = (score: number | null) => {
     if (score === null || !instrumenList || instrumenList.length === 0) {
@@ -46,22 +61,55 @@ export default function StudentGrades() {
     return instrumen ? { predikat: instrumen.predikat, color: instrumen.color } : null;
   };
 
+  // Calculate average score for each course from assessment scores
+  const gradesWithCalculatedScore = useMemo((): Array<{
+    id: string;
+    course_id: string;
+    course: { name: string; code: string; passing_score: number } | null;
+    calculated_score: number | null;
+  }> => {
+    if (!grades || !studentAssessmentScores) return [];
+    
+    return grades.map(grade => {
+      // Get all assessment scores for this course
+      const courseScores = studentAssessmentScores.filter(
+        s => s.assessments?.course_id === grade.course_id
+      );
+      
+      // Calculate average of all assessment scores
+      const totalScores = courseScores.reduce((sum, s) => sum + s.score, 0);
+      const avgScore = courseScores.length > 0 ? totalScores / courseScores.length : null;
+      
+      return {
+        id: grade.id,
+        course_id: grade.course_id,
+        course: grade.course ? {
+          name: grade.course.name,
+          code: grade.course.code,
+          passing_score: grade.course.passing_score,
+        } : null,
+        calculated_score: avgScore,
+      };
+    });
+  }, [grades, studentAssessmentScores]);
+
   const isLoading = studentLoading || gradesLoading;
 
-  // Calculate average
-  const averageScore = grades && grades.length > 0
-    ? grades.reduce((sum, g) => sum + g.final_score, 0) / grades.length
+  // Calculate average using calculated scores
+  const gradesWithScores = gradesWithCalculatedScore.filter(g => g.calculated_score !== null);
+  const averageScore = gradesWithScores.length > 0
+    ? gradesWithScores.reduce((sum, g) => sum + (g.calculated_score ?? 0), 0) / gradesWithScores.length
     : 0;
 
-  // Prepare chart data
-  const chartData = grades?.map(g => ({
+  // Prepare chart data using calculated scores
+  const chartData = gradesWithCalculatedScore.map(g => ({
     name: g.course?.name?.split(' ')[0] || 'Unknown',
     fullName: g.course?.name || 'Unknown',
     code: g.course?.code || '',
-    score: g.final_score,
+    score: g.calculated_score ?? 0,
     passingScore: g.course?.passing_score || 60,
-    isPassing: g.final_score >= (g.course?.passing_score || 60),
-  })) || [];
+    isPassing: (g.calculated_score ?? 0) >= (g.course?.passing_score || 60),
+  }));
 
   // Radar chart data
   const radarData = chartData.map(d => ({
@@ -281,13 +329,13 @@ export default function StudentGrades() {
                     <TableHead className="text-primary-foreground font-semibold">Mata Kuliah</TableHead>
                     <TableHead className="text-primary-foreground font-semibold text-center">Nilai Akhir</TableHead>
                     <TableHead className="text-primary-foreground font-semibold text-center">Predikat</TableHead>
-                    <TableHead className="text-primary-foreground font-semibold text-center">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {grades && grades.length > 0 ? (
-                    grades.map((grade, index) => {
-                      const predikatData = getPredikat(grade.final_score);
+                  {gradesWithCalculatedScore && gradesWithCalculatedScore.length > 0 ? (
+                    gradesWithCalculatedScore.map((grade, index) => {
+                      const score = grade.calculated_score;
+                      const predikatData = getPredikat(score);
                       return (
                         <TableRow key={grade.id} className="hover:bg-muted/30">
                           <TableCell className="text-center">{index + 1}</TableCell>
@@ -305,25 +353,19 @@ export default function StudentGrades() {
                             </Link>
                           </TableCell>
                           <TableCell className="text-center">
-                            <div className="flex items-center justify-center gap-2">
-                              <Progress 
-                                value={grade.final_score} 
-                                className={cn(
-                                  "w-16 h-2",
-                                  grade.final_score >= (grade.course?.passing_score || 60) 
-                                    ? "[&>div]:bg-success" 
-                                    : "[&>div]:bg-destructive"
-                                )}
-                              />
-                              <span className={cn(
-                                "font-bold",
-                                grade.final_score >= (grade.course?.passing_score || 60) 
-                                  ? "text-success" 
-                                  : "text-destructive"
-                              )}>
-                                {grade.final_score}
-                              </span>
-                            </div>
+                            {score !== null ? (
+                              <div className="flex items-center justify-center gap-2">
+                                <Progress 
+                                  value={score} 
+                                  className="w-16 h-2 [&>div]:bg-primary"
+                                />
+                                <span className="font-bold">
+                                  {score.toFixed(1)}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-center">
                             {predikatData ? (
@@ -339,25 +381,12 @@ export default function StudentGrades() {
                               <Badge variant="outline">-</Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-center">
-                            {grade.final_score >= (grade.course?.passing_score || 60) ? (
-                              <Badge className="bg-success/10 text-success border-success/20">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                Lulus
-                              </Badge>
-                            ) : (
-                              <Badge variant="destructive" className="bg-destructive/10 text-destructive border-destructive/20">
-                                <XCircle className="h-3 w-3 mr-1" />
-                                Belum Lulus
-                              </Badge>
-                            )}
-                          </TableCell>
                         </TableRow>
                       );
                     })
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         Belum ada nilai
                       </TableCell>
                     </TableRow>
