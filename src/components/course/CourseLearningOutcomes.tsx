@@ -56,6 +56,8 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
   const [assessmentName, setAssessmentName] = useState('');
   const [assessmentDescription, setAssessmentDescription] = useState('');
   const [selectedLlosForAssessment, setSelectedLlosForAssessment] = useState<string[]>([]);
+  const [assessmentIndikator, setAssessmentIndikator] = useState<string[]>([]);
+  const [assessmentTeknik, setAssessmentTeknik] = useState<string[]>([]);
 
   // Fetch Course PLOs
   const { data: coursePlos } = useQuery({
@@ -328,8 +330,12 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
 
   // Assessment Mutations
   const createAssessmentMutation = useMutation({
-    mutationFn: async ({ lloIds, ...assessment }: { code: string; name: string; description?: string; course_id: string; lloIds: string[] }) => {
-      const { data, error } = await supabase.from('assessments').insert([assessment]).select().single();
+    mutationFn: async ({ lloIds, indikator, teknik, ...assessment }: { code: string; name: string; description?: string; course_id: string; lloIds: string[]; indikator?: string[]; teknik?: string[] }) => {
+      const { data, error } = await supabase.from('assessments').insert([{
+        ...assessment,
+        indikator: indikator || [],
+        teknik: teknik || []
+      }]).select().single();
       if (error) throw error;
       
       if (lloIds.length > 0) {
@@ -353,8 +359,12 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
   });
 
   const updateAssessmentMutation = useMutation({
-    mutationFn: async ({ id, lloIds, ...assessment }: Partial<Assessment> & { id: string; lloIds?: string[] }) => {
-      const { error } = await supabase.from('assessments').update(assessment).eq('id', id);
+    mutationFn: async ({ id, lloIds, indikator, teknik, ...assessment }: Partial<Assessment> & { id: string; lloIds?: string[]; indikator?: string[]; teknik?: string[] }) => {
+      const updateData: any = { ...assessment };
+      if (indikator !== undefined) updateData.indikator = indikator;
+      if (teknik !== undefined) updateData.teknik = teknik;
+      
+      const { error } = await supabase.from('assessments').update(updateData).eq('id', id);
       if (error) throw error;
 
       if (lloIds) {
@@ -429,6 +439,8 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
     setAssessmentName('');
     setAssessmentDescription('');
     setSelectedLlosForAssessment([]);
+    setAssessmentIndikator([]);
+    setAssessmentTeknik([]);
     setEditingAssessment(null);
     setShowAssessmentDialog(false);
   };
@@ -459,11 +471,14 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
 
   const openEditAssessment = (assessment: Assessment) => {
     const existingLlos = assessmentLlos?.filter(al => al.assessment_id === assessment.id).map(al => al.llo_id) || [];
+    const assessmentData = assessment as Assessment & { indikator?: string[]; teknik?: string[] };
     setEditingAssessment(assessment);
     setAssessmentCode(assessment.code);
     setAssessmentName(assessment.name);
     setAssessmentDescription(assessment.description || '');
     setSelectedLlosForAssessment(existingLlos);
+    setAssessmentIndikator(assessmentData.indikator || []);
+    setAssessmentTeknik(assessmentData.teknik || []);
     setShowAssessmentDialog(true);
   };
 
@@ -510,7 +525,9 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
         code: assessmentCode, 
         name: assessmentName,
         description: assessmentDescription || undefined,
-        lloIds: selectedLlosForAssessment
+        lloIds: selectedLlosForAssessment,
+        indikator: assessmentIndikator,
+        teknik: assessmentTeknik
       });
     } else {
       createAssessmentMutation.mutate({ 
@@ -518,9 +535,24 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
         name: assessmentName,
         description: assessmentDescription || undefined,
         course_id: courseId,
-        lloIds: selectedLlosForAssessment
+        lloIds: selectedLlosForAssessment,
+        indikator: assessmentIndikator,
+        teknik: assessmentTeknik
       });
     }
+  };
+
+  // Get available indikator from selected LLOs
+  const getAvailableIndikator = () => {
+    const selectedLloData = llos?.filter(llo => selectedLlosForAssessment.includes(llo.id)) || [];
+    const allIndikator: string[] = [];
+    selectedLloData.forEach(llo => {
+      const lloData = llo as LLO & { indikator?: string[] };
+      if (lloData.indikator) {
+        allIndikator.push(...lloData.indikator);
+      }
+    });
+    return [...new Set(allIndikator)];
   };
 
   // Get LLOs for a CLO
@@ -1063,8 +1095,8 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                       <Textarea value={assessmentDescription} onChange={(e) => setAssessmentDescription(e.target.value)} placeholder="Deskripsi tugas..." rows={2} />
                     </div>
                     <div className="space-y-2">
-                      <Label>SUB-CPMK/LLO Terkait</Label>
-                      <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                      <Label>SUB-CPMK</Label>
+                      <div className="border rounded-lg p-3 max-h-32 overflow-y-auto space-y-2">
                         {llos?.map((llo) => (
                           <div key={llo.id} className="flex items-center space-x-2">
                             <Checkbox
@@ -1075,6 +1107,15 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                                   setSelectedLlosForAssessment([...selectedLlosForAssessment, llo.id]);
                                 } else {
                                   setSelectedLlosForAssessment(selectedLlosForAssessment.filter(id => id !== llo.id));
+                                  // Also remove indikator that are no longer available
+                                  const newSelectedLlos = selectedLlosForAssessment.filter(id => id !== llo.id);
+                                  const newLloData = llos?.filter(l => newSelectedLlos.includes(l.id)) || [];
+                                  const availableInd: string[] = [];
+                                  newLloData.forEach(l => {
+                                    const lloData = l as LLO & { indikator?: string[] };
+                                    if (lloData.indikator) availableInd.push(...lloData.indikator);
+                                  });
+                                  setAssessmentIndikator(assessmentIndikator.filter(ind => availableInd.includes(ind)));
                                 }
                               }}
                             />
@@ -1089,6 +1130,61 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                           Total bobot: {llos?.filter(llo => selectedLlosForAssessment.includes(llo.id)).reduce((sum, llo) => sum + llo.weight_percentage, 0).toFixed(1)}%
                         </p>
                       )}
+                    </div>
+                    
+                    {/* Indikator - multi select from selected SUB-CPMK */}
+                    {selectedLlosForAssessment.length > 0 && getAvailableIndikator().length > 0 && (
+                      <div className="space-y-2">
+                        <Label>Indikator (dari SUB-CPMK yang dipilih)</Label>
+                        <div className="border rounded-lg p-3 max-h-32 overflow-y-auto space-y-2">
+                          {getAvailableIndikator().map((ind, idx) => (
+                            <div key={idx} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`ind-${idx}`}
+                                checked={assessmentIndikator.includes(ind)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setAssessmentIndikator([...assessmentIndikator, ind]);
+                                  } else {
+                                    setAssessmentIndikator(assessmentIndikator.filter(i => i !== ind));
+                                  }
+                                }}
+                              />
+                              <label htmlFor={`ind-${idx}`} className="text-sm cursor-pointer flex-1">
+                                {ind}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Teknik Penilaian */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center justify-between">
+                        Teknik Penilaian
+                        <Button type="button" variant="outline" size="sm" onClick={() => setAssessmentTeknik([...assessmentTeknik, ''])}>
+                          <Plus className="h-3 w-3 mr-1" /> Tambah
+                        </Button>
+                      </Label>
+                      <div className="space-y-2">
+                        {assessmentTeknik.map((item, index) => (
+                          <div key={index} className="flex gap-2">
+                            <Input 
+                              value={item} 
+                              onChange={(e) => {
+                                const newItems = [...assessmentTeknik];
+                                newItems[index] = e.target.value;
+                                setAssessmentTeknik(newItems);
+                              }} 
+                              placeholder={`Teknik penilaian ${index + 1}`}
+                            />
+                            <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => setAssessmentTeknik(assessmentTeknik.filter((_, i) => i !== index))}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                   <DialogFooter>
@@ -1109,8 +1205,10 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                   <TableHead className="w-12 text-primary-foreground">No</TableHead>
                   <TableHead className="w-20 text-primary-foreground">Kode</TableHead>
                   <TableHead className="text-primary-foreground">Nama</TableHead>
-                  <TableHead className="text-primary-foreground">SUB-CPMK Terkait</TableHead>
+                  <TableHead className="text-primary-foreground">SUB-CPMK</TableHead>
+                  <TableHead className="text-primary-foreground">Indikator</TableHead>
                   <TableHead className="w-24 text-center text-primary-foreground">Bobot</TableHead>
+                  <TableHead className="text-primary-foreground">Teknik</TableHead>
                   {canEdit && <TableHead className="w-20 text-primary-foreground">Aksi</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -1118,6 +1216,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                 {assessments.map((assessment, index) => {
                   const linkedLlos = getLinkedLlosForAssessment(assessment.id);
                   const weight = getAssessmentWeight(assessment.id);
+                  const assessmentData = assessment as Assessment & { indikator?: string[]; teknik?: string[] };
                   return (
                     <TableRow key={assessment.id}>
                       <TableCell className="text-center">{index + 1}</TableCell>
@@ -1143,8 +1242,20 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                           )}
                         </div>
                       </TableCell>
+                      <TableCell className="text-sm">
+                        {assessmentData.indikator && assessmentData.indikator.length > 0 
+                          ? assessmentData.indikator.map((item, i) => <div key={i} className="text-xs">• {item}</div>)
+                          : <span className="text-muted-foreground">-</span>
+                        }
+                      </TableCell>
                       <TableCell className="text-center">
                         <Badge variant={weight > 0 ? 'default' : 'outline'}>{weight.toFixed(1)}%</Badge>
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {assessmentData.teknik && assessmentData.teknik.length > 0 
+                          ? assessmentData.teknik.map((item, i) => <div key={i} className="text-xs">• {item}</div>)
+                          : <span className="text-muted-foreground">-</span>
+                        }
                       </TableCell>
                       {canEdit && (
                         <TableCell>
