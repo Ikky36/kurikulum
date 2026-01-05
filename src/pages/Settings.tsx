@@ -15,8 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff } from 'lucide-react';
-import { Curriculum, Program, AppSetting } from '@/lib/types';
+import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff, Scale } from 'lucide-react';
+import { Curriculum, Program, AppSetting, InstrumenPenilaian } from '@/lib/types';
 import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
 
 export default function Settings() {
@@ -54,6 +54,13 @@ export default function Settings() {
   // Prompts state
   const [prompts, setPrompts] = useState<Record<string, string>>({});
 
+  // Instrumen state
+  const [showInstrumenDialog, setShowInstrumenDialog] = useState(false);
+  const [editingInstrumen, setEditingInstrumen] = useState<InstrumenPenilaian | null>(null);
+  const [instrumenMin, setInstrumenMin] = useState('');
+  const [instrumenMax, setInstrumenMax] = useState('');
+  const [instrumenPredikat, setInstrumenPredikat] = useState('');
+
   // Fetch curricula
   const { data: curricula } = useQuery({
     queryKey: ['curricula'],
@@ -71,6 +78,16 @@ export default function Settings() {
       const { data, error } = await supabase.from('programs').select('*').order('name');
       if (error) throw error;
       return data as Program[];
+    },
+  });
+
+  // Fetch instrumen penilaian
+  const { data: instrumenList } = useQuery({
+    queryKey: ['instrumen-penilaian'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('instrumen_penilaian').select('*').order('rentang_min');
+      if (error) throw error;
+      return data as InstrumenPenilaian[];
     },
   });
 
@@ -196,6 +213,51 @@ export default function Settings() {
     },
   });
 
+  // Instrumen mutations
+  const createInstrumenMutation = useMutation({
+    mutationFn: async (data: { rentang_min: number; rentang_max: number; predikat: string }) => {
+      const { error } = await supabase.from('instrumen_penilaian').insert([data]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['instrumen-penilaian'] });
+      toast({ title: 'Berhasil', description: 'Instrumen penilaian berhasil ditambahkan' });
+      resetInstrumenForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const updateInstrumenMutation = useMutation({
+    mutationFn: async ({ id, ...data }: Partial<InstrumenPenilaian> & { id: string }) => {
+      const { error } = await supabase.from('instrumen_penilaian').update(data).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['instrumen-penilaian'] });
+      toast({ title: 'Berhasil', description: 'Instrumen penilaian berhasil diperbarui' });
+      resetInstrumenForm();
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const deleteInstrumenMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('instrumen_penilaian').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['instrumen-penilaian'] });
+      toast({ title: 'Berhasil', description: 'Instrumen penilaian berhasil dihapus' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
   // Settings mutation
   const updateSettingMutation = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
@@ -251,6 +313,40 @@ export default function Settings() {
     setProgramDescription('');
     setEditingProgram(null);
     setShowProgramDialog(false);
+  };
+
+  const resetInstrumenForm = () => {
+    setInstrumenMin('');
+    setInstrumenMax('');
+    setInstrumenPredikat('');
+    setEditingInstrumen(null);
+    setShowInstrumenDialog(false);
+  };
+
+  const openEditInstrumen = (instrumen: InstrumenPenilaian) => {
+    setEditingInstrumen(instrumen);
+    setInstrumenMin(instrumen.rentang_min.toString());
+    setInstrumenMax(instrumen.rentang_max.toString());
+    setInstrumenPredikat(instrumen.predikat);
+    setShowInstrumenDialog(true);
+  };
+
+  const handleSaveInstrumen = () => {
+    const min = parseInt(instrumenMin);
+    const max = parseInt(instrumenMax);
+    if (isNaN(min) || isNaN(max)) {
+      toast({ title: 'Gagal', description: 'Rentang harus berupa angka', variant: 'destructive' });
+      return;
+    }
+    if (min > max) {
+      toast({ title: 'Gagal', description: 'Rentang minimal tidak boleh lebih besar dari rentang maksimal', variant: 'destructive' });
+      return;
+    }
+    if (editingInstrumen) {
+      updateInstrumenMutation.mutate({ id: editingInstrumen.id, rentang_min: min, rentang_max: max, predikat: instrumenPredikat });
+    } else {
+      createInstrumenMutation.mutate({ rentang_min: min, rentang_max: max, predikat: instrumenPredikat });
+    }
   };
 
   const openEditCurriculum = (curriculum: Curriculum) => {
@@ -380,6 +476,12 @@ export default function Settings() {
               <span className="hidden md:inline">Program Studi</span>
               <span className="md:hidden">Prodi</span>
             </TabsTrigger>
+            {canAccessTheme && (
+              <TabsTrigger value="instrumen" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Scale className="h-4 w-4" />
+                Instrumen
+              </TabsTrigger>
+            )}
             {canAccessTheme && (
               <TabsTrigger value="ai" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Sparkles className="h-4 w-4" />
@@ -783,6 +885,115 @@ export default function Settings() {
                         </div>
                       </div>
                     ))}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+
+            {/* Instrumen Tab - Only for admin */}
+            {canAccessTheme && (
+              <TabsContent value="instrumen" className="mt-0">
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Instrumen Penilaian</CardTitle>
+                        <CardDescription>Atur rentang nilai dan predikat untuk penilaian mahasiswa</CardDescription>
+                      </div>
+                      <Dialog open={showInstrumenDialog} onOpenChange={(open) => { if (!open) resetInstrumenForm(); setShowInstrumenDialog(open); }}>
+                        <DialogTrigger asChild>
+                          <Button size="sm">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Tambah Instrumen
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>{editingInstrumen ? 'Edit Instrumen' : 'Tambah Instrumen Baru'}</DialogTitle>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Rentang Minimal (%)</Label>
+                                <Input 
+                                  type="number" 
+                                  min="0" 
+                                  max="100"
+                                  value={instrumenMin} 
+                                  onChange={(e) => setInstrumenMin(e.target.value)} 
+                                  placeholder="0"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Rentang Maksimal (%)</Label>
+                                <Input 
+                                  type="number" 
+                                  min="0" 
+                                  max="100"
+                                  value={instrumenMax} 
+                                  onChange={(e) => setInstrumenMax(e.target.value)} 
+                                  placeholder="100"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Predikat</Label>
+                              <Input 
+                                value={instrumenPredikat} 
+                                onChange={(e) => setInstrumenPredikat(e.target.value)} 
+                                placeholder="Contoh: A, B, C, Sangat Baik, dll."
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button onClick={handleSaveInstrumen} disabled={!instrumenMin || !instrumenMax || !instrumenPredikat}>
+                              {editingInstrumen ? 'Simpan' : 'Tambah'}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {instrumenList && instrumenList.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-12">No</TableHead>
+                            <TableHead>Rentang Minimal</TableHead>
+                            <TableHead>Rentang Maksimal</TableHead>
+                            <TableHead>Predikat</TableHead>
+                            <TableHead className="w-24">Aksi</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {instrumenList.map((instrumen, index) => (
+                            <TableRow key={instrumen.id}>
+                              <TableCell>{index + 1}</TableCell>
+                              <TableCell>{instrumen.rentang_min}%</TableCell>
+                              <TableCell>{instrumen.rentang_max}%</TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">{instrumen.predikat}</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditInstrumen(instrumen)}>
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => deleteInstrumenMutation.mutate(instrumen.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        Belum ada instrumen penilaian. Klik "Tambah Instrumen" untuk menambahkan.
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </TabsContent>

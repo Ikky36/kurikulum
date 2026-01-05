@@ -55,6 +55,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
   const [assessmentCode, setAssessmentCode] = useState('');
   const [assessmentName, setAssessmentName] = useState('');
   const [assessmentDescription, setAssessmentDescription] = useState('');
+  const [assessmentPertemuan, setAssessmentPertemuan] = useState('');
   const [selectedLlosForAssessment, setSelectedLlosForAssessment] = useState<string[]>([]);
   const [assessmentIndikator, setAssessmentIndikator] = useState<string[]>([]);
   const [assessmentTeknik, setAssessmentTeknik] = useState<string[]>([]);
@@ -330,11 +331,12 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
 
   // Assessment Mutations
   const createAssessmentMutation = useMutation({
-    mutationFn: async ({ lloIds, indikator, teknik, ...assessment }: { code: string; name: string; description?: string; course_id: string; lloIds: string[]; indikator?: string[]; teknik?: string[] }) => {
+    mutationFn: async ({ lloIds, indikator, teknik, pertemuan, ...assessment }: { code: string; name: string; description?: string; course_id: string; lloIds: string[]; indikator?: string[]; teknik?: string[]; pertemuan?: string }) => {
       const { data, error } = await supabase.from('assessments').insert([{
         ...assessment,
         indikator: indikator || [],
-        teknik: teknik || []
+        teknik: teknik || [],
+        pertemuan: pertemuan || null
       }]).select().single();
       if (error) throw error;
       
@@ -359,10 +361,11 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
   });
 
   const updateAssessmentMutation = useMutation({
-    mutationFn: async ({ id, lloIds, indikator, teknik, ...assessment }: Partial<Assessment> & { id: string; lloIds?: string[]; indikator?: string[]; teknik?: string[] }) => {
+    mutationFn: async ({ id, lloIds, indikator, teknik, pertemuan, ...assessment }: Partial<Assessment> & { id: string; lloIds?: string[]; indikator?: string[]; teknik?: string[]; pertemuan?: string }) => {
       const updateData: any = { ...assessment };
       if (indikator !== undefined) updateData.indikator = indikator;
       if (teknik !== undefined) updateData.teknik = teknik;
+      if (pertemuan !== undefined) updateData.pertemuan = pertemuan;
       
       const { error } = await supabase.from('assessments').update(updateData).eq('id', id);
       if (error) throw error;
@@ -438,6 +441,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
     setAssessmentCode('');
     setAssessmentName('');
     setAssessmentDescription('');
+    setAssessmentPertemuan('');
     setSelectedLlosForAssessment([]);
     setAssessmentIndikator([]);
     setAssessmentTeknik([]);
@@ -471,11 +475,12 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
 
   const openEditAssessment = (assessment: Assessment) => {
     const existingLlos = assessmentLlos?.filter(al => al.assessment_id === assessment.id).map(al => al.llo_id) || [];
-    const assessmentData = assessment as Assessment & { indikator?: string[]; teknik?: string[] };
+    const assessmentData = assessment as Assessment & { indikator?: string[]; teknik?: string[]; pertemuan?: string };
     setEditingAssessment(assessment);
     setAssessmentCode(assessment.code);
     setAssessmentName(assessment.name);
     setAssessmentDescription(assessment.description || '');
+    setAssessmentPertemuan(assessmentData.pertemuan || '');
     setSelectedLlosForAssessment(existingLlos);
     setAssessmentIndikator(assessmentData.indikator || []);
     setAssessmentTeknik(assessmentData.teknik || []);
@@ -525,6 +530,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
         code: assessmentCode, 
         name: assessmentName,
         description: assessmentDescription || undefined,
+        pertemuan: assessmentPertemuan || undefined,
         lloIds: selectedLlosForAssessment,
         indikator: assessmentIndikator,
         teknik: assessmentTeknik
@@ -534,6 +540,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
         code: assessmentCode, 
         name: assessmentName,
         description: assessmentDescription || undefined,
+        pertemuan: assessmentPertemuan || undefined,
         course_id: courseId,
         lloIds: selectedLlosForAssessment,
         indikator: assessmentIndikator,
@@ -1080,10 +1087,23 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                     <DialogTitle>{editingAssessment ? 'Edit Tugas/Quiz' : 'Tambah Tugas/Quiz Baru'}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>Kode</Label>
                         <Input value={assessmentCode} onChange={(e) => setAssessmentCode(e.target.value)} placeholder="T1" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Pertemuan</Label>
+                        <Select value={assessmentPertemuan} onValueChange={setAssessmentPertemuan}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih pertemuan" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 18 }, (_, i) => i + 1).map(num => (
+                              <SelectItem key={num} value={`Pertemuan ${num}`}>Pertemuan {num}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                       <div className="space-y-2">
                         <Label>Nama</Label>
@@ -1204,6 +1224,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                 <TableRow className="bg-primary hover:bg-primary">
                   <TableHead className="w-12 text-primary-foreground">No</TableHead>
                   <TableHead className="w-20 text-primary-foreground">Kode</TableHead>
+                  <TableHead className="text-primary-foreground">Pertemuan</TableHead>
                   <TableHead className="text-primary-foreground">Nama</TableHead>
                   <TableHead className="text-primary-foreground">SUB-CPMK</TableHead>
                   <TableHead className="text-primary-foreground">Indikator</TableHead>
@@ -1216,11 +1237,14 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                 {assessments.map((assessment, index) => {
                   const linkedLlos = getLinkedLlosForAssessment(assessment.id);
                   const weight = getAssessmentWeight(assessment.id);
-                  const assessmentData = assessment as Assessment & { indikator?: string[]; teknik?: string[] };
+                  const assessmentData = assessment as Assessment & { indikator?: string[]; teknik?: string[]; pertemuan?: string };
                   return (
                     <TableRow key={assessment.id}>
                       <TableCell className="text-center">{index + 1}</TableCell>
                       <TableCell><Badge variant="outline" className="font-mono">{assessment.code}</Badge></TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{assessmentData.pertemuan || '-'}</Badge>
+                      </TableCell>
                       <TableCell>
                         <div>
                           <span className="font-medium">{assessment.name}</span>
