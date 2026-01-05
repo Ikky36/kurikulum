@@ -20,7 +20,7 @@ import { Course, Profile, AppRole, Program } from '@/lib/types';
 import { UserImportExport } from '@/components/admin/UserImportExport';
 import { UserPagination } from '@/components/admin/UserPagination';
 import { KurikulumTab } from '@/components/admin/KurikulumTab';
-import { ManageClassTab } from '@/components/admin/ManageClassTab';
+
 
 export default function DashboardAdmin() {
   const { user, profile, role, refreshProfile, loading } = useAuth();
@@ -532,12 +532,11 @@ export default function DashboardAdmin() {
         </div>
 
         <Tabs defaultValue="kelas" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="kelas" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Target className="h-4 w-4" />
               <span className="hidden sm:inline">Kelas</span>
             </TabsTrigger>
-            <TabsTrigger value="manage-class" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Kelola Kelas</TabsTrigger>
             <TabsTrigger value="accounts" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Kelola Akun</TabsTrigger>
             <TabsTrigger value="assignments" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Penugasan</TabsTrigger>
             <TabsTrigger value="roles" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Role</TabsTrigger>
@@ -546,11 +545,6 @@ export default function DashboardAdmin() {
           {/* Kelas Tab */}
           <TabsContent value="kelas">
             <KurikulumTab />
-          </TabsContent>
-
-          {/* Manage Class Tab */}
-          <TabsContent value="manage-class">
-            <ManageClassTab />
           </TabsContent>
 
           {/* Accounts Tab */}
