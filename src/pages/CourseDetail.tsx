@@ -368,37 +368,61 @@ export default function CourseDetail() {
               <Card className="animate-slide-up">
                 <CardHeader>
                   <CardTitle className="text-lg">Dosen Pengajar</CardTitle>
+                  {classFilter !== 'all' && (
+                    <p className="text-sm text-muted-foreground">Kelas: {classFilter}</p>
+                  )}
                 </CardHeader>
                 <CardContent>
-                  {instructors && instructors.length > 0 ? (
-                    <div className="space-y-4">
-                      {instructors.map((instructor) => (
-                        <div key={instructor.id} className="flex items-start gap-4">
-                          <Avatar className="h-14 w-14 ring-2 ring-primary/20">
-                            <AvatarImage src={instructor.photo_url || undefined} />
-                            <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                              {instructor.full_name?.charAt(0) || 'D'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold truncate">{instructor.full_name}</p>
-                            {instructor.nip && (
-                              <p className="text-sm text-muted-foreground flex items-center gap-1">
-                                <User className="h-3 w-3" />
-                                NIDN/NIDK: {instructor.nip}
-                              </p>
-                            )}
-                            <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">
-                              <Mail className="h-3 w-3" />
-                              {instructor.email}
-                            </p>
-                          </div>
+                  {(() => {
+                    // Filter instructors based on class filter
+                    const filteredInstructors = instructors?.filter((instructor: any) => {
+                      if (classFilter === 'all') return true;
+                      // Show instructors that are assigned to this class or have no class assignment
+                      return instructor.classGroupName === classFilter || instructor.classGroupId === null;
+                    }) || [];
+                    
+                    // Deduplicate by instructor id
+                    const uniqueInstructors = filteredInstructors.reduce((acc: any[], curr: any) => {
+                      if (!acc.find(i => i.id === curr.id)) {
+                        acc.push(curr);
+                      }
+                      return acc;
+                    }, []);
+
+                    if (uniqueInstructors.length > 0) {
+                      return (
+                        <div className="space-y-4">
+                          {uniqueInstructors.map((instructor: any) => (
+                            <div key={instructor.id} className="flex items-start gap-4">
+                              <Avatar className="h-14 w-14 ring-2 ring-primary/20">
+                                <AvatarImage src={instructor.photo_url || undefined} />
+                                <AvatarFallback className="bg-primary text-primary-foreground text-lg">
+                                  {instructor.full_name?.charAt(0) || 'D'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold truncate">{instructor.full_name}</p>
+                                {instructor.classGroupName && (
+                                  <p className="text-xs text-muted-foreground">Kelas: {instructor.classGroupName}</p>
+                                )}
+                                {instructor.nip && (
+                                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                    <User className="h-3 w-3" />
+                                    NIDN/NIDK: {instructor.nip}
+                                  </p>
+                                )}
+                                <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">
+                                  <Mail className="h-3 w-3" />
+                                  {instructor.email}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">Belum ada dosen yang ditugaskan</p>
-                  )}
+                      );
+                    }
+                    return <p className="text-muted-foreground">Belum ada dosen yang ditugaskan</p>;
+                  })()}
                 </CardContent>
               </Card>
 
