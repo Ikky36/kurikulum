@@ -1207,8 +1207,8 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                   <TableHead className="text-primary-foreground">Nama</TableHead>
                   <TableHead className="text-primary-foreground">SUB-CPMK</TableHead>
                   <TableHead className="text-primary-foreground">Indikator</TableHead>
-                  <TableHead className="w-24 text-center text-primary-foreground">Bobot</TableHead>
                   <TableHead className="text-primary-foreground">Teknik</TableHead>
+                  <TableHead className="w-24 text-center text-primary-foreground">Bobot</TableHead>
                   {canEdit && <TableHead className="w-20 text-primary-foreground">Aksi</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -1248,14 +1248,14 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                           : <span className="text-muted-foreground">-</span>
                         }
                       </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant={weight > 0 ? 'default' : 'outline'}>{weight.toFixed(1)}%</Badge>
-                      </TableCell>
                       <TableCell className="text-sm">
                         {assessmentData.teknik && assessmentData.teknik.length > 0 
                           ? assessmentData.teknik.map((item, i) => <div key={i} className="text-xs">• {item}</div>)
                           : <span className="text-muted-foreground">-</span>
                         }
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant={weight > 0 ? 'default' : 'outline'}>{weight.toFixed(1)}%</Badge>
                       </TableCell>
                       {canEdit && (
                         <TableCell>

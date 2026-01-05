@@ -33,6 +33,7 @@ export default function Settings() {
   // Program state
   const [showProgramDialog, setShowProgramDialog] = useState(false);
   const [editingProgram, setEditingProgram] = useState<Program | null>(null);
+  const [programCode, setProgramCode] = useState('');
   const [programName, setProgramName] = useState('');
   const [programDescription, setProgramDescription] = useState('');
 
@@ -152,7 +153,7 @@ export default function Settings() {
 
   // Program mutations
   const createProgramMutation = useMutation({
-    mutationFn: async (data: { name: string; description?: string }) => {
+    mutationFn: async (data: { code?: string; name: string; description?: string }) => {
       const { error } = await supabase.from('programs').insert([data]);
       if (error) throw error;
     },
@@ -245,6 +246,7 @@ export default function Settings() {
   };
 
   const resetProgramForm = () => {
+    setProgramCode('');
     setProgramName('');
     setProgramDescription('');
     setEditingProgram(null);
@@ -260,6 +262,7 @@ export default function Settings() {
 
   const openEditProgram = (program: Program) => {
     setEditingProgram(program);
+    setProgramCode(program.code || '');
     setProgramName(program.name);
     setProgramDescription(program.description || '');
     setShowProgramDialog(true);
@@ -275,9 +278,9 @@ export default function Settings() {
 
   const handleSaveProgram = () => {
     if (editingProgram) {
-      updateProgramMutation.mutate({ id: editingProgram.id, name: programName, description: programDescription || undefined });
+      updateProgramMutation.mutate({ id: editingProgram.id, code: programCode || undefined, name: programName, description: programDescription || undefined });
     } else {
-      createProgramMutation.mutate({ name: programName, description: programDescription || undefined });
+      createProgramMutation.mutate({ code: programCode || undefined, name: programName, description: programDescription || undefined });
     }
   };
 
@@ -606,6 +609,14 @@ export default function Settings() {
                         </DialogHeader>
                         <div className="space-y-4">
                           <div className="space-y-2">
+                            <Label>Kode Prodi</Label>
+                            <Input 
+                              value={programCode} 
+                              onChange={(e) => setProgramCode(e.target.value)} 
+                              placeholder="Contoh: PBA" 
+                            />
+                          </div>
+                          <div className="space-y-2">
                             <Label>Nama Program Studi</Label>
                             <Input 
                               value={programName} 
@@ -637,6 +648,7 @@ export default function Settings() {
                     <TableHeader>
                       <TableRow className="bg-primary hover:bg-primary">
                         <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                        <TableHead className="w-24 text-primary-foreground">Kode</TableHead>
                         <TableHead className="text-primary-foreground">Nama Program Studi</TableHead>
                         <TableHead className="text-primary-foreground">Deskripsi</TableHead>
                         <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
@@ -646,6 +658,9 @@ export default function Settings() {
                       {programs?.map((program, index) => (
                         <TableRow key={program.id}>
                           <TableCell className="text-center">{index + 1}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="font-mono">{program.code || '-'}</Badge>
+                          </TableCell>
                           <TableCell>
                             <Badge variant="secondary">{program.name}</Badge>
                           </TableCell>
@@ -669,7 +684,7 @@ export default function Settings() {
                       ))}
                       {(!programs || programs.length === 0) && (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                             Belum ada program studi. Klik "Tambah Prodi" untuk menambahkan.
                           </TableCell>
                         </TableRow>
