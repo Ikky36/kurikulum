@@ -196,26 +196,26 @@ export default function MataKuliah() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          {course.instructors.length > 0 ? (
-                            <>
-                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={course.instructors[0]?.photo_url || undefined} />
-                                <AvatarFallback className="text-xs bg-secondary text-secondary-foreground">
-                                  {course.instructors[0]?.full_name?.charAt(0) || '?'}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm">{course.instructors[0]?.full_name}</span>
-                              {course.instructors.length > 1 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{course.instructors.length - 1}
-                                </Badge>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">Belum ditugaskan</span>
-                          )}
-                        </div>
+                        {course.instructors.length > 0 ? (
+                          <div className="flex flex-col gap-2">
+                            {/* Get unique instructors by name */}
+                            {Array.from(
+                              new Map(course.instructors.map(i => [i.full_name, i])).values()
+                            ).map((instructor, idx) => (
+                              <div key={idx} className="flex items-center gap-2">
+                                <Avatar className="h-7 w-7">
+                                  <AvatarImage src={instructor?.photo_url || undefined} />
+                                  <AvatarFallback className="text-xs bg-secondary text-secondary-foreground">
+                                    {instructor?.full_name?.charAt(0) || '?'}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-sm">{instructor?.full_name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">Belum ditugaskan</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-center">
                         <div className="flex items-center justify-center gap-1">
