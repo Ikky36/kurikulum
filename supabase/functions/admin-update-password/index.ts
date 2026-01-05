@@ -21,13 +21,27 @@ serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    // Verify the requesting user is an admin
-    const authHeader = req.headers.get("Authorization")!;
+    // Get the authorization header
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.log("No Authorization header provided");
+      return new Response(JSON.stringify({ error: "No authorization header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Extract the token from Bearer token
     const token = authHeader.replace("Bearer ", "");
     
+    // Verify the JWT using admin client
     const { data: { user: requestingUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    console.log("Auth check:", { hasUser: !!requestingUser, error: authError?.message });
+    
     if (authError || !requestingUser) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      console.log("Auth failed:", authError?.message);
+      return new Response(JSON.stringify({ error: "Unauthorized", details: authError?.message }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
