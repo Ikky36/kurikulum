@@ -134,6 +134,8 @@ export interface Assessment {
   code: string;
   name: string;
   description?: string;
+  indikator?: string[];
+  teknik?: string[];
   created_at: string;
   updated_at: string;
   course?: Course;
