@@ -894,10 +894,10 @@ export default function DashboardAdmin() {
                         </div>
                         <div className="space-y-2">
                           <Label>Kelas (Opsional)</Label>
-                          <Select value={selectedClassForAssign} onValueChange={setSelectedClassForAssign}>
+                          <Select value={selectedClassForAssign || 'none'} onValueChange={(v) => setSelectedClassForAssign(v === 'none' ? '' : v)}>
                             <SelectTrigger><SelectValue placeholder="Pilih kelas (opsional)" /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">Tanpa Kelas</SelectItem>
+                              <SelectItem value="none">Tanpa Kelas</SelectItem>
                               {classGroups?.map((cg) => (
                                 <SelectItem key={cg.id} value={cg.id}>{cg.name}</SelectItem>
                               ))}
