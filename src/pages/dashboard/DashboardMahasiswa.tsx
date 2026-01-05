@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -268,8 +269,8 @@ export default function DashboardMahasiswa() {
             <CardContent>
               <Tabs defaultValue="bar" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="bar">Bar Chart</TabsTrigger>
-                  <TabsTrigger value="radar">Radar Chart</TabsTrigger>
+                  <TabsTrigger value="bar" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Bar Chart</TabsTrigger>
+                  <TabsTrigger value="radar" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Radar Chart</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="bar">
@@ -359,7 +360,16 @@ export default function DashboardMahasiswa() {
                       <TableRow key={grade.id} className="hover:bg-muted/30">
                         <TableCell className="text-center">{index + 1}</TableCell>
                         <TableCell>
-                          <Badge variant="secondary" className="font-mono">{grade.course?.code}</Badge>
+                          <TooltipProvider>
+                            <UITooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="secondary" className="font-mono cursor-help">{grade.course?.code}</Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-sm">
+                                <p>{grade.course?.name}</p>
+                              </TooltipContent>
+                            </UITooltip>
+                          </TooltipProvider>
                         </TableCell>
                         <TableCell>
                           <Link to={`/mata-kuliah/${grade.course_id}`} className="font-medium hover:text-primary transition-colors">

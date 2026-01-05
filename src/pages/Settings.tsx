@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText } from 'lucide-react';
 import { Curriculum, Program, AppSetting } from '@/lib/types';
 import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
 
@@ -37,6 +37,9 @@ export default function Settings() {
 
   // Theme state
   const [appName, setAppName] = useState('');
+  const [appTitle, setAppTitle] = useState('');
+  const [appTagline, setAppTagline] = useState('');
+  const [footerText, setFooterText] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [primaryColor, setPrimaryColor] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -73,7 +76,10 @@ export default function Settings() {
         settingsMap[s.setting_key] = s.setting_value || '';
       });
       
-      setAppName(settingsMap['app_name'] || 'Student Achievement Tracker PBA');
+      setAppName(settingsMap['app_name'] || 'Tracker PBA');
+      setAppTitle(settingsMap['app_title'] || 'Student Achievement Tracker');
+      setAppTagline(settingsMap['app_tagline'] || 'Pantau dan kelola nilai mahasiswa Program Bahasa Arab dengan mudah. Visualisasi data yang jelas untuk hasil pembelajaran yang lebih baik.');
+      setFooterText(settingsMap['footer_text'] || '© 2024 Student Achievement Tracker PBA. Semua hak dilindungi.');
       setLogoUrl(settingsMap['logo_url'] || '');
       setPrimaryColor(settingsMap['primary_color'] || '');
       
@@ -181,6 +187,7 @@ export default function Settings() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['app-settings'] });
+      queryClient.invalidateQueries({ queryKey: ['app-settings-all'] });
       toast({ title: 'Berhasil', description: 'Pengaturan berhasil disimpan' });
     },
     onError: (error: any) => {
@@ -256,8 +263,11 @@ export default function Settings() {
     }
   };
 
-  const handleSaveTheme = () => {
-    updateSettingMutation.mutate({ key: 'app_name', value: appName });
+  const handleSaveAllTexts = async () => {
+    await updateSettingMutation.mutateAsync({ key: 'app_name', value: appName });
+    await updateSettingMutation.mutateAsync({ key: 'app_title', value: appTitle });
+    await updateSettingMutation.mutateAsync({ key: 'app_tagline', value: appTagline });
+    await updateSettingMutation.mutateAsync({ key: 'footer_text', value: footerText });
   };
 
   if (loading) {
@@ -290,52 +300,50 @@ export default function Settings() {
           </p>
         </div>
 
-        <Tabs defaultValue={canAccessTheme ? "theme" : "curriculum"} className="space-y-6">
-          <TabsList className={`grid w-full ${canAccessTheme ? 'grid-cols-4' : 'grid-cols-3'}`}>
+        <Tabs defaultValue={canAccessTheme ? "theme" : "curriculum"} orientation="vertical" className="flex flex-col md:flex-row gap-6">
+          <TabsList className="flex md:flex-col h-auto w-full md:w-56 shrink-0 bg-card border rounded-lg p-1">
             {canAccessTheme && (
-              <TabsTrigger value="theme" className="flex items-center gap-2">
+              <TabsTrigger value="theme" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Palette className="h-4 w-4" />
-                Custom Web
+                <span className="hidden md:inline">Custom Web</span>
+                <span className="md:hidden">Web</span>
               </TabsTrigger>
             )}
-            <TabsTrigger value="curriculum" className="flex items-center gap-2">
+            {canAccessTheme && (
+              <TabsTrigger value="texts" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Type className="h-4 w-4" />
+                <span className="hidden md:inline">Teks Aplikasi</span>
+                <span className="md:hidden">Teks</span>
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="curriculum" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BookOpen className="h-4 w-4" />
               Kurikulum
             </TabsTrigger>
-            <TabsTrigger value="programs" className="flex items-center gap-2">
+            <TabsTrigger value="programs" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <GraduationCap className="h-4 w-4" />
-              Program Studi
+              <span className="hidden md:inline">Program Studi</span>
+              <span className="md:hidden">Prodi</span>
             </TabsTrigger>
             {canAccessTheme && (
-              <TabsTrigger value="permissions" className="flex items-center gap-2">
+              <TabsTrigger value="permissions" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Shield className="h-4 w-4" />
-                Perizinan Role
+                <span className="hidden md:inline">Perizinan Role</span>
+                <span className="md:hidden">Role</span>
               </TabsTrigger>
             )}
           </TabsList>
 
-          {/* Theme Tab - Only for admin */}
-          {canAccessTheme && (
-            <TabsContent value="theme">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Kustomisasi Tampilan</CardTitle>
-                  <CardDescription>Atur nama aplikasi dan logo</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid gap-6 md:grid-cols-2">
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <Label>Nama Aplikasi</Label>
-                        <Input 
-                          value={appName} 
-                          onChange={(e) => setAppName(e.target.value)} 
-                          placeholder="Student Achievement Tracker PBA"
-                        />
-                      </div>
-                      <Button onClick={handleSaveTheme}>Simpan Nama</Button>
-                    </div>
-                    
+          <div className="flex-1">
+            {/* Theme Tab - Only for admin */}
+            {canAccessTheme && (
+              <TabsContent value="theme" className="mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Kustomisasi Tampilan</CardTitle>
+                    <CardDescription>Atur logo aplikasi</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
                     <div className="space-y-4">
                       <Label>Logo Aplikasi</Label>
                       <div className="flex items-center gap-4">
@@ -362,210 +370,264 @@ export default function Settings() {
                         </div>
                       </div>
                     </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+
+            {/* Texts Tab - Only for admin */}
+            {canAccessTheme && (
+              <TabsContent value="texts" className="mt-0">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Kustomisasi Teks</CardTitle>
+                    <CardDescription>Atur teks yang tampil di aplikasi</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label>Nama Aplikasi (Navbar)</Label>
+                        <Input 
+                          value={appName} 
+                          onChange={(e) => setAppName(e.target.value)} 
+                          placeholder="Tracker PBA"
+                        />
+                        <p className="text-xs text-muted-foreground">Ditampilkan di navbar</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Judul Hero (Beranda)</Label>
+                        <Input 
+                          value={appTitle} 
+                          onChange={(e) => setAppTitle(e.target.value)} 
+                          placeholder="Student Achievement Tracker"
+                        />
+                        <p className="text-xs text-muted-foreground">Ditampilkan sebagai judul besar di halaman beranda</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Tagline (Beranda)</Label>
+                        <Textarea 
+                          value={appTagline} 
+                          onChange={(e) => setAppTagline(e.target.value)} 
+                          placeholder="Pantau dan kelola nilai mahasiswa..."
+                          rows={3}
+                        />
+                        <p className="text-xs text-muted-foreground">Ditampilkan sebagai deskripsi di bawah judul hero</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Teks Footer</Label>
+                        <Input 
+                          value={footerText} 
+                          onChange={(e) => setFooterText(e.target.value)} 
+                          placeholder="© 2024 Student Achievement Tracker PBA. Semua hak dilindungi."
+                        />
+                        <p className="text-xs text-muted-foreground">Ditampilkan di bagian bawah setiap halaman</p>
+                      </div>
+                      <Button onClick={handleSaveAllTexts}>Simpan Semua Teks</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            )}
+
+            {/* Curriculum Tab */}
+            <TabsContent value="curriculum" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Kelola Kurikulum</CardTitle>
+                      <CardDescription>Buat dan kelola nama kurikulum</CardDescription>
+                    </div>
+                    <Dialog open={showCurriculumDialog} onOpenChange={(open) => { if (!open) resetCurriculumForm(); setShowCurriculumDialog(open); }}>
+                      <DialogTrigger asChild>
+                        <Button size="sm">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Tambah Kurikulum
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>{editingCurriculum ? 'Edit Kurikulum' : 'Tambah Kurikulum Baru'}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>Nama Kurikulum</Label>
+                            <Input 
+                              value={curriculumName} 
+                              onChange={(e) => setCurriculumName(e.target.value)} 
+                              placeholder="Contoh: Kurikulum 2024" 
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Deskripsi (opsional)</Label>
+                            <Textarea 
+                              value={curriculumDescription} 
+                              onChange={(e) => setCurriculumDescription(e.target.value)} 
+                              placeholder="Deskripsi kurikulum..."
+                              rows={3}
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button onClick={handleSaveCurriculum} disabled={!curriculumName}>
+                            {editingCurriculum ? 'Simpan' : 'Tambah'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-primary hover:bg-primary">
+                        <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                        <TableHead className="text-primary-foreground">Nama Kurikulum</TableHead>
+                        <TableHead className="text-primary-foreground">Deskripsi</TableHead>
+                        <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {curricula?.map((curriculum, index) => (
+                        <TableRow key={curriculum.id}>
+                          <TableCell className="text-center">{index + 1}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{curriculum.name}</Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{curriculum.description || '-'}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => openEditCurriculum(curriculum)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => deleteCurriculumMutation.mutate(curriculum.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {(!curricula || curricula.length === 0) && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            Belum ada kurikulum. Klik "Tambah Kurikulum" untuk menambahkan.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
             </TabsContent>
-          )}
 
-          {/* Curriculum Tab */}
-          <TabsContent value="curriculum">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Kelola Kurikulum</CardTitle>
-                    <CardDescription>Buat dan kelola nama kurikulum</CardDescription>
-                  </div>
-                  <Dialog open={showCurriculumDialog} onOpenChange={(open) => { if (!open) resetCurriculumForm(); setShowCurriculumDialog(open); }}>
-                    <DialogTrigger asChild>
-                      <Button size="sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Tambah Kurikulum
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>{editingCurriculum ? 'Edit Kurikulum' : 'Tambah Kurikulum Baru'}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Nama Kurikulum</Label>
-                          <Input 
-                            value={curriculumName} 
-                            onChange={(e) => setCurriculumName(e.target.value)} 
-                            placeholder="Contoh: Kurikulum 2024" 
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Deskripsi (opsional)</Label>
-                          <Textarea 
-                            value={curriculumDescription} 
-                            onChange={(e) => setCurriculumDescription(e.target.value)} 
-                            placeholder="Deskripsi kurikulum..."
-                            rows={3}
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button onClick={handleSaveCurriculum} disabled={!curriculumName}>
-                          {editingCurriculum ? 'Simpan' : 'Tambah'}
+            {/* Programs Tab */}
+            <TabsContent value="programs" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Kelola Program Studi</CardTitle>
+                      <CardDescription>Buat dan kelola nama program studi</CardDescription>
+                    </div>
+                    <Dialog open={showProgramDialog} onOpenChange={(open) => { if (!open) resetProgramForm(); setShowProgramDialog(open); }}>
+                      <DialogTrigger asChild>
+                        <Button size="sm">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Tambah Prodi
                         </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-primary hover:bg-primary">
-                      <TableHead className="w-12 text-primary-foreground">No</TableHead>
-                      <TableHead className="text-primary-foreground">Nama Kurikulum</TableHead>
-                      <TableHead className="text-primary-foreground">Deskripsi</TableHead>
-                      <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {curricula?.map((curriculum, index) => (
-                      <TableRow key={curriculum.id}>
-                        <TableCell className="text-center">{index + 1}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{curriculum.name}</Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{curriculum.description || '-'}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openEditCurriculum(curriculum)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => deleteCurriculumMutation.mutate(curriculum.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>{editingProgram ? 'Edit Program Studi' : 'Tambah Program Studi Baru'}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>Nama Program Studi</Label>
+                            <Input 
+                              value={programName} 
+                              onChange={(e) => setProgramName(e.target.value)} 
+                              placeholder="Contoh: Pendidikan Bahasa Arab" 
+                            />
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {(!curricula || curricula.length === 0) && (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                          Belum ada kurikulum. Klik "Tambah Kurikulum" untuk menambahkan.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Programs Tab */}
-          <TabsContent value="programs">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>Kelola Program Studi</CardTitle>
-                    <CardDescription>Buat dan kelola nama program studi</CardDescription>
+                          <div className="space-y-2">
+                            <Label>Deskripsi (opsional)</Label>
+                            <Textarea 
+                              value={programDescription} 
+                              onChange={(e) => setProgramDescription(e.target.value)} 
+                              placeholder="Deskripsi program studi..."
+                              rows={3}
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button onClick={handleSaveProgram} disabled={!programName}>
+                            {editingProgram ? 'Simpan' : 'Tambah'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
                   </div>
-                  <Dialog open={showProgramDialog} onOpenChange={(open) => { if (!open) resetProgramForm(); setShowProgramDialog(open); }}>
-                    <DialogTrigger asChild>
-                      <Button size="sm">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Tambah Prodi
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>{editingProgram ? 'Edit Program Studi' : 'Tambah Program Studi Baru'}</DialogTitle>
-                      </DialogHeader>
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Nama Program Studi</Label>
-                          <Input 
-                            value={programName} 
-                            onChange={(e) => setProgramName(e.target.value)} 
-                            placeholder="Contoh: Pendidikan Bahasa Arab" 
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Deskripsi (opsional)</Label>
-                          <Textarea 
-                            value={programDescription} 
-                            onChange={(e) => setProgramDescription(e.target.value)} 
-                            placeholder="Deskripsi program studi..."
-                            rows={3}
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button onClick={handleSaveProgram} disabled={!programName}>
-                          {editingProgram ? 'Simpan' : 'Tambah'}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-primary hover:bg-primary">
-                      <TableHead className="w-12 text-primary-foreground">No</TableHead>
-                      <TableHead className="text-primary-foreground">Nama Program Studi</TableHead>
-                      <TableHead className="text-primary-foreground">Deskripsi</TableHead>
-                      <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {programs?.map((program, index) => (
-                      <TableRow key={program.id}>
-                        <TableCell className="text-center">{index + 1}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">{program.name}</Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{program.description || '-'}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openEditProgram(program)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => deleteProgramMutation.mutate(program.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-primary hover:bg-primary">
+                        <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                        <TableHead className="text-primary-foreground">Nama Program Studi</TableHead>
+                        <TableHead className="text-primary-foreground">Deskripsi</TableHead>
+                        <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                       </TableRow>
-                    ))}
-                    {(!programs || programs.length === 0) && (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                          Belum ada program studi. Klik "Tambah Prodi" untuk menambahkan.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Permissions Tab - Only for admin */}
-          {canAccessTheme && (
-            <TabsContent value="permissions">
-              <RolePermissionsTab />
+                    </TableHeader>
+                    <TableBody>
+                      {programs?.map((program, index) => (
+                        <TableRow key={program.id}>
+                          <TableCell className="text-center">{index + 1}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{program.name}</Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">{program.description || '-'}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => openEditProgram(program)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => deleteProgramMutation.mutate(program.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {(!programs || programs.length === 0) && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            Belum ada program studi. Klik "Tambah Prodi" untuk menambahkan.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
             </TabsContent>
-          )}
+
+            {/* Permissions Tab - Only for admin */}
+            {canAccessTheme && (
+              <TabsContent value="permissions" className="mt-0">
+                <RolePermissionsTab />
+              </TabsContent>
+            )}
+          </div>
         </Tabs>
       </div>
     </Layout>

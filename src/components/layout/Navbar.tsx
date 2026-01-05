@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -16,9 +17,12 @@ import { cn } from '@/lib/utils';
 
 export function Navbar() {
   const { user, profile, signOut } = useAuth();
+  const { data: settings } = useAppSettings();
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const appName = settings?.app_name || 'Tracker PBA';
 
   const handleSignOut = async () => {
     await signOut();
@@ -46,7 +50,7 @@ export function Navbar() {
           </div>
           <div className="hidden sm:block">
             <h1 className="font-display text-lg font-bold text-foreground">
-              Tracker PBA
+              {appName}
             </h1>
             <p className="text-xs text-muted-foreground">Student Achievement</p>
           </div>
