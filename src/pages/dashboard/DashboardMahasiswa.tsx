@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -32,6 +33,7 @@ export default function DashboardMahasiswa() {
   const [nim, setNim] = useState(profile?.nim || '');
   const [program, setProgram] = useState(profile?.program || '');
   const [classGroup, setClassGroup] = useState(profile?.class_group || '');
+  const [gender, setGender] = useState(profile?.gender || '');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -77,6 +79,7 @@ export default function DashboardMahasiswa() {
         nim: nim,
         program: program,
         class_group: classGroup,
+        gender: gender || null,
       })
       .eq('id', user.id);
 
@@ -153,6 +156,7 @@ export default function DashboardMahasiswa() {
                       setNim(profile?.nim || '');
                       setProgram(profile?.program || '');
                       setClassGroup(profile?.class_group || '');
+                      setGender(profile?.gender || '');
                     }
                     setEditMode(!editMode);
                   }}
@@ -203,6 +207,18 @@ export default function DashboardMahasiswa() {
                     <Label>Kelas</Label>
                     <Input value={classGroup} onChange={(e) => setClassGroup(e.target.value)} />
                   </div>
+                  <div className="space-y-2">
+                    <Label>Gender</Label>
+                    <Select value={gender} onValueChange={setGender}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih gender..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pria">Pria</SelectItem>
+                        <SelectItem value="wanita">Wanita</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <Button onClick={handleSaveProfile} className="w-full" disabled={saving}>
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Simpan
@@ -229,6 +245,13 @@ export default function DashboardMahasiswa() {
                       <User className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">Kelas:</span>
                       <span className="font-medium">{profile.class_group}</span>
+                    </div>
+                  )}
+                  {profile?.gender && (
+                    <div className="flex items-center gap-3 text-sm">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Gender:</span>
+                      <span className="font-medium capitalize">{profile.gender}</span>
                     </div>
                   )}
                   <div className="flex items-center gap-3 text-sm">
