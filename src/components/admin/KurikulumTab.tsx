@@ -10,7 +10,9 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Pencil, Users, Download, Upload, UserPlus, UserMinus } from 'lucide-react';
+import { Plus, Trash2, Pencil, Users, Download, Upload, UserPlus, UserMinus, Search, Check } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ClassGroup, Profile, ClassStudent } from '@/lib/types';
 import * as XLSX from 'xlsx';
 
@@ -25,6 +27,12 @@ export function KurikulumTab() {
   const [classDescription, setClassDescription] = useState('');
   const [selectedClassForManage, setSelectedClassForManage] = useState<ClassGroup | null>(null);
   const [showManageStudentsDialog, setShowManageStudentsDialog] = useState(false);
+  
+  // Filter state for manage students
+  const [yearFilter, setYearFilter] = useState<string>('all');
+  const [genderFilter, setGenderFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
 
   // Fetch Class Groups
   const { data: classGroups, refetch: refetchClasses } = useQuery({
@@ -171,6 +179,77 @@ export function KurikulumTab() {
   const getStudentsNotInClass = (classGroupId: string) => {
     const studentIds = classStudents?.filter(cs => cs.class_group_id === classGroupId).map(cs => cs.student_profile_id) || [];
     return students?.filter(s => !studentIds.includes(s.id)) || [];
+  };
+
+  // Get available years from students
+  const availableYears = [...new Set(students?.map(s => s.enrollment_year).filter(Boolean) || [])].sort((a, b) => (b || 0) - (a || 0));
+
+  // Filter students not in class based on filters
+  const getFilteredStudentsNotInClass = (classGroupId: string) => {
+    let filtered = getStudentsNotInClass(classGroupId);
+    
+    if (yearFilter !== 'all') {
+      filtered = filtered.filter(s => s.enrollment_year?.toString() === yearFilter);
+    }
+    if (genderFilter !== 'all') {
+      filtered = filtered.filter(s => s.gender === genderFilter);
+    }
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(s => 
+        s.full_name.toLowerCase().includes(query) || 
+        s.nim?.toLowerCase().includes(query)
+      );
+    }
+    
+    return filtered;
+  };
+
+  // Add multiple students to class
+  const addMultipleStudentsToClassMutation = useMutation({
+    mutationFn: async ({ classGroupId, studentIds }: { classGroupId: string; studentIds: string[] }) => {
+      const insertData = studentIds.map(studentId => ({ class_group_id: classGroupId, student_profile_id: studentId }));
+      const { error } = await supabase.from('class_students').insert(insertData);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['class-students'] });
+      toast({ title: 'Berhasil', description: `${variables.studentIds.length} mahasiswa berhasil ditambahkan ke kelas` });
+      setSelectedStudents([]);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Select students by year
+  const selectByYear = (year: number, classGroupId: string) => {
+    const studentsToSelect = getStudentsNotInClass(classGroupId).filter(s => s.enrollment_year === year);
+    setSelectedStudents(studentsToSelect.map(s => s.id));
+  };
+
+  // Select students by gender
+  const selectByGender = (gender: string, classGroupId: string) => {
+    const studentsToSelect = getStudentsNotInClass(classGroupId).filter(s => s.gender === gender);
+    setSelectedStudents(studentsToSelect.map(s => s.id));
+  };
+
+  // Toggle individual student selection
+  const toggleStudentSelection = (studentId: string) => {
+    setSelectedStudents(prev => 
+      prev.includes(studentId) 
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  // Reset filters when dialog closes
+  const resetManageDialog = () => {
+    setYearFilter('all');
+    setGenderFilter('all');
+    setSearchQuery('');
+    setSelectedStudents([]);
+    setShowManageStudentsDialog(false);
   };
 
   // Export students of a class
@@ -377,21 +456,21 @@ export function KurikulumTab() {
       </Card>
 
       {/* Manage Students Dialog */}
-      <Dialog open={showManageStudentsDialog} onOpenChange={setShowManageStudentsDialog}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+      <Dialog open={showManageStudentsDialog} onOpenChange={(open) => { if (!open) resetManageDialog(); else setShowManageStudentsDialog(open); }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Kelola Mahasiswa Kelas {selectedClassForManage?.name}</DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-hidden grid grid-cols-2 gap-4">
             {/* Students in class */}
             <div className="flex flex-col">
-              <h4 className="font-medium mb-2">Mahasiswa di Kelas</h4>
-              <div className="border rounded-lg p-2 flex-1 overflow-y-auto max-h-[300px] space-y-1">
+              <h4 className="font-medium mb-2">Mahasiswa di Kelas ({selectedClassForManage ? getStudentsInClass(selectedClassForManage.id).length : 0})</h4>
+              <div className="border rounded-lg p-2 flex-1 overflow-y-auto max-h-[400px] space-y-1">
                 {selectedClassForManage && getStudentsInClass(selectedClassForManage.id).map(student => (
                   <div key={student.id} className="flex items-center justify-between p-2 hover:bg-muted rounded">
                     <div className="text-sm">
                       <p className="font-medium">{student.full_name}</p>
-                      <p className="text-muted-foreground text-xs">{student.nim}</p>
+                      <p className="text-muted-foreground text-xs">{student.nim} • {student.enrollment_year || '-'} • {student.gender || '-'}</p>
                     </div>
                     <Button 
                       variant="ghost" 
@@ -412,12 +491,107 @@ export function KurikulumTab() {
             {/* Students not in class */}
             <div className="flex flex-col">
               <h4 className="font-medium mb-2">Mahasiswa Tersedia</h4>
+              
+              {/* Filters */}
+              <div className="space-y-2 mb-3">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cari nama atau NIM..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-8 h-9"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Select value={yearFilter} onValueChange={setYearFilter}>
+                    <SelectTrigger className="h-9 flex-1">
+                      <SelectValue placeholder="Angkatan" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Angkatan</SelectItem>
+                      {availableYears.map(year => (
+                        <SelectItem key={year} value={year!.toString()}>{year}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={genderFilter} onValueChange={setGenderFilter}>
+                    <SelectTrigger className="h-9 flex-1">
+                      <SelectValue placeholder="Gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Gender</SelectItem>
+                      <SelectItem value="pria">Pria</SelectItem>
+                      <SelectItem value="wanita">Wanita</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Bulk selection buttons */}
+                <div className="flex flex-wrap gap-1">
+                  <span className="text-xs text-muted-foreground mr-1">Pilih:</span>
+                  {availableYears.slice(0, 4).map(year => (
+                    <Button 
+                      key={year} 
+                      variant="outline" 
+                      size="sm" 
+                      className="h-6 text-xs px-2"
+                      onClick={() => selectedClassForManage && selectByYear(year!, selectedClassForManage.id)}
+                    >
+                      {year}
+                    </Button>
+                  ))}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-6 text-xs px-2"
+                    onClick={() => selectedClassForManage && selectByGender('pria', selectedClassForManage.id)}
+                  >
+                    Pria
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-6 text-xs px-2"
+                    onClick={() => selectedClassForManage && selectByGender('wanita', selectedClassForManage.id)}
+                  >
+                    Wanita
+                  </Button>
+                  {selectedStudents.length > 0 && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-6 text-xs px-2"
+                      onClick={() => setSelectedStudents([])}
+                    >
+                      Batal ({selectedStudents.length})
+                    </Button>
+                  )}
+                </div>
+              </div>
+              
+              {/* Add selected button */}
+              {selectedStudents.length > 0 && selectedClassForManage && (
+                <Button 
+                  size="sm" 
+                  className="mb-2"
+                  onClick={() => addMultipleStudentsToClassMutation.mutate({ classGroupId: selectedClassForManage.id, studentIds: selectedStudents })}
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Tambahkan {selectedStudents.length} Mahasiswa
+                </Button>
+              )}
+              
               <div className="border rounded-lg p-2 flex-1 overflow-y-auto max-h-[300px] space-y-1">
-                {selectedClassForManage && getStudentsNotInClass(selectedClassForManage.id).map(student => (
-                  <div key={student.id} className="flex items-center justify-between p-2 hover:bg-muted rounded">
-                    <div className="text-sm">
+                {selectedClassForManage && getFilteredStudentsNotInClass(selectedClassForManage.id).map(student => (
+                  <div key={student.id} className="flex items-center gap-2 p-2 hover:bg-muted rounded">
+                    <Checkbox
+                      checked={selectedStudents.includes(student.id)}
+                      onCheckedChange={() => toggleStudentSelection(student.id)}
+                    />
+                    <div className="text-sm flex-1">
                       <p className="font-medium">{student.full_name}</p>
-                      <p className="text-muted-foreground text-xs">{student.nim}</p>
+                      <p className="text-muted-foreground text-xs">{student.nim} • {student.enrollment_year || '-'} • {student.gender || '-'}</p>
                     </div>
                     <Button 
                       variant="ghost" 
@@ -429,14 +603,14 @@ export function KurikulumTab() {
                     </Button>
                   </div>
                 ))}
-                {selectedClassForManage && getStudentsNotInClass(selectedClassForManage.id).length === 0 && (
-                  <p className="text-muted-foreground text-sm text-center py-4">Semua mahasiswa sudah di kelas</p>
+                {selectedClassForManage && getFilteredStudentsNotInClass(selectedClassForManage.id).length === 0 && (
+                  <p className="text-muted-foreground text-sm text-center py-4">Tidak ada mahasiswa yang cocok</p>
                 )}
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowManageStudentsDialog(false)}>
+            <Button variant="outline" onClick={resetManageDialog}>
               Tutup
             </Button>
           </DialogFooter>
