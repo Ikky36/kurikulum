@@ -29,6 +29,7 @@ export default function DashboardDosen() {
   const [editMode, setEditMode] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [nip, setNip] = useState(profile?.nip || '');
+  const [gender, setGender] = useState(profile?.gender || '');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string>('');
@@ -154,7 +155,7 @@ export default function DashboardDosen() {
     
     const { error } = await supabase
       .from('profiles')
-      .update({ full_name: fullName, nip: nip })
+      .update({ full_name: fullName, nip: nip, gender: gender || null })
       .eq('id', user.id);
 
     setSaving(false);
@@ -338,6 +339,7 @@ export default function DashboardDosen() {
                     if (editMode) {
                       setFullName(profile?.full_name || '');
                       setNip(profile?.nip || '');
+                      setGender(profile?.gender || '');
                     }
                     setEditMode(!editMode);
                   }}
@@ -377,8 +379,20 @@ export default function DashboardDosen() {
                     <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label>NIP</Label>
+                    <Label>NIDN/NIDK</Label>
                     <Input value={nip} onChange={(e) => setNip(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Gender</Label>
+                    <Select value={gender} onValueChange={setGender}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih gender..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pria">Pria</SelectItem>
+                        <SelectItem value="wanita">Wanita</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <Button onClick={handleSaveProfile} className="w-full" disabled={saving}>
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -390,7 +404,13 @@ export default function DashboardDosen() {
                   {profile?.nip && (
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
-                      <span>NIP: {profile.nip}</span>
+                      <span>NIDN/NIDK: {profile.nip}</span>
+                    </div>
+                  )}
+                  {profile?.gender && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="capitalize">Gender: {profile.gender}</span>
                     </div>
                   )}
                   <div className="flex items-center gap-2">
