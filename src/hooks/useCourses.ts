@@ -105,12 +105,17 @@ export function useCourseInstructors(courseId: string) {
         .from('course_instructors')
         .select(`
           *,
-          profiles:instructor_profile_id (*)
+          profiles:instructor_profile_id (*),
+          class_groups:class_group_id (*)
         `)
         .eq('course_id', courseId);
       
       if (error) throw error;
-      return data.map(d => d.profiles as unknown as Profile).filter(Boolean);
+      return data.map(d => ({
+        ...d.profiles as unknown as Profile,
+        classGroupId: d.class_group_id,
+        classGroupName: (d.class_groups as unknown as { id: string; name: string } | null)?.name || null,
+      }));
     },
     enabled: !!courseId,
   });

@@ -36,6 +36,7 @@ export default function DashboardAdmin() {
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [selectedCourseForAssign, setSelectedCourseForAssign] = useState('');
   const [selectedDosenForAssign, setSelectedDosenForAssign] = useState<string[]>([]);
+  const [selectedClassForAssign, setSelectedClassForAssign] = useState('');
 
   // Role management state
   const [showRoleDialog, setShowRoleDialog] = useState(false);
@@ -98,19 +99,30 @@ export default function DashboardAdmin() {
     },
   });
 
-  // Fetch all course instructors
+  // Fetch all course instructors with class groups
   const { data: courseInstructors, refetch: refetchInstructors } = useQuery({
     queryKey: ['admin-course-instructors'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('course_instructors')
-        .select(`*, courses:course_id (*), profiles:instructor_profile_id (*)`);
+        .select(`*, courses:course_id (*), profiles:instructor_profile_id (*), class_groups:class_group_id (*)`);
       if (error) throw error;
       return data.map(d => ({
         ...d,
         course: d.courses as unknown as Course,
         instructor: d.profiles as unknown as Profile,
+        classGroup: d.class_groups as unknown as { id: string; name: string } | null,
       }));
+    },
+  });
+
+  // Fetch class groups for assignment
+  const { data: classGroups } = useQuery({
+    queryKey: ['class-groups-assign'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('class_groups').select('*').order('name');
+      if (error) throw error;
+      return data as { id: string; name: string; description?: string }[];
     },
   });
 
@@ -126,11 +138,12 @@ export default function DashboardAdmin() {
 
   // Assignment mutations
   const assignInstructorMutation = useMutation({
-    mutationFn: async ({ courseId, instructorIds }: { courseId: string; instructorIds: string[] }) => {
+    mutationFn: async ({ courseId, instructorIds, classGroupId }: { courseId: string; instructorIds: string[]; classGroupId?: string }) => {
       // Insert multiple instructors
       const insertData = instructorIds.map(id => ({
         course_id: courseId,
         instructor_profile_id: id,
+        class_group_id: classGroupId || null,
       }));
       const { error } = await supabase.from('course_instructors').insert(insertData);
       if (error) throw error;
@@ -141,6 +154,7 @@ export default function DashboardAdmin() {
       setShowAssignDialog(false);
       setSelectedCourseForAssign('');
       setSelectedDosenForAssign([]);
+      setSelectedClassForAssign('');
     },
     onError: (error: any) => {
       toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
@@ -879,6 +893,18 @@ export default function DashboardAdmin() {
                           </Select>
                         </div>
                         <div className="space-y-2">
+                          <Label>Kelas (Opsional)</Label>
+                          <Select value={selectedClassForAssign} onValueChange={setSelectedClassForAssign}>
+                            <SelectTrigger><SelectValue placeholder="Pilih kelas (opsional)" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="">Tanpa Kelas</SelectItem>
+                              {classGroups?.map((cg) => (
+                                <SelectItem key={cg.id} value={cg.id}>{cg.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
                           <Label>Dosen (dapat memilih lebih dari satu)</Label>
                           <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
                             {selectedCourseForAssign ? (
@@ -910,7 +936,11 @@ export default function DashboardAdmin() {
                       </div>
                       <DialogFooter>
                         <Button 
-                          onClick={() => assignInstructorMutation.mutate({ courseId: selectedCourseForAssign, instructorIds: selectedDosenForAssign })} 
+                          onClick={() => assignInstructorMutation.mutate({ 
+                            courseId: selectedCourseForAssign, 
+                            instructorIds: selectedDosenForAssign,
+                            classGroupId: selectedClassForAssign || undefined
+                          })} 
                           disabled={!selectedCourseForAssign || selectedDosenForAssign.length === 0}
                         >
                           Tugaskan
@@ -926,54 +956,99 @@ export default function DashboardAdmin() {
                     <TableRow className="bg-primary hover:bg-primary">
                       <TableHead className="w-12 text-primary-foreground">No</TableHead>
                       <TableHead className="text-primary-foreground">Mata Kuliah</TableHead>
+                      <TableHead className="text-primary-foreground">Kelas</TableHead>
                       <TableHead className="text-primary-foreground">Dosen</TableHead>
                       <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {courseInstructors?.map((ci, index) => (
-                      <TableRow key={ci.id}>
-                        <TableCell className="text-center">{index + 1}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="font-mono mr-2">{ci.course?.code}</Badge>
-                          {ci.course?.name}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={ci.instructor?.photo_url || undefined} />
-                              <AvatarFallback>{ci.instructor?.full_name?.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            {ci.instructor?.full_name}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              onClick={() => {
-                                setSelectedCourseForAssign(ci.course?.id || '');
-                                setSelectedDosenForAssign([]);
-                                setShowAssignDialog(true);
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => removeInstructorMutation.mutate(ci.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {(!courseInstructors || courseInstructors.length === 0) && (
-                      <TableRow>
-                        <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                          Belum ada penugasan
-                        </TableCell>
-                      </TableRow>
-                    )}
+                    {(() => {
+                      // Group instructors by course + class
+                      const grouped = (courseInstructors || []).reduce((acc, ci) => {
+                        const key = `${ci.course_id}_${ci.class_group_id || 'none'}`;
+                        if (!acc[key]) {
+                          acc[key] = {
+                            course: ci.course,
+                            classGroup: ci.classGroup,
+                            instructors: [],
+                            ids: [],
+                          };
+                        }
+                        acc[key].instructors.push(ci.instructor);
+                        acc[key].ids.push(ci.id);
+                        return acc;
+                      }, {} as Record<string, { course: Course | null; classGroup: { id: string; name: string } | null; instructors: (Profile | null)[]; ids: string[] }>);
+
+                      const groupedEntries = Object.entries(grouped);
+                      
+                      if (groupedEntries.length === 0) {
+                        return (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                              Belum ada penugasan
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
+
+                      return groupedEntries.map(([key, group], index) => (
+                        <TableRow key={key}>
+                          <TableCell className="text-center align-top">{index + 1}</TableCell>
+                          <TableCell className="align-top">
+                            <Badge variant="secondary" className="font-mono mr-2">{group.course?.code}</Badge>
+                            {group.course?.name}
+                          </TableCell>
+                          <TableCell className="align-top">
+                            {group.classGroup ? (
+                              <Badge variant="outline">{group.classGroup.name}</Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-2">
+                              {group.instructors.filter(Boolean).map((instructor, idx) => (
+                                <div key={instructor?.id || idx} className="flex items-center gap-2">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage src={instructor?.photo_url || undefined} />
+                                    <AvatarFallback>{instructor?.full_name?.charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-sm">{instructor?.full_name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell className="align-top">
+                            <div className="flex gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => {
+                                  setSelectedCourseForAssign(group.course?.id || '');
+                                  setSelectedClassForAssign(group.classGroup?.id || '');
+                                  setSelectedDosenForAssign([]);
+                                  setShowAssignDialog(true);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              {group.ids.map((id) => (
+                                <Button 
+                                  key={id} 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="text-destructive hover:text-destructive" 
+                                  onClick={() => removeInstructorMutation.mutate(id)}
+                                  title="Hapus penugasan"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              ))}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ));
+                    })()}
                   </TableBody>
                 </Table>
               </CardContent>

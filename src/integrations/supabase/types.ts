@@ -281,24 +281,34 @@ export type Database = {
       }
       course_instructors: {
         Row: {
+          class_group_id: string | null
           course_id: string
           created_at: string
           id: string
           instructor_profile_id: string
         }
         Insert: {
+          class_group_id?: string | null
           course_id: string
           created_at?: string
           id?: string
           instructor_profile_id: string
         }
         Update: {
+          class_group_id?: string | null
           course_id?: string
           created_at?: string
           id?: string
           instructor_profile_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "course_instructors_class_group_id_fkey"
+            columns: ["class_group_id"]
+            isOneToOne: false
+            referencedRelation: "class_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "course_instructors_course_id_fkey"
             columns: ["course_id"]
