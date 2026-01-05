@@ -745,11 +745,15 @@ export default function Kurikulum() {
                           </TooltipTrigger>
                           <TooltipContent className="max-w-sm">
                             <p>{course.name}</p>
-                          </TooltipContent>
+                                          </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </TableCell>
-                    <TableCell>{course.name}</TableCell>
+                    <TableCell>
+                      <a href={`/mata-kuliah/${course.id}`} className="hover:text-primary hover:underline transition-colors">
+                        {course.name}
+                      </a>
+                    </TableCell>
                     <TableCell>{course.curricula?.name || '-'}</TableCell>
                     <TableCell>{course.semester || '-'}</TableCell>
                     <TableCell>

@@ -55,6 +55,7 @@ export default function DashboardAdmin() {
   const [userNip, setUserNip] = useState('');
   const [userProgram, setUserProgram] = useState('');
   const [userEnrollmentYear, setUserEnrollmentYear] = useState('');
+  const [userGender, setUserGender] = useState<'pria' | 'wanita' | ''>('');
   const [showDeleteUserDialog, setShowDeleteUserDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
   
@@ -204,6 +205,7 @@ export default function DashboardAdmin() {
       nip?: string;
       program?: string;
       enrollment_year?: number;
+      gender?: 'pria' | 'wanita';
     }) => {
       // Use edge function to create user with admin privileges
       const { data, error } = await supabase.functions.invoke('admin-create-user', {
@@ -353,6 +355,7 @@ export default function DashboardAdmin() {
     setUserNip('');
     setUserProgram('');
     setUserEnrollmentYear('');
+    setUserGender('');
     setEditingUser(null);
     setShowUserDialog(false);
   };
@@ -420,6 +423,7 @@ export default function DashboardAdmin() {
         nip: userRole === 'dosen' ? userNip : null,
         program: userRole === 'mahasiswa' ? userProgram : null,
         enrollment_year: userRole === 'mahasiswa' && userEnrollmentYear ? parseInt(userEnrollmentYear) : null,
+        gender: userGender || null,
         id: editingUser.id,
       };
       if (userPassword) {
@@ -437,6 +441,7 @@ export default function DashboardAdmin() {
         nip: userRole === 'dosen' ? userNip : undefined,
         program: userRole === 'mahasiswa' ? userProgram : undefined,
         enrollment_year: userRole === 'mahasiswa' && userEnrollmentYear ? parseInt(userEnrollmentYear) : undefined,
+        gender: userGender || undefined,
       });
     }
   };
@@ -450,6 +455,7 @@ export default function DashboardAdmin() {
     setUserNip(userProfile.nip || '');
     setUserProgram(userProfile.program || '');
     setUserEnrollmentYear(userProfile.enrollment_year?.toString() || '');
+    setUserGender(userProfile.gender || '');
     setShowUserDialog(true);
   };
 
@@ -575,6 +581,16 @@ export default function DashboardAdmin() {
                             <Input value={userFullName} onChange={(e) => setUserFullName(e.target.value)} placeholder="Nama lengkap" />
                           </div>
                           <div className="space-y-2">
+                            <Label>Gender</Label>
+                            <Select value={userGender} onValueChange={(v) => setUserGender(v as 'pria' | 'wanita' | '')}>
+                              <SelectTrigger><SelectValue placeholder="Pilih gender" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pria">Pria</SelectItem>
+                                <SelectItem value="wanita">Wanita</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
                             <Label>Email</Label>
                             <Input type="email" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} placeholder="email@example.com" disabled={!!editingUser} />
                           </div>
@@ -678,7 +694,7 @@ export default function DashboardAdmin() {
                   />
                   
                   {/* Search and Filter */}
-                  <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex flex-col gap-4">
                     <div className="relative flex-1">
                       <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                       <Input 
@@ -688,19 +704,44 @@ export default function DashboardAdmin() {
                         className="pl-9"
                       />
                     </div>
-                    <Select value={userRoleFilter} onValueChange={(v) => handleUserRoleFilterChange(v as any)}>
-                      <SelectTrigger className="w-full sm:w-[180px]">
-                        <Filter className="h-4 w-4 mr-2" />
-                        <SelectValue placeholder="Filter Role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Semua Role</SelectItem>
-                        <SelectItem value="mahasiswa">Mahasiswa</SelectItem>
-                        <SelectItem value="dosen">Dosen</SelectItem>
-                        <SelectItem value="sub_admin">Sub-Admin</SelectItem>
-                        <SelectItem value="admin">Admin</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    {/* Role Tabs */}
+                    <div className="flex flex-wrap gap-2">
+                      <Button 
+                        variant={userRoleFilter === 'all' ? 'default' : 'outline'} 
+                        size="sm"
+                        onClick={() => handleUserRoleFilterChange('all')}
+                      >
+                        Semua
+                      </Button>
+                      <Button 
+                        variant={userRoleFilter === 'mahasiswa' ? 'default' : 'outline'} 
+                        size="sm"
+                        onClick={() => handleUserRoleFilterChange('mahasiswa')}
+                      >
+                        Mahasiswa
+                      </Button>
+                      <Button 
+                        variant={userRoleFilter === 'dosen' ? 'default' : 'outline'} 
+                        size="sm"
+                        onClick={() => handleUserRoleFilterChange('dosen')}
+                      >
+                        Dosen
+                      </Button>
+                      <Button 
+                        variant={userRoleFilter === 'sub_admin' ? 'default' : 'outline'} 
+                        size="sm"
+                        onClick={() => handleUserRoleFilterChange('sub_admin')}
+                      >
+                        Sub-Admin
+                      </Button>
+                      <Button 
+                        variant={userRoleFilter === 'admin' ? 'default' : 'outline'} 
+                        size="sm"
+                        onClick={() => handleUserRoleFilterChange('admin')}
+                      >
+                        Admin
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardHeader>
@@ -710,9 +751,10 @@ export default function DashboardAdmin() {
                     <TableRow className="bg-primary hover:bg-primary">
                       <TableHead className="w-12 text-primary-foreground">No</TableHead>
                       <TableHead className="text-primary-foreground">Nama</TableHead>
+                      <TableHead className="text-primary-foreground">Gender</TableHead>
                       <TableHead className="text-primary-foreground">Email</TableHead>
                       <TableHead className="text-primary-foreground">Role</TableHead>
-                      <TableHead className="text-primary-foreground">NIM/NIDN</TableHead>
+                      <TableHead className="text-primary-foreground">NIM/NIDN/NIDK</TableHead>
                       <TableHead className="text-primary-foreground">Angkatan</TableHead>
                       <TableHead className="text-primary-foreground">Program</TableHead>
                       <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
@@ -731,6 +773,7 @@ export default function DashboardAdmin() {
                             <span className="font-medium">{u.full_name}</span>
                           </div>
                         </TableCell>
+                        <TableCell className="capitalize">{(u as any).gender || '-'}</TableCell>
                         <TableCell className="text-muted-foreground">{u.email}</TableCell>
                         <TableCell>
                           <Badge variant={u.role === 'admin' ? 'default' : u.role === 'sub_admin' ? 'default' : u.role === 'dosen' ? 'secondary' : 'outline'} className="capitalize">

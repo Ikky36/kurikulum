@@ -43,6 +43,7 @@ export default function CourseDetail() {
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [classFilter, setClassFilter] = useState<string>('all');
   const [yearFilter, setYearFilter] = useState<string>('all');
+  const [genderFilter, setGenderFilter] = useState<string>('all');
 
   const canEdit = role === 'admin' || role === 'dosen';
 
@@ -118,6 +119,11 @@ export default function CourseDetail() {
     if (yearFilter !== 'all') {
       result = result.filter(s => s?.enrollment_year?.toString() === yearFilter);
     }
+
+    // Apply gender filter
+    if (genderFilter !== 'all') {
+      result = result.filter(s => (s as any)?.gender === genderFilter);
+    }
     
     // Apply sorting
     if (sortColumn) {
@@ -162,7 +168,7 @@ export default function CourseDetail() {
     }
     
     return result;
-  }, [studentsWithGrades, classFilter, yearFilter, sortColumn, sortDirection]);
+  }, [studentsWithGrades, classFilter, yearFilter, genderFilter, sortColumn, sortDirection]);
 
   // Toggle sort handler
   const handleSort = (column: string) => {
@@ -326,7 +332,7 @@ export default function CourseDetail() {
             </TabsTrigger>
             <TabsTrigger value="learning-outcomes" className="flex items-center gap-2">
               <Target className="h-4 w-4" />
-              Capaian Pembelajaran
+              Rencana Pembelajaran
             </TabsTrigger>
             <TabsTrigger value="statistics" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
@@ -358,7 +364,7 @@ export default function CourseDetail() {
                             {instructor.nip && (
                               <p className="text-sm text-muted-foreground flex items-center gap-1">
                                 <User className="h-3 w-3" />
-                                NIP: {instructor.nip}
+                                NIDN/NIDK: {instructor.nip}
                               </p>
                             )}
                             <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">
@@ -481,6 +487,18 @@ export default function CourseDetail() {
                           </button>
                         </TableHead>
                         <TableHead className="font-semibold text-primary-foreground">
+                          <Select value={genderFilter} onValueChange={setGenderFilter}>
+                            <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground mx-auto">
+                              <SelectValue placeholder="Gender" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Gender</SelectItem>
+                              <SelectItem value="pria">Pria</SelectItem>
+                              <SelectItem value="wanita">Wanita</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableHead>
+                        <TableHead className="font-semibold text-primary-foreground">
                           <button 
                             onClick={() => handleSort('nim')}
                             className="flex items-center justify-center w-full hover:opacity-80"
@@ -495,7 +513,7 @@ export default function CourseDetail() {
                               <SelectValue placeholder="Angkatan" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="all">Semua Angkatan</SelectItem>
+                              <SelectItem value="all">Angkatan</SelectItem>
                               {enrollmentYears.map(year => (
                                 <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
                               ))}
@@ -508,7 +526,7 @@ export default function CourseDetail() {
                               <SelectValue placeholder="Kelas" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="all">Semua Kelas</SelectItem>
+                              <SelectItem value="all">Kelas</SelectItem>
                               {classGroups.map(group => (
                                 <SelectItem key={group} value={group}>{group}</SelectItem>
                               ))}
@@ -562,6 +580,9 @@ export default function CourseDetail() {
                                 </Avatar>
                                 <span className="font-medium">{student?.full_name}</span>
                               </Link>
+                            </TableCell>
+                            <TableCell className="text-center capitalize">
+                              {(student as any)?.gender || '-'}
                             </TableCell>
                             <TableCell className="font-mono text-sm text-center">
                               {student?.nim || '-'}

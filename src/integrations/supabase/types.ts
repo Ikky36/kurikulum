@@ -688,6 +688,7 @@ export type Database = {
           email: string
           enrollment_year: number | null
           full_name: string
+          gender: string | null
           id: string
           nim: string | null
           nip: string | null
@@ -702,6 +703,7 @@ export type Database = {
           email: string
           enrollment_year?: number | null
           full_name: string
+          gender?: string | null
           id: string
           nim?: string | null
           nip?: string | null
@@ -716,6 +718,7 @@ export type Database = {
           email?: string
           enrollment_year?: number | null
           full_name?: string
+          gender?: string | null
           id?: string
           nim?: string | null
           nip?: string | null
@@ -728,6 +731,7 @@ export type Database = {
       }
       programs: {
         Row: {
+          code: string | null
           created_at: string
           description: string | null
           id: string
@@ -735,6 +739,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          code?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -742,6 +747,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          code?: string | null
           created_at?: string
           description?: string | null
           id?: string

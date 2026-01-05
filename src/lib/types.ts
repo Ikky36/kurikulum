@@ -11,6 +11,7 @@ export interface Profile {
   class_group?: string;
   photo_url?: string;
   enrollment_year?: number;
+  gender?: 'pria' | 'wanita' | null;
   created_at: string;
   updated_at: string;
 }
@@ -175,6 +176,7 @@ export interface Curriculum {
 // Program (Prodi)
 export interface Program {
   id: string;
+  code?: string | null;
   name: string;
   description?: string | null;
   created_at?: string;
