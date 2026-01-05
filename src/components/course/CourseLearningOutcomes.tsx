@@ -48,8 +48,8 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
   const [lloIndikator, setLloIndikator] = useState<string[]>([]);
   const [lloMetode, setLloMetode] = useState<string[]>([]);
   const [lloReferensi, setLloReferensi] = useState<string[]>([]);
+  const [lloPertemuan, setLloPertemuan] = useState('');
 
-  // Assessment state
   const [showAssessmentDialog, setShowAssessmentDialog] = useState(false);
   const [editingAssessment, setEditingAssessment] = useState<Assessment | null>(null);
   const [assessmentCode, setAssessmentCode] = useState('');
@@ -279,6 +279,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
       indikator?: string[];
       metode?: string[];
       referensi?: string[];
+      pertemuan?: string;
     }) => {
       const { error } = await supabase.from('llos').insert([llo]);
       if (error) throw error;
@@ -300,6 +301,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
       indikator?: string[];
       metode?: string[];
       referensi?: string[];
+      pertemuan?: string;
     }) => {
       const { error } = await supabase.from('llos').update(llo).eq('id', id);
       if (error) throw error;
@@ -433,6 +435,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
     setLloIndikator([]);
     setLloMetode([]);
     setLloReferensi([]);
+    setLloPertemuan('');
     setEditingLlo(null);
     setShowLloDialog(false);
   };
@@ -460,7 +463,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
   };
 
   const openEditLlo = (llo: LLO) => {
-    const lloData = llo as LLO & { bahan_kajian?: string[]; indikator?: string[]; metode?: string[]; referensi?: string[] };
+    const lloData = llo as LLO & { bahan_kajian?: string[]; indikator?: string[]; metode?: string[]; referensi?: string[]; pertemuan?: string };
     setEditingLlo(llo);
     setLloCode(llo.code);
     setLloDescription(llo.description);
@@ -470,6 +473,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
     setLloIndikator(lloData.indikator || []);
     setLloMetode(lloData.metode || []);
     setLloReferensi(lloData.referensi || []);
+    setLloPertemuan(lloData.pertemuan || '');
     setShowLloDialog(true);
   };
 
@@ -507,7 +511,8 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
         bahan_kajian: lloBahanKajian,
         indikator: lloIndikator,
         metode: lloMetode,
-        referensi: lloReferensi
+        referensi: lloReferensi,
+        pertemuan: lloPertemuan || undefined
       });
     } else {
       createLloMutation.mutate({ 
@@ -518,7 +523,8 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
         bahan_kajian: lloBahanKajian,
         indikator: lloIndikator,
         metode: lloMetode,
-        referensi: lloReferensi
+        referensi: lloReferensi,
+        pertemuan: lloPertemuan || undefined
       });
     }
   };
@@ -827,7 +833,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                     <DialogTitle>{editingLlo ? 'Edit SUB-CPMK/LLO' : 'Tambah SUB-CPMK/LLO Baru'}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
                         <Label>CPMK/CLO Terkait</Label>
                         <Select value={selectedCloForLlo} onValueChange={setSelectedCloForLlo}>
@@ -844,6 +850,21 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                       <div className="space-y-2">
                         <Label>Kode SUB-CPMK</Label>
                         <Input value={lloCode} onChange={(e) => setLloCode(e.target.value)} placeholder="Contoh: SUB-CPMK-1.1" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Pertemuan</Label>
+                        <Select value={lloPertemuan} onValueChange={setLloPertemuan}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Pilih pertemuan" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 18 }, (_, i) => i + 1).map((num) => (
+                              <SelectItem key={num} value={`Pertemuan ${num}`}>
+                                Pertemuan {num}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
                     <div className="space-y-2">
@@ -985,6 +1006,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                 <TableRow className="bg-primary hover:bg-primary">
                   <TableHead className="w-12 text-primary-foreground">No</TableHead>
                   <TableHead className="w-28 text-primary-foreground">Kode</TableHead>
+                  <TableHead className="w-28 text-primary-foreground">Pertemuan</TableHead>
                   <TableHead className="text-primary-foreground">SUB-CPMK/LLO</TableHead>
                   <TableHead className="w-24 text-primary-foreground">CPMK</TableHead>
                   <TableHead className="text-primary-foreground">Bahan Kajian</TableHead>
@@ -997,11 +1019,12 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
               </TableHeader>
               <TableBody>
                 {llos.map((llo, index) => {
-                  const lloData = llo as LLO & { bahan_kajian?: string[]; indikator?: string[]; metode?: string[]; referensi?: string[] };
+                  const lloData = llo as LLO & { bahan_kajian?: string[]; indikator?: string[]; metode?: string[]; referensi?: string[]; pertemuan?: string };
                   return (
                     <TableRow key={llo.id}>
                       <TableCell className="text-center">{index + 1}</TableCell>
                       <TableCell><Badge variant="outline" className="font-mono">{llo.code}</Badge></TableCell>
+                      <TableCell className="text-sm">{lloData.pertemuan || '-'}</TableCell>
                       <TableCell className="text-sm max-w-xs">{llo.description}</TableCell>
                       <TableCell><Badge variant="secondary">{llo.clo?.code}</Badge></TableCell>
                       <TableCell className="text-sm">

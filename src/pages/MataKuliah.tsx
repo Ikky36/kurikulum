@@ -125,14 +125,14 @@ export default function MataKuliah() {
                         </SelectContent>
                       </Select>
                     </TableHead>
-                    <TableHead className="font-semibold text-primary-foreground">Nama Mata Kuliah</TableHead>
+                    <TableHead className="font-semibold text-primary-foreground">Mata Kuliah</TableHead>
                     <TableHead className="font-semibold text-primary-foreground">
                       <Select value={curriculumFilter} onValueChange={setCurriculumFilter}>
                         <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground">
                           <SelectValue placeholder="Kurikulum" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Semua Kurikulum</SelectItem>
+                          <SelectItem value="all">Kurikulum</SelectItem>
                           {curricula?.map(c => (
                             <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                           ))}
@@ -145,7 +145,7 @@ export default function MataKuliah() {
                           <SelectValue placeholder="Dosen Pengajar" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Semua Dosen</SelectItem>
+                          <SelectItem value="all">Dosen</SelectItem>
                           {filterOptions.instructors.map(name => (
                             <SelectItem key={name} value={name}>{name}</SelectItem>
                           ))}
@@ -160,7 +160,7 @@ export default function MataKuliah() {
                           <SelectValue placeholder="Semester" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Semua Semester</SelectItem>
+                          <SelectItem value="all">Semester</SelectItem>
                           {filterOptions.semesters.map(sem => (
                             <SelectItem key={sem} value={sem}>{sem}</SelectItem>
                           ))}

@@ -573,6 +573,7 @@ export type Database = {
           id: string
           indikator: string[] | null
           metode: string[] | null
+          pertemuan: string | null
           referensi: string[] | null
           updated_at: string
           weight_percentage: number
@@ -586,6 +587,7 @@ export type Database = {
           id?: string
           indikator?: string[] | null
           metode?: string[] | null
+          pertemuan?: string | null
           referensi?: string[] | null
           updated_at?: string
           weight_percentage: number
@@ -599,6 +601,7 @@ export type Database = {
           id?: string
           indikator?: string[] | null
           metode?: string[] | null
+          pertemuan?: string | null
           referensi?: string[] | null
           updated_at?: string
           weight_percentage?: number
