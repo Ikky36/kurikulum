@@ -119,7 +119,15 @@ export default function Kurikulum() {
   const { data: plos = [] } = useQuery({
     queryKey: ['plos'],
     queryFn: async () => {
-      const { data } = await supabase.from('plos').select('*, profil_lulusan:profil_lulusan_id(*)').order('code');
+      const { data } = await supabase.from('plos').select('*, profil_lulusan:profil_lulusan_id(*), plo_profil_lulusan(profil_lulusan_id, profil_lulusan:profil_lulusan_id(*))').order('code');
+      return data || [];
+    },
+  });
+
+  const { data: ploPls = [] } = useQuery({
+    queryKey: ['plo_profil_lulusan'],
+    queryFn: async () => {
+      const { data } = await supabase.from('plo_profil_lulusan').select('*');
       return data || [];
     },
   });
@@ -409,7 +417,7 @@ export default function Kurikulum() {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-lg">CPL - Capaian Pembelajaran Lulusan</CardTitle>
         {isAdmin && (
-          <Button size="sm" onClick={() => openEdit('plos', { code: '', description: '', profil_lulusan_id: '' }, true)}>
+          <Button size="sm" onClick={() => openEdit('plos', { code: '', description: '', profil_lulusan_ids: [] }, true)}>
             <Plus className="h-4 w-4 mr-1" /> Tambah
           </Button>
         )}
@@ -427,48 +435,55 @@ export default function Kurikulum() {
           </TableHeader>
           <TableBody>
             {plos.length > 0 ? (
-              plos.map((item: any, idx: number) => (
-                <TableRow key={item.id}>
-                  <TableCell>{idx + 1}</TableCell>
-                  <TableCell>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="cursor-help font-medium">{item.code}</span>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-sm">
-                          <p>{item.description}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </TableCell>
-                  <TableCell>{item.description}</TableCell>
-                  <TableCell>
-                    {item.profil_lulusan ? (
+              plos.map((item: any, idx: number) => {
+                // Get PL from junction table
+                const itemPls = item.plo_profil_lulusan?.map((ppl: any) => ppl.profil_lulusan).filter(Boolean) || [];
+                return (
+                  <TableRow key={item.id}>
+                    <TableCell>{idx + 1}</TableCell>
+                    <TableCell>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span className="cursor-help">{item.profil_lulusan.code}</span>
+                            <span className="cursor-help font-medium">{item.code}</span>
                           </TooltipTrigger>
                           <TooltipContent className="max-w-sm">
-                            <p>{item.profil_lulusan.profil}</p>
+                            <p>{item.description}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                    ) : '-'}
-                  </TableCell>
-                  {isAdmin && (
+                    </TableCell>
+                    <TableCell>{item.description}</TableCell>
                     <TableCell>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openEdit('plos', { 
-                            id: item.id, 
-                            code: item.code, 
-                            description: item.description, 
-                            profil_lulusan_id: item.profil_lulusan_id || '' 
-                          }, false)}
+                      {itemPls.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {itemPls.map((pl: any, i: number) => (
+                            <TooltipProvider key={i}>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="cursor-help bg-muted px-1.5 py-0.5 rounded text-xs">{pl.code}</span>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-sm">
+                                  <p>{pl.profil}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          ))}
+                        </div>
+                      ) : '-'}
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEdit('plos', { 
+                              id: item.id, 
+                              code: item.code, 
+                              description: item.description, 
+                              profil_lulusan_ids: item.plo_profil_lulusan?.map((ppl: any) => ppl.profil_lulusan_id) || []
+                            }, false)}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -483,7 +498,8 @@ export default function Kurikulum() {
                     </TableCell>
                   )}
                 </TableRow>
-              ))
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={isAdmin ? 5 : 4} className="text-center text-muted-foreground">
@@ -888,14 +904,58 @@ export default function Kurikulum() {
                 Batal
               </Button>
               <Button 
-                onClick={() => {
-                  const { id, code, description, profil_lulusan_id } = formData;
-                  saveMutation.mutate({ 
-                    table: 'plos', 
-                    data: { code, description, profil_lulusan_id: profil_lulusan_id || null }, 
-                    isNew, 
-                    id 
-                  });
+                onClick={async () => {
+                  const { id, code, description, profil_lulusan_ids } = formData;
+                  const plIds = (profil_lulusan_ids as unknown as string[]) || [];
+                  
+                  if (isNew) {
+                    // Create the PLO first
+                    const { data: newPlo, error: ploError } = await supabase
+                      .from('plos')
+                      .insert({ code, description })
+                      .select()
+                      .single();
+                    
+                    if (ploError) {
+                      toast.error('Gagal menyimpan CPL: ' + ploError.message);
+                      return;
+                    }
+                    
+                    // Insert PL relationships
+                    if (plIds.length > 0) {
+                      const plRelations = plIds.map(plId => ({
+                        plo_id: newPlo.id,
+                        profil_lulusan_id: plId
+                      }));
+                      await supabase.from('plo_profil_lulusan').insert(plRelations);
+                    }
+                  } else {
+                    // Update PLO
+                    const { error: ploError } = await supabase
+                      .from('plos')
+                      .update({ code, description })
+                      .eq('id', id);
+                    
+                    if (ploError) {
+                      toast.error('Gagal menyimpan CPL: ' + ploError.message);
+                      return;
+                    }
+                    
+                    // Delete existing PL relationships and insert new ones
+                    await supabase.from('plo_profil_lulusan').delete().eq('plo_id', id);
+                    if (plIds.length > 0) {
+                      const plRelations = plIds.map(plId => ({
+                        plo_id: id,
+                        profil_lulusan_id: plId
+                      }));
+                      await supabase.from('plo_profil_lulusan').insert(plRelations);
+                    }
+                  }
+                  
+                  queryClient.invalidateQueries({ queryKey: ['plos'] });
+                  queryClient.invalidateQueries({ queryKey: ['plo_profil_lulusan'] });
+                  toast.success('Data berhasil disimpan');
+                  setEditDialog(null);
                 }}
                 disabled={!formData.code || !formData.description}
               >

@@ -2,12 +2,17 @@ import { Layout } from '@/components/layout/Layout';
 import { CourseScoreCard } from '@/components/charts/CourseScoreCard';
 import { PLOAchievementChart } from '@/components/charts/PLOAchievementChart';
 import { useCoursesWithStats } from '@/hooks/useCourses';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GraduationCap, BookOpen, Users, TrendingUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function Index() {
   const { data: courses, isLoading, error } = useCoursesWithStats();
+  const { data: settings } = useAppSettings();
+
+  const appTitle = settings?.app_title || 'Student Achievement Tracker';
+  const appTagline = settings?.app_tagline || 'Pantau dan kelola nilai mahasiswa Program Bahasa Arab dengan mudah. Visualisasi data yang jelas untuk hasil pembelajaran yang lebih baik.';
 
   const totalStudents = courses?.reduce((sum, c) => sum + c.total_students, 0) || 0;
   const averageAllCourses = courses && courses.length > 0 
@@ -26,11 +31,10 @@ export default function Index() {
               <span>Program Bahasa Arab</span>
             </div>
             <h1 className="font-display text-4xl font-bold text-primary-foreground lg:text-5xl xl:text-6xl mb-4">
-              Student Achievement Tracker
+              {appTitle}
             </h1>
             <p className="text-lg text-primary-foreground/80 lg:text-xl max-w-2xl">
-              Pantau dan kelola nilai mahasiswa Program Bahasa Arab dengan mudah. 
-              Visualisasi data yang jelas untuk hasil pembelajaran yang lebih baik.
+              {appTagline}
             </p>
           </div>
         </div>

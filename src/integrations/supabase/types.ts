@@ -541,6 +541,42 @@ export type Database = {
           },
         ]
       }
+      plo_profil_lulusan: {
+        Row: {
+          created_at: string
+          id: string
+          plo_id: string
+          profil_lulusan_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          plo_id: string
+          profil_lulusan_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          plo_id?: string
+          profil_lulusan_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plo_profil_lulusan_plo_id_fkey"
+            columns: ["plo_id"]
+            isOneToOne: false
+            referencedRelation: "plos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plo_profil_lulusan_profil_lulusan_id_fkey"
+            columns: ["profil_lulusan_id"]
+            isOneToOne: false
+            referencedRelation: "profil_lulusan"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plos: {
         Row: {
           code: string
