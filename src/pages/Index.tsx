@@ -16,9 +16,10 @@ export default function Index() {
   const appTagline = settings?.app_tagline || 'Pantau dan kelola nilai mahasiswa Program Bahasa Arab dengan mudah. Visualisasi data yang jelas untuk hasil pembelajaran yang lebih baik.';
 
   const totalStudents = courses?.reduce((sum, c) => sum + c.total_students, 0) || 0;
-  const averageAllCourses = courses && courses.length > 0 
-    ? courses.reduce((sum, c) => sum + c.average_score, 0) / courses.length 
-    : 0;
+  
+  // Calculate total weighted average across all courses
+  const totalWeightedSum = courses?.reduce((sum, c) => sum + (c.average_score * c.total_students), 0) || 0;
+  const averageAllCourses = totalStudents > 0 ? totalWeightedSum / totalStudents : 0;
 
   return (
     <TooltipProvider>
@@ -48,8 +49,7 @@ export default function Index() {
             {[
               { icon: BookOpen, label: 'Mata Kuliah', value: courses?.length || 0, color: 'text-primary', tooltip: 'Total mata kuliah yang tersedia' },
               { icon: Users, label: 'Total Mahasiswa', value: totalStudents, color: 'text-secondary-foreground', tooltip: 'Total mahasiswa terdaftar di semua mata kuliah' },
-              { icon: TrendingUp, label: 'Rata-rata Nilai', value: `${averageAllCourses.toFixed(1)}%`, color: 'text-success', tooltip: 'Rata-rata nilai dari semua mata kuliah' },
-              { icon: GraduationCap, label: 'Passing Score', value: '60%', color: 'text-warning', tooltip: 'Nilai minimum untuk lulus' },
+              { icon: TrendingUp, label: 'Rata-rata Nilai', value: averageAllCourses.toFixed(1), color: 'text-success', tooltip: 'Rata-rata nilai akhir dari semua mahasiswa' },
             ].map((stat, i) => (
               <Tooltip key={stat.label}>
                 <TooltipTrigger asChild>

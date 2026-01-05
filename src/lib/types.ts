@@ -150,6 +150,7 @@ export interface InstrumenPenilaian {
   rentang_min: number;
   rentang_max: number;
   predikat: string;
+  color?: string | null;
   created_at?: string;
   updated_at?: string;
 }

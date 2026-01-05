@@ -16,12 +16,35 @@ import { ArrowLeft, Mail, User, BookOpen, CheckCircle2, XCircle } from 'lucide-r
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function StudentGrades() {
   const { studentId } = useParams<{ studentId: string }>();
   const { data: student, isLoading: studentLoading } = useStudent(studentId!);
   const { data: grades, isLoading: gradesLoading } = useStudentGrades(studentId!);
   const { data: courses } = useCourses();
+  
+  // Fetch instrumen penilaian for predikat
+  const { data: instrumenList } = useQuery({
+    queryKey: ['instrumen-penilaian'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('instrumen_penilaian').select('*').order('rentang_min');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Function to get predikat based on score
+  const getPredikat = (score: number | null) => {
+    if (score === null || !instrumenList || instrumenList.length === 0) {
+      return null;
+    }
+    const instrumen = instrumenList.find(
+      i => score >= i.rentang_min && score <= i.rentang_max
+    );
+    return instrumen ? { predikat: instrumen.predikat, color: instrumen.color } : null;
+  };
 
   const isLoading = studentLoading || gradesLoading;
 
@@ -246,7 +269,7 @@ export default function StudentGrades() {
         {/* Grades Table */}
         <Card className="animate-slide-up" style={{ animationDelay: '200ms' }}>
           <CardHeader>
-            <CardTitle className="text-lg">Detail Nilai Per Mata Kuliah</CardTitle>
+            <CardTitle className="text-lg">Nilai Mahasiswa</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -256,68 +279,82 @@ export default function StudentGrades() {
                     <TableHead className="w-12 text-primary-foreground font-semibold">No</TableHead>
                     <TableHead className="text-primary-foreground font-semibold">Kode</TableHead>
                     <TableHead className="text-primary-foreground font-semibold">Mata Kuliah</TableHead>
-                    <TableHead className="text-primary-foreground font-semibold text-center">Passing Score</TableHead>
                     <TableHead className="text-primary-foreground font-semibold text-center">Nilai Akhir</TableHead>
+                    <TableHead className="text-primary-foreground font-semibold text-center">Predikat</TableHead>
                     <TableHead className="text-primary-foreground font-semibold text-center">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {grades && grades.length > 0 ? (
-                    grades.map((grade, index) => (
-                      <TableRow key={grade.id} className="hover:bg-muted/30">
-                        <TableCell className="text-center">{index + 1}</TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="font-mono">
-                            {grade.course?.code}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Link 
-                            to={`/mata-kuliah/${grade.course_id}`}
-                            className="font-medium hover:text-primary transition-colors"
-                          >
-                            {grade.course?.name}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {grade.course?.passing_score || 60}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <Progress 
-                              value={grade.final_score} 
-                              className={cn(
-                                "w-16 h-2",
+                    grades.map((grade, index) => {
+                      const predikatData = getPredikat(grade.final_score);
+                      return (
+                        <TableRow key={grade.id} className="hover:bg-muted/30">
+                          <TableCell className="text-center">{index + 1}</TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="font-mono">
+                              {grade.course?.code}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Link 
+                              to={`/mata-kuliah/${grade.course_id}`}
+                              className="font-medium hover:text-primary transition-colors"
+                            >
+                              {grade.course?.name}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-2">
+                              <Progress 
+                                value={grade.final_score} 
+                                className={cn(
+                                  "w-16 h-2",
+                                  grade.final_score >= (grade.course?.passing_score || 60) 
+                                    ? "[&>div]:bg-success" 
+                                    : "[&>div]:bg-destructive"
+                                )}
+                              />
+                              <span className={cn(
+                                "font-bold",
                                 grade.final_score >= (grade.course?.passing_score || 60) 
-                                  ? "[&>div]:bg-success" 
-                                  : "[&>div]:bg-destructive"
-                              )}
-                            />
-                            <span className={cn(
-                              "font-bold",
-                              grade.final_score >= (grade.course?.passing_score || 60) 
-                                ? "text-success" 
-                                : "text-destructive"
-                            )}>
-                              {grade.final_score}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {grade.final_score >= (grade.course?.passing_score || 60) ? (
-                            <Badge className="bg-success/10 text-success border-success/20">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Lulus
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive" className="bg-destructive/10 text-destructive border-destructive/20">
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Belum Lulus
-                            </Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))
+                                  ? "text-success" 
+                                  : "text-destructive"
+                              )}>
+                                {grade.final_score}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {predikatData ? (
+                              <Badge 
+                                style={{ 
+                                  backgroundColor: predikatData.color || undefined,
+                                  color: predikatData.color ? '#fff' : undefined
+                                }}
+                              >
+                                {predikatData.predikat}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline">-</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {grade.final_score >= (grade.course?.passing_score || 60) ? (
+                              <Badge className="bg-success/10 text-success border-success/20">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Lulus
+                              </Badge>
+                            ) : (
+                              <Badge variant="destructive" className="bg-destructive/10 text-destructive border-destructive/20">
+                                <XCircle className="h-3 w-3 mr-1" />
+                                Belum Lulus
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   ) : (
                     <TableRow>
                       <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
