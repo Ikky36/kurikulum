@@ -80,13 +80,53 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
   const execCommand = useCallback((command: string, value?: string) => {
     document.execCommand(command, false, value);
     editorRef.current?.focus();
-    handleInput();
-  }, []);
+    // Use setTimeout to ensure DOM is updated before reading innerHTML
+    setTimeout(() => {
+      if (editorRef.current) {
+        onChange(editorRef.current.innerHTML);
+      }
+    }, 0);
+  }, [onChange]);
 
   const handleInput = useCallback(() => {
     if (editorRef.current) {
       onChange(editorRef.current.innerHTML);
     }
+  }, [onChange]);
+
+  const insertHtmlAtCursor = useCallback((html: string) => {
+    editorRef.current?.focus();
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      range.deleteContents();
+      
+      const temp = document.createElement('div');
+      temp.innerHTML = html;
+      const frag = document.createDocumentFragment();
+      let node: Node | null;
+      while ((node = temp.firstChild)) {
+        frag.appendChild(node);
+      }
+      range.insertNode(frag);
+      
+      // Move cursor after inserted content
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    } else {
+      // Fallback: append to editor
+      if (editorRef.current) {
+        editorRef.current.innerHTML += html;
+      }
+    }
+    
+    // Trigger update
+    setTimeout(() => {
+      if (editorRef.current) {
+        onChange(editorRef.current.innerHTML);
+      }
+    }, 10);
   }, [onChange]);
 
   const insertLink = () => {
@@ -117,22 +157,27 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
     if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
       const videoId = videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\s]+)/)?.[1];
       if (videoId) {
-        embedHtml = `<div class="video-embed" contenteditable="false"><iframe src="https://www.youtube.com/embed/${videoId}" width="560" height="315" frameborder="0" allowfullscreen></iframe></div><p><br></p>`;
+        embedHtml = `<div class="video-embed" style="position: relative; padding-bottom: 56.25%; height: 0; margin: 1rem 0; background: #f1f5f9; border-radius: 0.5rem; overflow: hidden;"><iframe src="https://www.youtube.com/embed/${videoId}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 0.5rem;" allowfullscreen></iframe></div><p><br></p>`;
+      } else {
+        toast({ title: 'Error', description: 'URL YouTube tidak valid', variant: 'destructive' });
+        return;
       }
     } else if (videoUrl.includes('vimeo.com')) {
       const vimeoId = videoUrl.match(/vimeo\.com\/(\d+)/)?.[1];
       if (vimeoId) {
-        embedHtml = `<div class="video-embed" contenteditable="false"><iframe src="https://player.vimeo.com/video/${vimeoId}" width="560" height="315" frameborder="0" allowfullscreen></iframe></div><p><br></p>`;
+        embedHtml = `<div class="video-embed" style="position: relative; padding-bottom: 56.25%; height: 0; margin: 1rem 0; background: #f1f5f9; border-radius: 0.5rem; overflow: hidden;"><iframe src="https://player.vimeo.com/video/${vimeoId}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 0.5rem;" allowfullscreen></iframe></div><p><br></p>`;
+      } else {
+        toast({ title: 'Error', description: 'URL Vimeo tidak valid', variant: 'destructive' });
+        return;
       }
     } else {
-      embedHtml = `<div class="media-container" contenteditable="false"><video src="${videoUrl}" controls style="max-width: 100%; border-radius: 0.5rem;"></video></div><p><br></p>`;
+      // Direct video file
+      embedHtml = `<div class="media-container" style="margin: 1rem 0;"><video src="${videoUrl}" controls style="max-width: 100%; border-radius: 0.5rem; background: #000;"></video></div><p><br></p>`;
     }
 
-    if (embedHtml) {
-      execCommand('insertHTML', embedHtml);
-      setVideoUrl('');
-      toast({ title: 'Video ditambahkan', description: 'Video player berhasil dimasukkan' });
-    }
+    insertHtmlAtCursor(embedHtml);
+    setVideoUrl('');
+    toast({ title: 'Video ditambahkan', description: 'Video player berhasil dimasukkan' });
   };
 
   const insertAudio = () => {
@@ -144,24 +189,25 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
     let embedHtml = '';
     if (audioUrl.includes('soundcloud.com')) {
       // SoundCloud embed
-      embedHtml = `<div class="audio-embed" contenteditable="false"><iframe width="100%" height="166" scrolling="no" frameborder="no" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(audioUrl)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true"></iframe></div><p><br></p>`;
+      embedHtml = `<div class="audio-embed" style="margin: 1rem 0; border-radius: 0.75rem; overflow: hidden;"><iframe width="100%" height="166" scrolling="no" style="border: none;" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(audioUrl)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true"></iframe></div><p><br></p>`;
     } else if (audioUrl.includes('spotify.com')) {
       // Spotify embed
       const spotifyMatch = audioUrl.match(/spotify\.com\/(track|episode|playlist)\/([a-zA-Z0-9]+)/);
       if (spotifyMatch) {
         const [, type, id] = spotifyMatch;
-        embedHtml = `<div class="audio-embed" contenteditable="false"><iframe style="border-radius:12px" src="https://open.spotify.com/embed/${type}/${id}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div><p><br></p>`;
+        embedHtml = `<div class="audio-embed" style="margin: 1rem 0; border-radius: 0.75rem; overflow: hidden;"><iframe style="border-radius:12px; border: none;" src="https://open.spotify.com/embed/${type}/${id}" width="100%" height="152" allowfullscreen allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div><p><br></p>`;
+      } else {
+        toast({ title: 'Error', description: 'URL Spotify tidak valid', variant: 'destructive' });
+        return;
       }
     } else {
       // Direct audio file
-      embedHtml = `<div class="media-container" contenteditable="false"><audio src="${audioUrl}" controls style="width: 100%;"></audio></div><p><br></p>`;
+      embedHtml = `<div class="media-container" style="margin: 1rem 0;"><audio src="${audioUrl}" controls style="width: 100%; border-radius: 0.5rem;"></audio></div><p><br></p>`;
     }
 
-    if (embedHtml) {
-      execCommand('insertHTML', embedHtml);
-      setAudioUrl('');
-      toast({ title: 'Audio ditambahkan', description: 'Audio player berhasil dimasukkan' });
-    }
+    insertHtmlAtCursor(embedHtml);
+    setAudioUrl('');
+    toast({ title: 'Audio ditambahkan', description: 'Audio player berhasil dimasukkan' });
   };
 
   const insertTable = () => {
