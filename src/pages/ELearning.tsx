@@ -1,14 +1,18 @@
 import { Layout } from '@/components/layout/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
-import { BookOpen, ClipboardList, FileText } from 'lucide-react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { BookOpen, ClipboardList, FileText, BarChart3 } from 'lucide-react';
 import { ElearningKelas } from '@/components/elearning/ElearningKelas';
 import { ElearningPresensi } from '@/components/elearning/ElearningPresensi';
 import { ElearningMateri } from '@/components/elearning/ElearningMateri';
+import { Button } from '@/components/ui/button';
 
 export default function ELearning() {
-  const { user, loading } = useAuth();
+  const { user, loading, profile } = useAuth();
+  const navigate = useNavigate();
+
+  const canViewRecap = profile?.role === 'admin' || profile?.role === 'dosen';
 
   if (loading) {
     return (
@@ -26,41 +30,53 @@ export default function ELearning() {
 
   return (
     <Layout>
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Header */}
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-display font-bold text-foreground">E-Learning</h1>
-          <p className="text-muted-foreground">
-            Kelola kelas, presensi, dan materi pembelajaran
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-3xl font-display font-bold text-foreground">E-Learning</h1>
+            <p className="text-muted-foreground">
+              Kelola kelas, presensi, dan materi pembelajaran
+            </p>
+          </div>
+          {canViewRecap && (
+            <Button 
+              variant="outline" 
+              className="gap-2 w-fit"
+              onClick={() => navigate('/e-learning/recap')}
+            >
+              <BarChart3 className="h-4 w-4" />
+              Lihat Rekapitulasi
+            </Button>
+          )}
         </div>
 
         {/* Tabs */}
         <Tabs defaultValue="kelas" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="kelas" className="gap-2">
+          <TabsList className="grid w-full max-w-md grid-cols-3 h-12">
+            <TabsTrigger value="kelas" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BookOpen className="h-4 w-4" />
               <span className="hidden sm:inline">Kelas</span>
             </TabsTrigger>
-            <TabsTrigger value="presensi" className="gap-2">
+            <TabsTrigger value="presensi" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <ClipboardList className="h-4 w-4" />
               <span className="hidden sm:inline">Presensi</span>
             </TabsTrigger>
-            <TabsTrigger value="materi" className="gap-2">
+            <TabsTrigger value="materi" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Materi</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="kelas" className="mt-6">
+          <TabsContent value="kelas" className="mt-8">
             <ElearningKelas />
           </TabsContent>
 
-          <TabsContent value="presensi" className="mt-6">
+          <TabsContent value="presensi" className="mt-8">
             <ElearningPresensi />
           </TabsContent>
 
-          <TabsContent value="materi" className="mt-6">
+          <TabsContent value="materi" className="mt-8">
             <ElearningMateri />
           </TabsContent>
         </Tabs>

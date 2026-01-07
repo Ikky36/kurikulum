@@ -1,13 +1,22 @@
 import { useState } from 'react';
-import { useCreateAssignment, useUpdateAssignment, useCourseLLOs, type ElearningAssignment } from '@/hooks/useElearningMaterials';
+import { 
+  useCreateAssignment, 
+  useUpdateAssignment, 
+  useCourseLLOs, 
+  useElearningMaterials,
+  useElearningAssignments,
+  type ElearningAssignment 
+} from '@/hooks/useElearningMaterials';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Lock, BookOpen, ClipboardCheck, ChevronDown, Shield, Eye } from 'lucide-react';
 
 interface AssignmentEditorProps {
   classId: string;
@@ -20,6 +29,8 @@ type ExtendedAssignment = ElearningAssignment & {
   seb_password?: string | null;
   seb_quit_password?: string | null;
   show_answer_mode?: string | null;
+  prerequisite_material_id?: string | null;
+  prerequisite_assignment_id?: string | null;
 };
 
 export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: AssignmentEditorProps) {
@@ -27,6 +38,8 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
   const createAssignment = useCreateAssignment();
   const updateAssignment = useUpdateAssignment();
   const { data: llos } = useCourseLLOs(courseId);
+  const { data: materials } = useElearningMaterials(classId);
+  const { data: assignments } = useElearningAssignments(classId);
 
   const extendedAssignment = assignment as ExtendedAssignment | null;
 
@@ -42,8 +55,14 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
   const [showAnswerMode, setShowAnswerMode] = useState(extendedAssignment?.show_answer_mode || 'after_quiz');
   const [sebPassword, setSebPassword] = useState(extendedAssignment?.seb_password || '');
   const [sebQuitPassword, setSebQuitPassword] = useState(extendedAssignment?.seb_quit_password || '');
+  const [prerequisiteMaterialId, setPrerequisiteMaterialId] = useState(extendedAssignment?.prerequisite_material_id || '');
+  const [prerequisiteAssignmentId, setPrerequisiteAssignmentId] = useState(extendedAssignment?.prerequisite_assignment_id || '');
+  const [showPrerequisites, setShowPrerequisites] = useState(false);
 
   const isLoading = createAssignment.isPending || updateAssignment.isPending;
+
+  // Filter out current assignment from prerequisites
+  const otherAssignments = (assignments || []).filter((a: any) => a.id !== assignment?.id);
 
   const handleSubmit = async () => {
     if (!title.trim()) {
@@ -66,6 +85,8 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
         seb_password: isSafeExamMode ? sebPassword : null,
         seb_quit_password: isSafeExamMode ? sebQuitPassword : null,
         elearning_class_id: classId,
+        prerequisite_material_id: prerequisiteMaterialId || null,
+        prerequisite_assignment_id: prerequisiteAssignmentId || null,
       };
 
       if (assignment) {
@@ -82,18 +103,26 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
   };
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-6">
+      {/* Basic Info */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label>Judul</Label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Judul tugas/quiz" />
+          <Label className="text-base font-medium">Judul *</Label>
+          <Input 
+            value={title} 
+            onChange={(e) => setTitle(e.target.value)} 
+            placeholder="Judul tugas/quiz"
+            className="h-12"
+          />
         </div>
         <div className="space-y-2">
-          <Label>Tipe</Label>
+          <Label className="text-base font-medium">Tipe</Label>
           <Select value={assignmentType} onValueChange={setAssignmentType}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-12">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
-              <SelectItem value="quiz">Quiz</SelectItem>
+              <SelectItem value="quiz">Quiz (Soal Interaktif)</SelectItem>
               <SelectItem value="file_upload">Upload File</SelectItem>
               <SelectItem value="link">Link</SelectItem>
             </SelectContent>
@@ -102,44 +131,143 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
       </div>
 
       <div className="space-y-2">
-        <Label>Deskripsi</Label>
-        <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Deskripsi..." />
+        <Label className="text-base font-medium">Deskripsi</Label>
+        <Textarea 
+          value={description} 
+          onChange={(e) => setDescription(e.target.value)} 
+          placeholder="Deskripsi tugas/quiz..."
+          rows={3}
+          className="resize-none"
+        />
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      {/* Time Settings */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label>Deadline</Label>
-          <Input type="datetime-local" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+          <Label className="text-sm font-medium">Deadline</Label>
+          <Input 
+            type="datetime-local" 
+            value={dueDate} 
+            onChange={(e) => setDueDate(e.target.value)}
+            className="h-11"
+          />
         </div>
         <div className="space-y-2">
-          <Label>Max Percobaan</Label>
-          <Input type="number" min="1" value={maxAttempts} onChange={(e) => setMaxAttempts(e.target.value)} />
+          <Label className="text-sm font-medium">Max Percobaan</Label>
+          <Input 
+            type="number" 
+            min="1" 
+            value={maxAttempts} 
+            onChange={(e) => setMaxAttempts(e.target.value)}
+            className="h-11"
+          />
         </div>
         <div className="space-y-2">
-          <Label>Batas Waktu (menit)</Label>
-          <Input type="number" min="1" value={timeLimit} onChange={(e) => setTimeLimit(e.target.value)} placeholder="Kosong = unlimited" />
+          <Label className="text-sm font-medium">Batas Waktu (menit)</Label>
+          <Input 
+            type="number" 
+            min="1" 
+            value={timeLimit} 
+            onChange={(e) => setTimeLimit(e.target.value)} 
+            placeholder="Kosong = unlimited"
+            className="h-11"
+          />
         </div>
       </div>
 
+      {/* LLO Selection */}
       <div className="space-y-2">
-        <Label>Sub-CPMK (Opsional)</Label>
+        <Label className="text-base font-medium">Sub-CPMK (Opsional)</Label>
         <Select value={selectedLloId || "__none__"} onValueChange={(v) => setSelectedLloId(v === "__none__" ? "" : v)}>
-          <SelectTrigger><SelectValue placeholder="Pilih Sub-CPMK..." /></SelectTrigger>
+          <SelectTrigger className="h-11">
+            <SelectValue placeholder="Pilih Sub-CPMK..." />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="__none__">Tidak ada</SelectItem>
             {(llos || []).map((llo: any) => (
-              <SelectItem key={llo.id} value={llo.id}>{llo.code} - {llo.description?.substring(0, 40)}...</SelectItem>
+              <SelectItem key={llo.id} value={llo.id}>
+                <span className="font-medium">{llo.code}</span> - {llo.description?.substring(0, 40)}...
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
 
+      {/* Prerequisites */}
+      <Collapsible open={showPrerequisites} onOpenChange={setShowPrerequisites}>
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className="w-full justify-between h-11">
+            <span className="flex items-center gap-2">
+              <Lock className="h-4 w-4" />
+              Prasyarat (Konten Bersyarat)
+            </span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${showPrerequisites ? 'rotate-180' : ''}`} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-4 space-y-4">
+          <Card className="bg-muted/50">
+            <CardContent className="py-4 space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Mahasiswa harus menyelesaikan prasyarat berikut sebelum dapat mengakses tugas/quiz ini.
+              </p>
+              
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  Prasyarat Materi
+                </Label>
+                <Select 
+                  value={prerequisiteMaterialId || "__none__"} 
+                  onValueChange={(v) => setPrerequisiteMaterialId(v === "__none__" ? "" : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih materi prasyarat..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Tidak ada</SelectItem>
+                    {(materials || []).map((m: any) => (
+                      <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <ClipboardCheck className="h-4 w-4" />
+                  Prasyarat Tugas/Quiz
+                </Label>
+                <Select 
+                  value={prerequisiteAssignmentId || "__none__"} 
+                  onValueChange={(v) => setPrerequisiteAssignmentId(v === "__none__" ? "" : v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih tugas/quiz prasyarat..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Tidak ada</SelectItem>
+                    {otherAssignments.map((a: any) => (
+                      <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
+
       {/* Answer Display Mode - Quiz only */}
       {assignmentType === 'quiz' && (
         <div className="space-y-2">
-          <Label>Tampilkan Jawaban</Label>
+          <Label className="text-base font-medium flex items-center gap-2">
+            <Eye className="h-4 w-4" />
+            Tampilkan Jawaban
+          </Label>
           <Select value={showAnswerMode} onValueChange={setShowAnswerMode}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-11">
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="after_each">Setelah setiap soal dijawab</SelectItem>
               <SelectItem value="after_quiz">Setelah quiz selesai</SelectItem>
@@ -152,51 +280,80 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
         </div>
       )}
 
-      <div className="flex items-center justify-between p-3 border rounded-lg">
-        <div><Label>Publikasikan</Label><p className="text-xs text-muted-foreground">Mahasiswa dapat melihat</p></div>
-        <Switch checked={isPublished} onCheckedChange={setIsPublished} />
-      </div>
+      {/* Publish Toggle */}
+      <Card className="bg-muted/30">
+        <CardContent className="py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-base font-medium">Publikasikan</Label>
+              <p className="text-xs text-muted-foreground mt-1">Mahasiswa dapat melihat dan mengerjakan</p>
+            </div>
+            <Switch checked={isPublished} onCheckedChange={setIsPublished} />
+          </div>
+        </CardContent>
+      </Card>
 
+      {/* Safe Exam Browser - Quiz only */}
       {assignmentType === 'quiz' && (
         <>
-          <div className="flex items-center justify-between p-3 border rounded-lg bg-destructive/5">
-            <div><Label>Safe Exam Browser</Label><p className="text-xs text-muted-foreground">Aktifkan mode ujian aman</p></div>
-            <Switch checked={isSafeExamMode} onCheckedChange={setIsSafeExamMode} />
-          </div>
+          <Card className="border-destructive/30 bg-destructive/5">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Shield className="h-5 w-5 text-destructive" />
+                  <div>
+                    <Label className="text-base font-medium">Safe Exam Browser</Label>
+                    <p className="text-xs text-muted-foreground mt-1">Aktifkan mode ujian aman (mengunci browser)</p>
+                  </div>
+                </div>
+                <Switch checked={isSafeExamMode} onCheckedChange={setIsSafeExamMode} />
+              </div>
+            </CardContent>
+          </Card>
 
           {isSafeExamMode && (
-            <div className="p-4 border rounded-lg space-y-4 bg-muted/50">
-              <p className="text-sm font-medium">Konfigurasi Safe Exam Browser</p>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Password Akses Quiz</Label>
-                  <Input 
-                    type="text" 
-                    value={sebPassword} 
-                    onChange={(e) => setSebPassword(e.target.value)}
-                    placeholder="Password untuk akses quiz..."
-                  />
-                  <p className="text-xs text-muted-foreground">Mahasiswa memasukkan password ini di SEB</p>
+            <Card className="bg-muted/50">
+              <CardContent className="py-4 space-y-4">
+                <p className="text-sm font-medium flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Konfigurasi Safe Exam Browser
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Password Akses Quiz</Label>
+                    <Input 
+                      type="text" 
+                      value={sebPassword} 
+                      onChange={(e) => setSebPassword(e.target.value)}
+                      placeholder="Password untuk akses quiz..."
+                      className="h-11"
+                    />
+                    <p className="text-xs text-muted-foreground">Mahasiswa memasukkan password ini di SEB</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Password Keluar SEB (Pengawas)</Label>
+                    <Input 
+                      type="text" 
+                      value={sebQuitPassword} 
+                      onChange={(e) => setSebQuitPassword(e.target.value)}
+                      placeholder="Password untuk keluar SEB..."
+                      className="h-11"
+                    />
+                    <p className="text-xs text-muted-foreground">Password untuk pengawas keluar SEB</p>
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Password Keluar SEB (Pengawas)</Label>
-                  <Input 
-                    type="text" 
-                    value={sebQuitPassword} 
-                    onChange={(e) => setSebQuitPassword(e.target.value)}
-                    placeholder="Password untuk keluar SEB..."
-                  />
-                  <p className="text-xs text-muted-foreground">Password untuk pengawas keluar SEB</p>
-                </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
         </>
       )}
 
-      <div className="flex justify-end gap-2 pt-4">
-        <Button variant="outline" onClick={onSuccess}>Batal</Button>
-        <Button onClick={handleSubmit} disabled={isLoading}>
+      {/* Submit */}
+      <div className="flex justify-end gap-3 pt-4 border-t">
+        <Button variant="outline" onClick={onSuccess} className="min-w-[100px]">
+          Batal
+        </Button>
+        <Button onClick={handleSubmit} disabled={isLoading} className="min-w-[120px]">
           {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           {assignment ? 'Perbarui' : 'Simpan'}
         </Button>

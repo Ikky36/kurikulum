@@ -16,9 +16,22 @@ interface AIContentGeneratorProps {
   onGenerated: (content: string) => void;
   courseTitle?: string;
   lloData?: { code: string; description: string; indikator?: string[] } | null;
+  defaultTopic?: string;
+  indicators?: string[];
+  questionType?: string;
+  questionCount?: number;
 }
 
-export function AIContentGenerator({ type, onGenerated, courseTitle, lloData }: AIContentGeneratorProps) {
+export function AIContentGenerator({ 
+  type, 
+  onGenerated, 
+  courseTitle, 
+  lloData,
+  defaultTopic = '',
+  indicators = [],
+  questionType = 'multiple_choice',
+  questionCount = 5
+}: AIContentGeneratorProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const generateAI = useAIGeneration();
