@@ -50,28 +50,54 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
     try {
       let parsedQuestions;
       try {
-        const jsonMatch = content.match(/\[[\s\S]*\]/);
-        parsedQuestions = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(content);
-      } catch {
+        // Clean up potential markdown code blocks
+        let cleanContent = content.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+        const jsonMatch = cleanContent.match(/\[[\s\S]*\]/);
+        parsedQuestions = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(cleanContent);
+      } catch (parseError) {
+        console.error('Parse error:', parseError, 'Content:', content);
         toast({ title: 'Error', description: 'Format response AI tidak valid', variant: 'destructive' });
         return;
       }
 
-      const questionsToInsert = parsedQuestions.map((q: any, idx: number) => ({
-        assignment_id: assignmentId,
-        question_type: aiQuestionType,
-        question_text: q.question_text,
-        options: q.options ? JSON.stringify(q.options) : null,
-        correct_answer: JSON.stringify(q.correct_answer),
-        feedback: q.feedback || null,
-        points: 10,
-        order_index: (questions?.length || 0) + idx + 1,
-      }));
+      if (!Array.isArray(parsedQuestions) || parsedQuestions.length === 0) {
+        toast({ title: 'Error', description: 'Tidak ada soal yang di-generate', variant: 'destructive' });
+        return;
+      }
+
+      const questionsToInsert = parsedQuestions.map((q: any, idx: number) => {
+        // Normalize options format - AI might return [{label, text}] or ["A", "B", ...]
+        let normalizedOptions = null;
+        if (q.options) {
+          if (Array.isArray(q.options) && q.options.length > 0) {
+            if (typeof q.options[0] === 'object' && q.options[0].text) {
+              // Format: [{label: "A", text: "..."}] -> extract texts
+              normalizedOptions = q.options.map((opt: any) => 
+                typeof opt === 'object' ? opt.text : opt
+              );
+            } else {
+              normalizedOptions = q.options;
+            }
+          }
+        }
+
+        return {
+          assignment_id: assignmentId,
+          question_type: q.question_type || aiQuestionType,
+          question_text: q.question_text,
+          options: normalizedOptions ? JSON.stringify(normalizedOptions) : null,
+          correct_answer: JSON.stringify(q.correct_answer),
+          feedback: q.feedback || q.explanation || null,
+          points: q.points || 10,
+          order_index: (questions?.length || 0) + idx + 1,
+        };
+      });
 
       await batchCreate.mutateAsync(questionsToInsert);
       toast({ title: 'Sukses', description: `${parsedQuestions.length} soal berhasil di-generate` });
       setShowAI(false);
     } catch (error: any) {
+      console.error('Generate error:', error);
       toast({ title: 'Error', description: error?.message || 'Gagal generate soal', variant: 'destructive' });
     }
   };
