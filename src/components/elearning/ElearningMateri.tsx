@@ -1,16 +1,12 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useElearningClasses, type ElearningClass } from '@/hooks/useElearning';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { FileText, BookOpen, ClipboardCheck, Construction } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FileText, BookOpen, ClipboardCheck } from 'lucide-react';
+import { MaterialList } from './MaterialList';
+import { AssignmentList } from './AssignmentList';
 
 type ClassWithRelations = ElearningClass & {
   class_group: { id: string; name: string } | null;
@@ -28,6 +24,8 @@ export function ElearningMateri() {
   const myClasses = typedClasses.filter(
     (c) => isAdmin || c.instructor_profile_id === profile?.id
   );
+  const selectedClass = myClasses.find(c => c.id === selectedClassId);
+  const canEdit = isAdmin || selectedClass?.instructor_profile_id === profile?.id;
 
   if (isLoading) {
     return (
@@ -39,7 +37,6 @@ export function ElearningMateri() {
 
   return (
     <div className="space-y-6">
-      {/* Class Selection */}
       <Card>
         <CardHeader>
           <CardTitle>Pilih Kelas</CardTitle>
@@ -61,54 +58,27 @@ export function ElearningMateri() {
         </CardContent>
       </Card>
 
-      {selectedClassId ? (
-        <div className="grid gap-6 md:grid-cols-2">
-          {/* Materials Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5" />
-                Materi Pembelajaran
-              </CardTitle>
-              <CardDescription>
-                Buat dan kelola materi berdasarkan Sub-CPMK
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <Construction className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-4">
-                Fitur materi pembelajaran sedang dalam pengembangan
-              </p>
-              <p className="text-xs text-muted-foreground max-w-sm">
-                Akan mencakup: pembuatan materi teks/gambar/video, integrasi AI untuk generate konten,
-                dan penghubungan dengan Sub-CPMK
-              </p>
-            </CardContent>
-          </Card>
+      {selectedClassId && selectedClass?.course?.id ? (
+        <Tabs defaultValue="materials" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="materials" className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4" />
+              Materi Pembelajaran
+            </TabsTrigger>
+            <TabsTrigger value="assignments" className="flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4" />
+              Tugas & Quiz
+            </TabsTrigger>
+          </TabsList>
 
-          {/* Assignments Section */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ClipboardCheck className="h-5 w-5" />
-                Tugas & Quiz
-              </CardTitle>
-              <CardDescription>
-                Buat dan kelola tugas serta quiz
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <Construction className="h-12 w-12 text-muted-foreground mb-4" />
-              <p className="text-muted-foreground mb-4">
-                Fitur tugas dan quiz sedang dalam pengembangan
-              </p>
-              <p className="text-xs text-muted-foreground max-w-sm">
-                Akan mencakup: berbagai jenis soal quiz, Safe Exam Browser, 
-                feedback AI, dan instrumen penilaian
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+          <TabsContent value="materials">
+            <MaterialList classId={selectedClassId} courseId={selectedClass.course.id} canEdit={canEdit} />
+          </TabsContent>
+
+          <TabsContent value="assignments">
+            <AssignmentList classId={selectedClassId} courseId={selectedClass.course.id} canEdit={canEdit} />
+          </TabsContent>
+        </Tabs>
       ) : (
         <Card className="border-dashed">
           <CardContent className="flex flex-col items-center justify-center py-12">
