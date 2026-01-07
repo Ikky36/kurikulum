@@ -42,7 +42,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Users, BookOpen, Eye, EyeOff, Globe } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, BookOpen, Eye, EyeOff, Globe, GraduationCap, Calendar } from 'lucide-react';
 
 type ClassWithRelations = ElearningClass & {
   class_group: { id: string; name: string } | null;
@@ -175,6 +175,17 @@ export function ElearningKelas() {
     }
   };
 
+  const getVisibilityColor = (visibility: string) => {
+    switch (visibility) {
+      case 'public':
+        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
+      case 'instructors_only':
+        return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
+      default:
+        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
@@ -188,98 +199,134 @@ export function ElearningKelas() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 p-6 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent rounded-xl border">
         <div>
-          <h2 className="text-xl font-semibold">Daftar Kelas</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-2xl font-bold text-foreground">Daftar Kelas</h2>
+          <p className="text-muted-foreground mt-1">
             {typedClasses.length} kelas tersedia
           </p>
         </div>
         {canManage && (
-          <Button onClick={openCreateDialog} className="gap-2">
-            <Plus className="h-4 w-4" />
-            Buat Kelas
+          <Button onClick={openCreateDialog} size="lg" className="gap-2 shadow-md">
+            <Plus className="h-5 w-5" />
+            Buat Kelas Baru
           </Button>
         )}
       </div>
 
       {/* Classes Grid */}
       {typedClasses.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <BookOpen className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground text-center">
-              Belum ada kelas tersedia.
-              {canManage && ' Klik "Buat Kelas" untuk menambahkan.'}
+        <Card className="border-dashed border-2">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+              <BookOpen className="h-10 w-10 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Belum Ada Kelas</h3>
+            <p className="text-muted-foreground text-center max-w-md">
+              {canManage 
+                ? 'Mulai dengan membuat kelas e-learning pertama Anda. Klik tombol di atas untuk memulai.'
+                : 'Belum ada kelas yang tersedia untuk Anda saat ini.'}
             </p>
+            {canManage && (
+              <Button onClick={openCreateDialog} className="mt-6 gap-2">
+                <Plus className="h-4 w-4" />
+                Buat Kelas Pertama
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {typedClasses.map((cls) => (
-            <Card key={cls.id} className="group hover:shadow-lg transition-shadow">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-2">
+            <Card 
+              key={cls.id} 
+              className="group hover:shadow-xl transition-all duration-300 overflow-hidden border-0 shadow-md bg-card"
+            >
+              {/* Card Header with Gradient */}
+              <div className="h-2 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
+              
+              <CardHeader className="pb-4">
+                <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg line-clamp-1">{cls.title}</CardTitle>
-                    <CardDescription className="line-clamp-2 mt-1">
+                    <CardTitle className="text-xl font-bold line-clamp-2 group-hover:text-primary transition-colors">
+                      {cls.title}
+                    </CardTitle>
+                    <CardDescription className="line-clamp-2 mt-2">
                       {cls.description || 'Tidak ada deskripsi'}
                     </CardDescription>
                   </div>
-                  <Badge variant="outline" className="gap-1 shrink-0">
+                  <Badge 
+                    variant="secondary" 
+                    className={`gap-1.5 shrink-0 ${getVisibilityColor(cls.visibility)}`}
+                  >
                     {getVisibilityIcon(cls.visibility)}
                     <span className="hidden sm:inline">{getVisibilityLabel(cls.visibility)}</span>
                   </Badge>
                 </div>
               </CardHeader>
+              
               <CardContent className="space-y-4">
                 {/* Course & Class Info */}
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-muted-foreground" />
-                    <span className="truncate">
-                      {cls.course?.code} - {cls.course?.name}
-                    </span>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                      <BookOpen className="h-4 w-4 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Mata Kuliah</p>
+                      <p className="font-medium text-sm truncate">
+                        {cls.course?.code} - {cls.course?.name}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span>{cls.class_group?.name || '-'}</span>
+                  
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                    <div className="p-2 bg-secondary/80 rounded-lg">
+                      <Users className="h-4 w-4 text-secondary-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Kelas</p>
+                      <p className="font-medium text-sm">{cls.class_group?.name || '-'}</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Instructor */}
-                <div className="flex items-center gap-2 pt-2 border-t">
-                  <Avatar className="h-8 w-8">
+                <div className="flex items-center gap-3 pt-4 border-t">
+                  <Avatar className="h-10 w-10 ring-2 ring-primary/20">
                     <AvatarImage src={cls.instructor?.photo_url || undefined} />
-                    <AvatarFallback className="text-xs">
+                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">
                       {cls.instructor?.full_name?.charAt(0) || '?'}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm truncate">{cls.instructor?.full_name}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-muted-foreground">Pengajar</p>
+                    <p className="font-medium text-sm truncate">{cls.instructor?.full_name}</p>
+                  </div>
                 </div>
 
                 {/* Actions */}
                 {(isAdmin || cls.instructor_profile_id === profile?.id) && (
-                  <div className="flex gap-2 pt-2">
+                  <div className="flex gap-2 pt-4 border-t">
                     <Button
                       variant="outline"
                       size="sm"
-                      className="flex-1 gap-1"
+                      className="flex-1 gap-2 hover:bg-primary hover:text-primary-foreground transition-colors"
                       onClick={() => openEditDialog(cls)}
                     >
-                      <Edit className="h-3 w-3" />
-                      Edit
+                      <Edit className="h-4 w-4" />
+                      Edit Kelas
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
-                      className="gap-1 text-destructive hover:text-destructive"
+                      className="gap-2 text-destructive hover:text-destructive-foreground hover:bg-destructive transition-colors"
                       onClick={() => {
                         setDeletingClassId(cls.id);
                         setDeleteDialogOpen(true);
                       }}
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 )}
@@ -291,22 +338,23 @@ export function ElearningKelas() {
 
       {/* Create/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingClass ? 'Edit Kelas' : 'Buat Kelas Baru'}</DialogTitle>
+            <DialogTitle className="text-xl">{editingClass ? 'Edit Kelas' : 'Buat Kelas Baru'}</DialogTitle>
             <DialogDescription>
-              {editingClass ? 'Perbarui informasi kelas' : 'Tambahkan kelas e-learning baru'}
+              {editingClass ? 'Perbarui informasi kelas e-learning' : 'Tambahkan kelas e-learning baru untuk mahasiswa'}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          <div className="space-y-5 py-4">
             <div className="space-y-2">
               <Label htmlFor="title">Judul Kelas *</Label>
               <Input
                 id="title"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Masukkan judul kelas"
+                placeholder="Contoh: Pemrograman Web - Kelas A"
+                className="h-11"
               />
             </div>
 
@@ -316,8 +364,9 @@ export function ElearningKelas() {
                 id="description"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Deskripsi singkat kelas"
+                placeholder="Deskripsi singkat tentang kelas ini..."
                 rows={3}
+                className="resize-none"
               />
             </div>
 
@@ -327,13 +376,13 @@ export function ElearningKelas() {
                 value={formData.course_id}
                 onValueChange={(value) => setFormData({ ...formData, course_id: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11">
                   <SelectValue placeholder="Pilih mata kuliah" />
                 </SelectTrigger>
                 <SelectContent>
                   {courses?.map((course) => (
                     <SelectItem key={course.id} value={course.id}>
-                      {course.code} - {course.name}
+                      <span className="font-medium">{course.code}</span> - {course.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -346,7 +395,7 @@ export function ElearningKelas() {
                 value={formData.class_group_id}
                 onValueChange={(value) => setFormData({ ...formData, class_group_id: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11">
                   <SelectValue placeholder="Pilih kelas" />
                 </SelectTrigger>
                 <SelectContent>
@@ -367,26 +416,35 @@ export function ElearningKelas() {
                   setFormData({ ...formData, visibility: value })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="class_only">
-                    <div className="flex items-center gap-2">
-                      <Eye className="h-4 w-4" />
-                      Kelas Saja - Hanya mahasiswa di kelas ini
+                    <div className="flex items-center gap-3">
+                      <Eye className="h-4 w-4 text-blue-500" />
+                      <div>
+                        <p className="font-medium">Kelas Saja</p>
+                        <p className="text-xs text-muted-foreground">Hanya mahasiswa di kelas ini</p>
+                      </div>
                     </div>
                   </SelectItem>
                   <SelectItem value="instructors_only">
-                    <div className="flex items-center gap-2">
-                      <EyeOff className="h-4 w-4" />
-                      Dosen Saja - Hanya dosen mata kuliah ini
+                    <div className="flex items-center gap-3">
+                      <EyeOff className="h-4 w-4 text-orange-500" />
+                      <div>
+                        <p className="font-medium">Dosen Saja</p>
+                        <p className="text-xs text-muted-foreground">Hanya dosen yang bisa melihat</p>
+                      </div>
                     </div>
                   </SelectItem>
                   <SelectItem value="public">
-                    <div className="flex items-center gap-2">
-                      <Globe className="h-4 w-4" />
-                      Publik - Semua orang bisa melihat
+                    <div className="flex items-center gap-3">
+                      <Globe className="h-4 w-4 text-green-500" />
+                      <div>
+                        <p className="font-medium">Publik</p>
+                        <p className="text-xs text-muted-foreground">Semua orang bisa melihat</p>
+                      </div>
                     </div>
                   </SelectItem>
                 </SelectContent>
@@ -394,12 +452,12 @@ export function ElearningKelas() {
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Batal
             </Button>
-            <Button onClick={handleSubmit} disabled={createClass.isPending || updateClass.isPending}>
-              {editingClass ? 'Simpan' : 'Buat'}
+            <Button onClick={handleSubmit} disabled={createClass.isPending || updateClass.isPending} className="min-w-[100px]">
+              {editingClass ? 'Simpan Perubahan' : 'Buat Kelas'}
             </Button>
           </DialogFooter>
         </DialogContent>

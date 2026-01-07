@@ -1,12 +1,14 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useElearningAssignments, useDeleteAssignment, type ElearningAssignment } from '@/hooks/useElearningMaterials';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ClipboardCheck, FileUp, HelpCircle, Trash2, Pencil, Eye, Plus, Clock, Users, Shield } from 'lucide-react';
+import { ClipboardCheck, FileUp, HelpCircle, Trash2, Pencil, Play, Plus, Clock, Users, Shield, Lock, CheckCircle, AlertCircle } from 'lucide-react';
 import { AssignmentEditor } from './AssignmentEditor';
 import { QuizManager } from './QuizManager';
 import { format } from 'date-fns';
@@ -21,10 +23,16 @@ interface AssignmentListProps {
 type AssignmentWithRelations = ElearningAssignment & {
   llo?: { id: string; code: string; description: string } | null;
   assessment?: { id: string; code: string; name: string } | null;
+  prerequisite_material_id?: string | null;
+  prerequisite_assignment_id?: string | null;
+  seb_password?: string | null;
+  seb_quit_password?: string | null;
 };
 
 export function AssignmentList({ classId, courseId, canEdit }: AssignmentListProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { profile } = useAuth();
   const { data: assignments, isLoading } = useElearningAssignments(classId);
   const deleteAssignment = useDeleteAssignment();
   
@@ -33,6 +41,7 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
   const [managingQuiz, setManagingQuiz] = useState<AssignmentWithRelations | null>(null);
 
   const typedAssignments = (assignments || []) as AssignmentWithRelations[];
+  const isMahasiswa = profile?.role === 'mahasiswa';
 
   const handleDelete = async (id: string) => {
     try {
@@ -43,138 +52,221 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
     }
   };
 
+  const handleStartQuiz = (assignment: AssignmentWithRelations) => {
+    navigate(`/quiz/${assignment.id}`);
+  };
+
   const getAssignmentIcon = (type: string) => {
     switch (type) {
-      case 'quiz': return <HelpCircle className="h-4 w-4" />;
-      case 'file_upload': return <FileUp className="h-4 w-4" />;
-      default: return <ClipboardCheck className="h-4 w-4" />;
+      case 'quiz': return <HelpCircle className="h-5 w-5" />;
+      case 'file_upload': return <FileUp className="h-5 w-5" />;
+      default: return <ClipboardCheck className="h-5 w-5" />;
     }
   };
 
-  const getAssignmentTypeBadge = (type: string) => {
+  const getAssignmentTypeColor = (type: string) => {
     switch (type) {
-      case 'quiz': return <Badge>Quiz</Badge>;
-      case 'file_upload': return <Badge variant="secondary">Upload File</Badge>;
-      case 'link': return <Badge variant="outline">Link</Badge>;
-      default: return <Badge variant="secondary">{type}</Badge>;
+      case 'quiz': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+      case 'file_upload': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400';
     }
+  };
+
+  const hasPrerequisite = (assignment: AssignmentWithRelations) => {
+    return assignment.prerequisite_material_id || assignment.prerequisite_assignment_id;
+  };
+
+  const isOverdue = (dueDate: string | null) => {
+    if (!dueDate) return false;
+    return new Date(dueDate) < new Date();
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[100px]">
-        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-[200px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {canEdit && (
         <div className="flex justify-end">
-          <Button onClick={() => { setEditingAssignment(null); setShowEditor(true); }}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button 
+            onClick={() => { setEditingAssignment(null); setShowEditor(true); }}
+            size="lg"
+            className="gap-2 shadow-md"
+          >
+            <Plus className="h-5 w-5" />
             Tambah Tugas/Quiz
           </Button>
         </div>
       )}
 
       {typedAssignments.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center py-8">
-            <ClipboardCheck className="h-10 w-10 text-muted-foreground mb-3" />
-            <p className="text-muted-foreground text-center">Belum ada tugas atau quiz</p>
+        <Card className="border-dashed border-2">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+              <ClipboardCheck className="h-10 w-10 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Belum Ada Tugas/Quiz</h3>
+            <p className="text-muted-foreground text-center max-w-md mb-6">
+              Mulai dengan menambahkan tugas atau quiz pertama. Anda dapat menggunakan AI untuk membantu membuat soal.
+            </p>
             {canEdit && (
-              <Button variant="outline" className="mt-4" onClick={() => setShowEditor(true)}>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button onClick={() => setShowEditor(true)} className="gap-2">
+                <Plus className="h-4 w-4" />
                 Buat Tugas/Quiz Pertama
               </Button>
             )}
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           {typedAssignments.map((assignment) => (
-            <Card key={assignment.id} className="hover:shadow-md transition-shadow">
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2">
-                    {getAssignmentIcon(assignment.assignment_type)}
-                    <CardTitle className="text-lg">{assignment.title}</CardTitle>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {getAssignmentTypeBadge(assignment.assignment_type)}
-                    <Badge variant={assignment.is_published ? 'default' : 'secondary'}>
-                      {assignment.is_published ? 'Published' : 'Draft'}
-                    </Badge>
-                    {assignment.is_safe_exam_mode && (
-                      <Badge variant="destructive" className="flex items-center gap-1">
-                        <Shield className="h-3 w-3" />
-                        SEB
-                      </Badge>
-                    )}
+            <Card 
+              key={assignment.id} 
+              className="group hover:shadow-lg transition-all duration-300 overflow-hidden"
+            >
+              {/* Top Badge Bar */}
+              <div className="h-1.5 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
+              
+              <CardHeader className="pb-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 flex-1">
+                    <div className={`p-3 rounded-xl shrink-0 ${getAssignmentTypeColor(assignment.assignment_type)}`}>
+                      {getAssignmentIcon(assignment.assignment_type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg line-clamp-2 group-hover:text-primary transition-colors">
+                        {assignment.title}
+                      </CardTitle>
+                      {assignment.description && (
+                        <CardDescription className="mt-1 line-clamp-2">
+                          {assignment.description}
+                        </CardDescription>
+                      )}
+                    </div>
                   </div>
                 </div>
-                {assignment.description && (
-                  <CardDescription className="mt-2">{assignment.description}</CardDescription>
-                )}
+                
+                {/* Badges */}
+                <div className="flex items-center gap-2 flex-wrap mt-3">
+                  <Badge className={getAssignmentTypeColor(assignment.assignment_type)}>
+                    {assignment.assignment_type === 'quiz' ? 'Quiz' : 
+                     assignment.assignment_type === 'file_upload' ? 'Upload File' : 'Link'}
+                  </Badge>
+                  <Badge 
+                    variant={assignment.is_published ? 'default' : 'secondary'}
+                    className={assignment.is_published ? 'bg-green-100 text-green-700' : ''}
+                  >
+                    {assignment.is_published ? (
+                      <><CheckCircle className="h-3 w-3 mr-1" />Published</>
+                    ) : 'Draft'}
+                  </Badge>
+                  {assignment.is_safe_exam_mode && (
+                    <Badge variant="destructive" className="gap-1">
+                      <Shield className="h-3 w-3" />
+                      SEB
+                    </Badge>
+                  )}
+                  {hasPrerequisite(assignment) && (
+                    <Badge variant="outline" className="gap-1 text-orange-600 border-orange-300">
+                      <Lock className="h-3 w-3" />
+                      Bersyarat
+                    </Badge>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    {assignment.due_date && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Deadline: {format(new Date(assignment.due_date), 'dd MMM yyyy HH:mm', { locale: idLocale })}
-                      </span>
-                    )}
-                    {assignment.max_attempts && (
-                      <span className="flex items-center gap-1">
-                        <Users className="h-3 w-3" />
-                        Max {assignment.max_attempts}x percobaan
-                      </span>
-                    )}
-                    {assignment.time_limit_minutes && (
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {assignment.time_limit_minutes} menit
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {assignment.assignment_type === 'quiz' && canEdit && (
-                      <Button variant="outline" size="sm" onClick={() => setManagingQuiz(assignment)}>
-                        <HelpCircle className="h-4 w-4 mr-1" />
-                        Kelola Soal
-                      </Button>
-                    )}
-                    {canEdit && (
-                      <>
-                        <Button variant="ghost" size="sm" onClick={() => { setEditingAssignment(assignment); setShowEditor(true); }}>
-                          <Pencil className="h-4 w-4" />
+              
+              <CardContent className="space-y-4">
+                {/* Time & Attempts Info */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                  {assignment.due_date && (
+                    <span className={`flex items-center gap-1.5 ${isOverdue(assignment.due_date) ? 'text-destructive' : ''}`}>
+                      {isOverdue(assignment.due_date) ? (
+                        <AlertCircle className="h-4 w-4" />
+                      ) : (
+                        <Clock className="h-4 w-4" />
+                      )}
+                      {format(new Date(assignment.due_date), 'dd MMM yyyy, HH:mm', { locale: idLocale })}
+                    </span>
+                  )}
+                  {assignment.max_attempts && (
+                    <span className="flex items-center gap-1.5">
+                      <Users className="h-4 w-4" />
+                      {assignment.max_attempts}x percobaan
+                    </span>
+                  )}
+                  {assignment.time_limit_minutes && (
+                    <span className="flex items-center gap-1.5">
+                      <Clock className="h-4 w-4" />
+                      {assignment.time_limit_minutes} menit
+                    </span>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center justify-between gap-2 pt-3 border-t">
+                  {/* Student Actions */}
+                  {isMahasiswa && assignment.assignment_type === 'quiz' && assignment.is_published && (
+                    <Button 
+                      onClick={() => handleStartQuiz(assignment)} 
+                      className="gap-2 flex-1"
+                    >
+                      <Play className="h-4 w-4" />
+                      Kerjakan Quiz
+                    </Button>
+                  )}
+
+                  {/* Instructor Actions */}
+                  {canEdit && (
+                    <div className="flex items-center gap-2 flex-1 justify-end">
+                      {assignment.assignment_type === 'quiz' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setManagingQuiz(assignment)}
+                          className="gap-1"
+                        >
+                          <HelpCircle className="h-4 w-4" />
+                          Kelola Soal
                         </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="sm" className="text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Hapus Tugas/Quiz?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Tindakan ini tidak dapat dibatalkan. "{assignment.title}" akan dihapus permanen beserta semua soal dan submission.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Batal</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(assignment.id)}>Hapus</AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </>
-                    )}
-                  </div>
+                      )}
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => { setEditingAssignment(assignment); setShowEditor(true); }}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Hapus Tugas/Quiz?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Tindakan ini tidak dapat dibatalkan. "{assignment.title}" akan dihapus permanen beserta semua soal dan submission.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Batal</AlertDialogCancel>
+                            <AlertDialogAction 
+                              onClick={() => handleDelete(assignment.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Hapus
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -184,9 +276,11 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
 
       {/* Assignment Editor Dialog */}
       <Dialog open={showEditor} onOpenChange={setShowEditor}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingAssignment ? 'Edit Tugas/Quiz' : 'Tambah Tugas/Quiz Baru'}</DialogTitle>
+            <DialogTitle className="text-xl">
+              {editingAssignment ? 'Edit Tugas/Quiz' : 'Tambah Tugas/Quiz Baru'}
+            </DialogTitle>
           </DialogHeader>
           <AssignmentEditor
             classId={classId}
@@ -204,12 +298,19 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
       <Dialog open={!!managingQuiz} onOpenChange={() => setManagingQuiz(null)}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Kelola Soal Quiz: {managingQuiz?.title}</DialogTitle>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <HelpCircle className="h-5 w-5" />
+              Kelola Soal: {managingQuiz?.title}
+            </DialogTitle>
           </DialogHeader>
           {managingQuiz && (
             <QuizManager
               assignmentId={managingQuiz.id}
               courseId={courseId}
+              assignmentTitle={managingQuiz.title}
+              isSafeExamMode={managingQuiz.is_safe_exam_mode}
+              sebPassword={managingQuiz.seb_password}
+              sebQuitPassword={managingQuiz.seb_quit_password}
             />
           )}
         </DialogContent>
