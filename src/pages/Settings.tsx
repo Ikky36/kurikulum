@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff, Scale } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff, Scale, CheckCircle2, XCircle, Zap } from 'lucide-react';
 import { Curriculum, Program, AppSetting, InstrumenPenilaian } from '@/lib/types';
 import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
 
@@ -50,6 +50,8 @@ export default function Settings() {
   const [aiApiKey, setAiApiKey] = useState('');
   const [aiProvider, setAiProvider] = useState('gemini');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [testingAi, setTestingAi] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
   // Prompts state
   const [prompts, setPrompts] = useState<Record<string, string>>({});
@@ -393,6 +395,75 @@ export default function Settings() {
   const handleSaveAiSettings = async () => {
     await updateSettingMutation.mutateAsync({ key: 'ai_api_key', value: aiApiKey });
     await updateSettingMutation.mutateAsync({ key: 'ai_provider', value: aiProvider });
+  };
+
+  const handleTestAiConnection = async () => {
+    setTestingAi(true);
+    setAiTestResult(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('elearning-ai', {
+        body: {
+          type: 'generate_material',
+          topic: 'Test koneksi AI',
+          context: 'Ini adalah test sederhana untuk memastikan AI dapat terhubung dengan baik.'
+        }
+      });
+
+      if (error) {
+        setAiTestResult({
+          success: false,
+          message: `Gagal terhubung: ${error.message}`
+        });
+        toast({
+          title: 'Koneksi Gagal',
+          description: error.message,
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      if (data?.error) {
+        setAiTestResult({
+          success: false,
+          message: `Error dari AI: ${data.error}`
+        });
+        toast({
+          title: 'Koneksi Gagal',
+          description: data.error,
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      if (data?.content) {
+        setAiTestResult({
+          success: true,
+          message: 'Koneksi berhasil! AI dapat digunakan untuk membuat materi dan quiz.'
+        });
+        toast({
+          title: 'Koneksi Berhasil',
+          description: 'AI dapat terhubung dan siap digunakan untuk e-learning.',
+        });
+      } else {
+        setAiTestResult({
+          success: false,
+          message: 'Response tidak valid dari AI'
+        });
+      }
+    } catch (err: any) {
+      setAiTestResult({
+        success: false,
+        message: `Error: ${err.message || 'Unknown error'}`
+      });
+      toast({
+        title: 'Koneksi Gagal',
+        description: err.message || 'Terjadi kesalahan saat testing',
+        variant: 'destructive'
+      });
+    } finally {
+      setTestingAi(false);
+    }
   };
 
   const handleSavePrompt = async (key: string, value: string) => {
@@ -851,6 +922,66 @@ export default function Settings() {
                       <p className="text-xs text-muted-foreground">
                         API Key digunakan untuk mengakses AI yang membantu generate deskripsi CPMK, LLO, dan lainnya.
                       </p>
+                    </div>
+
+                    {/* AI Connection Test */}
+                    <div className="pt-4 border-t space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label className="text-base">Test Koneksi AI E-Learning</Label>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Test apakah AI dapat terhubung dan digunakan untuk membuat materi atau quiz
+                          </p>
+                        </div>
+                        <Button 
+                          onClick={handleTestAiConnection} 
+                          disabled={testingAi}
+                          variant="outline"
+                          className="min-w-32"
+                        >
+                          {testingAi ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Testing...
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="h-4 w-4 mr-2" />
+                              Test Koneksi
+                            </>
+                          )}
+                        </Button>
+                      </div>
+
+                      {aiTestResult && (
+                        <div className={`p-4 rounded-lg flex items-start gap-3 ${
+                          aiTestResult.success 
+                            ? 'bg-green-50 border border-green-200 dark:bg-green-950/30 dark:border-green-900' 
+                            : 'bg-red-50 border border-red-200 dark:bg-red-950/30 dark:border-red-900'
+                        }`}>
+                          {aiTestResult.success ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                          )}
+                          <div>
+                            <p className={`font-medium ${
+                              aiTestResult.success 
+                                ? 'text-green-800 dark:text-green-200' 
+                                : 'text-red-800 dark:text-red-200'
+                            }`}>
+                              {aiTestResult.success ? 'Berhasil!' : 'Gagal'}
+                            </p>
+                            <p className={`text-sm mt-0.5 ${
+                              aiTestResult.success 
+                                ? 'text-green-700 dark:text-green-300' 
+                                : 'text-red-700 dark:text-red-300'
+                            }`}>
+                              {aiTestResult.message}
+                            </p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
