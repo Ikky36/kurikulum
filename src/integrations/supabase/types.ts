@@ -815,6 +815,7 @@ export type Database = {
           options: Json | null
           order_index: number
           points: number
+          question_code: string | null
           question_image_url: string | null
           question_text: string
           question_type: string
@@ -830,6 +831,7 @@ export type Database = {
           options?: Json | null
           order_index?: number
           points?: number
+          question_code?: string | null
           question_image_url?: string | null
           question_text: string
           question_type: string
@@ -845,6 +847,7 @@ export type Database = {
           options?: Json | null
           order_index?: number
           points?: number
+          question_code?: string | null
           question_image_url?: string | null
           question_text?: string
           question_type?: string
@@ -1319,6 +1322,75 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      question_bank: {
+        Row: {
+          correct_answer: Json | null
+          course_id: string
+          created_at: string
+          feedback: string | null
+          id: string
+          instructor_profile_id: string
+          is_shared: boolean
+          options: Json | null
+          points: number
+          question_code: string
+          question_image_url: string | null
+          question_text: string
+          question_type: string
+          tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          correct_answer?: Json | null
+          course_id: string
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          instructor_profile_id: string
+          is_shared?: boolean
+          options?: Json | null
+          points?: number
+          question_code: string
+          question_image_url?: string | null
+          question_text: string
+          question_type: string
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          correct_answer?: Json | null
+          course_id?: string
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          instructor_profile_id?: string
+          is_shared?: boolean
+          options?: Json | null
+          points?: number
+          question_code?: string
+          question_image_url?: string | null
+          question_text?: string
+          question_type?: string
+          tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "question_bank_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "question_bank_instructor_profile_id_fkey"
+            columns: ["instructor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       role_permissions: {
         Row: {

@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useQuizQuestions, useBatchCreateQuestions, useDeleteQuizQuestion, useUpdateQuizQuestion, useCourseLLOs } from '@/hooks/useElearningMaterials';
+import { useQuestionBank, useAddToQuestionBank, useBatchAddToQuestionBank, QuestionBankItem } from '@/hooks/useQuestionBank';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,10 +12,11 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Wand2, Trash2, HelpCircle, ChevronDown, Upload, Shield, Sparkles, FileText, CheckCircle, Pencil, Eye, EyeOff, Save, X } from 'lucide-react';
+import { Loader2, Wand2, Trash2, HelpCircle, ChevronDown, Upload, Shield, Sparkles, FileText, CheckCircle, Pencil, Eye, EyeOff, Save, X, Database, Plus, BookmarkPlus } from 'lucide-react';
 import { QuizTemplateImport, type ParsedQuestion } from './QuizTemplateImport';
 import { SEBConfigGenerator } from './SEBConfigGenerator';
 import { AIContentGenerator } from './AIContentGenerator';
+import { QuestionBankDialog } from './QuestionBankDialog';
 
 interface QuizManagerProps {
   assignmentId: string;
@@ -34,11 +37,15 @@ const QUESTION_TYPES = [
 
 export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', isSafeExamMode, sebPassword, sebQuitPassword }: QuizManagerProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const { data: questions, isLoading } = useQuizQuestions(assignmentId);
   const { data: llos } = useCourseLLOs(courseId);
+  const { data: bankQuestions = [] } = useQuestionBank(courseId);
   const batchCreate = useBatchCreateQuestions();
   const deleteQuestion = useDeleteQuizQuestion();
   const updateQuestion = useUpdateQuizQuestion();
+  const addToBank = useAddToQuestionBank();
+  const batchAddToBank = useBatchAddToQuestionBank();
 
   const [aiQuestionType, setAiQuestionType] = useState('multiple_choice');
   const [aiQuestionCount, setAiQuestionCount] = useState('5');
@@ -47,10 +54,25 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
   const [showSebConfig, setShowSebConfig] = useState(false);
   const [showAI, setShowAI] = useState(false);
   const [showAnswers, setShowAnswers] = useState(true);
+  const [showQuestionBank, setShowQuestionBank] = useState(false);
+  const [showManualAdd, setShowManualAdd] = useState(false);
+  
+  // Manual add state
+  const [manualForm, setManualForm] = useState({
+    question_code: '',
+    question_type: 'multiple_choice',
+    question_text: '',
+    options: ['', '', '', ''],
+    correct_answer: 0,
+    feedback: '',
+    points: 10,
+    save_to_bank: false,
+  });
   
   // Edit state
   const [editingQuestion, setEditingQuestion] = useState<any>(null);
   const [editForm, setEditForm] = useState({
+    question_code: '',
     question_text: '',
     options: [] as string[],
     correct_answer: '' as any,
@@ -59,6 +81,24 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
   });
 
   const selectedLlo = (llos || []).find((l: any) => l.id === selectedLloId);
+
+  // Generate next question code
+  const generateNextCode = () => {
+    const existingCodes = [
+      ...(questions || []).map((q: any) => q.question_code).filter(Boolean),
+      ...bankQuestions.map(q => q.question_code),
+    ];
+    
+    let maxNum = 0;
+    existingCodes.forEach(code => {
+      const match = code?.match(/Q(\d+)/);
+      if (match) {
+        maxNum = Math.max(maxNum, parseInt(match[1]));
+      }
+    });
+    
+    return `Q${(maxNum + 1).toString().padStart(3, '0')}`;
+  };
 
   const handleAIGenerated = async (content: string) => {
     try {
@@ -79,6 +119,9 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
         return;
       }
 
+      const startCode = generateNextCode();
+      const startNum = parseInt(startCode.match(/\d+/)?.[0] || '1');
+
       const questionsToInsert = parsedQuestions.map((q: any, idx: number) => {
         // Normalize options format
         let normalizedOptions = null;
@@ -97,8 +140,11 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
           }
         }
 
+        const questionCode = `Q${(startNum + idx).toString().padStart(3, '0')}`;
+
         return {
           assignment_id: assignmentId,
+          question_code: questionCode,
           question_type: q.question_type || aiQuestionType,
           question_text: q.question_text,
           options: normalizedOptions ? JSON.stringify(normalizedOptions) : null,
@@ -120,8 +166,12 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
 
   const handleImportQuestions = async (parsedQuestions: ParsedQuestion[]) => {
     try {
+      const startCode = generateNextCode();
+      const startNum = parseInt(startCode.match(/\d+/)?.[0] || '1');
+
       const questionsToInsert = parsedQuestions.map((q, idx) => ({
         assignment_id: assignmentId,
+        question_code: `Q${(startNum + idx).toString().padStart(3, '0')}`,
         question_type: q.question_type,
         question_text: q.question_text,
         options: q.options ? JSON.stringify(q.options) : null,
@@ -135,6 +185,120 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
       setShowImport(false);
     } catch (error) {
       toast({ title: 'Error', description: 'Gagal mengimport soal', variant: 'destructive' });
+    }
+  };
+
+  const handleAddFromBank = async (selectedQuestions: QuestionBankItem[]) => {
+    try {
+      const questionsToInsert = selectedQuestions.map((q, idx) => ({
+        assignment_id: assignmentId,
+        question_code: q.question_code,
+        question_type: q.question_type,
+        question_text: q.question_text,
+        options: q.options ? JSON.stringify(q.options) : null,
+        correct_answer: q.correct_answer ? JSON.stringify(q.correct_answer) : null,
+        feedback: q.feedback || null,
+        points: q.points,
+        order_index: (questions?.length || 0) + idx + 1,
+      }));
+
+      await batchCreate.mutateAsync(questionsToInsert);
+      toast({ title: 'Sukses', description: `${selectedQuestions.length} soal berhasil ditambahkan dari bank soal` });
+    } catch (error) {
+      toast({ title: 'Error', description: 'Gagal menambahkan soal dari bank soal', variant: 'destructive' });
+    }
+  };
+
+  const handleManualAdd = async () => {
+    if (!manualForm.question_text.trim()) {
+      toast({ title: 'Error', description: 'Pertanyaan tidak boleh kosong', variant: 'destructive' });
+      return;
+    }
+
+    const questionCode = manualForm.question_code || generateNextCode();
+
+    try {
+      // Add to quiz
+      await batchCreate.mutateAsync([{
+        assignment_id: assignmentId,
+        question_code: questionCode,
+        question_type: manualForm.question_type,
+        question_text: manualForm.question_text,
+        options: manualForm.options.filter(o => o.trim()).length > 0 
+          ? JSON.stringify(manualForm.options.filter(o => o.trim())) 
+          : null,
+        correct_answer: JSON.stringify(
+          manualForm.question_type === 'short_answer' 
+            ? manualForm.options[0] 
+            : manualForm.correct_answer
+        ),
+        feedback: manualForm.feedback || null,
+        points: manualForm.points,
+        order_index: (questions?.length || 0) + 1,
+      }]);
+
+      // Also save to bank if requested
+      if (manualForm.save_to_bank && user) {
+        await addToBank.mutateAsync({
+          course_id: courseId,
+          instructor_profile_id: user.id,
+          question_code: questionCode,
+          question_type: manualForm.question_type,
+          question_text: manualForm.question_text,
+          options: manualForm.options.filter(o => o.trim()).length > 0 
+            ? manualForm.options.filter(o => o.trim()) 
+            : null,
+          correct_answer: manualForm.question_type === 'short_answer' 
+            ? manualForm.options[0] 
+            : manualForm.correct_answer,
+          feedback: manualForm.feedback || null,
+          points: manualForm.points,
+        });
+      }
+
+      toast({ title: 'Sukses', description: 'Soal berhasil ditambahkan' });
+      setShowManualAdd(false);
+      setManualForm({
+        question_code: '',
+        question_type: 'multiple_choice',
+        question_text: '',
+        options: ['', '', '', ''],
+        correct_answer: 0,
+        feedback: '',
+        points: 10,
+        save_to_bank: false,
+      });
+    } catch (error) {
+      toast({ title: 'Error', description: 'Gagal menambahkan soal', variant: 'destructive' });
+    }
+  };
+
+  const handleSaveToBank = async (question: any) => {
+    if (!user) return;
+
+    try {
+      const options = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
+      const correctAnswer = typeof question.correct_answer === 'string' ? JSON.parse(question.correct_answer) : question.correct_answer;
+
+      await addToBank.mutateAsync({
+        course_id: courseId,
+        instructor_profile_id: user.id,
+        question_code: question.question_code || generateNextCode(),
+        question_type: question.question_type,
+        question_text: question.question_text,
+        options: options,
+        correct_answer: correctAnswer,
+        feedback: question.feedback || null,
+        points: question.points,
+      });
+
+      toast({ title: 'Sukses', description: 'Soal berhasil disimpan ke bank soal' });
+    } catch (error: any) {
+      if (error.message?.includes('duplicate')) {
+        toast({ title: 'Info', description: 'Soal dengan kode ini sudah ada di bank soal', variant: 'default' });
+      } else {
+        toast({ title: 'Error', description: 'Gagal menyimpan ke bank soal', variant: 'destructive' });
+      }
     }
   };
 
@@ -162,6 +326,7 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
     } catch {}
 
     setEditForm({
+      question_code: question.question_code || '',
       question_text: question.question_text,
       options,
       correct_answer: correctAnswer,
@@ -177,6 +342,7 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
     try {
       await updateQuestion.mutateAsync({
         id: editingQuestion.id,
+        question_code: editForm.question_code || null,
         question_text: editForm.question_text,
         options: editForm.options.length > 0 ? JSON.stringify(editForm.options) : null,
         correct_answer: JSON.stringify(editForm.correct_answer),
@@ -304,34 +470,36 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
         </Collapsible>
       )}
 
+      {/* Action Buttons Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <Button variant="outline" className="h-12" onClick={() => setShowManualAdd(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Tambah Manual
+        </Button>
+        <Button variant="outline" className="h-12" onClick={() => setShowQuestionBank(true)}>
+          <Database className="h-4 w-4 mr-2" />
+          Bank Soal
+        </Button>
+        <Button variant="outline" className="h-12" onClick={() => setShowImport(!showImport)}>
+          <Upload className="h-4 w-4 mr-2" />
+          Import Excel
+        </Button>
+        <Button variant="outline" className="h-12 border-primary/30 text-primary" onClick={() => setShowAI(!showAI)}>
+          <Sparkles className="h-4 w-4 mr-2" />
+          Generate AI
+        </Button>
+      </div>
+
       {/* Import from Template */}
       <Collapsible open={showImport} onOpenChange={setShowImport}>
-        <CollapsibleTrigger asChild>
-          <Button variant="outline" className="w-full justify-between h-12">
-            <span className="flex items-center gap-2">
-              <Upload className="h-4 w-4" />
-              Import Soal dari File Excel
-            </span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${showImport ? 'rotate-180' : ''}`} />
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-4">
+        <CollapsibleContent>
           <QuizTemplateImport onImport={handleImportQuestions} />
         </CollapsibleContent>
       </Collapsible>
 
       {/* AI Generator */}
       <Collapsible open={showAI} onOpenChange={setShowAI}>
-        <CollapsibleTrigger asChild>
-          <Button variant="outline" className="w-full justify-between h-12 border-primary/30 hover:border-primary">
-            <span className="flex items-center gap-2 text-primary">
-              <Sparkles className="h-4 w-4" />
-              Generate Soal dengan AI
-            </span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${showAI ? 'rotate-180' : ''}`} />
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-4">
+        <CollapsibleContent>
           <Card className="bg-gradient-to-br from-primary/5 to-transparent border-primary/20">
             <CardContent className="py-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -422,7 +590,7 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
               </div>
               <h4 className="font-semibold mb-2">Belum Ada Soal</h4>
               <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                Generate soal dengan AI atau import dari file Excel untuk memulai.
+                Tambahkan soal secara manual, dari bank soal, import dari Excel, atau generate dengan AI.
               </p>
             </CardContent>
           </Card>
@@ -442,7 +610,12 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
                           <Badge className="text-xs">{q.points} pts</Badge>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            {q.question_code && (
+                              <Badge variant="outline" className="font-mono text-xs">
+                                {q.question_code}
+                              </Badge>
+                            )}
                             <Badge variant="secondary" className={`text-xs ${typeInfo.color}`}>
                               {typeInfo.label}
                             </Badge>
@@ -473,6 +646,15 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
                         <Button 
                           variant="ghost" 
                           size="sm" 
+                          title="Simpan ke Bank Soal"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity" 
+                          onClick={() => handleSaveToBank(q)}
+                        >
+                          <BookmarkPlus className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
                           className="opacity-0 group-hover:opacity-100 transition-opacity" 
                           onClick={() => openEditDialog(q)}
                         >
@@ -496,6 +678,160 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
         )}
       </div>
 
+      {/* Question Bank Dialog */}
+      <QuestionBankDialog
+        open={showQuestionBank}
+        onOpenChange={setShowQuestionBank}
+        courseId={courseId}
+        onSelectQuestions={handleAddFromBank}
+      />
+
+      {/* Manual Add Dialog */}
+      <Dialog open={showManualAdd} onOpenChange={setShowManualAdd}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Tambah Soal Manual</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Kode Soal</Label>
+                <Input
+                  value={manualForm.question_code}
+                  onChange={(e) => setManualForm({ ...manualForm, question_code: e.target.value })}
+                  placeholder={generateNextCode()}
+                  className="font-mono"
+                />
+                <p className="text-xs text-muted-foreground">Kosongkan untuk auto-generate</p>
+              </div>
+              <div className="space-y-2">
+                <Label>Tipe Soal</Label>
+                <Select value={manualForm.question_type} onValueChange={(v) => setManualForm({ ...manualForm, question_type: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {QUESTION_TYPES.map(t => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Pertanyaan</Label>
+              <Textarea
+                value={manualForm.question_text}
+                onChange={(e) => setManualForm({ ...manualForm, question_text: e.target.value })}
+                placeholder="Tulis pertanyaan di sini..."
+                className="min-h-[100px]"
+              />
+            </div>
+
+            {manualForm.question_type === 'short_answer' ? (
+              <div className="space-y-2">
+                <Label>Jawaban Benar</Label>
+                <Input
+                  value={manualForm.options[0]}
+                  onChange={(e) => setManualForm({ ...manualForm, options: [e.target.value, '', '', ''] })}
+                  placeholder="Masukkan jawaban yang benar..."
+                />
+              </div>
+            ) : manualForm.question_type === 'true_false' ? (
+              <div className="space-y-2">
+                <Label>Jawaban Benar</Label>
+                <Select 
+                  value={manualForm.correct_answer.toString()} 
+                  onValueChange={(v) => setManualForm({ ...manualForm, correct_answer: parseInt(v), options: ['Benar', 'Salah', '', ''] })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Benar</SelectItem>
+                    <SelectItem value="1">Salah</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Pilihan Jawaban</Label>
+                {manualForm.options.map((opt, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <span className="w-6 font-medium">{String.fromCharCode(65 + idx)}.</span>
+                    <Input
+                      value={opt}
+                      onChange={(e) => {
+                        const newOptions = [...manualForm.options];
+                        newOptions[idx] = e.target.value;
+                        setManualForm({ ...manualForm, options: newOptions });
+                      }}
+                      placeholder={`Pilihan ${String.fromCharCode(65 + idx)}`}
+                      className="flex-1"
+                    />
+                    <input
+                      type="radio"
+                      name="manual_correct"
+                      checked={manualForm.correct_answer === idx}
+                      onChange={() => setManualForm({ ...manualForm, correct_answer: idx })}
+                      className="w-4 h-4"
+                    />
+                    <span className="text-xs text-muted-foreground w-12">Benar</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label>Feedback / Penjelasan (Opsional)</Label>
+              <Textarea
+                value={manualForm.feedback}
+                onChange={(e) => setManualForm({ ...manualForm, feedback: e.target.value })}
+                placeholder="Jelaskan mengapa jawaban tersebut benar..."
+              />
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="space-y-2">
+                <Label>Poin</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={manualForm.points}
+                  onChange={(e) => setManualForm({ ...manualForm, points: parseInt(e.target.value) || 10 })}
+                  className="w-24"
+                />
+              </div>
+              <div className="flex items-center gap-2 pt-6">
+                <input
+                  type="checkbox"
+                  id="save_to_bank"
+                  checked={manualForm.save_to_bank}
+                  onChange={(e) => setManualForm({ ...manualForm, save_to_bank: e.target.checked })}
+                  className="w-4 h-4"
+                />
+                <Label htmlFor="save_to_bank" className="cursor-pointer">Simpan juga ke Bank Soal</Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowManualAdd(false)}>
+              <X className="h-4 w-4 mr-2" />
+              Batal
+            </Button>
+            <Button onClick={handleManualAdd} disabled={batchCreate.isPending}>
+              {batchCreate.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4 mr-2" />
+              )}
+              Tambah Soal
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Edit Question Dialog */}
       <Dialog open={!!editingQuestion} onOpenChange={() => setEditingQuestion(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -504,6 +840,16 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
           </DialogHeader>
           {editingQuestion && (
             <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Kode Soal</Label>
+                <Input
+                  value={editForm.question_code}
+                  onChange={(e) => setEditForm({ ...editForm, question_code: e.target.value })}
+                  placeholder="Q001"
+                  className="font-mono max-w-[150px]"
+                />
+              </div>
+
               <div className="space-y-2">
                 <Label>Pertanyaan</Label>
                 <Textarea
