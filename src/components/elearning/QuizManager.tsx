@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { useQuizQuestions, useBatchCreateQuestions, useDeleteQuizQuestion, useAIGeneration, useCourseLLOs } from '@/hooks/useElearningMaterials';
+import { useQuizQuestions, useBatchCreateQuestions, useDeleteQuizQuestion, useUpdateQuizQuestion, useCourseLLOs } from '@/hooks/useElearningMaterials';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Wand2, Trash2, HelpCircle, ChevronDown, Upload, Shield, Sparkles, FileText, CheckCircle } from 'lucide-react';
+import { Loader2, Wand2, Trash2, HelpCircle, ChevronDown, Upload, Shield, Sparkles, FileText, CheckCircle, Pencil, Eye, EyeOff, Save, X } from 'lucide-react';
 import { QuizTemplateImport, type ParsedQuestion } from './QuizTemplateImport';
 import { SEBConfigGenerator } from './SEBConfigGenerator';
 import { AIContentGenerator } from './AIContentGenerator';
@@ -36,6 +38,7 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
   const { data: llos } = useCourseLLOs(courseId);
   const batchCreate = useBatchCreateQuestions();
   const deleteQuestion = useDeleteQuizQuestion();
+  const updateQuestion = useUpdateQuizQuestion();
 
   const [aiQuestionType, setAiQuestionType] = useState('multiple_choice');
   const [aiQuestionCount, setAiQuestionCount] = useState('5');
@@ -43,6 +46,17 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
   const [showImport, setShowImport] = useState(false);
   const [showSebConfig, setShowSebConfig] = useState(false);
   const [showAI, setShowAI] = useState(false);
+  const [showAnswers, setShowAnswers] = useState(true);
+  
+  // Edit state
+  const [editingQuestion, setEditingQuestion] = useState<any>(null);
+  const [editForm, setEditForm] = useState({
+    question_text: '',
+    options: [] as string[],
+    correct_answer: '' as any,
+    feedback: '',
+    points: 10,
+  });
 
   const selectedLlo = (llos || []).find((l: any) => l.id === selectedLloId);
 
@@ -66,15 +80,17 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
       }
 
       const questionsToInsert = parsedQuestions.map((q: any, idx: number) => {
-        // Normalize options format - AI might return [{label, text}] or ["A", "B", ...]
+        // Normalize options format
         let normalizedOptions = null;
         if (q.options) {
           if (Array.isArray(q.options) && q.options.length > 0) {
             if (typeof q.options[0] === 'object' && q.options[0].text) {
-              // Format: [{label: "A", text: "..."}] -> extract texts
               normalizedOptions = q.options.map((opt: any) => 
                 typeof opt === 'object' ? opt.text : opt
               );
+            } else if (typeof q.options[0] === 'object' && q.options[0].left) {
+              // Matching type - keep as is
+              normalizedOptions = q.options;
             } else {
               normalizedOptions = q.options;
             }
@@ -131,8 +147,125 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
     }
   };
 
+  const openEditDialog = (question: any) => {
+    let options: string[] = [];
+    try {
+      const parsed = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
+      if (Array.isArray(parsed)) {
+        options = parsed.map((o: any) => typeof o === 'object' ? o.text || o.left : o);
+      }
+    } catch {}
+
+    let correctAnswer = question.correct_answer;
+    try {
+      correctAnswer = typeof question.correct_answer === 'string' ? JSON.parse(question.correct_answer) : question.correct_answer;
+    } catch {}
+
+    setEditForm({
+      question_text: question.question_text,
+      options,
+      correct_answer: correctAnswer,
+      feedback: question.feedback || '',
+      points: question.points,
+    });
+    setEditingQuestion(question);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingQuestion) return;
+
+    try {
+      await updateQuestion.mutateAsync({
+        id: editingQuestion.id,
+        question_text: editForm.question_text,
+        options: editForm.options.length > 0 ? JSON.stringify(editForm.options) : null,
+        correct_answer: JSON.stringify(editForm.correct_answer),
+        feedback: editForm.feedback,
+        points: editForm.points,
+      });
+      toast({ title: 'Sukses', description: 'Soal berhasil diperbarui' });
+      setEditingQuestion(null);
+    } catch {
+      toast({ title: 'Error', description: 'Gagal memperbarui soal', variant: 'destructive' });
+    }
+  };
+
   const getQuestionTypeInfo = (type: string) => {
     return QUESTION_TYPES.find(t => t.value === type) || QUESTION_TYPES[0];
+  };
+
+  const formatCorrectAnswer = (question: any) => {
+    try {
+      const answer = typeof question.correct_answer === 'string' ? JSON.parse(question.correct_answer) : question.correct_answer;
+      const options = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
+
+      if (question.question_type === 'multiple_choice' || question.question_type === 'select_missing_word') {
+        if (typeof answer === 'number' && Array.isArray(options)) {
+          return options[answer] || answer;
+        }
+        return answer;
+      }
+      if (question.question_type === 'true_false') {
+        if (typeof answer === 'number') {
+          return answer === 0 ? 'Benar' : 'Salah';
+        }
+        return answer === true || answer === 'true' ? 'Benar' : 'Salah';
+      }
+      if (question.question_type === 'matching') {
+        return 'Lihat pasangan';
+      }
+      return String(answer);
+    } catch {
+      return String(question.correct_answer);
+    }
+  };
+
+  const formatOptions = (question: any) => {
+    try {
+      const options = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
+      const answer = typeof question.correct_answer === 'string' ? JSON.parse(question.correct_answer) : question.correct_answer;
+
+      if (!Array.isArray(options)) return null;
+
+      if (question.question_type === 'matching') {
+        return (
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            {options.map((pair: any, idx: number) => (
+              <div key={idx} className="flex items-center gap-2 text-sm">
+                <span className="px-2 py-1 bg-muted rounded">{pair.left}</span>
+                <span className="text-muted-foreground">↔</span>
+                <span className="px-2 py-1 bg-primary/10 rounded">{pair.right}</span>
+              </div>
+            ))}
+          </div>
+        );
+      }
+
+      return (
+        <div className="grid grid-cols-2 gap-2 mt-2">
+          {options.map((opt: any, idx: number) => {
+            const optText = typeof opt === 'object' ? opt.text : opt;
+            const isCorrect = typeof answer === 'number' ? idx === answer : optText === answer;
+            return (
+              <div 
+                key={idx} 
+                className={`text-sm px-3 py-2 rounded-lg border ${
+                  isCorrect 
+                    ? 'border-green-500 bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-400' 
+                    : 'border-border bg-muted/50'
+                }`}
+              >
+                <span className="font-medium mr-2">{String.fromCharCode(65 + idx)}.</span>
+                {optText}
+                {isCorrect && <CheckCircle className="inline h-4 w-4 ml-2" />}
+              </div>
+            );
+          })}
+        </div>
+      );
+    } catch {
+      return null;
+    }
   };
 
   if (isLoading) {
@@ -265,9 +398,20 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
             <FileText className="h-5 w-5" />
             Daftar Soal
           </h3>
-          <Badge variant="secondary" className="text-base px-3 py-1">
-            {questions?.length || 0} Soal
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setShowAnswers(!showAnswers)}
+              className="gap-2"
+            >
+              {showAnswers ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              {showAnswers ? 'Sembunyikan' : 'Tampilkan'} Jawaban
+            </Button>
+            <Badge variant="secondary" className="text-base px-3 py-1">
+              {questions?.length || 0} Soal
+            </Badge>
+          </div>
         </div>
         
         {questions?.length === 0 ? (
@@ -283,7 +427,7 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {questions?.map((q: any, idx: number) => {
               const typeInfo = getQuestionTypeInfo(q.question_type);
               return (
@@ -303,23 +447,46 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
                               {typeInfo.label}
                             </Badge>
                           </div>
-                          <p className="text-sm leading-relaxed">{q.question_text}</p>
-                          {q.feedback && (
-                            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                              <CheckCircle className="h-3 w-3" />
-                              Feedback: {q.feedback}
-                            </p>
+                          <p className="text-sm leading-relaxed font-medium">{q.question_text}</p>
+                          
+                          {/* Show options with correct answer highlighted */}
+                          {showAnswers && formatOptions(q)}
+                          
+                          {/* Show correct answer for short answer type */}
+                          {showAnswers && q.question_type === 'short_answer' && (
+                            <div className="mt-2 p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                              <span className="text-xs text-green-600 dark:text-green-400 font-medium">Jawaban Benar: </span>
+                              <span className="text-sm text-green-700 dark:text-green-300">{formatCorrectAnswer(q)}</span>
+                            </div>
+                          )}
+                          
+                          {/* Feedback */}
+                          {showAnswers && q.feedback && (
+                            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">💡 Feedback:</p>
+                              <p className="text-sm text-blue-700 dark:text-blue-300">{q.feedback}</p>
+                            </div>
                           )}
                         </div>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity" 
-                        onClick={() => handleDeleteQuestion(q.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex flex-col gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="opacity-0 group-hover:opacity-100 transition-opacity" 
+                          onClick={() => openEditDialog(q)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity" 
+                          onClick={() => handleDeleteQuestion(q.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -328,6 +495,101 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
           </div>
         )}
       </div>
+
+      {/* Edit Question Dialog */}
+      <Dialog open={!!editingQuestion} onOpenChange={() => setEditingQuestion(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Soal</DialogTitle>
+          </DialogHeader>
+          {editingQuestion && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Pertanyaan</Label>
+                <Textarea
+                  value={editForm.question_text}
+                  onChange={(e) => setEditForm({ ...editForm, question_text: e.target.value })}
+                  className="min-h-[100px]"
+                />
+              </div>
+
+              {(editingQuestion.question_type === 'multiple_choice' || 
+                editingQuestion.question_type === 'true_false' ||
+                editingQuestion.question_type === 'select_missing_word') && (
+                <div className="space-y-2">
+                  <Label>Pilihan Jawaban</Label>
+                  {editForm.options.map((opt, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <span className="w-6 font-medium">{String.fromCharCode(65 + idx)}.</span>
+                      <Input
+                        value={opt}
+                        onChange={(e) => {
+                          const newOptions = [...editForm.options];
+                          newOptions[idx] = e.target.value;
+                          setEditForm({ ...editForm, options: newOptions });
+                        }}
+                        className="flex-1"
+                      />
+                      <input
+                        type="radio"
+                        name="correct"
+                        checked={editForm.correct_answer === idx}
+                        onChange={() => setEditForm({ ...editForm, correct_answer: idx })}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-xs text-muted-foreground">Benar</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {editingQuestion.question_type === 'short_answer' && (
+                <div className="space-y-2">
+                  <Label>Jawaban Benar</Label>
+                  <Input
+                    value={typeof editForm.correct_answer === 'string' ? editForm.correct_answer : ''}
+                    onChange={(e) => setEditForm({ ...editForm, correct_answer: e.target.value })}
+                  />
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Feedback / Penjelasan</Label>
+                <Textarea
+                  value={editForm.feedback}
+                  onChange={(e) => setEditForm({ ...editForm, feedback: e.target.value })}
+                  placeholder="Jelaskan mengapa jawaban tersebut benar..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Poin</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={editForm.points}
+                  onChange={(e) => setEditForm({ ...editForm, points: parseInt(e.target.value) || 10 })}
+                  className="w-24"
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEditingQuestion(null)}>
+              <X className="h-4 w-4 mr-2" />
+              Batal
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={updateQuestion.isPending}>
+              {updateQuestion.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Simpan
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
