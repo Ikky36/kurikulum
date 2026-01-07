@@ -136,15 +136,15 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
       {/* LLO Selection */}
       <div className="space-y-2">
         <Label>Sub-CPMK (Opsional)</Label>
-        <Select value={selectedLloId} onValueChange={setSelectedLloId}>
-          <SelectTrigger>
-            <SelectValue placeholder="Pilih Sub-CPMK..." />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">Tidak ada</SelectItem>
-            {typedLlos.map((llo) => (
-              <SelectItem key={llo.id} value={llo.id}>
-                {llo.code} - {llo.description.substring(0, 50)}...
+      <Select value={selectedLloId || "__none__"} onValueChange={(v) => setSelectedLloId(v === "__none__" ? "" : v)}>
+        <SelectTrigger>
+          <SelectValue placeholder="Pilih Sub-CPMK..." />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="__none__">Tidak ada</SelectItem>
+          {typedLlos.map((llo) => (
+            <SelectItem key={llo.id} value={llo.id}>
+              {llo.code} - {llo.description.substring(0, 50)}...
               </SelectItem>
             ))}
           </SelectContent>

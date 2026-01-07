@@ -109,10 +109,10 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
 
       <div className="space-y-2">
         <Label>Sub-CPMK (Opsional)</Label>
-        <Select value={selectedLloId} onValueChange={setSelectedLloId}>
+        <Select value={selectedLloId || "__none__"} onValueChange={(v) => setSelectedLloId(v === "__none__" ? "" : v)}>
           <SelectTrigger><SelectValue placeholder="Pilih Sub-CPMK..." /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Tidak ada</SelectItem>
+            <SelectItem value="__none__">Tidak ada</SelectItem>
             {(llos || []).map((llo: any) => (
               <SelectItem key={llo.id} value={llo.id}>{llo.code} - {llo.description?.substring(0, 40)}...</SelectItem>
             ))}
