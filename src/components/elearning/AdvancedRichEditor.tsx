@@ -11,7 +11,7 @@ import {
   Bold, Italic, Underline, Strikethrough, List, ListOrdered, 
   Link, Image, Video, AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Heading1, Heading2, Heading3, Type, Table, Undo, Redo,
-  Palette, FileVideo, ImageIcon, Quote, Code, Minus
+  Palette, FileVideo, ImageIcon, Quote, Code, Minus, Music
 } from 'lucide-react';
 
 // Google Fonts list
@@ -59,6 +59,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
   const [linkUrl, setLinkUrl] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
+  const [audioUrl, setAudioUrl] = useState('');
   const [tableRows, setTableRows] = useState('3');
   const [tableCols, setTableCols] = useState('3');
   const [selectedFont, setSelectedFont] = useState('inherit');
@@ -116,14 +117,51 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
     if (videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')) {
       const videoId = videoUrl.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&\s]+)/)?.[1];
       if (videoId) {
-        embedHtml = `<div class="video-embed"><iframe src="https://www.youtube.com/embed/${videoId}" width="560" height="315" frameborder="0" allowfullscreen></iframe></div>`;
+        embedHtml = `<div class="video-embed" contenteditable="false"><iframe src="https://www.youtube.com/embed/${videoId}" width="560" height="315" frameborder="0" allowfullscreen></iframe></div><p><br></p>`;
+      }
+    } else if (videoUrl.includes('vimeo.com')) {
+      const vimeoId = videoUrl.match(/vimeo\.com\/(\d+)/)?.[1];
+      if (vimeoId) {
+        embedHtml = `<div class="video-embed" contenteditable="false"><iframe src="https://player.vimeo.com/video/${vimeoId}" width="560" height="315" frameborder="0" allowfullscreen></iframe></div><p><br></p>`;
       }
     } else {
-      embedHtml = `<video src="${videoUrl}" controls style="max-width: 100%;"></video>`;
+      embedHtml = `<div class="media-container" contenteditable="false"><video src="${videoUrl}" controls style="max-width: 100%; border-radius: 0.5rem;"></video></div><p><br></p>`;
     }
 
-    execCommand('insertHTML', embedHtml);
-    setVideoUrl('');
+    if (embedHtml) {
+      execCommand('insertHTML', embedHtml);
+      setVideoUrl('');
+      toast({ title: 'Video ditambahkan', description: 'Video player berhasil dimasukkan' });
+    }
+  };
+
+  const insertAudio = () => {
+    if (!audioUrl) {
+      toast({ title: 'Error', description: 'Masukkan URL audio', variant: 'destructive' });
+      return;
+    }
+
+    let embedHtml = '';
+    if (audioUrl.includes('soundcloud.com')) {
+      // SoundCloud embed
+      embedHtml = `<div class="audio-embed" contenteditable="false"><iframe width="100%" height="166" scrolling="no" frameborder="no" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(audioUrl)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true"></iframe></div><p><br></p>`;
+    } else if (audioUrl.includes('spotify.com')) {
+      // Spotify embed
+      const spotifyMatch = audioUrl.match(/spotify\.com\/(track|episode|playlist)\/([a-zA-Z0-9]+)/);
+      if (spotifyMatch) {
+        const [, type, id] = spotifyMatch;
+        embedHtml = `<div class="audio-embed" contenteditable="false"><iframe style="border-radius:12px" src="https://open.spotify.com/embed/${type}/${id}" width="100%" height="152" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe></div><p><br></p>`;
+      }
+    } else {
+      // Direct audio file
+      embedHtml = `<div class="media-container" contenteditable="false"><audio src="${audioUrl}" controls style="width: 100%;"></audio></div><p><br></p>`;
+    }
+
+    if (embedHtml) {
+      execCommand('insertHTML', embedHtml);
+      setAudioUrl('');
+      toast({ title: 'Audio ditambahkan', description: 'Audio player berhasil dimasukkan' });
+    }
   };
 
   const insertTable = () => {
@@ -338,13 +376,35 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
             </PopoverTrigger>
             <PopoverContent className="w-80">
               <div className="space-y-3">
-                <Label>URL Video (YouTube/Direct)</Label>
+                <Label>URL Video (YouTube/Vimeo/Direct)</Label>
                 <Input
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
                   placeholder="https://youtube.com/watch?v=..."
                 />
+                <p className="text-xs text-muted-foreground">Mendukung YouTube, Vimeo, atau URL video langsung (.mp4, dll)</p>
                 <Button size="sm" onClick={insertVideo} className="w-full">Insert Video</Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Audio */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" title="Insert Audio">
+                <Music className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-3">
+                <Label>URL Audio (SoundCloud/Spotify/Direct)</Label>
+                <Input
+                  value={audioUrl}
+                  onChange={(e) => setAudioUrl(e.target.value)}
+                  placeholder="https://soundcloud.com/... atau .mp3"
+                />
+                <p className="text-xs text-muted-foreground">Mendukung SoundCloud, Spotify, atau URL audio langsung (.mp3, dll)</p>
+                <Button size="sm" onClick={insertAudio} className="w-full">Insert Audio</Button>
               </div>
             </PopoverContent>
           </Popover>
@@ -443,6 +503,9 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
           padding-bottom: 56.25%;
           height: 0;
           margin: 1rem 0;
+          background: hsl(var(--muted));
+          border-radius: 0.5rem;
+          overflow: hidden;
         }
         .video-embed iframe {
           position: absolute;
@@ -451,6 +514,29 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
           width: 100%;
           height: 100%;
           border-radius: 0.5rem;
+        }
+        .audio-embed {
+          margin: 1rem 0;
+          border-radius: 0.75rem;
+          overflow: hidden;
+        }
+        .audio-embed iframe {
+          display: block;
+        }
+        .media-container {
+          margin: 1rem 0;
+        }
+        .media-container video,
+        .media-container audio {
+          border-radius: 0.5rem;
+          background: hsl(var(--muted));
+        }
+        [contenteditable] video {
+          max-width: 100%;
+          border-radius: 0.5rem;
+        }
+        [contenteditable] audio {
+          width: 100%;
         }
       `}</style>
     </Card>
