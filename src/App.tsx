@@ -15,6 +15,7 @@ import DashboardDosen from "./pages/dashboard/DashboardDosen";
 import DashboardAdmin from "./pages/dashboard/DashboardAdmin";
 import Settings from "./pages/Settings";
 import Kurikulum from "./pages/Kurikulum";
+import ELearning from "./pages/ELearning";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/mata-kuliah" element={<MataKuliah />} />
             <Route path="/mata-kuliah/:courseId" element={<CourseDetail />} />
             <Route path="/nilai-mahasiswa/:studentId" element={<StudentGrades />} />
+            <Route path="/e-learning" element={<ELearning />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
             <Route path="/dashboard/dosen" element={<DashboardDosen />} />

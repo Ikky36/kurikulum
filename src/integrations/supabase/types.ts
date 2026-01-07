@@ -462,6 +462,430 @@ export type Database = {
         }
         Relationships: []
       }
+      elearning_assignments: {
+        Row: {
+          assessment_id: string | null
+          assignment_type: string
+          created_at: string
+          description: string | null
+          due_date: string | null
+          elearning_class_id: string
+          id: string
+          is_published: boolean
+          is_safe_exam_mode: boolean
+          llo_id: string | null
+          max_attempts: number | null
+          seb_config_url: string | null
+          submission_type: string | null
+          time_limit_minutes: number | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assessment_id?: string | null
+          assignment_type: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          elearning_class_id: string
+          id?: string
+          is_published?: boolean
+          is_safe_exam_mode?: boolean
+          llo_id?: string | null
+          max_attempts?: number | null
+          seb_config_url?: string | null
+          submission_type?: string | null
+          time_limit_minutes?: number | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assessment_id?: string | null
+          assignment_type?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          elearning_class_id?: string
+          id?: string
+          is_published?: boolean
+          is_safe_exam_mode?: boolean
+          llo_id?: string | null
+          max_attempts?: number | null
+          seb_config_url?: string | null
+          submission_type?: string | null
+          time_limit_minutes?: number | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elearning_assignments_assessment_id_fkey"
+            columns: ["assessment_id"]
+            isOneToOne: false
+            referencedRelation: "assessments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elearning_assignments_elearning_class_id_fkey"
+            columns: ["elearning_class_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elearning_assignments_llo_id_fkey"
+            columns: ["llo_id"]
+            isOneToOne: false
+            referencedRelation: "llos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      elearning_attendance: {
+        Row: {
+          checked_at: string | null
+          created_at: string
+          elearning_session_id: string
+          id: string
+          notes: string | null
+          status: string
+          student_profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          checked_at?: string | null
+          created_at?: string
+          elearning_session_id: string
+          id?: string
+          notes?: string | null
+          status?: string
+          student_profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          checked_at?: string | null
+          created_at?: string
+          elearning_session_id?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          student_profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elearning_attendance_elearning_session_id_fkey"
+            columns: ["elearning_session_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elearning_attendance_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      elearning_classes: {
+        Row: {
+          class_group_id: string
+          course_id: string
+          cover_image_url: string | null
+          created_at: string
+          description: string | null
+          id: string
+          instructor_profile_id: string
+          is_active: boolean
+          title: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          class_group_id: string
+          course_id: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          instructor_profile_id: string
+          is_active?: boolean
+          title: string
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          class_group_id?: string
+          course_id?: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          instructor_profile_id?: string
+          is_active?: boolean
+          title?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elearning_classes_class_group_id_fkey"
+            columns: ["class_group_id"]
+            isOneToOne: false
+            referencedRelation: "class_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elearning_classes_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elearning_classes_instructor_profile_id_fkey"
+            columns: ["instructor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      elearning_materials: {
+        Row: {
+          content: string | null
+          content_type: string
+          created_at: string
+          elearning_class_id: string
+          file_url: string | null
+          id: string
+          is_published: boolean
+          llo_id: string | null
+          order_index: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string | null
+          content_type: string
+          created_at?: string
+          elearning_class_id: string
+          file_url?: string | null
+          id?: string
+          is_published?: boolean
+          llo_id?: string | null
+          order_index?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string | null
+          content_type?: string
+          created_at?: string
+          elearning_class_id?: string
+          file_url?: string | null
+          id?: string
+          is_published?: boolean
+          llo_id?: string | null
+          order_index?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elearning_materials_elearning_class_id_fkey"
+            columns: ["elearning_class_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elearning_materials_llo_id_fkey"
+            columns: ["llo_id"]
+            isOneToOne: false
+            referencedRelation: "llos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      elearning_quiz_questions: {
+        Row: {
+          ai_feedback: string | null
+          assignment_id: string
+          correct_answer: Json | null
+          created_at: string
+          feedback: string | null
+          id: string
+          options: Json | null
+          order_index: number
+          points: number
+          question_image_url: string | null
+          question_text: string
+          question_type: string
+          updated_at: string
+        }
+        Insert: {
+          ai_feedback?: string | null
+          assignment_id: string
+          correct_answer?: Json | null
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          options?: Json | null
+          order_index?: number
+          points?: number
+          question_image_url?: string | null
+          question_text: string
+          question_type: string
+          updated_at?: string
+        }
+        Update: {
+          ai_feedback?: string | null
+          assignment_id?: string
+          correct_answer?: Json | null
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          options?: Json | null
+          order_index?: number
+          points?: number
+          question_image_url?: string | null
+          question_text?: string
+          question_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elearning_quiz_questions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      elearning_sessions: {
+        Row: {
+          created_at: string
+          elearning_class_id: string
+          end_time: string | null
+          id: string
+          notes: string | null
+          session_date: string
+          session_number: number
+          start_time: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          elearning_class_id: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          session_date: string
+          session_number: number
+          start_time?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          elearning_class_id?: string
+          end_time?: string | null
+          id?: string
+          notes?: string | null
+          session_date?: string
+          session_number?: number
+          start_time?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elearning_sessions_elearning_class_id_fkey"
+            columns: ["elearning_class_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      elearning_submissions: {
+        Row: {
+          answers: Json | null
+          assignment_id: string
+          attempt_number: number
+          created_at: string
+          feedback: string | null
+          graded_at: string | null
+          graded_by_profile_id: string | null
+          id: string
+          score: number | null
+          student_profile_id: string
+          submission_content: string | null
+          submission_url: string | null
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          answers?: Json | null
+          assignment_id: string
+          attempt_number?: number
+          created_at?: string
+          feedback?: string | null
+          graded_at?: string | null
+          graded_by_profile_id?: string | null
+          id?: string
+          score?: number | null
+          student_profile_id: string
+          submission_content?: string | null
+          submission_url?: string | null
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          answers?: Json | null
+          assignment_id?: string
+          attempt_number?: number
+          created_at?: string
+          feedback?: string | null
+          graded_at?: string | null
+          graded_by_profile_id?: string | null
+          id?: string
+          score?: number | null
+          student_profile_id?: string
+          submission_content?: string | null
+          submission_url?: string | null
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elearning_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elearning_submissions_graded_by_profile_id_fkey"
+            columns: ["graded_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elearning_submissions_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollments: {
         Row: {
           course_id: string
