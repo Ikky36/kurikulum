@@ -49,21 +49,55 @@ Buatkan materi yang lengkap, terstruktur, dan mudah dipahami oleh mahasiswa.`;
         break;
 
       case "generate_quiz":
+        const qType = questionType || 'multiple_choice';
+        const qCount = questionCount || 5;
+        
         systemPrompt = `Anda adalah ahli pendidikan yang membantu dosen membuat soal quiz yang berkualitas.
 Gunakan bahasa Indonesia yang baik dan benar.
-Output dalam format JSON array dengan struktur sesuai tipe soal.`;
-        userPrompt = `Buatkan ${questionCount || 5} soal quiz dengan tipe: ${questionType}
+Output HARUS berupa JSON array yang valid tanpa markdown code block.
+Setiap soal HARUS memiliki: question_type, question_text, correct_answer, dan feedback.`;
+
+        let formatGuide = '';
+        switch (qType) {
+          case 'multiple_choice':
+            formatGuide = `Format: { "question_type": "multiple_choice", "question_text": "...", "options": ["Pilihan A", "Pilihan B", "Pilihan C", "Pilihan D"], "correct_answer": 0, "feedback": "Penjelasan mengapa jawaban tersebut benar" }
+correct_answer adalah index (0-3) dari options yang benar.`;
+            break;
+          case 'true_false':
+            formatGuide = `Format: { "question_type": "true_false", "question_text": "Pernyataan untuk dinilai benar/salah...", "options": ["Benar", "Salah"], "correct_answer": 0, "feedback": "Penjelasan" }
+correct_answer: 0 untuk Benar, 1 untuk Salah.`;
+            break;
+          case 'short_answer':
+            formatGuide = `Format: { "question_type": "short_answer", "question_text": "...", "correct_answer": "jawaban singkat yang diharapkan", "feedback": "Penjelasan atau kata kunci yang diterima" }`;
+            break;
+          case 'matching':
+            formatGuide = `Format: { "question_type": "matching", "question_text": "Jodohkan item berikut:", "options": [{"left": "Term 1", "right": "Definition 1"}, {"left": "Term 2", "right": "Definition 2"}], "correct_answer": [[0,0], [1,1]], "feedback": "Penjelasan pasangan yang benar" }`;
+            break;
+          case 'select_missing_word':
+            formatGuide = `Format: { "question_type": "select_missing_word", "question_text": "Kalimat dengan kata yang _____ untuk dipilih.", "options": ["kata1", "kata2", "kata3", "kata4"], "correct_answer": 0, "feedback": "Penjelasan kata yang tepat" }
+correct_answer adalah index pilihan yang benar.`;
+            break;
+          default:
+            formatGuide = `Format: { "question_type": "multiple_choice", "question_text": "...", "options": ["A", "B", "C", "D"], "correct_answer": 0, "feedback": "Penjelasan" }`;
+        }
+
+        userPrompt = `Buatkan TEPAT ${qCount} soal quiz dengan tipe: ${qType}
+
 Topik: ${topic}
 ${indicators?.length ? `\nIndikator yang diuji:\n${indicators.map((i, idx) => `${idx + 1}. ${i}`).join("\n")}` : ""}
 
-Format output JSON sesuai tipe soal:
-- multiple_choice: { question_text, options: [{label: "A", text: "..."}], correct_answer: "A" }
-- true_false: { question_text, correct_answer: true/false }
-- short_answer: { question_text, correct_answer: "..." }
-- matching: { question_text, pairs: [{left: "...", right: "..."}] }
-- select_missing_word: { question_text: "Teks dengan [BLANK] untuk jawaban", options: ["..."], correct_answer: "..." }
+${formatGuide}
 
-Berikan JSON array yang valid tanpa markdown code block.`;
+PENTING:
+- Buat TEPAT ${qCount} soal, tidak lebih tidak kurang
+- Semua soal harus bertipe "${qType}"
+- Setiap soal WAJIB memiliki feedback yang menjelaskan jawaban
+- Output HANYA JSON array tanpa teks lain atau markdown
+
+Contoh output yang valid:
+[
+  { "question_type": "${qType}", "question_text": "...", ... }
+]`;
         break;
 
       case "grade_answer":

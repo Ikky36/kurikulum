@@ -150,10 +150,10 @@ Buat ${contentLength === 'short' ? '5' : contentLength === 'medium' ? '10' : '15
 
       const result = await generateAI.mutateAsync({
         type: type === 'material' ? 'generate_material' : 'generate_quiz',
-        topic: prompt || 'Generate content',
-        indicators: lloData?.indikator || [],
-        questionType: 'multiple_choice',
-        questionCount: contentLength === 'short' ? 5 : contentLength === 'medium' ? 10 : 15,
+        topic: prompt || defaultTopic || 'Generate content',
+        indicators: indicators.length > 0 ? indicators : (lloData?.indikator || []),
+        questionType: questionType,
+        questionCount: questionCount,
       });
 
       setProgress(100);
