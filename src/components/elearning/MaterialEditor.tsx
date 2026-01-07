@@ -3,12 +3,11 @@ import { useCreateMaterial, useUpdateMaterial, useCourseLLOs, useAIGeneration, t
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Wand2, BookOpen, Video, Image, FileText } from 'lucide-react';
+import { Loader2, Wand2 } from 'lucide-react';
+import { RichContentEditor } from './RichContentEditor';
 
 interface MaterialEditorProps {
   classId: string;
@@ -33,11 +32,7 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
   const { data: llos } = useCourseLLOs(courseId);
 
   const [title, setTitle] = useState(material?.title || '');
-  const [contentType, setContentType] = useState<'text' | 'video' | 'image' | 'document'>(
-    (material?.content_type as 'text' | 'video' | 'image' | 'document') || 'text'
-  );
   const [content, setContent] = useState(material?.content || '');
-  const [fileUrl, setFileUrl] = useState(material?.file_url || '');
   const [selectedLloId, setSelectedLloId] = useState(material?.llo_id || '');
   const [isPublished, setIsPublished] = useState(material?.is_published || false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -63,7 +58,6 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
 
       if (result.content) {
         setContent(result.content);
-        setContentType('text');
         if (!title && selectedLlo) {
           setTitle(`Materi ${selectedLlo.code}`);
         }
@@ -86,22 +80,17 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
       return;
     }
 
-    if (contentType === 'text' && !content.trim()) {
+    if (!content.trim()) {
       toast({ title: 'Error', description: 'Konten materi harus diisi', variant: 'destructive' });
-      return;
-    }
-
-    if (contentType !== 'text' && !fileUrl.trim()) {
-      toast({ title: 'Error', description: 'URL file harus diisi', variant: 'destructive' });
       return;
     }
 
     try {
       const data = {
         title,
-        content_type: contentType,
-        content: contentType === 'text' ? content : null,
-        file_url: contentType !== 'text' ? fileUrl : null,
+        content_type: 'text' as const,
+        content,
+        file_url: null,
         llo_id: selectedLloId || null,
         is_published: isPublished,
         elearning_class_id: classId,
@@ -136,15 +125,15 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
       {/* LLO Selection */}
       <div className="space-y-2">
         <Label>Sub-CPMK (Opsional)</Label>
-      <Select value={selectedLloId || "__none__"} onValueChange={(v) => setSelectedLloId(v === "__none__" ? "" : v)}>
-        <SelectTrigger>
-          <SelectValue placeholder="Pilih Sub-CPMK..." />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="__none__">Tidak ada</SelectItem>
-          {typedLlos.map((llo) => (
-            <SelectItem key={llo.id} value={llo.id}>
-              {llo.code} - {llo.description.substring(0, 50)}...
+        <Select value={selectedLloId || "__none__"} onValueChange={(v) => setSelectedLloId(v === "__none__" ? "" : v)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Pilih Sub-CPMK..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">Tidak ada</SelectItem>
+            {typedLlos.map((llo) => (
+              <SelectItem key={llo.id} value={llo.id}>
+                {llo.code} - {llo.description.substring(0, 50)}...
               </SelectItem>
             ))}
           </SelectContent>
@@ -161,123 +150,51 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
         )}
       </div>
 
-      {/* Content Type Tabs */}
-      <Tabs value={contentType} onValueChange={(v) => setContentType(v as typeof contentType)}>
-        <TabsList className="grid grid-cols-4 w-full">
-          <TabsTrigger value="text" className="flex items-center gap-2">
-            <BookOpen className="h-4 w-4" />
-            Teks
-          </TabsTrigger>
-          <TabsTrigger value="video" className="flex items-center gap-2">
-            <Video className="h-4 w-4" />
-            Video
-          </TabsTrigger>
-          <TabsTrigger value="image" className="flex items-center gap-2">
-            <Image className="h-4 w-4" />
-            Gambar
-          </TabsTrigger>
-          <TabsTrigger value="document" className="flex items-center gap-2">
-            <FileText className="h-4 w-4" />
-            Dokumen
-          </TabsTrigger>
-        </TabsList>
+      {/* AI Generation */}
+      <div className="p-4 border rounded-lg bg-muted/50 space-y-3">
+        <Label className="flex items-center gap-2">
+          <Wand2 className="h-4 w-4" />
+          Generate dengan AI
+        </Label>
+        <div className="flex gap-2">
+          <Input
+            value={aiTopic}
+            onChange={(e) => setAiTopic(e.target.value)}
+            placeholder="Masukkan topik atau biarkan kosong untuk menggunakan Sub-CPMK..."
+            className="flex-1"
+          />
+          <Button onClick={handleGenerateWithAI} disabled={isGenerating}>
+            {isGenerating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="h-4 w-4 mr-2" />
+                Generate
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
 
-        <TabsContent value="text" className="space-y-4">
-          {/* AI Generation */}
-          <div className="p-4 border rounded-lg bg-muted/50 space-y-3">
-            <Label className="flex items-center gap-2">
-              <Wand2 className="h-4 w-4" />
-              Generate dengan AI
-            </Label>
-            <div className="flex gap-2">
-              <Input
-                value={aiTopic}
-                onChange={(e) => setAiTopic(e.target.value)}
-                placeholder="Masukkan topik atau biarkan kosong untuk menggunakan Sub-CPMK..."
-                className="flex-1"
-              />
-              <Button onClick={handleGenerateWithAI} disabled={isGenerating}>
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Wand2 className="h-4 w-4 mr-2" />
-                    Generate
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+      {/* Rich Content Editor - Combined text, image, video */}
+      <div className="space-y-2">
+        <Label>Konten Materi (Teks, Gambar, Video)</Label>
+        <RichContentEditor value={content} onChange={setContent} />
+      </div>
 
-          <div className="space-y-2">
-            <Label>Konten Materi (HTML)</Label>
-            <Textarea
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              placeholder="Masukkan konten materi dalam format HTML..."
-              className="min-h-[300px] font-mono text-sm"
-            />
-          </div>
-
-          {content && (
-            <div className="space-y-2">
-              <Label>Preview</Label>
-              <div 
-                className="p-4 border rounded-lg prose prose-sm max-w-none dark:prose-invert"
-                dangerouslySetInnerHTML={{ __html: content }}
-              />
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="video" className="space-y-4">
-          <div className="space-y-2">
-            <Label>URL Video (YouTube/Vimeo)</Label>
-            <Input
-              value={fileUrl}
-              onChange={(e) => setFileUrl(e.target.value)}
-              placeholder="https://youtube.com/watch?v=..."
-            />
-          </div>
-          {fileUrl && fileUrl.includes('youtube') && (
-            <div className="aspect-video">
-              <iframe
-                src={fileUrl.replace('watch?v=', 'embed/')}
-                className="w-full h-full rounded-lg"
-                allowFullScreen
-              />
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="image" className="space-y-4">
-          <div className="space-y-2">
-            <Label>URL Gambar</Label>
-            <Input
-              value={fileUrl}
-              onChange={(e) => setFileUrl(e.target.value)}
-              placeholder="https://example.com/image.jpg"
-            />
-          </div>
-          {fileUrl && (
-            <img src={fileUrl} alt="Preview" className="max-w-full rounded-lg" />
-          )}
-        </TabsContent>
-
-        <TabsContent value="document" className="space-y-4">
-          <div className="space-y-2">
-            <Label>URL Dokumen (Google Drive/PDF)</Label>
-            <Input
-              value={fileUrl}
-              onChange={(e) => setFileUrl(e.target.value)}
-              placeholder="https://drive.google.com/file/d/..."
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
+      {/* Preview */}
+      {content && (
+        <div className="space-y-2">
+          <Label>Preview</Label>
+          <div 
+            className="p-4 border rounded-lg prose prose-sm max-w-none dark:prose-invert"
+            dangerouslySetInnerHTML={{ __html: content }}
+          />
+        </div>
+      )}
 
       {/* Publish Toggle */}
       <div className="flex items-center justify-between p-4 border rounded-lg">

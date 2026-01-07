@@ -3,16 +3,22 @@ import { useQuizQuestions, useBatchCreateQuestions, useDeleteQuizQuestion, useAI
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Wand2, Plus, Trash2, HelpCircle } from 'lucide-react';
+import { Loader2, Wand2, Trash2, HelpCircle, ChevronDown, Upload, Download, Shield } from 'lucide-react';
+import { QuizTemplateImport, type ParsedQuestion } from './QuizTemplateImport';
+import { SEBConfigGenerator } from './SEBConfigGenerator';
 
 interface QuizManagerProps {
   assignmentId: string;
   courseId: string;
+  assignmentTitle?: string;
+  isSafeExamMode?: boolean;
+  sebPassword?: string;
+  sebQuitPassword?: string;
 }
 
 const QUESTION_TYPES = [
@@ -23,7 +29,7 @@ const QUESTION_TYPES = [
   { value: 'select_missing_word', label: 'Pilih Kata yang Hilang' },
 ];
 
-export function QuizManager({ assignmentId, courseId }: QuizManagerProps) {
+export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', isSafeExamMode, sebPassword, sebQuitPassword }: QuizManagerProps) {
   const { toast } = useToast();
   const { data: questions, isLoading } = useQuizQuestions(assignmentId);
   const { data: llos } = useCourseLLOs(courseId);
@@ -36,6 +42,8 @@ export function QuizManager({ assignmentId, courseId }: QuizManagerProps) {
   const [aiQuestionCount, setAiQuestionCount] = useState('5');
   const [selectedLloId, setSelectedLloId] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [showSebConfig, setShowSebConfig] = useState(false);
 
   const selectedLlo = (llos || []).find((l: any) => l.id === selectedLloId);
 
@@ -71,6 +79,7 @@ export function QuizManager({ assignmentId, courseId }: QuizManagerProps) {
           question_text: q.question_text,
           options: q.options ? JSON.stringify(q.options) : null,
           correct_answer: JSON.stringify(q.correct_answer),
+          feedback: q.feedback || null,
           points: 10,
           order_index: (questions?.length || 0) + idx + 1,
         }));
@@ -82,6 +91,26 @@ export function QuizManager({ assignmentId, courseId }: QuizManagerProps) {
       toast({ title: 'Error', description: error?.message || 'Gagal generate soal', variant: 'destructive' });
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const handleImportQuestions = async (parsedQuestions: ParsedQuestion[]) => {
+    try {
+      const questionsToInsert = parsedQuestions.map((q, idx) => ({
+        assignment_id: assignmentId,
+        question_type: q.question_type,
+        question_text: q.question_text,
+        options: q.options ? JSON.stringify(q.options) : null,
+        correct_answer: JSON.stringify(q.correct_answer),
+        feedback: q.feedback || null,
+        points: q.points,
+        order_index: (questions?.length || 0) + idx + 1,
+      }));
+
+      await batchCreate.mutateAsync(questionsToInsert);
+      setShowImport(false);
+    } catch (error) {
+      toast({ title: 'Error', description: 'Gagal mengimport soal', variant: 'destructive' });
     }
   };
 
@@ -98,8 +127,44 @@ export function QuizManager({ assignmentId, courseId }: QuizManagerProps) {
     return <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>;
   }
 
+  const quizUrl = `${window.location.origin}/quiz/${assignmentId}`;
+
   return (
     <div className="space-y-6">
+      {/* SEB Config Generator */}
+      {isSafeExamMode && (
+        <Collapsible open={showSebConfig} onOpenChange={setShowSebConfig}>
+          <CollapsibleTrigger asChild>
+            <Button variant="outline" className="w-full justify-between">
+              <span className="flex items-center gap-2"><Shield className="h-4 w-4" />Generate File .seb</span>
+              <ChevronDown className={`h-4 w-4 transition-transform ${showSebConfig ? 'rotate-180' : ''}`} />
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="pt-4">
+            <SEBConfigGenerator
+              assignmentId={assignmentId}
+              assignmentTitle={assignmentTitle}
+              quizUrl={quizUrl}
+              existingPassword={sebPassword}
+              existingQuitPassword={sebQuitPassword}
+            />
+          </CollapsibleContent>
+        </Collapsible>
+      )}
+
+      {/* Import from Template */}
+      <Collapsible open={showImport} onOpenChange={setShowImport}>
+        <CollapsibleTrigger asChild>
+          <Button variant="outline" className="w-full justify-between">
+            <span className="flex items-center gap-2"><Upload className="h-4 w-4" />Import dari File</span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${showImport ? 'rotate-180' : ''}`} />
+          </Button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="pt-4">
+          <QuizTemplateImport onImport={handleImportQuestions} />
+        </CollapsibleContent>
+      </Collapsible>
+
       {/* AI Generator */}
       <Card>
         <CardHeader>
@@ -112,11 +177,12 @@ export function QuizManager({ assignmentId, courseId }: QuizManagerProps) {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Sub-CPMK</Label>
-              <Select value={selectedLloId} onValueChange={setSelectedLloId}>
+              <Select value={selectedLloId || "__none__"} onValueChange={(v) => setSelectedLloId(v === "__none__" ? "" : v)}>
                 <SelectTrigger><SelectValue placeholder="Pilih Sub-CPMK..." /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">Tidak ada</SelectItem>
                   {(llos || []).map((llo: any) => (
-                    <SelectItem key={llo.id} value={llo.id}>{llo.code}</SelectItem>
+                    <SelectItem key={llo.id} value={llo.id}>{llo.code} - {llo.description?.substring(0, 30)}...</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -149,14 +215,12 @@ export function QuizManager({ assignmentId, courseId }: QuizManagerProps) {
 
       {/* Questions List */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="font-semibold">Daftar Soal ({questions?.length || 0})</h3>
-        </div>
+        <h3 className="font-semibold">Daftar Soal ({questions?.length || 0})</h3>
         {questions?.length === 0 ? (
           <Card className="border-dashed">
             <CardContent className="py-8 text-center text-muted-foreground">
               <HelpCircle className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              Belum ada soal. Generate soal dengan AI di atas.
+              Belum ada soal. Generate dengan AI atau import dari file.
             </CardContent>
           </Card>
         ) : (
@@ -171,6 +235,7 @@ export function QuizManager({ assignmentId, courseId }: QuizManagerProps) {
                       <Badge className="text-xs">{q.points} poin</Badge>
                     </div>
                     <p className="text-sm">{q.question_text}</p>
+                    {q.feedback && <p className="text-xs text-muted-foreground mt-1">Feedback: {q.feedback}</p>}
                   </div>
                   <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDeleteQuestion(q.id)}>
                     <Trash2 className="h-4 w-4" />

@@ -476,6 +476,9 @@ export type Database = {
           llo_id: string | null
           max_attempts: number | null
           seb_config_url: string | null
+          seb_password: string | null
+          seb_quit_password: string | null
+          show_answer_mode: string | null
           submission_type: string | null
           time_limit_minutes: number | null
           title: string
@@ -494,6 +497,9 @@ export type Database = {
           llo_id?: string | null
           max_attempts?: number | null
           seb_config_url?: string | null
+          seb_password?: string | null
+          seb_quit_password?: string | null
+          show_answer_mode?: string | null
           submission_type?: string | null
           time_limit_minutes?: number | null
           title: string
@@ -512,6 +518,9 @@ export type Database = {
           llo_id?: string | null
           max_attempts?: number | null
           seb_config_url?: string | null
+          seb_password?: string | null
+          seb_quit_password?: string | null
+          show_answer_mode?: string | null
           submission_type?: string | null
           time_limit_minutes?: number | null
           title?: string

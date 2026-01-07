@@ -16,11 +16,19 @@ interface AssignmentEditorProps {
   onSuccess: () => void;
 }
 
+type ExtendedAssignment = ElearningAssignment & {
+  seb_password?: string | null;
+  seb_quit_password?: string | null;
+  show_answer_mode?: string | null;
+};
+
 export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: AssignmentEditorProps) {
   const { toast } = useToast();
   const createAssignment = useCreateAssignment();
   const updateAssignment = useUpdateAssignment();
   const { data: llos } = useCourseLLOs(courseId);
+
+  const extendedAssignment = assignment as ExtendedAssignment | null;
 
   const [title, setTitle] = useState(assignment?.title || '');
   const [description, setDescription] = useState(assignment?.description || '');
@@ -31,6 +39,9 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
   const [selectedLloId, setSelectedLloId] = useState(assignment?.llo_id || '');
   const [isPublished, setIsPublished] = useState(assignment?.is_published || false);
   const [isSafeExamMode, setIsSafeExamMode] = useState(assignment?.is_safe_exam_mode || false);
+  const [showAnswerMode, setShowAnswerMode] = useState(extendedAssignment?.show_answer_mode || 'after_quiz');
+  const [sebPassword, setSebPassword] = useState(extendedAssignment?.seb_password || '');
+  const [sebQuitPassword, setSebQuitPassword] = useState(extendedAssignment?.seb_quit_password || '');
 
   const isLoading = createAssignment.isPending || updateAssignment.isPending;
 
@@ -41,7 +52,7 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
     }
 
     try {
-      const data = {
+      const data: any = {
         title,
         description: description || null,
         assignment_type: assignmentType,
@@ -51,6 +62,9 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
         llo_id: selectedLloId || null,
         is_published: isPublished,
         is_safe_exam_mode: isSafeExamMode,
+        show_answer_mode: assignmentType === 'quiz' ? showAnswerMode : null,
+        seb_password: isSafeExamMode ? sebPassword : null,
+        seb_quit_password: isSafeExamMode ? sebQuitPassword : null,
         elearning_class_id: classId,
       };
 
@@ -120,16 +134,64 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
         </Select>
       </div>
 
+      {/* Answer Display Mode - Quiz only */}
+      {assignmentType === 'quiz' && (
+        <div className="space-y-2">
+          <Label>Tampilkan Jawaban</Label>
+          <Select value={showAnswerMode} onValueChange={setShowAnswerMode}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="after_each">Setelah setiap soal dijawab</SelectItem>
+              <SelectItem value="after_quiz">Setelah quiz selesai</SelectItem>
+              <SelectItem value="never">Tidak ditampilkan</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            Kapan jawaban benar dan feedback ditampilkan kepada mahasiswa
+          </p>
+        </div>
+      )}
+
       <div className="flex items-center justify-between p-3 border rounded-lg">
         <div><Label>Publikasikan</Label><p className="text-xs text-muted-foreground">Mahasiswa dapat melihat</p></div>
         <Switch checked={isPublished} onCheckedChange={setIsPublished} />
       </div>
 
       {assignmentType === 'quiz' && (
-        <div className="flex items-center justify-between p-3 border rounded-lg bg-destructive/5">
-          <div><Label>Safe Exam Browser</Label><p className="text-xs text-muted-foreground">Aktifkan mode ujian aman</p></div>
-          <Switch checked={isSafeExamMode} onCheckedChange={setIsSafeExamMode} />
-        </div>
+        <>
+          <div className="flex items-center justify-between p-3 border rounded-lg bg-destructive/5">
+            <div><Label>Safe Exam Browser</Label><p className="text-xs text-muted-foreground">Aktifkan mode ujian aman</p></div>
+            <Switch checked={isSafeExamMode} onCheckedChange={setIsSafeExamMode} />
+          </div>
+
+          {isSafeExamMode && (
+            <div className="p-4 border rounded-lg space-y-4 bg-muted/50">
+              <p className="text-sm font-medium">Konfigurasi Safe Exam Browser</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Password Akses Quiz</Label>
+                  <Input 
+                    type="text" 
+                    value={sebPassword} 
+                    onChange={(e) => setSebPassword(e.target.value)}
+                    placeholder="Password untuk akses quiz..."
+                  />
+                  <p className="text-xs text-muted-foreground">Mahasiswa memasukkan password ini di SEB</p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Password Keluar SEB (Pengawas)</Label>
+                  <Input 
+                    type="text" 
+                    value={sebQuitPassword} 
+                    onChange={(e) => setSebQuitPassword(e.target.value)}
+                    placeholder="Password untuk keluar SEB..."
+                  />
+                  <p className="text-xs text-muted-foreground">Password untuk pengawas keluar SEB</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <div className="flex justify-end gap-2 pt-4">
