@@ -475,6 +475,8 @@ export type Database = {
           is_safe_exam_mode: boolean
           llo_id: string | null
           max_attempts: number | null
+          prerequisite_assignment_id: string | null
+          prerequisite_material_id: string | null
           seb_config_url: string | null
           seb_password: string | null
           seb_quit_password: string | null
@@ -496,6 +498,8 @@ export type Database = {
           is_safe_exam_mode?: boolean
           llo_id?: string | null
           max_attempts?: number | null
+          prerequisite_assignment_id?: string | null
+          prerequisite_material_id?: string | null
           seb_config_url?: string | null
           seb_password?: string | null
           seb_quit_password?: string | null
@@ -517,6 +521,8 @@ export type Database = {
           is_safe_exam_mode?: boolean
           llo_id?: string | null
           max_attempts?: number | null
+          prerequisite_assignment_id?: string | null
+          prerequisite_material_id?: string | null
           seb_config_url?: string | null
           seb_password?: string | null
           seb_quit_password?: string | null
@@ -546,6 +552,20 @@ export type Database = {
             columns: ["llo_id"]
             isOneToOne: false
             referencedRelation: "llos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elearning_assignments_prerequisite_assignment_id_fkey"
+            columns: ["prerequisite_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elearning_assignments_prerequisite_material_id_fkey"
+            columns: ["prerequisite_material_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_materials"
             referencedColumns: ["id"]
           },
         ]
@@ -662,6 +682,51 @@ export type Database = {
           },
         ]
       }
+      elearning_material_progress: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          id: string
+          material_id: string
+          progress_percentage: number | null
+          student_profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          material_id: string
+          progress_percentage?: number | null
+          student_profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          material_id?: string
+          progress_percentage?: number | null
+          student_profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elearning_material_progress_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elearning_material_progress_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       elearning_materials: {
         Row: {
           content: string | null
@@ -673,6 +738,8 @@ export type Database = {
           is_published: boolean
           llo_id: string | null
           order_index: number
+          prerequisite_assignment_id: string | null
+          prerequisite_material_id: string | null
           title: string
           updated_at: string
         }
@@ -686,6 +753,8 @@ export type Database = {
           is_published?: boolean
           llo_id?: string | null
           order_index?: number
+          prerequisite_assignment_id?: string | null
+          prerequisite_material_id?: string | null
           title: string
           updated_at?: string
         }
@@ -699,6 +768,8 @@ export type Database = {
           is_published?: boolean
           llo_id?: string | null
           order_index?: number
+          prerequisite_assignment_id?: string | null
+          prerequisite_material_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -715,6 +786,20 @@ export type Database = {
             columns: ["llo_id"]
             isOneToOne: false
             referencedRelation: "llos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elearning_materials_prerequisite_assignment_id_fkey"
+            columns: ["prerequisite_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "elearning_materials_prerequisite_material_id_fkey"
+            columns: ["prerequisite_material_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_materials"
             referencedColumns: ["id"]
           },
         ]
