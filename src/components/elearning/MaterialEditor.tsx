@@ -261,9 +261,62 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
             <Card className="mt-2">
               <CardContent className="py-4">
                 <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
+                  className="prose prose-sm max-w-none dark:prose-invert material-preview"
                   dangerouslySetInnerHTML={{ __html: content }}
                 />
+                <style>{`
+                  .material-preview .video-embed {
+                    position: relative;
+                    padding-bottom: 56.25%;
+                    height: 0;
+                    margin: 1rem 0;
+                    background: hsl(var(--muted));
+                    border-radius: 0.5rem;
+                    overflow: hidden;
+                  }
+                  .material-preview .video-embed iframe {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    border: none;
+                    border-radius: 0.5rem;
+                  }
+                  .material-preview .audio-embed {
+                    margin: 1rem 0;
+                    border-radius: 0.75rem;
+                    overflow: hidden;
+                  }
+                  .material-preview .audio-embed iframe {
+                    display: block;
+                    border: none;
+                  }
+                  .material-preview .media-container {
+                    margin: 1rem 0;
+                  }
+                  .material-preview video {
+                    max-width: 100%;
+                    border-radius: 0.5rem;
+                  }
+                  .material-preview audio {
+                    width: 100%;
+                  }
+                  .material-preview img {
+                    max-width: 100%;
+                    height: auto;
+                    border-radius: 0.5rem;
+                  }
+                  .material-preview table {
+                    width: 100%;
+                    border-collapse: collapse;
+                  }
+                  .material-preview th,
+                  .material-preview td {
+                    border: 1px solid hsl(var(--border));
+                    padding: 0.5rem;
+                  }
+                `}</style>
               </CardContent>
             </Card>
           </CollapsibleContent>
