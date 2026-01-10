@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCourses } from '@/hooks/useCourses';
 import {
@@ -9,6 +9,7 @@ import {
   useClassGroups,
   type ElearningClass,
 } from '@/hooks/useElearning';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -44,10 +45,17 @@ import {
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Users, BookOpen, Eye, EyeOff, Globe, GraduationCap, Calendar } from 'lucide-react';
 
+type AssignedInstructor = {
+  id: string;
+  full_name: string;
+  photo_url: string | null;
+};
+
 type ClassWithRelations = ElearningClass & {
   class_group: { id: string; name: string } | null;
   course: { id: string; name: string; code: string } | null;
   instructor: { id: string; full_name: string; photo_url: string | null } | null;
+  assignedInstructors?: AssignedInstructor[];
 };
 
 export function ElearningKelas() {
@@ -63,6 +71,7 @@ export function ElearningKelas() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<ClassWithRelations | null>(null);
   const [deletingClassId, setDeletingClassId] = useState<string | null>(null);
+  const [classesWithInstructors, setClassesWithInstructors] = useState<ClassWithRelations[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -76,6 +85,68 @@ export function ElearningKelas() {
   const isAdmin = profile?.role === 'admin';
   const isDosen = profile?.role === 'dosen';
   const canManage = isAdmin || isDosen;
+
+  // Fetch assigned instructors for each class based on course_id and class_group_id
+  useEffect(() => {
+    const fetchAssignedInstructors = async () => {
+      if (!classes || classes.length === 0) {
+        setClassesWithInstructors([]);
+        return;
+      }
+
+      const typedClasses = classes as ClassWithRelations[];
+      
+      // Get unique course_id + class_group_id combinations
+      const combinations = typedClasses.map(cls => ({
+        course_id: cls.course_id,
+        class_group_id: cls.class_group_id
+      }));
+
+      // Fetch all course instructors
+      const { data: instructorData, error } = await supabase
+        .from('course_instructors')
+        .select(`
+          *,
+          profiles:instructor_profile_id (id, full_name, photo_url)
+        `);
+
+      if (error) {
+        console.error('Error fetching instructors:', error);
+        setClassesWithInstructors(typedClasses);
+        return;
+      }
+
+      // Map instructors to classes
+      const updatedClasses = typedClasses.map(cls => {
+        const matchingInstructors = (instructorData || [])
+          .filter(ci => 
+            ci.course_id === cls.course_id && 
+            ci.class_group_id === cls.class_group_id
+          )
+          .map(ci => ci.profiles as unknown as AssignedInstructor)
+          .filter(Boolean);
+
+        return {
+          ...cls,
+          assignedInstructors: matchingInstructors.length > 0 ? matchingInstructors : undefined
+        };
+      });
+
+      setClassesWithInstructors(updatedClasses);
+    };
+
+    fetchAssignedInstructors();
+  }, [classes]);
+
+  // Auto-generate title when course and class are selected
+  const generateTitle = (courseId: string, classGroupId: string): string => {
+    const course = courses?.find(c => c.id === courseId);
+    const classGroup = classGroups?.find(g => g.id === classGroupId);
+    if (course && classGroup) {
+      return `${course.name} - ${classGroup.name}`;
+    }
+    return '';
+  };
 
   const resetForm = () => {
     setFormData({
@@ -106,16 +177,19 @@ export function ElearningKelas() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.title || !formData.course_id || !formData.class_group_id) {
+    if (!formData.course_id || !formData.class_group_id) {
       toast.error('Mohon lengkapi semua field wajib');
       return;
     }
+
+    // Auto-generate title from course and class
+    const autoTitle = editingClass ? formData.title : generateTitle(formData.course_id, formData.class_group_id);
 
     try {
       if (editingClass) {
         await updateClass.mutateAsync({
           id: editingClass.id,
-          title: formData.title,
+          title: autoTitle,
           description: formData.description || null,
           course_id: formData.course_id,
           class_group_id: formData.class_group_id,
@@ -124,7 +198,7 @@ export function ElearningKelas() {
         toast.success('Kelas berhasil diperbarui');
       } else {
         await createClass.mutateAsync({
-          title: formData.title,
+          title: autoTitle,
           description: formData.description || null,
           course_id: formData.course_id,
           class_group_id: formData.class_group_id,
@@ -194,7 +268,7 @@ export function ElearningKelas() {
     );
   }
 
-  const typedClasses = (classes || []) as ClassWithRelations[];
+  const typedClasses = classesWithInstructors.length > 0 ? classesWithInstructors : (classes || []) as ClassWithRelations[];
 
   return (
     <div className="space-y-6">
@@ -291,19 +365,38 @@ export function ElearningKelas() {
                   </div>
                 </div>
 
-                {/* Instructor */}
-                <div className="flex items-center gap-3 pt-4 border-t">
-                  <Avatar className="h-10 w-10 ring-2 ring-primary/20">
-                    <AvatarImage src={cls.instructor?.photo_url || undefined} />
-                    <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                      {cls.instructor?.full_name?.charAt(0) || '?'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-muted-foreground">Pengajar</p>
-                    <p className="font-medium text-sm truncate">{cls.instructor?.full_name}</p>
+                {/* Assigned Instructors from course_instructors */}
+                {cls.assignedInstructors && cls.assignedInstructors.length > 0 ? (
+                  <div className="pt-4 border-t">
+                    <p className="text-xs text-muted-foreground mb-2">Dosen Pengampu</p>
+                    <div className="flex flex-col gap-2">
+                      {cls.assignedInstructors.map((instructor) => (
+                        <div key={instructor.id} className="flex items-center gap-2">
+                          <Avatar className="h-8 w-8 ring-2 ring-primary/20">
+                            <AvatarImage src={instructor.photo_url || undefined} />
+                            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                              {instructor.full_name?.charAt(0) || '?'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <p className="font-medium text-sm truncate">{instructor.full_name}</p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-center gap-3 pt-4 border-t">
+                    <Avatar className="h-10 w-10 ring-2 ring-primary/20">
+                      <AvatarImage src={cls.instructor?.photo_url || undefined} />
+                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
+                        {cls.instructor?.full_name?.charAt(0) || '?'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-muted-foreground">Pembuat Kelas</p>
+                      <p className="font-medium text-sm truncate">{cls.instructor?.full_name}</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Actions */}
                 {(isAdmin || cls.instructor_profile_id === profile?.id) && (
@@ -348,29 +441,6 @@ export function ElearningKelas() {
 
           <div className="space-y-5 py-4">
             <div className="space-y-2">
-              <Label htmlFor="title">Judul Kelas *</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Contoh: Pemrograman Web - Kelas A"
-                className="h-11"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Deskripsi</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Deskripsi singkat tentang kelas ini..."
-                rows={3}
-                className="resize-none"
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="course">Mata Kuliah *</Label>
               <Select
                 value={formData.course_id}
@@ -406,6 +476,18 @@ export function ElearningKelas() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Deskripsi</Label>
+              <Textarea
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="Deskripsi singkat tentang kelas ini..."
+                rows={3}
+                className="resize-none"
+              />
             </div>
 
             <div className="space-y-2">

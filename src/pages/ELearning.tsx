@@ -13,6 +13,7 @@ export default function ELearning() {
   const navigate = useNavigate();
 
   const canViewRecap = profile?.role === 'admin' || profile?.role === 'dosen';
+  const canViewPresensi = profile?.role === 'admin' || profile?.role === 'dosen';
 
   if (loading) {
     return (
@@ -53,15 +54,17 @@ export default function ELearning() {
 
         {/* Tabs */}
         <Tabs defaultValue="kelas" className="w-full">
-          <TabsList className="grid w-full max-w-md grid-cols-3 h-12">
+          <TabsList className={`grid w-full max-w-md h-12 ${canViewPresensi ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <TabsTrigger value="kelas" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BookOpen className="h-4 w-4" />
               <span className="hidden sm:inline">Kelas</span>
             </TabsTrigger>
-            <TabsTrigger value="presensi" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <ClipboardList className="h-4 w-4" />
-              <span className="hidden sm:inline">Presensi</span>
-            </TabsTrigger>
+            {canViewPresensi && (
+              <TabsTrigger value="presensi" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <ClipboardList className="h-4 w-4" />
+                <span className="hidden sm:inline">Presensi</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="materi" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Materi</span>
@@ -72,9 +75,11 @@ export default function ELearning() {
             <ElearningKelas />
           </TabsContent>
 
-          <TabsContent value="presensi" className="mt-8">
-            <ElearningPresensi />
-          </TabsContent>
+          {canViewPresensi && (
+            <TabsContent value="presensi" className="mt-8">
+              <ElearningPresensi />
+            </TabsContent>
+          )}
 
           <TabsContent value="materi" className="mt-8">
             <ElearningMateri />
