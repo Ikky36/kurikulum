@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useElearningClasses, type ElearningClass } from '@/hooks/useElearning';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,16 +19,50 @@ export function ElearningMateri() {
   const { profile } = useAuth();
   const { data: classes, isLoading } = useElearningClasses();
   const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [studentClassGroupIds, setStudentClassGroupIds] = useState<string[]>([]);
+  const [loadingStudentClasses, setLoadingStudentClasses] = useState(false);
 
   const isAdmin = profile?.role === 'admin';
+  const isDosen = profile?.role === 'dosen';
+  const isMahasiswa = profile?.role === 'mahasiswa';
   const typedClasses = (classes || []) as ClassWithRelations[];
-  const myClasses = typedClasses.filter(
-    (c) => isAdmin || c.instructor_profile_id === profile?.id
-  );
+
+  // Fetch student's enrolled class groups
+  useEffect(() => {
+    const fetchStudentClassGroups = async () => {
+      if (!profile?.id || !isMahasiswa) return;
+      
+      setLoadingStudentClasses(true);
+      try {
+        const { data, error } = await supabase
+          .from('class_students')
+          .select('class_group_id')
+          .eq('student_profile_id', profile.id);
+        
+        if (error) throw error;
+        setStudentClassGroupIds(data?.map(cs => cs.class_group_id) || []);
+      } catch (error) {
+        console.error('Error fetching student class groups:', error);
+      } finally {
+        setLoadingStudentClasses(false);
+      }
+    };
+
+    fetchStudentClassGroups();
+  }, [profile?.id, isMahasiswa]);
+
+  // Filter classes based on role
+  const myClasses = typedClasses.filter((c) => {
+    if (isAdmin) return true;
+    if (isDosen) return c.instructor_profile_id === profile?.id;
+    if (isMahasiswa) return studentClassGroupIds.includes(c.class_group_id);
+    return false;
+  });
+
   const selectedClass = myClasses.find(c => c.id === selectedClassId);
   const canEdit = isAdmin || selectedClass?.instructor_profile_id === profile?.id;
 
-  if (isLoading) {
+  if (isLoading || loadingStudentClasses) {
     return (
       <div className="flex items-center justify-center min-h-[200px]">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
