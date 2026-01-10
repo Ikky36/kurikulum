@@ -13,12 +13,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { 
   AlertTriangle, Clock, ChevronLeft, ChevronRight, CheckCircle, 
   Send, Shield, Eye, EyeOff, Lock
 } from 'lucide-react';
+import { MatchingQuestion } from '@/components/quiz/MatchingQuestion';
 
 interface QuizQuestion {
   id: string;
@@ -592,67 +592,22 @@ export default function QuizTaking() {
                 </div>
               )}
 
-              {/* Matching */}
+              {/* Matching - Drag and Drop */}
               {currentQuestion.question_type === 'matching' && (
-                <div className="space-y-4">
-                  {(() => {
-                    let options = currentQuestion.options;
-                    if (typeof options === 'string') {
-                      try { options = JSON.parse(options); } catch { options = { left: [], right: [] }; }
-                    }
-                    
-                    const leftItems = options?.left || options?.items || [];
-                    const rightItems = options?.right || options?.matches || [];
-                    const currentAnswers: Record<string, string> = answers[currentQuestion.id] || {};
-
-                    const handleMatchChange = (leftItem: string, rightItem: string) => {
-                      const newAnswers = { ...currentAnswers, [leftItem]: rightItem };
-                      handleAnswerChange(currentQuestion.id, newAnswers);
-                    };
-
-                    // Get available right items (not yet matched)
-                    const getAvailableRightItems = (currentLeft: string) => {
-                      const usedRightItems = Object.entries(currentAnswers)
-                        .filter(([left]) => left !== currentLeft)
-                        .map(([, right]) => right);
-                      return rightItems.filter((item: string) => !usedRightItems.includes(item));
-                    };
-
-                    return (
-                      <div className="space-y-3">
-                        <p className="text-sm text-muted-foreground mb-4">Cocokkan item di sebelah kiri dengan pasangannya:</p>
-                        {leftItems.map((leftItem: string, idx: number) => (
-                          <div key={idx} className="flex items-center gap-4 p-3 border rounded-lg bg-muted/30">
-                            <div className="flex-1 font-medium">{leftItem}</div>
-                            <div className="w-8 text-center text-muted-foreground">→</div>
-                            <div className="flex-1">
-                              <Select
-                                value={currentAnswers[leftItem] || ''}
-                                onValueChange={(value) => handleMatchChange(leftItem, value)}
-                              >
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Pilih pasangan..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {getAvailableRightItems(leftItem).map((rightItem: string, rIdx: number) => (
-                                    <SelectItem key={rIdx} value={rightItem}>
-                                      {rightItem}
-                                    </SelectItem>
-                                  ))}
-                                  {currentAnswers[leftItem] && (
-                                    <SelectItem value={currentAnswers[leftItem]}>
-                                      {currentAnswers[leftItem]}
-                                    </SelectItem>
-                                  )}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
+                (() => {
+                  let options = currentQuestion.options;
+                  if (typeof options === 'string') {
+                    try { options = JSON.parse(options); } catch { options = { left: [], right: [] }; }
+                  }
+                  
+                  return (
+                    <MatchingQuestion
+                      options={options}
+                      value={answers[currentQuestion.id] || {}}
+                      onChange={(value) => handleAnswerChange(currentQuestion.id, value)}
+                    />
+                  );
+                })()
               )}
 
               {/* Show feedback after each question if enabled */}
