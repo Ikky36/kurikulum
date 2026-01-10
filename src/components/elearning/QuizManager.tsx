@@ -12,11 +12,13 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Wand2, Trash2, HelpCircle, ChevronDown, Upload, Shield, Sparkles, FileText, CheckCircle, Pencil, Eye, EyeOff, Save, X, Database, Plus, BookmarkPlus } from 'lucide-react';
+import { Loader2, Wand2, Trash2, HelpCircle, ChevronDown, Upload, Shield, Sparkles, FileText, CheckCircle, Pencil, Eye, EyeOff, Save, X, Database, Plus, BookmarkPlus, Play, List } from 'lucide-react';
 import { QuizTemplateImport, type ParsedQuestion } from './QuizTemplateImport';
 import { SEBConfigGenerator } from './SEBConfigGenerator';
 import { AIContentGenerator } from './AIContentGenerator';
 import { QuestionBankDialog } from './QuestionBankDialog';
+import { QuizPreview } from '@/components/quiz/QuizPreview';
+import { MatchingQuestionEditor } from '@/components/quiz/MatchingQuestionEditor';
 
 interface QuizManagerProps {
   assignmentId: string;
@@ -56,6 +58,9 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
   const [showAnswers, setShowAnswers] = useState(true);
   const [showQuestionBank, setShowQuestionBank] = useState(false);
   const [showManualAdd, setShowManualAdd] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewMode, setPreviewMode] = useState<'single' | 'all'>('all');
+  const [previewQuestionIndex, setPreviewQuestionIndex] = useState(0);
   
   // Manual add state
   const [manualForm, setManualForm] = useState({
@@ -67,6 +72,7 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
     feedback: '',
     points: 10,
     save_to_bank: false,
+    matching_pairs: [{ left: '', right: '' }, { left: '', right: '' }, { left: '', right: '' }] as { left: string; right: string }[],
   });
   
   // Edit state
@@ -218,20 +224,38 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
     const questionCode = manualForm.question_code || generateNextCode();
 
     try {
+      // Handle matching type differently
+      let optionsToSave = null;
+      let correctAnswerToSave = null;
+
+      if (manualForm.question_type === 'matching') {
+        const validPairs = manualForm.matching_pairs.filter(p => p.left.trim() && p.right.trim());
+        if (validPairs.length < 2) {
+          toast({ title: 'Error', description: 'Minimal 2 pasangan yang valid untuk soal menjodohkan', variant: 'destructive' });
+          return;
+        }
+        optionsToSave = JSON.stringify(validPairs);
+        // For matching, correct_answer is the mapping
+        const correctMapping: Record<string, string> = {};
+        validPairs.forEach(p => { correctMapping[p.left] = p.right; });
+        correctAnswerToSave = JSON.stringify(correctMapping);
+      } else if (manualForm.question_type === 'short_answer') {
+        correctAnswerToSave = JSON.stringify(manualForm.options[0]);
+      } else {
+        optionsToSave = manualForm.options.filter(o => o.trim()).length > 0 
+          ? JSON.stringify(manualForm.options.filter(o => o.trim())) 
+          : null;
+        correctAnswerToSave = JSON.stringify(manualForm.correct_answer);
+      }
+
       // Add to quiz
       await batchCreate.mutateAsync([{
         assignment_id: assignmentId,
         question_code: questionCode,
         question_type: manualForm.question_type,
         question_text: manualForm.question_text,
-        options: manualForm.options.filter(o => o.trim()).length > 0 
-          ? JSON.stringify(manualForm.options.filter(o => o.trim())) 
-          : null,
-        correct_answer: JSON.stringify(
-          manualForm.question_type === 'short_answer' 
-            ? manualForm.options[0] 
-            : manualForm.correct_answer
-        ),
+        options: optionsToSave,
+        correct_answer: correctAnswerToSave,
         feedback: manualForm.feedback || null,
         points: manualForm.points,
         order_index: (questions?.length || 0) + 1,
@@ -245,9 +269,11 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
           question_code: questionCode,
           question_type: manualForm.question_type,
           question_text: manualForm.question_text,
-          options: manualForm.options.filter(o => o.trim()).length > 0 
-            ? manualForm.options.filter(o => o.trim()) 
-            : null,
+          options: manualForm.question_type === 'matching' 
+            ? manualForm.matching_pairs.filter(p => p.left.trim() && p.right.trim())
+            : (manualForm.options.filter(o => o.trim()).length > 0 
+              ? manualForm.options.filter(o => o.trim()) 
+              : null),
           correct_answer: manualForm.question_type === 'short_answer' 
             ? manualForm.options[0] 
             : manualForm.correct_answer,
@@ -267,6 +293,7 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
         feedback: '',
         points: 10,
         save_to_bank: false,
+        matching_pairs: [{ left: '', right: '' }, { left: '', right: '' }, { left: '', right: '' }],
       });
     } catch (error) {
       toast({ title: 'Error', description: 'Gagal menambahkan soal', variant: 'destructive' });
@@ -566,7 +593,7 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
             <FileText className="h-5 w-5" />
             Daftar Soal
           </h3>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Button 
               variant="outline" 
               size="sm" 
@@ -576,6 +603,35 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
               {showAnswers ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {showAnswers ? 'Sembunyikan' : 'Tampilkan'} Jawaban
             </Button>
+            {questions && questions.length > 0 && (
+              <>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => {
+                    setPreviewMode('all');
+                    setShowPreview(true);
+                  }}
+                  className="gap-2"
+                >
+                  <List className="h-4 w-4" />
+                  Preview Semua
+                </Button>
+                <Button 
+                  variant="default" 
+                  size="sm" 
+                  onClick={() => {
+                    setPreviewMode('single');
+                    setPreviewQuestionIndex(0);
+                    setShowPreview(true);
+                  }}
+                  className="gap-2"
+                >
+                  <Play className="h-4 w-4" />
+                  Coba Soal
+                </Button>
+              </>
+            )}
             <Badge variant="secondary" className="text-base px-3 py-1">
               {questions?.length || 0} Soal
             </Badge>
@@ -754,6 +810,11 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
                   </SelectContent>
                 </Select>
               </div>
+            ) : manualForm.question_type === 'matching' ? (
+              <MatchingQuestionEditor
+                pairs={manualForm.matching_pairs}
+                onChange={(pairs) => setManualForm({ ...manualForm, matching_pairs: pairs })}
+              />
             ) : (
               <div className="space-y-2">
                 <Label>Pilihan Jawaban</Label>
@@ -936,6 +997,17 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Quiz Preview */}
+      {questions && questions.length > 0 && (
+        <QuizPreview
+          questions={questions}
+          open={showPreview}
+          onOpenChange={setShowPreview}
+          mode={previewMode}
+          initialQuestionIndex={previewQuestionIndex}
+        />
+      )}
     </div>
   );
 }
