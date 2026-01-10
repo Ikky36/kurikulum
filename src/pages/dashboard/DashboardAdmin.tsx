@@ -1008,12 +1008,21 @@ export default function DashboardAdmin() {
                           <TableCell>
                             <div className="flex flex-col gap-2">
                               {group.instructors.filter(Boolean).map((instructor, idx) => (
-                                <div key={instructor?.id || idx} className="flex items-center gap-2">
+                                <div key={instructor?.id || idx} className="flex items-center gap-2 group/instructor">
                                   <Avatar className="h-8 w-8">
                                     <AvatarImage src={instructor?.photo_url || undefined} />
                                     <AvatarFallback>{instructor?.full_name?.charAt(0)}</AvatarFallback>
                                   </Avatar>
-                                  <span className="text-sm">{instructor?.full_name}</span>
+                                  <span className="text-sm flex-1">{instructor?.full_name}</span>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-6 w-6 text-destructive hover:text-destructive opacity-0 group-hover/instructor:opacity-100 transition-opacity" 
+                                    onClick={() => removeInstructorMutation.mutate(group.ids[idx])}
+                                    title="Hapus penugasan dosen ini"
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
                                 </div>
                               ))}
                             </div>
@@ -1029,21 +1038,10 @@ export default function DashboardAdmin() {
                                   setSelectedDosenForAssign([]);
                                   setShowAssignDialog(true);
                                 }}
+                                title="Tambah dosen"
                               >
-                                <Pencil className="h-4 w-4" />
+                                <Plus className="h-4 w-4" />
                               </Button>
-                              {group.ids.map((id) => (
-                                <Button 
-                                  key={id} 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="text-destructive hover:text-destructive" 
-                                  onClick={() => removeInstructorMutation.mutate(id)}
-                                  title="Hapus penugasan"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              ))}
                             </div>
                           </TableCell>
                         </TableRow>
