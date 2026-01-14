@@ -175,9 +175,26 @@ export function useDeleteAssignment() {
 }
 
 // Fetch quiz questions for an assignment
+// Fetch quiz questions using secure function that hides correct_answer for students
 export function useQuizQuestions(assignmentId: string) {
   return useQuery({
     queryKey: ['quiz-questions', assignmentId],
+    queryFn: async () => {
+      // Use the secure RPC function that hides correct_answer based on permissions
+      const { data, error } = await supabase
+        .rpc('get_quiz_questions_for_student', { p_assignment_id: assignmentId });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!assignmentId,
+  });
+}
+
+// Fetch quiz questions directly for instructors (admin/dosen) who need to manage questions
+export function useQuizQuestionsForInstructor(assignmentId: string) {
+  return useQuery({
+    queryKey: ['quiz-questions-instructor', assignmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('elearning_quiz_questions')
@@ -189,6 +206,28 @@ export function useQuizQuestions(assignmentId: string) {
       return data;
     },
     enabled: !!assignmentId,
+  });
+}
+
+// Server-side quiz grading function
+export function useGradeQuiz() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ assignmentId, answers }: { assignmentId: string; answers: Record<string, any> }) => {
+      const { data, error } = await supabase
+        .rpc('grade_quiz_submission', { 
+          p_assignment_id: assignmentId, 
+          p_answers: answers 
+        });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quiz-questions'] });
+      queryClient.invalidateQueries({ queryKey: ['quiz-submissions'] });
+    },
   });
 }
 

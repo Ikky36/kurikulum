@@ -44,6 +44,23 @@ interface Assignment {
   elearning_class_id: string;
 }
 
+interface GradingResult {
+  total_points: number;
+  earned_points: number;
+  percentage: number;
+  details: Array<{
+    question_id: string;
+    question: string;
+    question_type: string;
+    user_answer: any;
+    correct_answer: any;
+    is_correct: boolean;
+    points: number;
+    earned_points: number;
+    feedback: string | null;
+  }>;
+}
+
 export default function QuizTaking() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const navigate = useNavigate();
@@ -76,15 +93,12 @@ export default function QuizTaking() {
     enabled: !!assignmentId,
   });
 
-  // Fetch questions
+  // Fetch questions using secure RPC function (hides correct_answer for students)
   const { data: questions, isLoading: loadingQuestions } = useQuery({
     queryKey: ['quiz-questions', assignmentId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('elearning_quiz_questions')
-        .select('*')
-        .eq('assignment_id', assignmentId)
-        .order('order_index');
+        .rpc('get_quiz_questions_for_student', { p_assignment_id: assignmentId });
       if (error) throw error;
       return data as QuizQuestion[];
     },
@@ -220,76 +234,50 @@ export default function QuizTaking() {
     setAnswers(prev => ({ ...prev, [questionId]: value }));
   };
 
-  const calculateScore = () => {
-    if (!questions) return { score: 0, total: 0, percentage: 0, details: [] };
-
-    let totalScore = 0;
-    let earnedScore = 0;
-    const details: any[] = [];
-
-    questions.forEach(q => {
-      totalScore += q.points;
-      const userAnswer = answers[q.id];
-      let correctAnswer = q.correct_answer;
-
-      // Parse correct answer if it's a string
-      if (typeof correctAnswer === 'string') {
-        try {
-          correctAnswer = JSON.parse(correctAnswer);
-        } catch {}
-      }
-
-      let isCorrect = false;
-
-      if (q.question_type === 'multiple_choice' || q.question_type === 'true_false') {
-        isCorrect = userAnswer === correctAnswer || userAnswer === String(correctAnswer);
-      } else if (q.question_type === 'short_answer') {
-        isCorrect = userAnswer?.toLowerCase().trim() === String(correctAnswer).toLowerCase().trim();
-      }
-
-      if (isCorrect) {
-        earnedScore += q.points;
-      }
-
-      details.push({
-        question: q.question_text,
-        userAnswer,
-        correctAnswer,
-        isCorrect,
-        points: q.points,
-        earnedPoints: isCorrect ? q.points : 0,
-        feedback: q.feedback,
-      });
-    });
-
-    return {
-      score: earnedScore,
-      total: totalScore,
-      percentage: Math.round((earnedScore / totalScore) * 100),
-      details,
-    };
-  };
-
   const handleSubmit = async () => {
     if (!profile?.id || !assignmentId) return;
 
     setIsSubmitting(true);
     try {
-      const result = calculateScore();
+      // Use server-side grading for secure score calculation
+      const { data: gradingData, error: gradingError } = await supabase
+        .rpc('grade_quiz_submission', { 
+          p_assignment_id: assignmentId, 
+          p_answers: answers 
+        });
+
+      if (gradingError) throw gradingError;
+
+      // Cast the result to the correct type
+      const gradingResult = gradingData as unknown as GradingResult;
+
       const attemptNumber = (previousSubmissions?.length || 0) + 1;
 
       const submissionData = {
         assignment_id: assignmentId,
         student_profile_id: profile.id,
         answers: JSON.stringify(answers),
-        score: result.percentage,
+        score: gradingResult.percentage,
         attempt_number: attemptNumber,
         submitted_at: new Date().toISOString(),
       };
 
       await submitQuiz.mutateAsync(submissionData);
+      
+      // Transform grading result for display
+      const result = {
+        score: gradingResult.earned_points,
+        total: gradingResult.total_points,
+        percentage: gradingResult.percentage,
+        details: gradingResult.details,
+      };
+      
       setSubmissionResult(result);
       setShowResults(true);
+      
+      // Invalidate quiz questions to get correct answers now that student has submitted
+      queryClient.invalidateQueries({ queryKey: ['quiz-questions', assignmentId] });
+      
       toast.success('Quiz berhasil disubmit!');
     } catch (error: any) {
       toast.error(error.message || 'Gagal submit quiz');

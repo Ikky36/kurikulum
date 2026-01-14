@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useQuizQuestions, useCreateSubmission, useAssignmentSubmissions } from '@/hooks/useElearningMaterials';
+import { useQuizQuestions, useCreateSubmission, useAssignmentSubmissions, useGradeQuiz } from '@/hooks/useElearningMaterials';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -13,6 +13,7 @@ import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
 import { CheckCircle2, XCircle, Trophy, ArrowRight, ArrowLeft, Send, RotateCcw, HelpCircle } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface MaterialQuizProps {
   assignmentId: string;
@@ -39,9 +40,11 @@ type QuizQuestion = {
 export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: MaterialQuizProps) {
   const { profile } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { data: questions, isLoading } = useQuizQuestions(assignmentId);
   const { data: submissions } = useAssignmentSubmissions(assignmentId);
   const createSubmission = useCreateSubmission();
+  const gradeQuiz = useGradeQuiz();
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
@@ -84,43 +87,24 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
     });
   };
 
-  const calculateScore = (): number => {
-    let totalPoints = 0;
-    let earnedPoints = 0;
-
-    typedQuestions.forEach(question => {
-      totalPoints += question.points;
-      const userAnswer = answers[question.id];
-      const correctAnswer = question.correct_answer;
-
-      if (!correctAnswer || !userAnswer) return;
-
-      if (question.question_type === 'multiple_choice' || question.question_type === 'true_false') {
-        if (userAnswer === correctAnswer) {
-          earnedPoints += question.points;
-        }
-      } else if (question.question_type === 'multiple_answer') {
-        const correctSet = new Set(Array.isArray(correctAnswer) ? correctAnswer : [correctAnswer]);
-        const userSet = new Set(Array.isArray(userAnswer) ? userAnswer : [userAnswer]);
-        if (correctSet.size === userSet.size && [...correctSet].every(v => userSet.has(v))) {
-          earnedPoints += question.points;
-        }
-      }
-      // Essay questions need manual grading
-    });
-
-    return totalPoints > 0 ? Math.round((earnedPoints / totalPoints) * 100) : 0;
-  };
-
   const handleSubmit = async () => {
     if (!profile) return;
 
-    const calculatedScore = calculateScore();
-    setScore(calculatedScore);
-    setIsSubmitted(true);
-    setShowResults(true);
-
     try {
+      // Use server-side grading for secure score calculation
+      const gradingResult = await gradeQuiz.mutateAsync({
+        assignmentId,
+        answers,
+      });
+
+      // Cast result properly
+      const result = gradingResult as { percentage: number; earned_points: number; total_points: number };
+      const calculatedScore = result.percentage;
+      
+      setScore(calculatedScore);
+      setIsSubmitted(true);
+      setShowResults(true);
+
       await createSubmission.mutateAsync({
         assignment_id: assignmentId,
         student_profile_id: profile.id,
@@ -128,6 +112,10 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
         score: calculatedScore,
         submitted_at: new Date().toISOString(),
       });
+      
+      // Invalidate quiz questions to get correct answers now that student has submitted
+      queryClient.invalidateQueries({ queryKey: ['quiz-questions', assignmentId] });
+      
       toast({ title: 'Berhasil', description: 'Quiz berhasil dikumpulkan' });
       onComplete?.(calculatedScore);
     } catch (error) {
@@ -141,27 +129,6 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
     setIsSubmitted(false);
     setShowResults(false);
     setScore(0);
-  };
-
-  const isCorrect = (questionId: string): boolean | null => {
-    if (!isSubmitted) return null;
-    const question = typedQuestions.find(q => q.id === questionId);
-    if (!question) return null;
-    
-    const userAnswer = answers[questionId];
-    const correctAnswer = question.correct_answer;
-    
-    if (!correctAnswer || !userAnswer) return false;
-    
-    if (question.question_type === 'multiple_choice' || question.question_type === 'true_false') {
-      return userAnswer === correctAnswer;
-    }
-    if (question.question_type === 'multiple_answer') {
-      const correctSet = new Set(Array.isArray(correctAnswer) ? correctAnswer : [correctAnswer]);
-      const userSet = new Set(Array.isArray(userAnswer) ? userAnswer : [userAnswer]);
-      return correctSet.size === userSet.size && [...correctSet].every(v => userSet.has(v));
-    }
-    return null;
   };
 
   if (isLoading) {
