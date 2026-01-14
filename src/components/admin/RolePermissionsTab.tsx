@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save, Shield, Eye, Pencil, Link2 } from 'lucide-react';
+import { Loader2, Save, Shield, Eye, Pencil, Link2, Search } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface RolePermission {
@@ -58,6 +59,7 @@ export function RolePermissionsTab() {
   const queryClient = useQueryClient();
   const [localPermissions, setLocalPermissions] = useState<RolePermission[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const { data: permissions, isLoading } = useQuery({
     queryKey: ['role-permissions'],
@@ -146,6 +148,20 @@ export function RolePermissionsTab() {
     );
   }
 
+  // Filter roles based on search
+  const filteredRoles = useMemo(() => {
+    if (!searchQuery) return ROLES;
+    const query = searchQuery.toLowerCase();
+    return ROLES.filter(role => 
+      role.label.toLowerCase().includes(query) || 
+      role.description.toLowerCase().includes(query) ||
+      PERMISSION_KEYS.some(perm => 
+        perm.label.toLowerCase().includes(query) || 
+        perm.description.toLowerCase().includes(query)
+      )
+    );
+  }, [searchQuery]);
+
   return (
     <Card>
       <CardHeader>
@@ -171,9 +187,20 @@ export function RolePermissionsTab() {
             Simpan Perubahan
           </Button>
         </div>
+        
+        {/* Search */}
+        <div className="relative mt-4">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cari role atau permission..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
       </CardHeader>
       <CardContent className="space-y-8">
-        {ROLES.map(role => (
+        {filteredRoles.map(role => (
           <div key={role.value} className="space-y-4">
             <div className="flex items-center gap-2 pb-2 border-b">
               <Badge variant="outline" className="text-base px-3 py-1">

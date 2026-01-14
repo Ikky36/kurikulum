@@ -1262,6 +1262,7 @@ export type Database = {
           photo_url: string | null
           program: string | null
           role: Database["public"]["Enums"]["app_role"]
+          sistem_kuliah_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1277,6 +1278,7 @@ export type Database = {
           photo_url?: string | null
           program?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          sistem_kuliah_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1292,9 +1294,18 @@ export type Database = {
           photo_url?: string | null
           program?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          sistem_kuliah_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_sistem_kuliah_id_fkey"
+            columns: ["sistem_kuliah_id"]
+            isOneToOne: false
+            referencedRelation: "sistem_kuliah"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       programs: {
         Row: {
@@ -1421,6 +1432,33 @@ export type Database = {
           permission_key?: string
           role?: string
           scope?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sistem_kuliah: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
           updated_at?: string
         }
         Relationships: []
