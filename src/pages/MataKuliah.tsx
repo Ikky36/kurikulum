@@ -2,13 +2,14 @@ import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { useCoursesWithStats } from '@/hooks/useCourses';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Users, TrendingUp, ChevronRight, Filter } from 'lucide-react';
+import { Users, TrendingUp, ChevronRight, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,6 +17,8 @@ import { Curriculum } from '@/lib/types';
 
 export default function MataKuliah() {
   const { data: courses, isLoading, error } = useCoursesWithStats();
+  const { user } = useAuth();
+  const isGuest = !user;
   
   // Filter states
   const [codeFilter, setCodeFilter] = useState('all');
@@ -72,6 +75,110 @@ export default function MataKuliah() {
       return true;
     });
   }, [courses, codeFilter, curriculumFilter, semesterFilter, instructorFilter]);
+
+  const renderCourseRow = (course: typeof filteredCourses[0], i: number) => {
+    const rowContent = (
+      <>
+        <TableCell className="text-center">{i + 1}</TableCell>
+        <TableCell>
+          <Badge variant="secondary" className="font-mono">
+            {course.code}
+          </Badge>
+        </TableCell>
+        <TableCell>
+          <span className={cn(
+            "font-medium",
+            !isGuest && "hover:text-primary transition-colors"
+          )}>
+            {course.name}
+          </span>
+        </TableCell>
+        <TableCell>
+          {getCurriculumName(course.curriculum_id) ? (
+            <Badge variant="outline">{getCurriculumName(course.curriculum_id)}</Badge>
+          ) : (
+            <span className="text-muted-foreground text-sm">-</span>
+          )}
+        </TableCell>
+        <TableCell>
+          {course.instructors.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {Array.from(
+                new Map(course.instructors.map(i => [i.full_name, i])).values()
+              ).map((instructor, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <Avatar className="h-7 w-7">
+                    <AvatarImage src={instructor?.photo_url || undefined} />
+                    <AvatarFallback className="text-xs bg-secondary text-secondary-foreground">
+                      {instructor?.full_name?.charAt(0) || '?'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm">{instructor?.full_name}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <span className="text-muted-foreground text-sm">Belum ditugaskan</span>
+          )}
+        </TableCell>
+        <TableCell className="text-center">
+          <div className="flex items-center justify-center gap-1">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium">{course.total_students}</span>
+          </div>
+        </TableCell>
+        <TableCell className="text-center">
+          <div className="flex items-center justify-center gap-1">
+            <TrendingUp className={cn(
+              "h-4 w-4",
+              course.average_score >= course.passing_score ? "text-success" : "text-destructive"
+            )} />
+            <span className={cn(
+              "font-bold",
+              course.average_score >= course.passing_score ? "text-success" : "text-destructive"
+            )}>
+              {course.average_score.toFixed(1)}%
+            </span>
+          </div>
+        </TableCell>
+        <TableCell className="text-center">
+          <Badge variant="outline">{course.semester || '-'}</Badge>
+        </TableCell>
+        <TableCell>
+          {isGuest ? (
+            <Lock className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <Link to={`/mata-kuliah/${course.id}`}>
+              <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </Link>
+          )}
+        </TableCell>
+      </>
+    );
+
+    if (isGuest) {
+      return (
+        <TableRow 
+          key={course.id} 
+          className="transition-colors"
+          style={{ animationDelay: `${i * 50}ms` }}
+        >
+          {rowContent}
+        </TableRow>
+      );
+    }
+
+    return (
+      <TableRow 
+        key={course.id} 
+        className="group cursor-pointer hover:bg-muted/30 transition-colors"
+        style={{ animationDelay: `${i * 50}ms` }}
+        onClick={() => window.location.href = `/mata-kuliah/${course.id}`}
+      >
+        {rowContent}
+      </TableRow>
+    );
+  };
 
   return (
     <Layout>
@@ -171,82 +278,7 @@ export default function MataKuliah() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCourses.map((course, i) => (
-                    <TableRow 
-                      key={course.id} 
-                      className="group cursor-pointer hover:bg-muted/30 transition-colors"
-                      style={{ animationDelay: `${i * 50}ms` }}
-                    >
-                      <TableCell className="text-center">{i + 1}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="font-mono">
-                          {course.code}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Link to={`/mata-kuliah/${course.id}`} className="font-medium hover:text-primary transition-colors">
-                          {course.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        {getCurriculumName(course.curriculum_id) ? (
-                          <Badge variant="outline">{getCurriculumName(course.curriculum_id)}</Badge>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">-</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {course.instructors.length > 0 ? (
-                          <div className="flex flex-col gap-2">
-                            {/* Get unique instructors by name */}
-                            {Array.from(
-                              new Map(course.instructors.map(i => [i.full_name, i])).values()
-                            ).map((instructor, idx) => (
-                              <div key={idx} className="flex items-center gap-2">
-                                <Avatar className="h-7 w-7">
-                                  <AvatarImage src={instructor?.photo_url || undefined} />
-                                  <AvatarFallback className="text-xs bg-secondary text-secondary-foreground">
-                                    {instructor?.full_name?.charAt(0) || '?'}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <span className="text-sm">{instructor?.full_name}</span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">Belum ditugaskan</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-medium">{course.total_students}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <TrendingUp className={cn(
-                            "h-4 w-4",
-                            course.average_score >= course.passing_score ? "text-success" : "text-destructive"
-                          )} />
-                          <span className={cn(
-                            "font-bold",
-                            course.average_score >= course.passing_score ? "text-success" : "text-destructive"
-                          )}>
-                            {course.average_score.toFixed(1)}%
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="outline">{course.semester || '-'}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Link to={`/mata-kuliah/${course.id}`}>
-                          <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {filteredCourses.map((course, i) => renderCourseRow(course, i))}
                   {filteredCourses.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
