@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,10 +25,44 @@ serve(async (req) => {
   }
 
   try {
-    // Use LOVABLE_API_KEY - this is the only key that works with the Lovable AI Gateway
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    // Get Supabase client to fetch settings
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch AI settings from app_settings
+    const { data: settingsData } = await supabase
+      .from("app_settings")
+      .select("setting_key, setting_value")
+      .in("setting_key", ["ai_api_key", "ai_provider"]);
+
+    const settings: Record<string, string> = {};
+    settingsData?.forEach((s: { setting_key: string; setting_value: string | null }) => {
+      settings[s.setting_key] = s.setting_value || "";
+    });
+
+    const aiApiKey = settings["ai_api_key"];
+    const aiProvider = settings["ai_provider"] || "gemini";
+
+    if (!aiApiKey) {
+      throw new Error("API Key AI belum dikonfigurasi. Silakan konfigurasi di halaman Pengaturan.");
+    }
+
+    // Determine API URL and model based on provider
+    let apiUrl = "";
+    let model = "";
+
+    if (aiProvider === "gemini") {
+      apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+      model = "gemini-2.0-flash";
+    } else if (aiProvider === "openai") {
+      apiUrl = "https://api.openai.com/v1/chat/completions";
+      model = "gpt-4o-mini";
+    } else if (aiProvider === "anthropic") {
+      apiUrl = "https://api.anthropic.com/v1/messages";
+      model = "claude-3-haiku-20240307";
+    } else {
+      throw new Error("Provider AI tidak didukung. Gunakan gemini, openai, atau anthropic.");
     }
 
     const body: AIRequest = await req.json();
@@ -129,41 +164,67 @@ Berikan feedback yang:
         throw new Error("Invalid request type");
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
+    const messages = [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ];
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+    let content = "";
+
+    if (aiProvider === "anthropic") {
+      // Anthropic uses a different format
+      const anthropicResponse = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          "x-api-key": aiApiKey,
+          "anthropic-version": "2023-06-01",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: 4096,
+          system: systemPrompt,
+          messages: [{ role: "user", content: userPrompt }],
+        }),
+      });
+
+      if (!anthropicResponse.ok) {
+        const errorText = await anthropicResponse.text();
+        console.error("Anthropic API error:", anthropicResponse.status, errorText);
+        throw new Error("Gagal terhubung ke Anthropic API. Periksa API Key Anda.");
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add more credits." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+
+      const anthropicData = await anthropicResponse.json();
+      content = anthropicData.content?.[0]?.text || "";
+    } else {
+      // OpenAI-compatible format (Gemini and OpenAI)
+      const response = await fetch(apiUrl, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${aiApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          return new Response(
+            JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
+            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        const errorText = await response.text();
+        console.error("AI API error:", response.status, errorText);
+        throw new Error(`Gagal terhubung ke ${aiProvider.toUpperCase()} API. Periksa API Key Anda.`);
       }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error("AI gateway error");
+
+      const data = await response.json();
+      content = data.choices?.[0]?.message?.content || "";
     }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
 
     return new Response(
       JSON.stringify({ content, type }),
