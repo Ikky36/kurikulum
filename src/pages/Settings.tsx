@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff, Scale, CheckCircle2, XCircle, Zap } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff, Scale, CheckCircle2, XCircle, Zap, Wifi, WifiOff } from 'lucide-react';
 import { Curriculum, Program, AppSetting, InstrumenPenilaian } from '@/lib/types';
 import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
 import { SistemKuliahManager } from '@/components/admin/SistemKuliahManager';
@@ -53,6 +53,7 @@ export default function Settings() {
   const [showApiKey, setShowApiKey] = useState(false);
   const [testingAi, setTestingAi] = useState(false);
   const [aiTestResult, setAiTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [aiConnectionStatus, setAiConnectionStatus] = useState<'idle' | 'checking' | 'connected' | 'error'>('idle');
 
   // Prompts state
   const [prompts, setPrompts] = useState<Record<string, string>>({});
@@ -127,7 +128,37 @@ export default function Settings() {
     },
   });
 
-  // Curriculum mutations
+  // Check AI connection status on mount
+  const checkAiConnection = useCallback(async () => {
+    setAiConnectionStatus('checking');
+    try {
+      const { data, error } = await supabase.functions.invoke('elearning-ai', {
+        body: {
+          type: 'generate_material',
+          topic: 'Test koneksi',
+          context: 'Test singkat untuk cek status koneksi AI.'
+        }
+      });
+
+      if (error || data?.error) {
+        setAiConnectionStatus('error');
+      } else if (data?.content) {
+        setAiConnectionStatus('connected');
+      } else {
+        setAiConnectionStatus('error');
+      }
+    } catch {
+      setAiConnectionStatus('error');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (settings && (role === 'admin' || role === 'sub_admin')) {
+      checkAiConnection();
+    }
+  }, [settings, role, checkAiConnection]);
+
+
   const createCurriculumMutation = useMutation({
     mutationFn: async (data: { name: string; description?: string }) => {
       const { error } = await supabase.from('curricula').insert([data]);
@@ -888,11 +919,42 @@ export default function Settings() {
                 {/* API Key Section */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Key className="h-5 w-5" />
-                      API Key AI
-                    </CardTitle>
-                    <CardDescription>Konfigurasi API Key untuk integrasi AI yang membantu generate data</CardDescription>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          <Key className="h-5 w-5" />
+                          API Key AI
+                        </CardTitle>
+                        <CardDescription>Konfigurasi API Key untuk integrasi AI yang membantu generate data</CardDescription>
+                      </div>
+                      {/* AI Connection Status Indicator */}
+                      <div className="flex items-center gap-2">
+                        {aiConnectionStatus === 'checking' && (
+                          <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1.5">
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+                            <span className="text-muted-foreground text-xs">Memeriksa...</span>
+                          </Badge>
+                        )}
+                        {aiConnectionStatus === 'connected' && (
+                          <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1.5 border-green-500 bg-green-50 dark:bg-green-950/30">
+                            <Wifi className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                            <span className="text-green-700 dark:text-green-300 text-xs font-medium">Terhubung</span>
+                          </Badge>
+                        )}
+                        {aiConnectionStatus === 'error' && (
+                          <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1.5 border-red-500 bg-red-50 dark:bg-red-950/30">
+                            <WifiOff className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                            <span className="text-red-700 dark:text-red-300 text-xs font-medium">Tidak Terhubung</span>
+                          </Badge>
+                        )}
+                        {aiConnectionStatus === 'idle' && (
+                          <Badge variant="outline" className="flex items-center gap-1.5 px-3 py-1.5">
+                            <Wifi className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-muted-foreground text-xs">Belum Diperiksa</span>
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
