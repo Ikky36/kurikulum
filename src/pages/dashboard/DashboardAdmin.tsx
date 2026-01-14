@@ -339,6 +339,36 @@ export default function DashboardAdmin() {
     },
   });
 
+  // Filter users based on search and role - MUST be before early returns
+  const filteredUsers = useMemo(() => {
+    return allUsers?.filter(u => {
+      // Exclude current user if they're admin
+      if (u.id === user?.id) return false;
+      
+      // Apply role filter
+      if (userRoleFilter !== 'all' && u.role !== userRoleFilter) return false;
+      
+      // Apply search filter
+      if (userSearchQuery) {
+        const query = userSearchQuery.toLowerCase();
+        const matchesName = u.full_name?.toLowerCase().includes(query);
+        const matchesEmail = u.email?.toLowerCase().includes(query);
+        const matchesNim = u.nim?.toLowerCase().includes(query);
+        const matchesNip = u.nip?.toLowerCase().includes(query);
+        return matchesName || matchesEmail || matchesNim || matchesNip;
+      }
+      
+      return true;
+    }) || [];
+  }, [allUsers, userRoleFilter, userSearchQuery, user?.id]);
+
+  // Paginated users - MUST be before early returns
+  const totalUserPages = Math.ceil(filteredUsers.length / userPageSize);
+  const paginatedUsers = useMemo(() => {
+    const start = (userCurrentPage - 1) * userPageSize;
+    return filteredUsers.slice(start, start + userPageSize);
+  }, [filteredUsers, userCurrentPage, userPageSize]);
+
   if (loading) {
     return <Layout><div className="container py-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div></Layout>;
   }
@@ -423,36 +453,6 @@ export default function DashboardAdmin() {
     setEditingUser(null);
     setShowUserDialog(false);
   };
-
-  // Filter users based on search and role
-  const filteredUsers = useMemo(() => {
-    return allUsers?.filter(u => {
-      // Exclude current user if they're admin
-      if (u.id === user?.id) return false;
-      
-      // Apply role filter
-      if (userRoleFilter !== 'all' && u.role !== userRoleFilter) return false;
-      
-      // Apply search filter
-      if (userSearchQuery) {
-        const query = userSearchQuery.toLowerCase();
-        const matchesName = u.full_name?.toLowerCase().includes(query);
-        const matchesEmail = u.email?.toLowerCase().includes(query);
-        const matchesNim = u.nim?.toLowerCase().includes(query);
-        const matchesNip = u.nip?.toLowerCase().includes(query);
-        return matchesName || matchesEmail || matchesNim || matchesNip;
-      }
-      
-      return true;
-    }) || [];
-  }, [allUsers, userRoleFilter, userSearchQuery, user?.id]);
-
-  // Paginated users
-  const totalUserPages = Math.ceil(filteredUsers.length / userPageSize);
-  const paginatedUsers = useMemo(() => {
-    const start = (userCurrentPage - 1) * userPageSize;
-    return filteredUsers.slice(start, start + userPageSize);
-  }, [filteredUsers, userCurrentPage, userPageSize]);
 
   // Reset page when filter changes
   const handleUserSearchChange = (query: string) => {
