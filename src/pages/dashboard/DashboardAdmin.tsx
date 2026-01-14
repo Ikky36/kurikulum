@@ -80,6 +80,10 @@ export default function DashboardAdmin() {
   // Bulk selection state
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  
+  // Assignment bulk selection state
+  const [selectedAssignmentIds, setSelectedAssignmentIds] = useState<string[]>([]);
+  const [showBulkDeleteAssignmentDialog, setShowBulkDeleteAssignmentDialog] = useState(false);
 
   // Fetch all courses
   const { data: courses, refetch: refetchCourses } = useQuery({
@@ -195,6 +199,25 @@ export default function DashboardAdmin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-course-instructors'] });
       toast({ title: 'Berhasil', description: 'Penugasan dihapus' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  // Bulk delete assignments mutation
+  const bulkDeleteAssignmentsMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      for (const id of ids) {
+        const { error } = await supabase.from('course_instructors').delete().eq('id', id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-course-instructors'] });
+      toast({ title: 'Berhasil', description: `${variables.length} penugasan berhasil dihapus` });
+      setShowBulkDeleteAssignmentDialog(false);
+      setSelectedAssignmentIds([]);
     },
     onError: (error: any) => {
       toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
@@ -488,6 +511,7 @@ export default function DashboardAdmin() {
         program: userRole === 'mahasiswa' ? userProgram : null,
         enrollment_year: userRole === 'mahasiswa' && userEnrollmentYear ? parseInt(userEnrollmentYear) : null,
         gender: userGender || null,
+        sistem_kuliah_id: userRole === 'mahasiswa' && userSistemKuliah ? userSistemKuliah : null,
         id: editingUser.id,
       };
       if (userPassword) {
@@ -506,6 +530,7 @@ export default function DashboardAdmin() {
         program: userRole === 'mahasiswa' ? userProgram : undefined,
         enrollment_year: userRole === 'mahasiswa' && userEnrollmentYear ? parseInt(userEnrollmentYear) : undefined,
         gender: userGender || undefined,
+        sistem_kuliah_id: userRole === 'mahasiswa' && userSistemKuliah ? userSistemKuliah : undefined,
       } as any);
     }
   };
@@ -520,6 +545,7 @@ export default function DashboardAdmin() {
     setUserProgram(userProfile.program || '');
     setUserEnrollmentYear(userProfile.enrollment_year?.toString() || '');
     setUserGender(userProfile.gender || '');
+    setUserSistemKuliah((userProfile as any).sistem_kuliah_id || '');
     setShowUserDialog(true);
   };
 
@@ -727,6 +753,20 @@ export default function DashboardAdmin() {
                                   </SelectContent>
                                 </Select>
                               </div>
+                              <div className="space-y-2">
+                                <Label>Sistem Kuliah</Label>
+                                <Select value={userSistemKuliah} onValueChange={setUserSistemKuliah}>
+                                  <SelectTrigger><SelectValue placeholder="Pilih sistem kuliah" /></SelectTrigger>
+                                  <SelectContent>
+                                    {sistemKuliahList?.map(sk => (
+                                      <SelectItem key={sk.id} value={sk.id}>{sk.name}</SelectItem>
+                                    ))}
+                                    {(!sistemKuliahList || sistemKuliahList.length === 0) && (
+                                      <SelectItem value="" disabled>Belum ada sistem kuliah. Buat di Pengaturan.</SelectItem>
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                              </div>
                             </>
                           )}
                           {userRole === 'dosen' && (
@@ -806,6 +846,32 @@ export default function DashboardAdmin() {
                         Admin
                       </Button>
                     </div>
+                    
+                    {/* Bulk Actions */}
+                    {selectedUserIds.length > 0 && (
+                      <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                        <Checkbox
+                          checked={selectedUserIds.length === paginatedUsers.length}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedUserIds(paginatedUsers.map(u => u.id));
+                            } else {
+                              setSelectedUserIds([]);
+                            }
+                          }}
+                        />
+                        <span className="text-sm font-medium">{selectedUserIds.length} dipilih</span>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => setShowBulkDeleteDialog(true)}
+                          className="ml-auto gap-1"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Hapus ({selectedUserIds.length})
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </CardHeader>
@@ -813,6 +879,19 @@ export default function DashboardAdmin() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-primary hover:bg-primary">
+                      <TableHead className="w-10 text-primary-foreground">
+                        <Checkbox
+                          checked={paginatedUsers.length > 0 && selectedUserIds.length === paginatedUsers.length}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedUserIds(paginatedUsers.map(u => u.id));
+                            } else {
+                              setSelectedUserIds([]);
+                            }
+                          }}
+                          className="border-primary-foreground data-[state=checked]:bg-primary-foreground data-[state=checked]:text-primary"
+                        />
+                      </TableHead>
                       <TableHead className="w-12 text-primary-foreground">No</TableHead>
                       <TableHead className="text-primary-foreground">Nama</TableHead>
                       <TableHead className="text-primary-foreground">Gender</TableHead>
@@ -826,7 +905,19 @@ export default function DashboardAdmin() {
                   </TableHeader>
                   <TableBody>
                     {paginatedUsers.map((u, index) => (
-                      <TableRow key={u.id}>
+                      <TableRow key={u.id} className={selectedUserIds.includes(u.id) ? 'bg-muted/50' : ''}>
+                        <TableCell>
+                          <Checkbox
+                            checked={selectedUserIds.includes(u.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedUserIds([...selectedUserIds, u.id]);
+                              } else {
+                                setSelectedUserIds(selectedUserIds.filter(id => id !== u.id));
+                              }
+                            }}
+                          />
+                        </TableCell>
                         <TableCell className="text-center">{(userCurrentPage - 1) * userPageSize + index + 1}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -869,7 +960,7 @@ export default function DashboardAdmin() {
                     ))}
                     {filteredUsers.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                           {userSearchQuery || userRoleFilter !== 'all' 
                             ? 'Tidak ada akun yang sesuai dengan filter' 
                             : 'Belum ada akun pengguna'}
@@ -906,6 +997,37 @@ export default function DashboardAdmin() {
                   </Button>
                   <Button variant="destructive" onClick={() => userToDelete && deleteUserMutation.mutate(userToDelete.id)}>
                     Hapus
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Bulk Delete Confirmation Dialog */}
+            <Dialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Konfirmasi Hapus Banyak Akun</DialogTitle>
+                </DialogHeader>
+                <p className="text-muted-foreground">
+                  Apakah Anda yakin ingin menghapus <span className="font-semibold text-foreground">{selectedUserIds.length} akun</span>? Tindakan ini tidak dapat dibatalkan.
+                </p>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowBulkDeleteDialog(false)}>
+                    Batal
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => bulkDeleteUsersMutation.mutate(selectedUserIds)}
+                    disabled={bulkDeleteUsersMutation.isPending}
+                  >
+                    {bulkDeleteUsersMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Menghapus...
+                      </>
+                    ) : (
+                      `Hapus ${selectedUserIds.length} Akun`
+                    )}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -998,11 +1120,43 @@ export default function DashboardAdmin() {
                     </DialogContent>
                   </Dialog>
                 </div>
+                
+                {/* Bulk Actions for assignments */}
+                {selectedAssignmentIds.length > 0 && (
+                  <div className="flex items-center gap-2 p-3 bg-muted rounded-lg mt-4">
+                    <span className="text-sm font-medium">{selectedAssignmentIds.length} penugasan dipilih</span>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => setShowBulkDeleteAssignmentDialog(true)}
+                      className="ml-auto gap-1"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Hapus ({selectedAssignmentIds.length})
+                    </Button>
+                  </div>
+                )}
               </CardHeader>
               <CardContent className="p-0">
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-primary hover:bg-primary">
+                      <TableHead className="w-10 text-primary-foreground">
+                        <Checkbox
+                          checked={(() => {
+                            const allIds = (courseInstructors || []).map(ci => ci.id);
+                            return allIds.length > 0 && selectedAssignmentIds.length === allIds.length;
+                          })()}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedAssignmentIds((courseInstructors || []).map(ci => ci.id));
+                            } else {
+                              setSelectedAssignmentIds([]);
+                            }
+                          }}
+                          className="border-primary-foreground data-[state=checked]:bg-primary-foreground data-[state=checked]:text-primary"
+                        />
+                      </TableHead>
                       <TableHead className="w-12 text-primary-foreground">No</TableHead>
                       <TableHead className="text-primary-foreground">Mata Kuliah</TableHead>
                       <TableHead className="text-primary-foreground">Kelas</TableHead>
@@ -1033,73 +1187,121 @@ export default function DashboardAdmin() {
                       if (groupedEntries.length === 0) {
                         return (
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                               Belum ada penugasan
                             </TableCell>
                           </TableRow>
                         );
                       }
 
-                      return groupedEntries.map(([key, group], index) => (
-                        <TableRow key={key}>
-                          <TableCell className="text-center align-top">{index + 1}</TableCell>
-                          <TableCell className="align-top">
-                            <Badge variant="secondary" className="font-mono mr-2">{group.course?.code}</Badge>
-                            {group.course?.name}
-                          </TableCell>
-                          <TableCell className="align-top">
-                            {group.classGroup ? (
-                              <Badge variant="outline">{group.classGroup.name}</Badge>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">-</span>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex flex-col gap-2">
-                              {group.instructors.filter(Boolean).map((instructor, idx) => (
-                                <div key={instructor?.id || idx} className="flex items-center gap-2 group/instructor">
-                                  <Avatar className="h-8 w-8">
-                                    <AvatarImage src={instructor?.photo_url || undefined} />
-                                    <AvatarFallback>{instructor?.full_name?.charAt(0)}</AvatarFallback>
-                                  </Avatar>
-                                  <span className="text-sm flex-1">{instructor?.full_name}</span>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
-                                    className="h-6 w-6 text-destructive hover:text-destructive opacity-0 group-hover/instructor:opacity-100 transition-opacity" 
-                                    onClick={() => removeInstructorMutation.mutate(group.ids[idx])}
-                                    title="Hapus penugasan dosen ini"
-                                  >
-                                    <Trash2 className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              ))}
-                            </div>
-                          </TableCell>
-                          <TableCell className="align-top">
-                            <div className="flex gap-1">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                onClick={() => {
-                                  setSelectedCourseForAssign(group.course?.id || '');
-                                  setSelectedClassForAssign(group.classGroup?.id || '');
-                                  setSelectedDosenForAssign([]);
-                                  setShowAssignDialog(true);
+                      return groupedEntries.map(([key, group], index) => {
+                        const allSelected = group.ids.every(id => selectedAssignmentIds.includes(id));
+                        const someSelected = group.ids.some(id => selectedAssignmentIds.includes(id));
+                        
+                        return (
+                          <TableRow key={key} className={someSelected ? 'bg-muted/50' : ''}>
+                            <TableCell className="align-top">
+                              <Checkbox
+                                checked={allSelected}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedAssignmentIds([...new Set([...selectedAssignmentIds, ...group.ids])]);
+                                  } else {
+                                    setSelectedAssignmentIds(selectedAssignmentIds.filter(id => !group.ids.includes(id)));
+                                  }
                                 }}
-                                title="Tambah dosen"
-                              >
-                                <Plus className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ));
+                              />
+                            </TableCell>
+                            <TableCell className="text-center align-top">{index + 1}</TableCell>
+                            <TableCell className="align-top">
+                              <Badge variant="secondary" className="font-mono mr-2">{group.course?.code}</Badge>
+                              {group.course?.name}
+                            </TableCell>
+                            <TableCell className="align-top">
+                              {group.classGroup ? (
+                                <Badge variant="outline">{group.classGroup.name}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-col gap-2">
+                                {group.instructors.filter(Boolean).map((instructor, idx) => (
+                                  <div key={instructor?.id || idx} className="flex items-center gap-2 group/instructor">
+                                    <Avatar className="h-8 w-8">
+                                      <AvatarImage src={instructor?.photo_url || undefined} />
+                                      <AvatarFallback>{instructor?.full_name?.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <span className="text-sm flex-1">{instructor?.full_name}</span>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-6 w-6 text-destructive hover:text-destructive opacity-0 group-hover/instructor:opacity-100 transition-opacity" 
+                                      onClick={() => removeInstructorMutation.mutate(group.ids[idx])}
+                                      title="Hapus penugasan dosen ini"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  </div>
+                                ))}
+                              </div>
+                            </TableCell>
+                            <TableCell className="align-top">
+                              <div className="flex gap-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => {
+                                    setSelectedCourseForAssign(group.course?.id || '');
+                                    setSelectedClassForAssign(group.classGroup?.id || '');
+                                    setSelectedDosenForAssign([]);
+                                    setShowAssignDialog(true);
+                                  }}
+                                  title="Tambah dosen"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      });
                     })()}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
+
+            {/* Bulk Delete Assignments Dialog */}
+            <Dialog open={showBulkDeleteAssignmentDialog} onOpenChange={setShowBulkDeleteAssignmentDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Konfirmasi Hapus Penugasan</DialogTitle>
+                </DialogHeader>
+                <p className="text-muted-foreground">
+                  Apakah Anda yakin ingin menghapus <span className="font-semibold text-foreground">{selectedAssignmentIds.length} penugasan</span>? Tindakan ini tidak dapat dibatalkan.
+                </p>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowBulkDeleteAssignmentDialog(false)}>
+                    Batal
+                  </Button>
+                  <Button 
+                    variant="destructive" 
+                    onClick={() => bulkDeleteAssignmentsMutation.mutate(selectedAssignmentIds)}
+                    disabled={bulkDeleteAssignmentsMutation.isPending}
+                  >
+                    {bulkDeleteAssignmentsMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Menghapus...
+                      </>
+                    ) : (
+                      `Hapus ${selectedAssignmentIds.length} Penugasan`
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* Roles Tab */}

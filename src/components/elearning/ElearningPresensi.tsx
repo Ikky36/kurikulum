@@ -54,6 +54,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Calendar, Clock, Users, Check, X, AlertCircle, Save } from 'lucide-react';
+import { AttendanceImportExport } from './AttendanceImportExport';
 import { format } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
 
@@ -391,21 +392,46 @@ export function ElearningPresensi() {
           {/* Attendance Table */}
           {selectedSessionId && (
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="h-5 w-5" />
-                    Daftar Presensi
-                  </CardTitle>
-                  <CardDescription>
-                    {classStudents?.length || 0} mahasiswa
-                  </CardDescription>
+              <CardHeader className="flex flex-col gap-4 space-y-0 pb-4">
+                <div className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Daftar Presensi
+                    </CardTitle>
+                    <CardDescription>
+                      {classStudents?.length || 0} mahasiswa
+                    </CardDescription>
+                  </div>
+                  {canManageClass && hasChanges && (
+                    <Button onClick={saveAttendance} disabled={batchUpsertAttendance.isPending} className="gap-2">
+                      <Save className="h-4 w-4" />
+                      Simpan Presensi
+                    </Button>
+                  )}
                 </div>
-                {canManageClass && hasChanges && (
-                  <Button onClick={saveAttendance} disabled={batchUpsertAttendance.isPending} className="gap-2">
-                    <Save className="h-4 w-4" />
-                    Simpan Presensi
-                  </Button>
+                
+                {/* Import/Export for attendance */}
+                {canManageClass && classStudents && classStudents.length > 0 && (
+                  <AttendanceImportExport
+                    sessionTitle={sessions?.find(s => s.id === selectedSessionId)?.title || 'Sesi'}
+                    sessionDate={sessions?.find(s => s.id === selectedSessionId)?.session_date || new Date().toISOString()}
+                    students={classStudents}
+                    attendanceRecords={attendanceRecords}
+                    onImportAttendance={(records) => {
+                      records.forEach(r => {
+                        setAttendanceRecords(prev => ({
+                          ...prev,
+                          [r.student_profile_id]: {
+                            student_profile_id: r.student_profile_id,
+                            status: r.status as 'hadir' | 'izin' | 'alpha',
+                            notes: r.notes,
+                          },
+                        }));
+                      });
+                      setHasChanges(true);
+                    }}
+                  />
                 )}
               </CardHeader>
               <CardContent>
