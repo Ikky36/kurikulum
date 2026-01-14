@@ -13,13 +13,20 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target, Eye, EyeOff, Settings } from 'lucide-react';
+import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target, Eye, EyeOff, Settings, CheckSquare } from 'lucide-react';
 import { Navigate, Link } from 'react-router-dom';
 import { Course, Profile, AppRole, Program } from '@/lib/types';
 import { UserImportExport } from '@/components/admin/UserImportExport';
 import { UserPagination } from '@/components/admin/UserPagination';
 import { KurikulumTab } from '@/components/admin/KurikulumTab';
+
+interface SistemKuliah {
+  id: string;
+  name: string;
+  is_active: boolean;
+}
 
 
 export default function DashboardAdmin() {
@@ -58,6 +65,7 @@ export default function DashboardAdmin() {
   const [userProgram, setUserProgram] = useState('');
   const [userEnrollmentYear, setUserEnrollmentYear] = useState('');
   const [userGender, setUserGender] = useState<'pria' | 'wanita' | ''>('');
+  const [userSistemKuliah, setUserSistemKuliah] = useState('');
   const [showDeleteUserDialog, setShowDeleteUserDialog] = useState(false);
   const [userToDelete, setUserToDelete] = useState<Profile | null>(null);
   
@@ -68,6 +76,10 @@ export default function DashboardAdmin() {
   // Pagination state
   const [userCurrentPage, setUserCurrentPage] = useState(1);
   const [userPageSize, setUserPageSize] = useState(10);
+
+  // Bulk selection state
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
 
   // Fetch all courses
   const { data: courses, refetch: refetchCourses } = useQuery({
@@ -133,6 +145,20 @@ export default function DashboardAdmin() {
       const { data, error } = await supabase.from('programs').select('*').order('name');
       if (error) throw error;
       return data as Program[];
+    },
+  });
+
+  // Fetch sistem kuliah
+  const { data: sistemKuliahList } = useQuery({
+    queryKey: ['sistem-kuliah'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sistem_kuliah')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data as SistemKuliah[];
     },
   });
 
@@ -291,6 +317,28 @@ export default function DashboardAdmin() {
     },
   });
 
+  // Bulk delete mutation
+  const bulkDeleteUsersMutation = useMutation({
+    mutationFn: async (userIds: string[]) => {
+      for (const userId of userIds) {
+        const { error: roleError } = await supabase.from('user_roles').delete().eq('user_id', userId);
+        if (roleError) console.error(roleError);
+        const { error: profileError } = await supabase.from('profiles').delete().eq('id', userId);
+        if (profileError) throw profileError;
+      }
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dosen'] });
+      toast({ title: 'Berhasil', description: `${variables.length} akun berhasil dihapus` });
+      setShowBulkDeleteDialog(false);
+      setSelectedUserIds([]);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
   if (loading) {
     return <Layout><div className="container py-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div></Layout>;
   }
@@ -371,6 +419,7 @@ export default function DashboardAdmin() {
     setUserProgram('');
     setUserEnrollmentYear('');
     setUserGender('');
+    setUserSistemKuliah('');
     setEditingUser(null);
     setShowUserDialog(false);
   };
@@ -457,7 +506,7 @@ export default function DashboardAdmin() {
         program: userRole === 'mahasiswa' ? userProgram : undefined,
         enrollment_year: userRole === 'mahasiswa' && userEnrollmentYear ? parseInt(userEnrollmentYear) : undefined,
         gender: userGender || undefined,
-      });
+      } as any);
     }
   };
 

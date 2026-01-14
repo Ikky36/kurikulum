@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,6 +10,11 @@ import { Download, Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle } 
 import * as XLSX from 'xlsx';
 import { Profile } from '@/lib/types';
 
+interface SistemKuliah {
+  id: string;
+  name: string;
+}
+
 interface ImportRow {
   email: string;
   full_name: string;
@@ -18,6 +24,9 @@ interface ImportRow {
   nip?: string;
   program?: string;
   class_group?: string;
+  enrollment_year?: string;
+  gender?: string;
+  sistem_kuliah?: string;
   isValid: boolean;
   errors: string[];
 }
@@ -36,6 +45,20 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
 
+  // Fetch sistem kuliah for mapping
+  const { data: sistemKuliahList } = useQuery({
+    queryKey: ['sistem-kuliah'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sistem_kuliah')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data as SistemKuliah[];
+    },
+  });
+
   // Download template Excel
   const handleDownloadTemplate = () => {
     const templateData = [
@@ -48,6 +71,9 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
         nip: '',
         program: 'Pendidikan Bahasa Arab',
         class_group: 'A',
+        enrollment_year: '2024',
+        gender: 'pria',
+        sistem_kuliah: 'Reguler',
       },
       {
         email: 'dosen@example.com',
@@ -58,6 +84,9 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
         nip: '198501012020011001',
         program: 'Pendidikan Bahasa Arab',
         class_group: '',
+        enrollment_year: '',
+        gender: 'pria',
+        sistem_kuliah: '',
       },
     ];
 
@@ -73,6 +102,9 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
       { wch: 20 }, // nip
       { wch: 25 }, // program
       { wch: 10 }, // class_group
+      { wch: 12 }, // enrollment_year
+      { wch: 10 }, // gender
+      { wch: 15 }, // sistem_kuliah
     ];
 
     const wb = XLSX.utils.book_new();
@@ -99,6 +131,9 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
         nip: u.nip || '',
         program: u.program || '',
         class_group: u.class_group || '',
+        enrollment_year: u.enrollment_year || '',
+        gender: (u as any).gender || '',
+        sistem_kuliah: '', // Will be filled with lookup
       }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -111,6 +146,9 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
       { wch: 20 },
       { wch: 25 },
       { wch: 10 },
+      { wch: 12 },
+      { wch: 10 },
+      { wch: 15 },
     ];
 
     const wb = XLSX.utils.book_new();
@@ -151,6 +189,9 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
           const nip = String(row.nip || '').trim();
           const program = String(row.program || '').trim();
           const classGroup = String(row.class_group || '').trim();
+          const enrollmentYear = String(row.enrollment_year || '').trim();
+          const gender = String(row.gender || '').trim().toLowerCase();
+          const sistemKuliah = String(row.sistem_kuliah || '').trim();
 
           // Validation
           if (!email) errors.push('Email wajib diisi');
@@ -168,6 +209,14 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
           if (role === 'mahasiswa' && !nim) errors.push('NIM wajib untuk mahasiswa');
           if (role === 'dosen' && !nip) errors.push('NIP wajib untuk dosen');
 
+          // Validate sistem kuliah if provided
+          if (sistemKuliah && sistemKuliahList) {
+            const found = sistemKuliahList.find(sk => sk.name.toLowerCase() === sistemKuliah.toLowerCase());
+            if (!found) {
+              errors.push(`Sistem kuliah "${sistemKuliah}" tidak ditemukan`);
+            }
+          }
+
           return {
             email,
             full_name: fullName,
@@ -177,6 +226,9 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
             nip: nip || undefined,
             program: program || undefined,
             class_group: classGroup || undefined,
+            enrollment_year: enrollmentYear || undefined,
+            gender: gender || undefined,
+            sistem_kuliah: sistemKuliah || undefined,
             isValid: errors.length === 0,
             errors,
           };
@@ -214,6 +266,15 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
       const row = validData[i];
       setImportProgress({ current: i + 1, total: validData.length });
 
+      // Find sistem_kuliah_id
+      let sistemKuliahId: string | undefined;
+      if (row.sistem_kuliah && sistemKuliahList) {
+        const found = sistemKuliahList.find(sk => sk.name.toLowerCase() === row.sistem_kuliah?.toLowerCase());
+        if (found) {
+          sistemKuliahId = found.id;
+        }
+      }
+
       try {
         const { data, error } = await supabase.functions.invoke('admin-create-user', {
           body: {
@@ -225,6 +286,9 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
             nip: row.nip,
             program: row.program,
             class_group: row.class_group,
+            enrollment_year: row.enrollment_year ? parseInt(row.enrollment_year) : undefined,
+            gender: row.gender,
+            sistem_kuliah_id: sistemKuliahId,
           },
         });
 
@@ -286,7 +350,7 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
 
       {/* Import Preview Dialog */}
       <Dialog open={showImportDialog} onOpenChange={(open) => { if (!importing) setShowImportDialog(open); }}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Preview Import Data</DialogTitle>
           </DialogHeader>
@@ -314,6 +378,8 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
                   <TableHead className="text-primary-foreground">Nama</TableHead>
                   <TableHead className="text-primary-foreground">Role</TableHead>
                   <TableHead className="text-primary-foreground">NIM/NIP</TableHead>
+                  <TableHead className="text-primary-foreground">Angkatan</TableHead>
+                  <TableHead className="text-primary-foreground">Sistem</TableHead>
                   <TableHead className="text-primary-foreground">Error</TableHead>
                 </TableRow>
               </TableHeader>
@@ -334,6 +400,8 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
                       <Badge variant="outline" className="capitalize">{row.role}</Badge>
                     </TableCell>
                     <TableCell>{row.role === 'mahasiswa' ? row.nim : row.nip}</TableCell>
+                    <TableCell>{row.enrollment_year || '-'}</TableCell>
+                    <TableCell>{row.sistem_kuliah || '-'}</TableCell>
                     <TableCell>
                       {row.errors.length > 0 && (
                         <span className="text-xs text-destructive">{row.errors.join(', ')}</span>

@@ -18,6 +18,7 @@ import { Navigate } from 'react-router-dom';
 import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff, Scale, CheckCircle2, XCircle, Zap } from 'lucide-react';
 import { Curriculum, Program, AppSetting, InstrumenPenilaian } from '@/lib/types';
 import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
+import { SistemKuliahManager } from '@/components/admin/SistemKuliahManager';
 
 export default function Settings() {
   const { user, role, loading } = useAuth();
@@ -550,6 +551,11 @@ export default function Settings() {
               <span className="hidden md:inline">Program Studi</span>
               <span className="md:hidden">Prodi</span>
             </TabsTrigger>
+            <TabsTrigger value="sistem-kuliah" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <GraduationCap className="h-4 w-4" />
+              <span className="hidden md:inline">Sistem Kuliah</span>
+              <span className="md:hidden">Sistem</span>
+            </TabsTrigger>
             {canAccessTheme && (
               <TabsTrigger value="instrumen" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Scale className="h-4 w-4" />
@@ -869,6 +875,11 @@ export default function Settings() {
                   </Table>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Sistem Kuliah Tab */}
+            <TabsContent value="sistem-kuliah" className="mt-0">
+              <SistemKuliahManager />
             </TabsContent>
 
             {/* AI & Prompts Tab - Only for admin */}
