@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
+import { TutorialChatButton } from "@/components/chat/TutorialChatButton";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MataKuliah from "./pages/MataKuliah";
@@ -49,6 +50,7 @@ function AppContent() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      <TutorialChatButton />
     </>
   );
 }
