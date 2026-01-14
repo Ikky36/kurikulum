@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -57,10 +58,52 @@ serve(async (req) => {
   }
 
   try {
-    // Use LOVABLE_API_KEY - this is the only key that works with the Lovable AI Gateway
+    // Get Supabase client to fetch settings
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch AI settings from app_settings
+    const { data: settingsData } = await supabase
+      .from("app_settings")
+      .select("setting_key, setting_value")
+      .in("setting_key", ["ai_api_key", "ai_provider"]);
+
+    const settings: Record<string, string> = {};
+    settingsData?.forEach((s: { setting_key: string; setting_value: string | null }) => {
+      settings[s.setting_key] = s.setting_value || "";
+    });
+
+    const aiApiKey = settings["ai_api_key"];
+    const aiProvider = settings["ai_provider"] || "gemini";
+
+    // Determine which API to use based on provider and API key availability
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    
+    let apiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
+    let apiKeyToUse = LOVABLE_API_KEY;
+    let model = "google/gemini-2.5-flash";
+
+    // If user has configured their own API key, use the appropriate provider
+    if (aiApiKey) {
+      if (aiProvider === "gemini") {
+        apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+        apiKeyToUse = aiApiKey;
+        model = "gemini-2.0-flash";
+      } else if (aiProvider === "openai") {
+        apiUrl = "https://api.openai.com/v1/chat/completions";
+        apiKeyToUse = aiApiKey;
+        model = "gpt-4o-mini";
+      } else if (aiProvider === "anthropic") {
+        // For Anthropic, we'll use the Lovable gateway as fallback since direct API is different
+        apiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
+        apiKeyToUse = LOVABLE_API_KEY;
+        model = "google/gemini-2.5-flash";
+      }
+    }
+
+    if (!apiKeyToUse) {
+      throw new Error("No AI API key configured. Please configure it in Settings or contact admin.");
     }
 
     const body: ChatRequest = await req.json();
@@ -73,14 +116,14 @@ serve(async (req) => {
       { role: "user", content: message },
     ];
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch(apiUrl, {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${apiKeyToUse}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model,
         messages,
       }),
     });
@@ -99,8 +142,34 @@ serve(async (req) => {
         );
       }
       const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error("AI gateway error");
+      console.error("AI API error:", response.status, errorText);
+      
+      // If custom API key fails, try fallback to Lovable API
+      if (aiApiKey && LOVABLE_API_KEY) {
+        console.log("Falling back to Lovable AI Gateway...");
+        const fallbackResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash",
+            messages,
+          }),
+        });
+
+        if (fallbackResponse.ok) {
+          const fallbackData = await fallbackResponse.json();
+          const content = fallbackData.choices?.[0]?.message?.content || "";
+          return new Response(
+            JSON.stringify({ response: content }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      }
+      
+      throw new Error("AI API error");
     }
 
     const data = await response.json();
