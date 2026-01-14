@@ -1,6 +1,5 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,31 +57,10 @@ serve(async (req) => {
   }
 
   try {
-    // Get Supabase client to fetch settings
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Fetch AI settings from app_settings
-    const { data: settingsData } = await supabase
-      .from("app_settings")
-      .select("setting_key, setting_value")
-      .in("setting_key", ["ai_api_key", "ai_provider"]);
-
-    const settings: Record<string, string> = {};
-    settingsData?.forEach((s: { setting_key: string; setting_value: string | null }) => {
-      settings[s.setting_key] = s.setting_value || "";
-    });
-
-    const aiApiKey = settings["ai_api_key"];
-    const aiProvider = settings["ai_provider"] || "gemini";
-
-    // Fallback to LOVABLE_API_KEY if no custom API key
+    // Use LOVABLE_API_KEY - this is the only key that works with the Lovable AI Gateway
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    const apiKeyToUse = aiApiKey || LOVABLE_API_KEY;
-
-    if (!apiKeyToUse) {
-      throw new Error("No AI API key configured. Please configure it in Settings.");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
     }
 
     const body: ChatRequest = await req.json();
@@ -95,20 +73,14 @@ serve(async (req) => {
       { role: "user", content: message },
     ];
 
-    // Determine model based on provider
-    let model = "google/gemini-2.5-flash";
-    if (aiProvider === "openai") {
-      model = "openai/gpt-5-mini";
-    }
-
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKeyToUse}`,
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model,
+        model: "google/gemini-2.5-flash",
         messages,
       }),
     });
