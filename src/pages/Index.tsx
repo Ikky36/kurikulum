@@ -87,7 +87,7 @@ export default function Index() {
               Performa Mata Kuliah
             </h2>
             <p className="text-muted-foreground">
-              Klik kartu untuk melihat detail nilai setiap mahasiswa
+              Lihat performa setiap mata kuliah
             </p>
           </div>
 
