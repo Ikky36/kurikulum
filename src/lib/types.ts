@@ -12,6 +12,7 @@ export interface Profile {
   photo_url?: string;
   enrollment_year?: number;
   gender?: 'pria' | 'wanita' | null;
+  sistem_kuliah_id?: string | null;
   created_at: string;
   updated_at: string;
 }

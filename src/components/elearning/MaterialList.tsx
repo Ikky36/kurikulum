@@ -6,8 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { BookOpen, FileText, Video, Image, Trash2, Pencil, Eye, Plus, GripVertical, Lock, CheckCircle } from 'lucide-react';
+import { BookOpen, FileText, Video, Image, Trash2, Pencil, Eye, Plus, GripVertical, Lock, CheckCircle, Box } from 'lucide-react';
 import { MaterialEditor } from './MaterialEditor';
+import { H5PViewer } from './H5PViewer';
+import { MaterialQuiz } from './MaterialQuiz';
 
 interface MaterialListProps {
   classId: string;
@@ -46,8 +48,16 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
       case 'video': return <Video className="h-5 w-5" />;
       case 'image': return <Image className="h-5 w-5" />;
       case 'document': return <FileText className="h-5 w-5" />;
+      case 'h5p': return <Box className="h-5 w-5" />;
       default: return <BookOpen className="h-5 w-5" />;
     }
+  };
+
+  // Extract embedded quiz ID from content
+  const getEmbeddedQuizId = (content: string | null): string | null => {
+    if (!content) return null;
+    const match = content.match(/<!-- EMBEDDED_QUIZ:(.+?) -->/);
+    return match ? match[1] : null;
   };
 
   const hasPrerequisite = (material: MaterialWithLLO) => {
@@ -252,10 +262,25 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
                 </Card>
               )}
               {viewingMaterial.content_type === 'text' && (
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert p-4 bg-muted/30 rounded-lg"
-                  dangerouslySetInnerHTML={{ __html: viewingMaterial.content || '' }}
-                />
+                <>
+                  <div 
+                    className="prose prose-sm max-w-none dark:prose-invert p-4 bg-muted/30 rounded-lg"
+                    dangerouslySetInnerHTML={{ __html: viewingMaterial.content?.replace(/<!-- EMBEDDED_QUIZ:.+? -->/g, '') || '' }}
+                  />
+                  {/* Embedded Quiz */}
+                  {getEmbeddedQuizId(viewingMaterial.content) && (
+                    <div className="mt-6 pt-6 border-t">
+                      <h3 className="text-lg font-semibold mb-4">Quiz Materi</h3>
+                      <MaterialQuiz 
+                        assignmentId={getEmbeddedQuizId(viewingMaterial.content)!}
+                        assignmentTitle="Quiz Materi"
+                      />
+                    </div>
+                  )}
+                </>
+              )}
+              {viewingMaterial.content_type === 'h5p' && viewingMaterial.file_url && (
+                <H5PViewer embedUrl={viewingMaterial.file_url} title={viewingMaterial.title} />
               )}
               {viewingMaterial.content_type === 'video' && viewingMaterial.file_url && (
                 <div className="aspect-video rounded-lg overflow-hidden">

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -10,11 +10,18 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Pencil, Users, Download, Upload, UserPlus, UserMinus, Search, Check } from 'lucide-react';
+import { Plus, Trash2, Pencil, Users, Download, Upload, UserPlus, UserMinus, Search, Check, CheckCheck } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ClassGroup, Profile, ClassStudent } from '@/lib/types';
 import * as XLSX from 'xlsx';
+
+type SistemKuliah = {
+  id: string;
+  name: string;
+  description: string | null;
+  is_active: boolean;
+};
 
 export function KurikulumTab() {
   const { toast } = useToast();
@@ -31,6 +38,7 @@ export function KurikulumTab() {
   // Filter state for manage students
   const [yearFilter, setYearFilter] = useState<string>('all');
   const [genderFilter, setGenderFilter] = useState<string>('all');
+  const [sistemKuliahFilter, setSistemKuliahFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
 
@@ -70,6 +78,20 @@ export function KurikulumTab() {
         .select('*');
       if (error) throw error;
       return data as ClassStudent[];
+    },
+  });
+
+  // Fetch Sistem Kuliah
+  const { data: sistemKuliahList } = useQuery({
+    queryKey: ['sistem-kuliah'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sistem_kuliah')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data as SistemKuliah[];
     },
   });
 
@@ -194,6 +216,9 @@ export function KurikulumTab() {
     if (genderFilter !== 'all') {
       filtered = filtered.filter(s => s.gender === genderFilter);
     }
+    if (sistemKuliahFilter !== 'all') {
+      filtered = filtered.filter(s => s.sistem_kuliah_id === sistemKuliahFilter);
+    }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(s => 
@@ -203,6 +228,12 @@ export function KurikulumTab() {
     }
     
     return filtered;
+  };
+
+  // Select all filtered students
+  const selectAllFiltered = (classGroupId: string) => {
+    const filteredStudents = getFilteredStudentsNotInClass(classGroupId);
+    setSelectedStudents(filteredStudents.map(s => s.id));
   };
 
   // Add multiple students to class
@@ -247,6 +278,7 @@ export function KurikulumTab() {
   const resetManageDialog = () => {
     setYearFilter('all');
     setGenderFilter('all');
+    setSistemKuliahFilter('all');
     setSearchQuery('');
     setSelectedStudents([]);
     setShowManageStudentsDialog(false);
@@ -526,11 +558,35 @@ export function KurikulumTab() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Sistem Kuliah Filter */}
+                {sistemKuliahList && sistemKuliahList.length > 0 && (
+                  <Select value={sistemKuliahFilter} onValueChange={setSistemKuliahFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue placeholder="Sistem Kuliah" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Sistem Kuliah</SelectItem>
+                      {sistemKuliahList.map(sk => (
+                        <SelectItem key={sk.id} value={sk.id}>{sk.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
                 
                 {/* Bulk selection buttons */}
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1 items-center">
                   <span className="text-xs text-muted-foreground mr-1">Pilih:</span>
-                  {availableYears.slice(0, 4).map(year => (
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    className="h-6 text-xs px-2 gap-1"
+                    onClick={() => selectedClassForManage && selectAllFiltered(selectedClassForManage.id)}
+                  >
+                    <CheckCheck className="h-3 w-3" />
+                    Semua
+                  </Button>
+                  {availableYears.slice(0, 3).map(year => (
                     <Button 
                       key={year} 
                       variant="outline" 
@@ -561,7 +617,7 @@ export function KurikulumTab() {
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="h-6 text-xs px-2"
+                      className="h-6 text-xs px-2 text-destructive"
                       onClick={() => setSelectedStudents([])}
                     >
                       Batal ({selectedStudents.length})

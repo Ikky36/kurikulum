@@ -14,10 +14,12 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Wand2, ChevronDown, Lock, BookOpen, ClipboardCheck, Sparkles } from 'lucide-react';
+import { Loader2, Wand2, ChevronDown, Lock, BookOpen, ClipboardCheck, Sparkles, FileText, Box, Play } from 'lucide-react';
 import { AdvancedRichEditor } from './AdvancedRichEditor';
 import { AIContentGenerator } from './AIContentGenerator';
+import { H5PViewer } from './H5PViewer';
 
 interface MaterialEditorProps {
   classId: string;
@@ -50,11 +52,16 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
   const extendedMaterial = material as MaterialWithPrereqs | null;
 
   const [title, setTitle] = useState(material?.title || '');
+  const [contentType, setContentType] = useState<'text' | 'h5p'>(
+    material?.content_type === 'h5p' ? 'h5p' : 'text'
+  );
   const [content, setContent] = useState(material?.content || '');
+  const [h5pUrl, setH5pUrl] = useState(material?.file_url || '');
   const [selectedLloId, setSelectedLloId] = useState(material?.llo_id || '');
   const [isPublished, setIsPublished] = useState(material?.is_published || false);
   const [prerequisiteMaterialId, setPrerequisiteMaterialId] = useState(extendedMaterial?.prerequisite_material_id || '');
   const [prerequisiteAssignmentId, setPrerequisiteAssignmentId] = useState(extendedMaterial?.prerequisite_assignment_id || '');
+  const [embeddedQuizId, setEmbeddedQuizId] = useState('');
   const [showAI, setShowAI] = useState(false);
   const [showPrerequisites, setShowPrerequisites] = useState(false);
 
@@ -64,6 +71,9 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
 
   // Filter out current material from prerequisites
   const otherMaterials = (materials || []).filter(m => m.id !== material?.id);
+  
+  // Filter quiz assignments for embedding
+  const quizAssignments = (assignments || []).filter((a: any) => a.assignment_type === 'quiz');
 
   const handleAIGenerated = (generatedContent: string) => {
     setContent(generatedContent);
@@ -79,17 +89,28 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
       return;
     }
 
-    if (!content.trim()) {
+    if (contentType === 'text' && !content.trim()) {
       toast({ title: 'Error', description: 'Konten materi harus diisi', variant: 'destructive' });
       return;
     }
 
+    if (contentType === 'h5p' && !h5pUrl.trim()) {
+      toast({ title: 'Error', description: 'URL H5P harus diisi', variant: 'destructive' });
+      return;
+    }
+
     try {
+      // If there's an embedded quiz, append a marker to content
+      let finalContent = content;
+      if (embeddedQuizId && contentType === 'text') {
+        finalContent = content + `\n<!-- EMBEDDED_QUIZ:${embeddedQuizId} -->`;
+      }
+
       const data: any = {
         title,
-        content_type: 'text' as const,
-        content,
-        file_url: null,
+        content_type: contentType,
+        content: contentType === 'text' ? finalContent : null,
+        file_url: contentType === 'h5p' ? h5pUrl : null,
         llo_id: selectedLloId || null,
         is_published: isPublished,
         elearning_class_id: classId,
@@ -122,6 +143,23 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
           placeholder="Masukkan judul materi..."
           className="h-12 text-base"
         />
+      </div>
+
+      {/* Content Type Selection */}
+      <div className="space-y-2">
+        <Label className="text-base font-medium">Tipe Konten</Label>
+        <Tabs value={contentType} onValueChange={(v) => setContentType(v as 'text' | 'h5p')}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="text" className="gap-2">
+              <FileText className="h-4 w-4" />
+              Teks/Rich Content
+            </TabsTrigger>
+            <TabsTrigger value="h5p" className="gap-2">
+              <Box className="h-4 w-4" />
+              H5P Interaktif
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* LLO Selection */}
@@ -242,11 +280,59 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Advanced Rich Content Editor */}
-      <div className="space-y-2">
-        <Label className="text-base font-medium">Konten Materi</Label>
-        <AdvancedRichEditor value={content} onChange={setContent} />
-      </div>
+      {/* Content based on type */}
+      {contentType === 'text' ? (
+        <>
+          {/* Advanced Rich Content Editor */}
+          <div className="space-y-2">
+            <Label className="text-base font-medium">Konten Materi</Label>
+            <AdvancedRichEditor value={content} onChange={setContent} />
+          </div>
+
+          {/* Embedded Quiz Selection */}
+          {quizAssignments.length > 0 && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Play className="h-4 w-4" />
+                Sematkan Quiz di Akhir Materi (Opsional)
+              </Label>
+              <Select value={embeddedQuizId || "__none__"} onValueChange={(v) => setEmbeddedQuizId(v === "__none__" ? "" : v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pilih quiz untuk disematkan..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Tidak ada</SelectItem>
+                  {quizAssignments.map((a: any) => (
+                    <SelectItem key={a.id} value={a.id}>{a.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </>
+      ) : (
+        /* H5P URL Input */
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-base font-medium">URL Embed H5P</Label>
+            <Input
+              value={h5pUrl}
+              onChange={(e) => setH5pUrl(e.target.value)}
+              placeholder="https://h5p.org/h5p/embed/xxxxx atau URL embed H5P lainnya..."
+              className="h-12"
+            />
+            <p className="text-sm text-muted-foreground">
+              Masukkan URL embed dari H5P.org, Lumi, atau platform H5P lainnya.
+            </p>
+          </div>
+          {h5pUrl && (
+            <div className="space-y-2">
+              <Label>Preview H5P</Label>
+              <H5PViewer embedUrl={h5pUrl} title={title} />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Preview */}
       {content && (
