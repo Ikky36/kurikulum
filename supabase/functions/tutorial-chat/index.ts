@@ -1,6 +1,4 @@
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,7 +33,6 @@ Aplikasi ini memiliki fitur-fitur berikut:
 
 5. **Pengaturan** - Konfigurasi sistem
    - Tema dan tampilan aplikasi
-   - API Key untuk AI
    - Kurikulum dan program studi
    - Instrumen penilaian
    - Hak akses role
@@ -58,50 +55,11 @@ serve(async (req) => {
   }
 
   try {
-    // Get Supabase client to fetch settings
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Check for GEMINI_API_KEY from environment first (priority)
-    const envGeminiKey = Deno.env.get("GEMINI_API_KEY");
-
-    // Fetch AI settings from app_settings as fallback
-    const { data: settingsData } = await supabase
-      .from("app_settings")
-      .select("setting_key, setting_value")
-      .in("setting_key", ["ai_api_key", "ai_provider"]);
-
-    const settings: Record<string, string> = {};
-    settingsData?.forEach((s: { setting_key: string; setting_value: string | null }) => {
-      settings[s.setting_key] = s.setting_value || "";
-    });
-
-    // Use environment GEMINI_API_KEY if available, otherwise fall back to app_settings
-    const aiApiKey = envGeminiKey || settings["ai_api_key"];
-    // If using env key, default to gemini provider
-    const aiProvider = envGeminiKey ? "gemini" : (settings["ai_provider"] || "gemini");
-
-    if (!aiApiKey) {
-      throw new Error("API Key AI belum dikonfigurasi. Pastikan GEMINI_API_KEY sudah ditambahkan atau konfigurasi di halaman Pengaturan.");
-    }
-
-    // Determine API URL and model based on provider
-    let apiUrl = "";
-    let model = "";
-
-    if (aiProvider === "gemini") {
-      apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-      model = "gemini-2.0-flash";
-    } else if (aiProvider === "openai") {
-      apiUrl = "https://api.openai.com/v1/chat/completions";
-      model = "gpt-4o-mini";
-    } else if (aiProvider === "anthropic") {
-      // Anthropic uses a different API format, we'll use their messages API
-      apiUrl = "https://api.anthropic.com/v1/messages";
-      model = "claude-3-haiku-20240307";
-    } else {
-      throw new Error("Provider AI tidak didukung. Gunakan gemini, openai, atau anthropic.");
+    // Use Lovable AI Gateway - LOVABLE_API_KEY is auto-provisioned
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY tidak tersedia.");
     }
 
     const body: ChatRequest = await req.json();
@@ -114,80 +72,45 @@ serve(async (req) => {
       { role: "user", content: message },
     ];
 
-    let responseData;
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages,
+      }),
+    });
 
-    if (aiProvider === "anthropic") {
-      // Anthropic uses a different format
-      const anthropicResponse = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          "x-api-key": aiApiKey,
-          "anthropic-version": "2023-06-01",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          max_tokens: 1024,
-          system: TUTORIAL_SYSTEM_PROMPT,
-          messages: [
-            ...history.slice(-10).map(m => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content })),
-            { role: "user", content: message },
-          ],
-        }),
-      });
-
-      if (!anthropicResponse.ok) {
-        if (anthropicResponse.status === 429) {
-          return new Response(
-            JSON.stringify({
-              error: "Terlalu banyak permintaan ke layanan AI. Silakan tunggu 30-60 detik lalu coba lagi.",
-              code: 429,
-              retry_after_seconds: 60,
-            }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-
-        const errorText = await anthropicResponse.text();
-        console.error("Anthropic API error:", anthropicResponse.status, errorText);
-        throw new Error("Gagal terhubung ke Anthropic API. Periksa API Key Anda.");
+    if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({
+            error: "Terlalu banyak permintaan. Silakan tunggu beberapa detik lalu coba lagi.",
+            code: 429,
+            retry_after_seconds: 10,
+          }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-
-      const anthropicData = await anthropicResponse.json();
-      responseData = anthropicData.content?.[0]?.text || "";
-    } else {
-      // OpenAI-compatible format (Gemini and OpenAI)
-      const response = await fetch(apiUrl, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${aiApiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-        }),
-      });
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          return new Response(
-            JSON.stringify({
-              error: "Terlalu banyak permintaan ke layanan AI. Silakan tunggu 30-60 detik lalu coba lagi.",
-              code: 429,
-              retry_after_seconds: 60,
-            }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        const errorText = await response.text();
-        console.error("AI API error:", response.status, errorText);
-        throw new Error(`Gagal terhubung ke ${aiProvider.toUpperCase()} API. Periksa API Key Anda.`);
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({
+            error: "Kredit AI habis. Silakan hubungi administrator.",
+            code: 402,
+          }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-
-      const data = await response.json();
-      responseData = data.choices?.[0]?.message?.content || "";
+      const errorText = await response.text();
+      console.error("Lovable AI error:", response.status, errorText);
+      throw new Error("Gagal terhubung ke layanan AI.");
     }
+
+    const data = await response.json();
+    const responseData = data.choices?.[0]?.message?.content || "";
 
     return new Response(
       JSON.stringify({ response: responseData }),
