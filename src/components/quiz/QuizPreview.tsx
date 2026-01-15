@@ -86,15 +86,30 @@ export function QuizPreview({ questions, open, onOpenChange, mode, initialQuesti
         return JSON.stringify(sortedCorrect) === JSON.stringify(sortedUser);
 
       case 'matching':
-        if (!correctAnswer || !userAnswer) return false;
-        // For matching, check if all pairs are correct
-        let allCorrect = true;
-        options.forEach((pair: any) => {
-          if (userAnswer[pair.left] !== pair.right) {
-            allCorrect = false;
+        // For matching, build expected mapping from options and compare
+        if (!userAnswer || typeof userAnswer !== 'object') return false;
+        if (!options || !Array.isArray(options)) return false;
+        
+        // Build expected mapping: {left: right, ...}
+        const expectedMapping: Record<string, string> = {};
+        options.forEach((pair: { left: string; right: string }) => {
+          if (pair.left && pair.right) {
+            expectedMapping[pair.left] = pair.right;
           }
         });
-        return allCorrect;
+        
+        // Check if user answer matches expected mapping
+        const userKeys = Object.keys(userAnswer);
+        const expectedKeys = Object.keys(expectedMapping);
+        
+        if (userKeys.length !== expectedKeys.length) return false;
+        
+        for (const key of userKeys) {
+          if (expectedMapping[key] !== userAnswer[key]) {
+            return false;
+          }
+        }
+        return true;
 
       default:
         return false;
