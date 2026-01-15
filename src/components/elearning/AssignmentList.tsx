@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useElearningAssignments, useDeleteAssignment, type ElearningAssignment } from '@/hooks/useElearningMaterials';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -11,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ClipboardCheck, FileUp, HelpCircle, Trash2, Pencil, Play, Plus, Clock, Users, Shield, Lock, CheckCircle, AlertCircle } from 'lucide-react';
 import { AssignmentEditor } from './AssignmentEditor';
 import { QuizManager } from './QuizManager';
+import { QuizResultViewer } from './QuizResultViewer';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 
@@ -27,6 +30,7 @@ type AssignmentWithRelations = ElearningAssignment & {
   prerequisite_assignment_id?: string | null;
   seb_password?: string | null;
   seb_quit_password?: string | null;
+  show_answer_mode?: string | null;
 };
 
 export function AssignmentList({ classId, courseId, canEdit }: AssignmentListProps) {
@@ -42,6 +46,29 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
 
   const typedAssignments = (assignments || []) as AssignmentWithRelations[];
   const isMahasiswa = profile?.role === 'mahasiswa';
+
+  // Fetch student's submissions to check which quizzes they've completed
+  const { data: mySubmissions } = useQuery({
+    queryKey: ['my-quiz-submissions', profile?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('elearning_submissions')
+        .select('assignment_id, score, attempt_number')
+        .eq('student_profile_id', profile!.id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!profile?.id && isMahasiswa,
+  });
+
+  const getSubmissionForAssignment = (assignmentId: string) => {
+    if (!mySubmissions) return null;
+    const submissions = mySubmissions.filter(s => s.assignment_id === assignmentId);
+    if (submissions.length === 0) return null;
+    return submissions.reduce((best, current) => 
+      (current.score || 0) > (best?.score || 0) ? current : best
+    , submissions[0]);
+  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -211,13 +238,42 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
                 <div className="flex items-center justify-between gap-2 pt-3 border-t">
                   {/* Student Actions */}
                   {isMahasiswa && assignment.assignment_type === 'quiz' && assignment.is_published && (
-                    <Button 
-                      onClick={() => handleStartQuiz(assignment)} 
-                      className="gap-2 flex-1"
-                    >
-                      <Play className="h-4 w-4" />
-                      Kerjakan Quiz
-                    </Button>
+                    <div className="flex items-center gap-2 flex-1">
+                      {getSubmissionForAssignment(assignment.id) ? (
+                        <>
+                          <QuizResultViewer 
+                            assignmentId={assignment.id} 
+                            assignmentTitle={assignment.title}
+                            showAnswerMode={assignment.show_answer_mode || 'after_quiz'}
+                          />
+                          <Badge variant="secondary" className="gap-1">
+                            <CheckCircle className="h-3 w-3" />
+                            {getSubmissionForAssignment(assignment.id)?.score?.toFixed(0) || 0}%
+                          </Badge>
+                          {/* Allow retake if max attempts not reached */}
+                          {(!assignment.max_attempts || 
+                            (mySubmissions?.filter(s => s.assignment_id === assignment.id).length || 0) < assignment.max_attempts) && (
+                            <Button 
+                              onClick={() => handleStartQuiz(assignment)} 
+                              variant="outline"
+                              size="sm"
+                              className="gap-1"
+                            >
+                              <Play className="h-4 w-4" />
+                              Coba Lagi
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        <Button 
+                          onClick={() => handleStartQuiz(assignment)} 
+                          className="gap-2 flex-1"
+                        >
+                          <Play className="h-4 w-4" />
+                          Kerjakan Quiz
+                        </Button>
+                      )}
+                    </div>
                   )}
 
                   {/* Instructor Actions */}
