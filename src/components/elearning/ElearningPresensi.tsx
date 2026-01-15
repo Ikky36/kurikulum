@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import {
   useElearningClasses,
   useElearningSessions,
@@ -84,14 +85,53 @@ export function ElearningPresensi() {
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, AttendanceRecord>>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [dosenCourseAssignments, setDosenCourseAssignments] = useState<{course_id: string, class_group_id: string | null}[]>([]);
 
   // Enable realtime subscriptions for sessions and attendance
   useElearningRealtimeSubscription(selectedClassId || undefined);
   useAttendanceRealtimeSubscription(selectedSessionId || undefined);
 
-  const selectedClass = (classes as ClassWithRelations[] | undefined)?.find(
-    (c) => c.id === selectedClassId
-  );
+  const isAdmin = profile?.role === 'admin';
+  const isSubAdmin = profile?.role === 'sub_admin';
+  const isDosen = profile?.role === 'dosen';
+  const typedClasses = (classes || []) as ClassWithRelations[];
+
+  // Fetch dosen course assignments
+  useEffect(() => {
+    const fetchDosenAssignments = async () => {
+      if (!profile?.id || !isDosen) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('course_instructors')
+          .select('course_id, class_group_id')
+          .eq('instructor_profile_id', profile.id);
+        
+        if (error) throw error;
+        setDosenCourseAssignments(data || []);
+      } catch (error) {
+        console.error('Error fetching dosen assignments:', error);
+      }
+    };
+
+    fetchDosenAssignments();
+  }, [profile?.id, isDosen]);
+
+  // Filter classes based on role
+  const myClasses = typedClasses.filter((c) => {
+    if (isAdmin || isSubAdmin) return true;
+    if (isDosen) {
+      const isCreator = c.instructor_profile_id === profile?.id;
+      const isAssigned = dosenCourseAssignments.some(
+        assignment => assignment.course_id === c.course_id && 
+        (assignment.class_group_id === null || assignment.class_group_id === c.class_group_id)
+      );
+      return isCreator || isAssigned;
+    }
+    return false;
+  });
+
+  const selectedClass = myClasses.find((c) => c.id === selectedClassId);
 
   const { data: sessions } = useElearningSessions(selectedClassId);
   const { data: attendance, isLoading: attendanceLoading } = useElearningAttendance(selectedSessionId);
@@ -111,10 +151,13 @@ export function ElearningPresensi() {
     notes: '',
   });
 
-  const isAdmin = profile?.role === 'admin';
-  const isDosen = profile?.role === 'dosen';
-  const canManage = isAdmin || isDosen;
-  const canManageClass = isAdmin || selectedClass?.instructor_profile_id === profile?.id;
+  // Determine if user can manage this class
+  const isCreator = selectedClass?.instructor_profile_id === profile?.id;
+  const isAssignedDosen = isDosen && dosenCourseAssignments.some(
+    assignment => selectedClass?.course_id === assignment.course_id &&
+    (assignment.class_group_id === null || assignment.class_group_id === selectedClass?.class_group_id)
+  );
+  const canManageClass = isAdmin || isSubAdmin || isCreator || isAssignedDosen;
 
   // Initialize attendance records when data loads
   useEffect(() => {
@@ -284,10 +327,6 @@ export function ElearningPresensi() {
     );
   }
 
-  const typedClasses = (classes || []) as ClassWithRelations[];
-  const myClasses = typedClasses.filter(
-    (c) => isAdmin || c.instructor_profile_id === profile?.id
-  );
 
   return (
     <div className="space-y-6">
