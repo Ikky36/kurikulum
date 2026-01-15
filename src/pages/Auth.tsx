@@ -26,6 +26,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { data: appSettings } = useAppSettings();
+  const logoUrl = appSettings?.logo_url;
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
@@ -121,8 +122,12 @@ export default function Auth() {
         <div className="container flex min-h-[calc(100vh-12rem)] items-center justify-center py-12">
           <Card className="w-full max-w-md animate-scale-in">
             <CardHeader className="text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl gradient-primary shadow-lg">
-                <GraduationCap className="h-7 w-7 text-primary-foreground" />
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl gradient-primary shadow-lg overflow-hidden">
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Logo" className="h-14 w-14 object-cover" />
+                ) : (
+                  <GraduationCap className="h-7 w-7 text-primary-foreground" />
+                )}
               </div>
               <CardTitle className="font-display text-2xl">Lupa Password</CardTitle>
               <CardDescription>
@@ -168,8 +173,12 @@ export default function Auth() {
       <div className="container flex min-h-[calc(100vh-12rem)] items-center justify-center py-12">
         <Card className="w-full max-w-md animate-scale-in">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl gradient-primary shadow-lg">
-              <GraduationCap className="h-7 w-7 text-primary-foreground" />
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl gradient-primary shadow-lg overflow-hidden">
+              {logoUrl ? (
+                <img src={logoUrl} alt="Logo" className="h-14 w-14 object-cover" />
+              ) : (
+                <GraduationCap className="h-7 w-7 text-primary-foreground" />
+              )}
             </div>
             <CardTitle className="font-display text-2xl">{appSettings?.app_name || 'Tracker PBA'}</CardTitle>
             <CardDescription>

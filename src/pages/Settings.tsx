@@ -44,6 +44,7 @@ export default function Settings() {
   const [appTagline, setAppTagline] = useState('');
   const [footerText, setFooterText] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [primaryColor, setPrimaryColor] = useState('');
   const [uploading, setUploading] = useState(false);
 
@@ -311,8 +312,18 @@ export default function Settings() {
     },
   });
 
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
+    setLogoPreview(previewUrl);
+  };
+
+  const handleLogoUpload = async () => {
+    const input = document.getElementById('logo-upload') as HTMLInputElement;
+    const file = input?.files?.[0];
     if (!file) return;
 
     setUploading(true);
@@ -330,9 +341,17 @@ export default function Settings() {
     }
 
     const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-    setLogoUrl(urlData.publicUrl);
-    updateSettingMutation.mutate({ key: 'logo_url', value: urlData.publicUrl });
+    const newUrl = `${urlData.publicUrl}?t=${Date.now()}`; // Add cache busting
+    setLogoUrl(newUrl);
+    setLogoPreview(null);
+    updateSettingMutation.mutate({ key: 'logo_url', value: newUrl });
     setUploading(false);
+  };
+
+  const handleCancelLogoPreview = () => {
+    setLogoPreview(null);
+    const input = document.getElementById('logo-upload') as HTMLInputElement;
+    if (input) input.value = '';
   };
 
   const resetCurriculumForm = () => {
@@ -621,18 +640,36 @@ export default function Settings() {
                   <CardContent className="space-y-6">
                     <div className="space-y-4">
                       <Label>Logo Aplikasi</Label>
-                      <div className="flex items-center gap-4">
-                        {logoUrl ? (
-                          <img src={logoUrl} alt="Logo" className="h-16 w-16 object-contain rounded-lg border" />
-                        ) : (
-                          <div className="h-16 w-16 flex items-center justify-center rounded-lg border bg-muted">
-                            <Image className="h-8 w-8 text-muted-foreground" />
+                      <div className="flex flex-col gap-4">
+                        <div className="flex items-center gap-4">
+                          {/* Current Logo */}
+                          <div className="text-center">
+                            <p className="text-xs text-muted-foreground mb-2">Logo Saat Ini</p>
+                            {logoUrl ? (
+                              <img src={logoUrl} alt="Logo" className="h-16 w-16 object-contain rounded-lg border" />
+                            ) : (
+                              <div className="h-16 w-16 flex items-center justify-center rounded-lg border bg-muted">
+                                <Image className="h-8 w-8 text-muted-foreground" />
+                              </div>
+                            )}
                           </div>
-                        )}
-                        <div>
+
+                          {/* Preview Logo */}
+                          {logoPreview && (
+                            <>
+                              <div className="text-muted-foreground">→</div>
+                              <div className="text-center">
+                                <p className="text-xs text-muted-foreground mb-2">Preview Baru</p>
+                                <img src={logoPreview} alt="Preview Logo" className="h-16 w-16 object-contain rounded-lg border-2 border-primary" />
+                              </div>
+                            </>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-2">
                           <Label htmlFor="logo-upload" className="cursor-pointer">
                             <Button variant="outline" asChild disabled={uploading}>
-                              <span>{uploading ? 'Uploading...' : 'Upload Logo'}</span>
+                              <span>{logoPreview ? 'Pilih Logo Lain' : 'Pilih Logo'}</span>
                             </Button>
                           </Label>
                           <input 
@@ -640,9 +677,27 @@ export default function Settings() {
                             type="file" 
                             accept="image/*" 
                             className="hidden" 
-                            onChange={handleLogoUpload}
+                            onChange={handleLogoSelect}
                           />
+                          {logoPreview && (
+                            <>
+                              <Button 
+                                onClick={handleLogoUpload} 
+                                disabled={uploading}
+                              >
+                                {uploading ? 'Uploading...' : 'Simpan Logo'}
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                onClick={handleCancelLogoPreview}
+                                disabled={uploading}
+                              >
+                                Batal
+                              </Button>
+                            </>
+                          )}
                         </div>
+                        <p className="text-xs text-muted-foreground">Logo akan ditampilkan di navbar, halaman login, dan beranda</p>
                       </div>
                     </div>
                   </CardContent>
