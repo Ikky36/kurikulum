@@ -286,8 +286,22 @@ export default function DashboardAdmin() {
         body: userData,
       });
       
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      // Handle edge function errors - can come in different formats
+      if (error) {
+        // Try to parse error response body if it's a FunctionsHttpError
+        try {
+          const errorBody = await error.context?.json?.();
+          if (errorBody?.error) {
+            throw new Error(errorBody.error);
+          }
+        } catch {
+          // If parsing fails, use the original error message
+        }
+        throw new Error(error.message || 'Gagal membuat akun');
+      }
+      if (data?.error) {
+        throw new Error(data.error);
+      }
       
       return data;
     },
