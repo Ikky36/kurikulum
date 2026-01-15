@@ -22,6 +22,7 @@ export function TutorialChatButton() {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [rateLimitedUntil, setRateLimitedUntil] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -40,34 +41,94 @@ export function TutorialChatButton() {
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
+    const now = Date.now();
+    if (rateLimitedUntil && now < rateLimitedUntil) {
+      const waitSeconds = Math.ceil((rateLimitedUntil - now) / 1000);
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `Layanan AI sedang sibuk. Silakan tunggu ${waitSeconds} detik lalu coba lagi.`,
+        },
+      ]);
+      return;
+    }
+
     const userMessage = input.trim();
     setInput('');
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
 
     try {
-      const history = messages.map(m => ({ role: m.role, content: m.content }));
-      
+      const history = [...messages, { role: 'user' as const, content: userMessage }].map(m => ({
+        role: m.role,
+        content: m.content,
+      }));
+
       const { data, error } = await supabase.functions.invoke('tutorial-chat', {
-        body: { message: userMessage, history }
+        body: { message: userMessage, history },
       });
 
-      if (error) throw error;
+      if (error) {
+        const status = (error as any)?.context?.status as number | undefined;
 
-      if (data?.error) {
-        throw new Error(data.error);
+        if (status === 429) {
+          setRateLimitedUntil(Date.now() + 60_000);
+          setMessages(prev => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: 'AI sedang sibuk (terlalu banyak permintaan). Silakan tunggu 30–60 detik lalu coba lagi.',
+            },
+          ]);
+          return;
+        }
+
+        throw error;
       }
 
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: data?.response || 'Maaf, saya tidak dapat memproses permintaan Anda saat ini.'
-      }]);
+      if ((data as any)?.code === 429) {
+        const retryAfterSeconds = Number((data as any)?.retry_after_seconds || 60);
+        setRateLimitedUntil(Date.now() + retryAfterSeconds * 1000);
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content:
+              (data as any)?.error ||
+              'AI sedang sibuk (terlalu banyak permintaan). Silakan tunggu 30–60 detik lalu coba lagi.',
+          },
+        ]);
+        return;
+      }
+
+      if ((data as any)?.error) {
+        setMessages(prev => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: (data as any).error,
+          },
+        ]);
+        return;
+      }
+
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: (data as any)?.response || 'Maaf, saya tidak dapat memproses permintaan Anda saat ini.',
+        },
+      ]);
     } catch (error: any) {
       console.error('Tutorial chat error:', error);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: `Maaf, terjadi kesalahan: ${error.message || 'Tidak dapat terhubung ke AI'}`
-      }]);
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: `Maaf, terjadi kesalahan: ${error.message || 'Tidak dapat terhubung ke AI'}`,
+        },
+      ]);
     } finally {
       setIsLoading(false);
     }
