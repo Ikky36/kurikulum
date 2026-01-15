@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStudentGrades } from '@/hooks/useStudents';
@@ -20,7 +21,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
-import { User, Mail, BookOpen, Camera, Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { User, Mail, BookOpen, Camera, Loader2, CheckCircle2, XCircle, Calendar, GraduationCap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link, Navigate } from 'react-router-dom';
 
@@ -40,10 +41,25 @@ export default function DashboardMahasiswa() {
   const [fullName, setFullName] = useState(profile?.full_name || '');
   const [nim, setNim] = useState(profile?.nim || '');
   const [program, setProgram] = useState(profile?.program || '');
-  const [classGroup, setClassGroup] = useState(profile?.class_group || '');
   const [gender, setGender] = useState(profile?.gender || '');
+  const [enrollmentYear, setEnrollmentYear] = useState(profile?.enrollment_year?.toString() || '');
+  const [sistemKuliahId, setSistemKuliahId] = useState((profile as any)?.sistem_kuliah_id || '');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+
+  // Fetch sistem kuliah options
+  const { data: sistemKuliahOptions } = useQuery({
+    queryKey: ['sistem-kuliah'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sistem_kuliah')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
 
   if (loading) {
     return <Layout><div className="container py-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div></Layout>;
@@ -86,8 +102,9 @@ export default function DashboardMahasiswa() {
         full_name: fullName,
         nim: nim,
         program: program,
-        class_group: classGroup,
         gender: gender || null,
+        enrollment_year: enrollmentYear ? parseInt(enrollmentYear) : null,
+        sistem_kuliah_id: sistemKuliahId || null,
       })
       .eq('id', user.id);
 
@@ -163,8 +180,9 @@ export default function DashboardMahasiswa() {
                       setFullName(profile?.full_name || '');
                       setNim(profile?.nim || '');
                       setProgram(profile?.program || '');
-                      setClassGroup(profile?.class_group || '');
                       setGender(profile?.gender || '');
+                      setEnrollmentYear(profile?.enrollment_year?.toString() || '');
+                      setSistemKuliahId((profile as any)?.sistem_kuliah_id || '');
                     }
                     setEditMode(!editMode);
                   }}
@@ -212,8 +230,26 @@ export default function DashboardMahasiswa() {
                     <Input value={program} onChange={(e) => setProgram(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label>Kelas</Label>
-                    <Input value={classGroup} onChange={(e) => setClassGroup(e.target.value)} />
+                    <Label>Tahun Angkatan</Label>
+                    <Input 
+                      type="number" 
+                      value={enrollmentYear} 
+                      onChange={(e) => setEnrollmentYear(e.target.value)}
+                      placeholder="Contoh: 2024"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sistem Kuliah</Label>
+                    <Select value={sistemKuliahId} onValueChange={setSistemKuliahId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih sistem kuliah..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sistemKuliahOptions?.map((sk) => (
+                          <SelectItem key={sk.id} value={sk.id}>{sk.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
                     <Label>Gender</Label>
@@ -248,11 +284,20 @@ export default function DashboardMahasiswa() {
                       <span className="font-medium">{profile.program}</span>
                     </div>
                   )}
-                  {profile?.class_group && (
+                  {profile?.enrollment_year && (
                     <div className="flex items-center gap-3 text-sm">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">Kelas:</span>
-                      <span className="font-medium">{profile.class_group}</span>
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Angkatan:</span>
+                      <span className="font-medium">{profile.enrollment_year}</span>
+                    </div>
+                  )}
+                  {(profile as any)?.sistem_kuliah_id && sistemKuliahOptions && (
+                    <div className="flex items-center gap-3 text-sm">
+                      <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Sistem Kuliah:</span>
+                      <span className="font-medium">
+                        {sistemKuliahOptions.find(sk => sk.id === (profile as any).sistem_kuliah_id)?.name || '-'}
+                      </span>
                     </div>
                   )}
                   {profile?.gender && (
