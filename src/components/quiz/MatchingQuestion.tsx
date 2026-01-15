@@ -97,12 +97,12 @@ function DroppableZone({ id, leftItem, matchedItem }: DroppableZoneProps) {
       <div className={cn(
         "flex-1 min-h-[60px] rounded-lg border-2 border-dashed flex items-center justify-center transition-all",
         isOver ? "border-primary bg-primary/20" : "border-muted-foreground/20",
-        matchedItem && "border-solid border-green-500/50 bg-green-50 dark:bg-green-950/30"
+        matchedItem && "border-solid border-primary/30 bg-primary/5"
       )}>
         {matchedItem ? (
           <div className="flex items-center gap-2 px-3 py-2">
-            <Check className="h-4 w-4 text-green-600" />
-            <span className="font-medium text-green-700 dark:text-green-400">{matchedItem}</span>
+            <Badge variant="secondary" className="shrink-0">Terpasang</Badge>
+            <span className="font-medium text-foreground">{matchedItem}</span>
           </div>
         ) : (
           <span className="text-sm text-muted-foreground">Drop jawaban di sini</span>
@@ -219,7 +219,7 @@ export function MatchingQuestion({ options, value, onChange }: MatchingQuestionP
               </DraggableItem>
             ))}
             {unmatchedRightItems.length === 0 && (
-              <p className="text-sm text-green-600 dark:text-green-400 flex items-center gap-2">
+              <p className="text-sm text-primary flex items-center gap-2">
                 <Check className="h-4 w-4" />
                 Semua jawaban sudah dipasangkan!
               </p>
