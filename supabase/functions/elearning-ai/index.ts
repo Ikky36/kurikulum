@@ -125,6 +125,10 @@ correct_answer: 0 untuk Benar, 1 untuk Salah.`;
           case 'short_answer':
             formatGuide = `Format: { "question_type": "short_answer", "question_text": "...", "correct_answer": "jawaban singkat yang diharapkan", "feedback": "Penjelasan atau kata kunci yang diterima" }`;
             break;
+          case 'long_answer':
+            formatGuide = `Format: { "question_type": "long_answer", "question_text": "Pertanyaan yang membutuhkan jawaban panjang/essay...", "correct_answer": "Kunci jawaban atau poin-poin utama yang diharapkan", "feedback": "Kriteria penilaian dan poin-poin penting" }
+Soal ini akan dinilai manual oleh dosen.`;
+            break;
           case 'matching':
             formatGuide = `Format: { "question_type": "matching", "question_text": "Jodohkan item berikut:", "options": [{"left": "Term 1", "right": "Definition 1"}, {"left": "Term 2", "right": "Definition 2"}], "correct_answer": [[0,0], [1,1]], "feedback": "Penjelasan pasangan yang benar" }`;
             break;

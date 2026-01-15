@@ -541,6 +541,21 @@ export default function QuizTaking() {
                 />
               )}
 
+              {/* Long Answer */}
+              {currentQuestion.question_type === 'long_answer' && (
+                <div className="space-y-2">
+                  <Textarea
+                    value={answers[currentQuestion.id] || ''}
+                    onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+                    placeholder="Tuliskan jawaban panjang Anda di sini..."
+                    className="min-h-[250px]"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    * Soal ini akan dinilai manual oleh dosen
+                  </p>
+                </div>
+              )}
+
               {/* Multiple Answer (Checkbox) */}
               {currentQuestion.question_type === 'multiple_answer' && (
                 <div className="space-y-3">
