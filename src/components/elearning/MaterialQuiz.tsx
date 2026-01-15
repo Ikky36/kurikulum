@@ -66,7 +66,7 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
     if (!options) return [];
     if (Array.isArray(options)) {
       return options.map((opt: any, idx) => ({
-        id: opt.id || `opt-${idx}`,
+        id: String(idx), // Use numeric index as ID for consistent grading
         text: typeof opt === 'string' ? opt : opt.text || String(opt),
       }));
     }
@@ -77,13 +77,13 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
     setAnswers(prev => ({ ...prev, [questionId]: value }));
   };
 
-  const handleMultipleAnswerToggle = (questionId: string, optionId: string) => {
+  const handleMultipleAnswerToggle = (questionId: string, optionIndex: number) => {
     setAnswers(prev => {
       const current = prev[questionId] || [];
-      if (current.includes(optionId)) {
-        return { ...prev, [questionId]: current.filter((id: string) => id !== optionId) };
+      if (current.includes(optionIndex)) {
+        return { ...prev, [questionId]: current.filter((idx: number) => idx !== optionIndex) };
       }
-      return { ...prev, [questionId]: [...current, optionId] };
+      return { ...prev, [questionId]: [...current, optionIndex] };
     });
   };
 
@@ -223,21 +223,21 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
         {/* Multiple Choice */}
         {currentQuestion.question_type === 'multiple_choice' && (
           <RadioGroup
-            value={answers[currentQuestion.id] || ''}
-            onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
+            value={answers[currentQuestion.id]?.toString() || ''}
+            onValueChange={(value) => handleAnswerChange(currentQuestion.id, parseInt(value))}
           >
             <div className="space-y-3">
-              {options.map((option) => (
+              {options.map((option, idx) => (
                 <div 
                   key={option.id} 
                   className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
-                    answers[currentQuestion.id] === option.id 
+                    answers[currentQuestion.id] === idx 
                       ? 'bg-primary/5 border-primary' 
                       : 'hover:bg-muted'
                   }`}
                 >
-                  <RadioGroupItem value={option.id} id={option.id} />
-                  <Label htmlFor={option.id} className="flex-1 cursor-pointer">
+                  <RadioGroupItem value={String(idx)} id={`q-${currentQuestion.id}-opt-${idx}`} />
+                  <Label htmlFor={`q-${currentQuestion.id}-opt-${idx}`} className="flex-1 cursor-pointer">
                     {option.text}
                   </Label>
                 </div>
@@ -276,19 +276,19 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
         {/* Multiple Answer */}
         {currentQuestion.question_type === 'multiple_answer' && (
           <div className="space-y-3">
-            {options.map((option) => {
-              const selected = (answers[currentQuestion.id] || []).includes(option.id);
+            {options.map((option, idx) => {
+              const selected = (answers[currentQuestion.id] || []).includes(idx);
               return (
                 <div 
                   key={option.id}
                   className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors cursor-pointer ${
                     selected ? 'bg-primary/5 border-primary' : 'hover:bg-muted'
                   }`}
-                  onClick={() => handleMultipleAnswerToggle(currentQuestion.id, option.id)}
+                  onClick={() => handleMultipleAnswerToggle(currentQuestion.id, idx)}
                 >
                   <Checkbox 
                     checked={selected}
-                    onCheckedChange={() => handleMultipleAnswerToggle(currentQuestion.id, option.id)}
+                    onCheckedChange={() => handleMultipleAnswerToggle(currentQuestion.id, idx)}
                   />
                   <Label className="flex-1 cursor-pointer">{option.text}</Label>
                 </div>
