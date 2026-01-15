@@ -319,34 +319,24 @@ export function QuizPreview({ questions, open, onOpenChange, mode, initialQuesti
           </div>
         );
 
-      case 'matching':
-        const matchingOptions = {
-          left: options.map((p: any) => p.left),
-          right: options.map((p: any) => p.right),
-        };
+      case 'matching': {
+        // Build correct mapping from options
+        const correctMappingObj: Record<string, string> = {};
+        options.forEach((pair: { left: string; right: string }) => {
+          correctMappingObj[pair.left] = pair.right;
+        });
+
         return (
-          <div className="space-y-4">
-            <MatchingQuestion
-              options={matchingOptions}
-              value={userAnswer || {}}
-              onChange={(value) => handleAnswerChange(question.id, value)}
-            />
-            {isChecked && (
-              <div className="p-4 rounded-lg bg-muted space-y-2">
-                <p className="font-medium text-sm">Jawaban Benar:</p>
-                {options.map((pair: any, idx: number) => (
-                  <div key={idx} className="flex items-center gap-2 text-sm">
-                    <span className="px-2 py-1 bg-background rounded">{pair.left}</span>
-                    <span className="text-muted-foreground">→</span>
-                    <span className="px-2 py-1 bg-green-100 dark:bg-green-900 rounded text-green-700 dark:text-green-300">
-                      {pair.right}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <MatchingQuestion
+            options={options}
+            value={userAnswer || {}}
+            onChange={(value) => handleAnswerChange(question.id, value)}
+            disabled={isChecked}
+            showResult={isChecked}
+            correctMapping={correctMappingObj}
+          />
         );
+      }
 
       default:
         return <p className="text-muted-foreground">Tipe soal tidak dikenali</p>;
