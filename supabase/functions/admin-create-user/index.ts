@@ -62,23 +62,37 @@ serve(async (req) => {
     }
 
     // Sub-admin cannot create admin or sub_admin accounts
-    const requestedRole = (await req.clone().json()).role;
-    if (adminProfile?.role === "sub_admin" && (requestedRole === "admin" || requestedRole === "sub_admin")) {
-      return new Response(JSON.stringify({ error: "Forbidden: Sub-admin cannot create admin accounts" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const body = await req.clone().json();
+    const requestedRoles: string[] = Array.isArray(body.roles) ? body.roles : (body.role ? [body.role] : []);
+    
+    if (adminProfile?.role === "sub_admin") {
+      if (requestedRoles.includes("admin") || requestedRoles.includes("sub_admin")) {
+        return new Response(JSON.stringify({ error: "Forbidden: Sub-admin cannot create admin accounts" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     // Parse request body
-    const { email, password, full_name, role, nim, nip, program, class_group, enrollment_year, gender } = await req.json();
+    const { email, password, full_name, role, roles, nim, nip, program, class_group, enrollment_year, gender } = await req.json();
 
-    if (!email || !password || !full_name || !role) {
+    // Support both single role and multiple roles
+    const userRoles: string[] = Array.isArray(roles) ? roles : (role ? [role] : ['mahasiswa']);
+
+    if (!email || !password || !full_name || userRoles.length === 0) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    
+    // Determine primary role (highest privilege)
+    let primaryRole = 'mahasiswa';
+    if (userRoles.includes('admin')) primaryRole = 'admin';
+    else if (userRoles.includes('sub_admin')) primaryRole = 'sub_admin';
+    else if (userRoles.includes('dosen')) primaryRole = 'dosen';
+    else if (userRoles.includes('mahasiswa')) primaryRole = 'mahasiswa';
 
     // Check if email already exists in profiles
     const { data: existingProfile } = await supabaseAdmin
@@ -99,7 +113,7 @@ serve(async (req) => {
       email,
       password,
       email_confirm: true,
-      user_metadata: { full_name, role },
+      user_metadata: { full_name, role: primaryRole },
     });
 
     if (createError) {
@@ -129,6 +143,22 @@ serve(async (req) => {
 
     if (updateError) {
       console.error("Profile update error:", updateError);
+    }
+
+    // Insert all roles into user_roles table
+    if (userRoles.length > 0) {
+      const rolesToInsert = userRoles.map((r: string) => ({ 
+        user_id: newUser.user.id, 
+        role: r 
+      }));
+      
+      const { error: rolesError } = await supabaseAdmin
+        .from("user_roles")
+        .insert(rolesToInsert);
+      
+      if (rolesError) {
+        console.error("User roles insert error:", rolesError);
+      }
     }
 
     return new Response(JSON.stringify({ success: true, userId: newUser.user.id }), {
