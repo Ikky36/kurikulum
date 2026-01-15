@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useQuestionBank, QuestionBankItem } from '@/hooks/useQuestionBank';
 import { Search, Database, CheckCircle, Filter } from 'lucide-react';
+import { containsArabic } from '@/components/ui/arabic-text';
 
 interface QuestionBankDialogProps {
   open: boolean;
@@ -131,7 +132,15 @@ export function QuestionBankDialog({ open, onOpenChange, courseId, onSelectQuest
                       </Badge>
                       <Badge className="text-xs">{q.points} pts</Badge>
                     </div>
-                    <p className="text-sm line-clamp-2">{q.question_text}</p>
+                    <p 
+                      className={`text-sm line-clamp-2 ${containsArabic(q.question_text) ? 'font-arabic' : ''}`}
+                      dir={containsArabic(q.question_text) ? 'rtl' : undefined}
+                      style={containsArabic(q.question_text) ? {
+                        fontFamily: "'Scheherazade New', 'Amiri', serif",
+                        fontSize: '1.1em',
+                        lineHeight: 1.8,
+                      } : undefined}
+                    >{q.question_text}</p>
                     {q.tags && q.tags.length > 0 && (
                       <div className="flex gap-1 mt-1 flex-wrap">
                         {q.tags.map((tag, idx) => (

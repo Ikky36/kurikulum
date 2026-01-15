@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
+import { containsArabic } from '@/components/ui/arabic-text';
 
 interface QuizResultViewerProps {
   assignmentId: string;
@@ -157,7 +158,15 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
                   </div>
                   <div className="flex-1 space-y-3">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="font-medium">
+                      <p 
+                        className={`font-medium ${containsArabic(question.question_text) ? 'font-arabic' : ''}`}
+                        dir={containsArabic(question.question_text) ? 'rtl' : undefined}
+                        style={containsArabic(question.question_text) ? {
+                          fontFamily: "'Scheherazade New', 'Amiri', serif",
+                          fontSize: '1.3em',
+                          lineHeight: 2,
+                        } : undefined}
+                      >
                         <span className="text-muted-foreground mr-2">#{idx + 1}</span>
                         {question.question_text}
                       </p>
@@ -169,13 +178,29 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                       <div className="space-y-1">
                         <span className="text-muted-foreground font-medium">Jawaban Anda:</span>
-                        <p className={`p-2 rounded ${isCorrect ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
+                        <p 
+                          className={`p-2 rounded ${isCorrect ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'} ${containsArabic(getAnswerDisplay(userAnswer, question.question_type, question.options)) ? 'font-arabic' : ''}`}
+                          dir={containsArabic(getAnswerDisplay(userAnswer, question.question_type, question.options)) ? 'rtl' : undefined}
+                          style={containsArabic(getAnswerDisplay(userAnswer, question.question_type, question.options)) ? {
+                            fontFamily: "'Scheherazade New', 'Amiri', serif",
+                            fontSize: '1.2em',
+                            lineHeight: 1.8,
+                          } : undefined}
+                        >
                           {getAnswerDisplay(userAnswer, question.question_type, question.options)}
                         </p>
                       </div>
                       <div className="space-y-1">
                         <span className="text-muted-foreground font-medium">Jawaban Benar:</span>
-                        <p className="p-2 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+                        <p 
+                          className={`p-2 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 ${containsArabic(getCorrectAnswerDisplay(question)) ? 'font-arabic' : ''}`}
+                          dir={containsArabic(getCorrectAnswerDisplay(question)) ? 'rtl' : undefined}
+                          style={containsArabic(getCorrectAnswerDisplay(question)) ? {
+                            fontFamily: "'Scheherazade New', 'Amiri', serif",
+                            fontSize: '1.2em',
+                            lineHeight: 1.8,
+                          } : undefined}
+                        >
                           {getCorrectAnswerDisplay(question)}
                         </p>
                       </div>
