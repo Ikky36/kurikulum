@@ -95,7 +95,7 @@ export function ElearningKelas() {
   const isDosen = profile?.role === 'dosen';
   const canManage = isAdmin || isSubAdmin || isDosen;
 
-  // Fetch dosen course assignments
+  // Fetch course assignments for dosen (sub_admin can see all, like admin)
   useEffect(() => {
     const fetchDosenAssignments = async () => {
       if (!profile?.id || !isDosen) return;
@@ -484,11 +484,30 @@ export function ElearningKelas() {
                   <SelectValue placeholder="Pilih mata kuliah" />
                 </SelectTrigger>
                 <SelectContent>
-                  {courses?.map((course) => (
-                    <SelectItem key={course.id} value={course.id}>
-                      <span className="font-medium">{course.code}</span> - {course.name}
-                    </SelectItem>
-                  ))}
+                  {(() => {
+                    // Filter courses based on role
+                    if (isAdmin || isSubAdmin) {
+                      // Admin and sub_admin can see all courses
+                      return courses?.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          <span className="font-medium">{course.code}</span> - {course.name}
+                        </SelectItem>
+                      ));
+                    } else if (isDosen) {
+                      // Dosen can only see courses they're assigned to
+                      const assignedCourseIds = dosenCourseAssignments.map(a => a.course_id);
+                      const filteredCourses = courses?.filter(c => assignedCourseIds.includes(c.id));
+                      if (!filteredCourses || filteredCourses.length === 0) {
+                        return <div className="px-2 py-1.5 text-sm text-muted-foreground">Tidak ada mata kuliah yang ditugaskan</div>;
+                      }
+                      return filteredCourses.map((course) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          <span className="font-medium">{course.code}</span> - {course.name}
+                        </SelectItem>
+                      ));
+                    }
+                    return null;
+                  })()}
                 </SelectContent>
               </Select>
             </div>
@@ -503,11 +522,45 @@ export function ElearningKelas() {
                   <SelectValue placeholder="Pilih kelas" />
                 </SelectTrigger>
                 <SelectContent>
-                  {classGroups?.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.name}
-                    </SelectItem>
-                  ))}
+                  {(() => {
+                    // Filter class groups based on role and selected course
+                    if (isAdmin || isSubAdmin) {
+                      // Admin and sub_admin can see all class groups
+                      return classGroups?.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name}
+                        </SelectItem>
+                      ));
+                    } else if (isDosen) {
+                      // Dosen can only see class groups they're assigned to for the selected course
+                      const assignmentsForCourse = dosenCourseAssignments.filter(
+                        a => a.course_id === formData.course_id
+                      );
+                      // If any assignment has null class_group_id, dosen can access all class groups
+                      const hasAllClassAccess = assignmentsForCourse.some(a => a.class_group_id === null);
+                      if (hasAllClassAccess) {
+                        return classGroups?.map((group) => (
+                          <SelectItem key={group.id} value={group.id}>
+                            {group.name}
+                          </SelectItem>
+                        ));
+                      }
+                      // Otherwise, only show assigned class groups
+                      const assignedClassGroupIds = assignmentsForCourse
+                        .map(a => a.class_group_id)
+                        .filter((id): id is string => id !== null);
+                      const filteredClassGroups = classGroups?.filter(g => assignedClassGroupIds.includes(g.id));
+                      if (!filteredClassGroups || filteredClassGroups.length === 0) {
+                        return <div className="px-2 py-1.5 text-sm text-muted-foreground">Tidak ada kelas yang ditugaskan</div>;
+                      }
+                      return filteredClassGroups.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name}
+                        </SelectItem>
+                      ));
+                    }
+                    return null;
+                  })()}
                 </SelectContent>
               </Select>
             </div>
