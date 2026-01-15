@@ -10,6 +10,7 @@ import { BookOpen, FileText, Video, Image, Trash2, Pencil, Eye, Plus, GripVertic
 import { MaterialEditor } from './MaterialEditor';
 import { H5PViewer } from './H5PViewer';
 import { MaterialQuiz } from './MaterialQuiz';
+import { containsArabic } from '@/components/ui/arabic-text';
 
 interface MaterialListProps {
   classId: string;
@@ -264,7 +265,13 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
               {viewingMaterial.content_type === 'text' && (
                 <>
                   <div 
-                    className="prose prose-sm max-w-none dark:prose-invert p-4 bg-muted/30 rounded-lg"
+                    className={`prose prose-sm max-w-none dark:prose-invert p-4 bg-muted/30 rounded-lg ${containsArabic(viewingMaterial.content || '') ? 'font-arabic' : ''}`}
+                    dir={containsArabic(viewingMaterial.content || '') ? 'rtl' : undefined}
+                    style={containsArabic(viewingMaterial.content || '') ? {
+                      fontFamily: "'Scheherazade New', 'Amiri', serif",
+                      fontSize: '1.3em',
+                      lineHeight: 2,
+                    } : undefined}
                     dangerouslySetInnerHTML={{ __html: viewingMaterial.content?.replace(/<!-- EMBEDDED_QUIZ:.+? -->/g, '') || '' }}
                   />
                   {/* Embedded Quiz */}

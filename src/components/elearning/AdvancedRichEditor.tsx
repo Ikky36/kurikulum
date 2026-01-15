@@ -17,6 +17,9 @@ import {
 // Google Fonts list
 const GOOGLE_FONTS = [
   { name: 'Default', value: 'inherit' },
+  { name: 'Scheherazade New (Arabic)', value: 'Scheherazade New' },
+  { name: 'Amiri (Arabic)', value: 'Amiri' },
+  { name: 'Noto Naskh Arabic', value: 'Noto Naskh Arabic' },
   { name: 'Inter', value: 'Inter' },
   { name: 'Roboto', value: 'Roboto' },
   { name: 'Open Sans', value: 'Open Sans' },
