@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { MatchingQuestion } from './MatchingQuestion';
 import { ChevronLeft, ChevronRight, Check, X, Eye, RotateCcw, Play, List } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { containsArabic } from '@/components/ui/arabic-text';
 
 interface Question {
   id: string;
@@ -376,7 +377,15 @@ export function QuizPreview({ questions, open, onOpenChange, mode, initialQuesti
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-base font-medium leading-relaxed">{currentQuestion.question_text}</p>
+              <p 
+                className={`text-base font-medium leading-relaxed ${containsArabic(currentQuestion.question_text) ? 'font-arabic' : ''}`}
+                dir={containsArabic(currentQuestion.question_text) ? 'rtl' : undefined}
+                style={containsArabic(currentQuestion.question_text) ? {
+                  fontFamily: "'Scheherazade New', 'Amiri', serif",
+                  fontSize: '1.3em',
+                  lineHeight: 2,
+                } : undefined}
+              >{currentQuestion.question_text}</p>
               {renderQuestionInput(currentQuestion)}
               
               {isChecked && currentQuestion.feedback && (
@@ -491,7 +500,15 @@ export function QuizPreview({ questions, open, onOpenChange, mode, initialQuesti
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <p className="text-base font-medium leading-relaxed">{question.question_text}</p>
+                  <p 
+                    className={`text-base font-medium leading-relaxed ${containsArabic(question.question_text) ? 'font-arabic' : ''}`}
+                    dir={containsArabic(question.question_text) ? 'rtl' : undefined}
+                    style={containsArabic(question.question_text) ? {
+                      fontFamily: "'Scheherazade New', 'Amiri', serif",
+                      fontSize: '1.3em',
+                      lineHeight: 2,
+                    } : undefined}
+                  >{question.question_text}</p>
                   {renderQuestionInput(question)}
                   
                   {isChecked && question.feedback && (

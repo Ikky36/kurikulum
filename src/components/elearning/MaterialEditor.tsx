@@ -20,6 +20,7 @@ import { Loader2, Wand2, ChevronDown, Lock, BookOpen, ClipboardCheck, Sparkles, 
 import { AdvancedRichEditor } from './AdvancedRichEditor';
 import { AIContentGenerator } from './AIContentGenerator';
 import { H5PViewer } from './H5PViewer';
+import { containsArabic } from '@/components/ui/arabic-text';
 
 interface MaterialEditorProps {
   classId: string;
@@ -347,7 +348,13 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
             <Card className="mt-2">
               <CardContent className="py-4">
                 <div 
-                  className="prose prose-sm max-w-none dark:prose-invert material-preview"
+                  className={`prose prose-sm max-w-none dark:prose-invert material-preview ${containsArabic(content) ? 'font-arabic' : ''}`}
+                  dir={containsArabic(content) ? 'rtl' : undefined}
+                  style={containsArabic(content) ? {
+                    fontFamily: "'Scheherazade New', 'Amiri', serif",
+                    fontSize: '1.3em',
+                    lineHeight: 2,
+                  } : undefined}
                   dangerouslySetInnerHTML={{ __html: content }}
                 />
                 <style>{`
