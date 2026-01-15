@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         sans: ["Plus Jakarta Sans", "system-ui", "sans-serif"],
         display: ["Space Grotesk", "system-ui", "sans-serif"],
+        arabic: ["Scheherazade New", "Amiri", "serif"],
       },
       colors: {
         border: "hsl(var(--border))",

@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { CheckCircle2, XCircle, Trophy, ArrowRight, ArrowLeft, Send, RotateCcw, HelpCircle } from 'lucide-react';
 import type { Json } from '@/integrations/supabase/types';
 import { useQueryClient } from '@tanstack/react-query';
+import { containsArabic } from '@/components/ui/arabic-text';
 
 interface MaterialQuizProps {
   assignmentId: string;
@@ -216,7 +217,13 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
       </CardHeader>
       <CardContent className="space-y-6 pt-4">
         <div 
-          className="text-lg font-medium prose prose-sm max-w-none dark:prose-invert"
+          className={`text-lg font-medium prose prose-sm max-w-none dark:prose-invert ${containsArabic(currentQuestion.question_text) ? 'font-arabic' : ''}`}
+          dir={containsArabic(currentQuestion.question_text) ? 'rtl' : undefined}
+          style={containsArabic(currentQuestion.question_text) ? {
+            fontFamily: "'Scheherazade New', 'Amiri', serif",
+            fontSize: '1.3em',
+            lineHeight: 2,
+          } : undefined}
           dangerouslySetInnerHTML={{ __html: currentQuestion.question_text }}
         />
 
@@ -227,21 +234,33 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
             onValueChange={(value) => handleAnswerChange(currentQuestion.id, parseInt(value))}
           >
             <div className="space-y-3">
-              {options.map((option, idx) => (
-                <div 
-                  key={option.id} 
-                  className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
-                    answers[currentQuestion.id] === idx 
-                      ? 'bg-primary/5 border-primary' 
-                      : 'hover:bg-muted'
-                  }`}
-                >
-                  <RadioGroupItem value={String(idx)} id={`q-${currentQuestion.id}-opt-${idx}`} />
-                  <Label htmlFor={`q-${currentQuestion.id}-opt-${idx}`} className="flex-1 cursor-pointer">
-                    {option.text}
-                  </Label>
-                </div>
-              ))}
+              {options.map((option, idx) => {
+                const isArabicOption = containsArabic(option.text);
+                return (
+                  <div 
+                    key={option.id} 
+                    className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
+                      answers[currentQuestion.id] === idx 
+                        ? 'bg-primary/5 border-primary' 
+                        : 'hover:bg-muted'
+                    }`}
+                    dir={isArabicOption ? 'rtl' : undefined}
+                  >
+                    <RadioGroupItem value={String(idx)} id={`q-${currentQuestion.id}-opt-${idx}`} />
+                    <Label 
+                      htmlFor={`q-${currentQuestion.id}-opt-${idx}`} 
+                      className={`flex-1 cursor-pointer ${isArabicOption ? 'font-arabic' : ''}`}
+                      style={isArabicOption ? {
+                        fontFamily: "'Scheherazade New', 'Amiri', serif",
+                        fontSize: '1.2em',
+                        lineHeight: 1.8,
+                      } : undefined}
+                    >
+                      {option.text}
+                    </Label>
+                  </div>
+                );
+              })}
             </div>
           </RadioGroup>
         )}

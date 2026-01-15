@@ -19,6 +19,7 @@ import {
   Send, Shield, Eye, EyeOff, Lock
 } from 'lucide-react';
 import { MatchingQuestion } from '@/components/quiz/MatchingQuestion';
+import { containsArabic } from '@/components/ui/arabic-text';
 
 interface QuizQuestion {
   id: string;
@@ -408,17 +409,41 @@ export default function QuizTaking() {
                               {idx + 1}
                             </Badge>
                             <div className="flex-1 space-y-2">
-                              <p className="font-medium">{detail.question}</p>
+                              <p 
+                                className={`font-medium ${containsArabic(detail.question || '') ? 'font-arabic' : ''}`}
+                                dir={containsArabic(detail.question || '') ? 'rtl' : undefined}
+                                style={containsArabic(detail.question || '') ? {
+                                  fontFamily: "'Scheherazade New', 'Amiri', serif",
+                                  fontSize: '1.3em',
+                                  lineHeight: 2,
+                                } : undefined}
+                              >{detail.question}</p>
                               <div className="grid grid-cols-2 gap-4 text-sm">
                                 <div>
                                   <span className="text-muted-foreground">Jawaban Anda:</span>
-                                  <p className={isCorrect ? 'text-green-600' : 'text-red-600'}>
+                                  <p 
+                                    className={`${isCorrect ? 'text-green-600' : 'text-red-600'} ${containsArabic(formatAnswer(detail.user_answer)) ? 'font-arabic' : ''}`}
+                                    dir={containsArabic(formatAnswer(detail.user_answer)) ? 'rtl' : undefined}
+                                    style={containsArabic(formatAnswer(detail.user_answer)) ? {
+                                      fontFamily: "'Scheherazade New', 'Amiri', serif",
+                                      fontSize: '1.2em',
+                                      lineHeight: 1.8,
+                                    } : undefined}
+                                  >
                                     {formatAnswer(detail.user_answer)}
                                   </p>
                                 </div>
                                 <div>
                                   <span className="text-muted-foreground">Jawaban Benar:</span>
-                                  <p className="text-green-600">{formatAnswer(detail.correct_answer)}</p>
+                                  <p 
+                                    className={`text-green-600 ${containsArabic(formatAnswer(detail.correct_answer)) ? 'font-arabic' : ''}`}
+                                    dir={containsArabic(formatAnswer(detail.correct_answer)) ? 'rtl' : undefined}
+                                    style={containsArabic(formatAnswer(detail.correct_answer)) ? {
+                                      fontFamily: "'Scheherazade New', 'Amiri', serif",
+                                      fontSize: '1.2em',
+                                      lineHeight: 1.8,
+                                    } : undefined}
+                                  >{formatAnswer(detail.correct_answer)}</p>
                                 </div>
                               </div>
                               {detail.feedback && (
@@ -495,7 +520,15 @@ export default function QuizTaking() {
                 </Badge>
                 <Badge variant="secondary">{currentQuestion.points} poin</Badge>
               </div>
-              <CardTitle className="text-xl mt-4">{currentQuestion.question_text}</CardTitle>
+              <CardTitle 
+                className={`text-xl mt-4 ${containsArabic(currentQuestion.question_text) ? 'font-arabic' : ''}`}
+                dir={containsArabic(currentQuestion.question_text) ? 'rtl' : undefined}
+                style={containsArabic(currentQuestion.question_text) ? {
+                  fontFamily: "'Scheherazade New', 'Amiri', serif",
+                  fontSize: '1.5rem',
+                  lineHeight: 2,
+                } : undefined}
+              >{currentQuestion.question_text}</CardTitle>
               {currentQuestion.question_image_url && (
                 <img 
                   src={currentQuestion.question_image_url} 
@@ -520,17 +553,26 @@ export default function QuizTaking() {
                     if (currentQuestion.question_type === 'true_false') {
                       options = ['Benar', 'Salah'];
                     }
-                    return (options || []).map((option: string, idx: number) => (
-                      <Label
-                        key={idx}
-                        className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors hover:bg-muted ${
-                          answers[currentQuestion.id] === option ? 'border-primary bg-primary/5' : ''
-                        }`}
-                      >
-                        <RadioGroupItem value={option} />
-                        <span>{option}</span>
-                      </Label>
-                    ));
+                    return (options || []).map((option: string, idx: number) => {
+                      const isArabicOption = containsArabic(option);
+                      return (
+                        <Label
+                          key={idx}
+                          className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors hover:bg-muted ${
+                            answers[currentQuestion.id] === option ? 'border-primary bg-primary/5' : ''
+                          } ${isArabicOption ? 'font-arabic' : ''}`}
+                          dir={isArabicOption ? 'rtl' : undefined}
+                          style={isArabicOption ? {
+                            fontFamily: "'Scheherazade New', 'Amiri', serif",
+                            fontSize: '1.3em',
+                            lineHeight: 2,
+                          } : undefined}
+                        >
+                          <RadioGroupItem value={option} />
+                          <span>{option}</span>
+                        </Label>
+                      );
+                    });
                   })()}
                 </RadioGroup>
               )}

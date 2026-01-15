@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&family=Scheherazade+New:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
@@ -225,4 +225,40 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Arabic text styling with Scheherazade New font */
+.font-arabic,
+[lang="ar"],
+:lang(ar) {
+  font-family: "Scheherazade New", "Amiri", serif !important;
+  direction: rtl;
+  text-align: right;
+  font-size: 1.3em;
+  line-height: 2;
+  font-feature-settings: "liga" 1, "calt" 1;
+}
+
+/* Auto-detect Arabic text in content */
+.prose :is(p, span, div, li, td, th, h1, h2, h3, h4, h5, h6):has([dir="rtl"]),
+.prose [dir="rtl"] {
+  font-family: "Scheherazade New", "Amiri", serif !important;
+  direction: rtl;
+  text-align: right;
+  font-size: 1.3em;
+  line-height: 2;
+}
+
+/* Apply Arabic font to elements containing Arabic Unicode range */
+@supports selector(:has(*)) {
+  .arabic-text,
+  .quiz-content .arabic,
+  .material-content .arabic {
+    font-family: "Scheherazade New", "Amiri", serif !important;
+    direction: rtl;
+    text-align: right;
+    font-size: 1.3em;
+    line-height: 2;
+    font-feature-settings: "liga" 1, "calt" 1;
+  }
 }
