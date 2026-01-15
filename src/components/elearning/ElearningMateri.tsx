@@ -6,9 +6,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FileText, BookOpen, ClipboardCheck } from 'lucide-react';
+import { FileText, BookOpen, ClipboardCheck, Scale } from 'lucide-react';
 import { MaterialList } from './MaterialList';
 import { AssignmentList } from './AssignmentList';
+import { RubricManager } from './RubricManager';
+import { ContentImportDialog } from './ContentImportDialog';
 
 type ClassWithRelations = ElearningClass & {
   class_group: { id: string; name: string } | null;
@@ -82,7 +84,6 @@ export function ElearningMateri() {
   const myClasses = typedClasses.filter((c) => {
     if (isAdmin || isSubAdmin) return true;
     if (isDosen) {
-      // Show classes where dosen is the creator OR assigned via course_instructors
       const isCreator = c.instructor_profile_id === profile?.id;
       const isAssigned = dosenCourseAssignments.some(
         assignment => assignment.course_id === c.course_id && 
@@ -96,7 +97,6 @@ export function ElearningMateri() {
 
   const selectedClass = myClasses.find(c => c.id === selectedClassId);
   
-  // Check if dosen can edit: is creator OR assigned to this course
   const isCreator = selectedClass?.instructor_profile_id === profile?.id;
   const isAssignedDosen = isDosen && dosenCourseAssignments.some(
     assignment => selectedClass?.course_id === assignment.course_id &&
@@ -116,8 +116,18 @@ export function ElearningMateri() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Pilih Kelas</CardTitle>
-          <CardDescription>Pilih kelas untuk mengelola materi pembelajaran</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Pilih Kelas</CardTitle>
+              <CardDescription>Pilih kelas untuk mengelola materi pembelajaran</CardDescription>
+            </div>
+            {canEdit && selectedClassId && selectedClass?.course?.id && (
+              <ContentImportDialog 
+                courseId={selectedClass.course.id} 
+                targetClassId={selectedClassId} 
+              />
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Select value={selectedClassId} onValueChange={setSelectedClassId}>
@@ -140,11 +150,15 @@ export function ElearningMateri() {
           <TabsList>
             <TabsTrigger value="materials" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
-              Materi Pembelajaran
+              Materi
             </TabsTrigger>
             <TabsTrigger value="assignments" className="flex items-center gap-2">
               <ClipboardCheck className="h-4 w-4" />
               Tugas & Quiz
+            </TabsTrigger>
+            <TabsTrigger value="rubrics" className="flex items-center gap-2">
+              <Scale className="h-4 w-4" />
+              Rubrik
             </TabsTrigger>
           </TabsList>
 
@@ -154,6 +168,10 @@ export function ElearningMateri() {
 
           <TabsContent value="assignments">
             <AssignmentList classId={selectedClassId} courseId={selectedClass.course.id} canEdit={canEdit} />
+          </TabsContent>
+
+          <TabsContent value="rubrics">
+            <RubricManager classId={selectedClassId} courseId={selectedClass.course.id} canEdit={canEdit} />
           </TabsContent>
         </Tabs>
       ) : (

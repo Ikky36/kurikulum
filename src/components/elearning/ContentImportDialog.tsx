@@ -1,0 +1,305 @@
+import { useState } from 'react';
+import { useSameCourseClasses, useSourceMaterials, useSourceAssignments, useImportMaterials, useImportAssignments } from '@/hooks/useContentImport';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { Download, BookOpen, ClipboardCheck, HelpCircle, FileUp, Loader2 } from 'lucide-react';
+
+interface ContentImportDialogProps {
+  courseId: string;
+  targetClassId: string;
+  onSuccess?: () => void;
+}
+
+export function ContentImportDialog({ courseId, targetClassId, onSuccess }: ContentImportDialogProps) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [sourceClassId, setSourceClassId] = useState<string>('');
+  const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
+  const [selectedAssignments, setSelectedAssignments] = useState<string[]>([]);
+  const [includeQuestions, setIncludeQuestions] = useState(true);
+
+  const { data: otherClasses, isLoading: classesLoading } = useSameCourseClasses(courseId, targetClassId);
+  const { data: sourceMaterials, isLoading: materialsLoading } = useSourceMaterials(sourceClassId);
+  const { data: sourceAssignments, isLoading: assignmentsLoading } = useSourceAssignments(sourceClassId);
+
+  const importMaterials = useImportMaterials();
+  const importAssignments = useImportAssignments();
+
+  const isImporting = importMaterials.isPending || importAssignments.isPending;
+
+  const handleSourceClassChange = (classId: string) => {
+    setSourceClassId(classId);
+    setSelectedMaterials([]);
+    setSelectedAssignments([]);
+  };
+
+  const toggleMaterial = (id: string) => {
+    setSelectedMaterials(prev =>
+      prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAssignment = (id: string) => {
+    setSelectedAssignments(prev =>
+      prev.includes(id) ? prev.filter(a => a !== id) : [...prev, id]
+    );
+  };
+
+  const selectAllMaterials = () => {
+    if (selectedMaterials.length === sourceMaterials?.length) {
+      setSelectedMaterials([]);
+    } else {
+      setSelectedMaterials(sourceMaterials?.map(m => m.id) || []);
+    }
+  };
+
+  const selectAllAssignments = () => {
+    if (selectedAssignments.length === sourceAssignments?.length) {
+      setSelectedAssignments([]);
+    } else {
+      setSelectedAssignments(sourceAssignments?.map(a => a.id) || []);
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      let importedMaterials = 0;
+      let importedAssignments = 0;
+
+      if (selectedMaterials.length > 0) {
+        await importMaterials.mutateAsync({
+          sourceClassId,
+          targetClassId,
+          materialIds: selectedMaterials,
+        });
+        importedMaterials = selectedMaterials.length;
+      }
+
+      if (selectedAssignments.length > 0) {
+        await importAssignments.mutateAsync({
+          sourceClassId,
+          targetClassId,
+          assignmentIds: selectedAssignments,
+          includeQuestions,
+        });
+        importedAssignments = selectedAssignments.length;
+      }
+
+      toast({
+        title: 'Import Berhasil',
+        description: `${importedMaterials} materi dan ${importedAssignments} tugas/quiz berhasil diimport.`,
+      });
+
+      setOpen(false);
+      setSourceClassId('');
+      setSelectedMaterials([]);
+      setSelectedAssignments([]);
+      onSuccess?.();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Gagal mengimport konten. Silakan coba lagi.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const getAssignmentIcon = (type: string) => {
+    switch (type) {
+      case 'quiz': return <HelpCircle className="h-4 w-4" />;
+      case 'file_upload': return <FileUp className="h-4 w-4" />;
+      default: return <ClipboardCheck className="h-4 w-4" />;
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="gap-2">
+          <Download className="h-4 w-4" />
+          Import dari Kelas Lain
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl">Import Materi & Tugas dari Kelas Lain</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6 py-4">
+          {/* Source Class Selection */}
+          <div className="space-y-2">
+            <Label>Pilih Kelas Sumber</Label>
+            <Select value={sourceClassId} onValueChange={handleSourceClassChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih kelas dengan mata kuliah yang sama..." />
+              </SelectTrigger>
+              <SelectContent>
+                {classesLoading ? (
+                  <div className="p-2 text-center text-sm text-muted-foreground">Loading...</div>
+                ) : otherClasses?.length === 0 ? (
+                  <div className="p-2 text-center text-sm text-muted-foreground">
+                    Tidak ada kelas lain dengan mata kuliah yang sama
+                  </div>
+                ) : (
+                  otherClasses?.map((cls) => (
+                    <SelectItem key={cls.id} value={cls.id}>
+                      {cls.title} - {(cls as any).class_group?.name}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Content Selection */}
+          {sourceClassId && (
+            <Tabs defaultValue="materials" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="materials" className="gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  Materi ({sourceMaterials?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger value="assignments" className="gap-2">
+                  <ClipboardCheck className="h-4 w-4" />
+                  Tugas/Quiz ({sourceAssignments?.length || 0})
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="materials" className="space-y-4 mt-4">
+                {materialsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : sourceMaterials?.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="py-8 text-center text-muted-foreground">
+                      Tidak ada materi di kelas sumber
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <Button variant="outline" size="sm" onClick={selectAllMaterials}>
+                        {selectedMaterials.length === sourceMaterials?.length ? 'Batal Pilih Semua' : 'Pilih Semua'}
+                      </Button>
+                      <Badge variant="secondary">{selectedMaterials.length} dipilih</Badge>
+                    </div>
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                      {sourceMaterials?.map((material) => (
+                        <Card 
+                          key={material.id} 
+                          className={`cursor-pointer transition-colors ${selectedMaterials.includes(material.id) ? 'border-primary bg-primary/5' : ''}`}
+                          onClick={() => toggleMaterial(material.id)}
+                        >
+                          <CardContent className="py-3 flex items-center gap-3">
+                            <Checkbox
+                              checked={selectedMaterials.includes(material.id)}
+                              onCheckedChange={() => toggleMaterial(material.id)}
+                            />
+                            <BookOpen className="h-4 w-4 text-muted-foreground" />
+                            <div className="flex-1">
+                              <div className="font-medium">{material.title}</div>
+                              <div className="text-sm text-muted-foreground">{material.content_type}</div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+
+              <TabsContent value="assignments" className="space-y-4 mt-4">
+                {assignmentsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                  </div>
+                ) : sourceAssignments?.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="py-8 text-center text-muted-foreground">
+                      Tidak ada tugas/quiz di kelas sumber
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <Button variant="outline" size="sm" onClick={selectAllAssignments}>
+                          {selectedAssignments.length === sourceAssignments?.length ? 'Batal Pilih Semua' : 'Pilih Semua'}
+                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="include-questions"
+                            checked={includeQuestions}
+                            onCheckedChange={(checked) => setIncludeQuestions(checked as boolean)}
+                          />
+                          <Label htmlFor="include-questions" className="text-sm">
+                            Sertakan soal quiz
+                          </Label>
+                        </div>
+                      </div>
+                      <Badge variant="secondary">{selectedAssignments.length} dipilih</Badge>
+                    </div>
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                      {sourceAssignments?.map((assignment) => (
+                        <Card 
+                          key={assignment.id} 
+                          className={`cursor-pointer transition-colors ${selectedAssignments.includes(assignment.id) ? 'border-primary bg-primary/5' : ''}`}
+                          onClick={() => toggleAssignment(assignment.id)}
+                        >
+                          <CardContent className="py-3 flex items-center gap-3">
+                            <Checkbox
+                              checked={selectedAssignments.includes(assignment.id)}
+                              onCheckedChange={() => toggleAssignment(assignment.id)}
+                            />
+                            {getAssignmentIcon(assignment.assignment_type)}
+                            <div className="flex-1">
+                              <div className="font-medium">{assignment.title}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {assignment.assignment_type === 'quiz' ? 'Quiz' : 
+                                 assignment.assignment_type === 'file_upload' ? 'Upload File' : 'Link'}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+            </Tabs>
+          )}
+
+          {/* Import Button */}
+          {sourceClassId && (selectedMaterials.length > 0 || selectedAssignments.length > 0) && (
+            <div className="flex justify-end gap-2 pt-4 border-t">
+              <Button variant="outline" onClick={() => setOpen(false)}>
+                Batal
+              </Button>
+              <Button onClick={handleImport} disabled={isImporting} className="gap-2">
+                {isImporting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Mengimport...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    Import {selectedMaterials.length + selectedAssignments.length} Item
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
