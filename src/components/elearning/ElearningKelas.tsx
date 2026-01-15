@@ -9,6 +9,7 @@ import {
   useClassGroups,
   type ElearningClass,
 } from '@/hooks/useElearning';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -66,6 +67,12 @@ export function ElearningKelas() {
   const createClass = useCreateElearningClass();
   const updateClass = useUpdateElearningClass();
   const deleteClass = useDeleteElearningClass();
+
+  // Enable realtime subscription for elearning classes
+  useRealtimeSubscription({
+    table: 'elearning_classes',
+    queryKeys: [['elearning-classes']],
+  });
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

@@ -3,6 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useMultiTableRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -25,6 +26,13 @@ export default function DashboardDosen() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Enable realtime for dosen dashboard
+  useMultiTableRealtimeSubscription([
+    { table: 'grades', queryKeys: [['course-grades'], ['grades']] },
+    { table: 'enrollments', queryKeys: [['course-enrollments-dosen']] },
+    { table: 'course_instructors', queryKeys: [['dosen-courses', user?.id || '']] },
+  ], !!user?.id);
   
   const [editMode, setEditMode] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || '');

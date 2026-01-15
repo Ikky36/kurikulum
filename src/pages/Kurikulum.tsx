@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useMultiTableRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { Layout } from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +31,14 @@ export default function Kurikulum() {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const isAdmin = profile?.role === 'admin';
+
+  // Enable realtime for curriculum-related tables
+  useMultiTableRealtimeSubscription([
+    { table: 'plos', queryKeys: [['plos'], ['plo-data']] },
+    { table: 'clos', queryKeys: [['clos'], ['course-clos']] },
+    { table: 'llos', queryKeys: [['llos'], ['clo-llos']] },
+    { table: 'curricula', queryKeys: [['curricula']] },
+  ]);
 
   // State for dialogs
   const [editDialog, setEditDialog] = useState<{ type: string; data: any; isNew: boolean } | null>(null);
