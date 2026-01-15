@@ -165,7 +165,7 @@ export default function Settings() {
   }, []);
 
   useEffect(() => {
-    if (settings && (role === 'admin' || role === 'sub_admin')) {
+    if (settings && role === 'admin') {
       checkAiConnection();
     }
   }, [settings, role, checkAiConnection]);
@@ -566,12 +566,12 @@ export default function Settings() {
     return <Navigate to="/auth" replace />;
   }
 
-  if (role !== 'admin' && role !== 'sub_admin') {
+  // Only admin can access settings, sub_admin is NOT allowed
+  if (role !== 'admin') {
     return <Navigate to="/dashboard" replace />;
   }
 
   const isAdmin = role === 'admin';
-  const isSubAdmin = role === 'sub_admin';
 
   const canAccessTheme = isAdmin;
 
