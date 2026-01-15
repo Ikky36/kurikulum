@@ -74,6 +74,61 @@ export type Database = {
           },
         ]
       }
+      assessment_rubrics: {
+        Row: {
+          assignment_id: string | null
+          created_at: string
+          created_by_profile_id: string
+          description: string | null
+          elearning_class_id: string
+          id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          created_at?: string
+          created_by_profile_id: string
+          description?: string | null
+          elearning_class_id: string
+          id?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string | null
+          created_at?: string
+          created_by_profile_id?: string
+          description?: string | null
+          elearning_class_id?: string
+          id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_rubrics_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_rubrics_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessment_rubrics_elearning_class_id_fkey"
+            columns: ["elearning_class_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assessments: {
         Row: {
           code: string
@@ -1436,6 +1491,94 @@ export type Database = {
         }
         Relationships: []
       }
+      rubric_criteria: {
+        Row: {
+          created_at: string
+          criterion_name: string
+          description: string | null
+          id: string
+          max_score: number
+          order_index: number
+          rubric_id: string
+          updated_at: string
+          weight_percentage: number
+        }
+        Insert: {
+          created_at?: string
+          criterion_name: string
+          description?: string | null
+          id?: string
+          max_score?: number
+          order_index?: number
+          rubric_id: string
+          updated_at?: string
+          weight_percentage?: number
+        }
+        Update: {
+          created_at?: string
+          criterion_name?: string
+          description?: string | null
+          id?: string
+          max_score?: number
+          order_index?: number
+          rubric_id?: string
+          updated_at?: string
+          weight_percentage?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rubric_criteria_rubric_id_fkey"
+            columns: ["rubric_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_rubrics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rubric_levels: {
+        Row: {
+          created_at: string
+          criteria_id: string
+          description: string | null
+          id: string
+          level_name: string
+          order_index: number
+          score_range_max: number
+          score_range_min: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          criteria_id: string
+          description?: string | null
+          id?: string
+          level_name: string
+          order_index?: number
+          score_range_max?: number
+          score_range_min?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          criteria_id?: string
+          description?: string | null
+          id?: string
+          level_name?: string
+          order_index?: number
+          score_range_max?: number
+          score_range_min?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rubric_levels_criteria_id_fkey"
+            columns: ["criteria_id"]
+            isOneToOne: false
+            referencedRelation: "rubric_criteria"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sistem_kuliah: {
         Row: {
           created_at: string
@@ -1512,6 +1655,74 @@ export type Database = {
           {
             foreignKeyName: "student_assessment_scores_updated_by_profile_id_fkey"
             columns: ["updated_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_rubric_scores: {
+        Row: {
+          created_at: string
+          criteria_id: string
+          graded_at: string | null
+          graded_by_profile_id: string | null
+          id: string
+          notes: string | null
+          rubric_id: string
+          score: number
+          student_profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          criteria_id: string
+          graded_at?: string | null
+          graded_by_profile_id?: string | null
+          id?: string
+          notes?: string | null
+          rubric_id: string
+          score?: number
+          student_profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          criteria_id?: string
+          graded_at?: string | null
+          graded_by_profile_id?: string | null
+          id?: string
+          notes?: string | null
+          rubric_id?: string
+          score?: number
+          student_profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_rubric_scores_criteria_id_fkey"
+            columns: ["criteria_id"]
+            isOneToOne: false
+            referencedRelation: "rubric_criteria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_rubric_scores_graded_by_profile_id_fkey"
+            columns: ["graded_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_rubric_scores_rubric_id_fkey"
+            columns: ["rubric_id"]
+            isOneToOne: false
+            referencedRelation: "assessment_rubrics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_rubric_scores_student_profile_id_fkey"
+            columns: ["student_profile_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
