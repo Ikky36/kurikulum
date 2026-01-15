@@ -71,7 +71,11 @@ export default function CourseDetail() {
   const [yearFilter, setYearFilter] = useState<string>('all');
   const [genderFilter, setGenderFilter] = useState<string>('all');
 
-  const canEdit = role === 'admin' || role === 'dosen';
+  // Check if dosen is assigned to this course
+  const isInstructor = role === 'dosen' && instructors?.some(
+    (instructor: any) => instructor.id === user?.id
+  );
+  const canEdit = role === 'admin' || isInstructor;
 
   const isLoading = courseLoading || instructorsLoading || gradesLoading;
 

@@ -22,6 +22,7 @@ export function ElearningMateri() {
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [studentClassGroupIds, setStudentClassGroupIds] = useState<string[]>([]);
   const [loadingStudentClasses, setLoadingStudentClasses] = useState(false);
+  const [dosenCourseAssignments, setDosenCourseAssignments] = useState<{course_id: string, class_group_id: string | null}[]>([]);
 
   // Enable realtime subscription for selected class materials/assignments
   useElearningRealtimeSubscription(selectedClassId || undefined);
@@ -55,16 +56,52 @@ export function ElearningMateri() {
     fetchStudentClassGroups();
   }, [profile?.id, isMahasiswa]);
 
+  // Fetch dosen course assignments
+  useEffect(() => {
+    const fetchDosenAssignments = async () => {
+      if (!profile?.id || !isDosen) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('course_instructors')
+          .select('course_id, class_group_id')
+          .eq('instructor_profile_id', profile.id);
+        
+        if (error) throw error;
+        setDosenCourseAssignments(data || []);
+      } catch (error) {
+        console.error('Error fetching dosen assignments:', error);
+      }
+    };
+
+    fetchDosenAssignments();
+  }, [profile?.id, isDosen]);
+
   // Filter classes based on role
   const myClasses = typedClasses.filter((c) => {
     if (isAdmin) return true;
-    if (isDosen) return c.instructor_profile_id === profile?.id;
+    if (isDosen) {
+      // Show classes where dosen is the creator OR assigned via course_instructors
+      const isCreator = c.instructor_profile_id === profile?.id;
+      const isAssigned = dosenCourseAssignments.some(
+        assignment => assignment.course_id === c.course_id && 
+        (assignment.class_group_id === null || assignment.class_group_id === c.class_group_id)
+      );
+      return isCreator || isAssigned;
+    }
     if (isMahasiswa) return studentClassGroupIds.includes(c.class_group_id);
     return false;
   });
 
   const selectedClass = myClasses.find(c => c.id === selectedClassId);
-  const canEdit = isAdmin || selectedClass?.instructor_profile_id === profile?.id;
+  
+  // Check if dosen can edit: is creator OR assigned to this course
+  const isCreator = selectedClass?.instructor_profile_id === profile?.id;
+  const isAssignedDosen = isDosen && dosenCourseAssignments.some(
+    assignment => selectedClass?.course_id === assignment.course_id &&
+    (assignment.class_group_id === null || assignment.class_group_id === selectedClass?.class_group_id)
+  );
+  const canEdit = isAdmin || isCreator || isAssignedDosen;
 
   if (isLoading || loadingStudentClasses) {
     return (
