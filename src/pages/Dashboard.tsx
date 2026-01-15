@@ -17,6 +17,9 @@ export default function Dashboard() {
           case 'admin':
             navigate('/dashboard/admin');
             break;
+          case 'sub_admin':
+            navigate('/dashboard/admin');
+            break;
           case 'dosen':
             navigate('/dashboard/dosen');
             break;

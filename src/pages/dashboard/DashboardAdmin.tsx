@@ -675,18 +675,20 @@ export default function DashboardAdmin() {
         <div className="mb-8 animate-fade-in flex items-center justify-between">
           <div>
             <h1 className="font-display text-3xl font-bold lg:text-4xl mb-2">
-              Dashboard Admin
+              Dashboard {role === 'sub_admin' ? 'Sub-Admin' : 'Admin'}
             </h1>
             <p className="text-muted-foreground">
               Kelola kurikulum, akun pengguna, dan penugasan dosen
             </p>
           </div>
-          <Link to="/settings">
-            <Button variant="outline" size="sm">
-              <Settings className="h-4 w-4 mr-2" />
-              Pengaturan
-            </Button>
-          </Link>
+          {role === 'admin' && (
+            <Link to="/settings">
+              <Button variant="outline" size="sm">
+                <Settings className="h-4 w-4 mr-2" />
+                Pengaturan
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Stats */}
