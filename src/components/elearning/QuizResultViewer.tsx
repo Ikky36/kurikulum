@@ -81,7 +81,7 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
     (current.score || 0) > (best?.score || 0) ? current : best
   , submissions[0]);
 
-  const getAnswerDisplay = (answer: any, questionType: string): string => {
+  const getAnswerDisplay = (answer: any, questionType: string, options?: any): string => {
     if (answer === null || answer === undefined) return '-';
     
     if (questionType === 'matching') {
@@ -90,6 +90,15 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
           .map(([left, right]) => `${left} → ${right}`)
           .join(', ');
       }
+      // If answer is array like [[0,0],[1,1]], we need to show from options
+      if (Array.isArray(answer) && options) {
+        const parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
+        if (Array.isArray(parsedOptions)) {
+          return parsedOptions
+            .map((pair: { left: string; right: string }) => `${pair.left} → ${pair.right}`)
+            .join(', ');
+        }
+      }
     }
     
     if (Array.isArray(answer)) {
@@ -97,6 +106,18 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
     }
     
     return String(answer);
+  };
+
+  const getCorrectAnswerDisplay = (question: any): string => {
+    if (question.question_type === 'matching' && question.options) {
+      const parsedOptions = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
+      if (Array.isArray(parsedOptions)) {
+        return parsedOptions
+          .map((pair: { left: string; right: string }) => `${pair.left} → ${pair.right}`)
+          .join(', ');
+      }
+    }
+    return getAnswerDisplay(question.correct_answer, question.question_type);
   };
 
   const renderSubmissionDetails = (submission: Submission) => {
@@ -121,7 +142,7 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
       <div className="space-y-4">
         {questions.map((question: any, idx: number) => {
           const userAnswer = userAnswers[question.id];
-          const isCorrect = checkAnswer(userAnswer, question.correct_answer, question.question_type);
+          const isCorrect = checkAnswer(userAnswer, question.correct_answer, question.question_type, question.options);
 
           return (
             <Card key={question.id} className={isCorrect ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/10' : 'border-red-500/50 bg-red-50/30 dark:bg-red-950/10'}>
@@ -149,13 +170,13 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
                       <div className="space-y-1">
                         <span className="text-muted-foreground font-medium">Jawaban Anda:</span>
                         <p className={`p-2 rounded ${isCorrect ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}>
-                          {getAnswerDisplay(userAnswer, question.question_type)}
+                          {getAnswerDisplay(userAnswer, question.question_type, question.options)}
                         </p>
                       </div>
                       <div className="space-y-1">
                         <span className="text-muted-foreground font-medium">Jawaban Benar:</span>
                         <p className="p-2 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
-                          {getAnswerDisplay(question.correct_answer, question.question_type)}
+                          {getCorrectAnswerDisplay(question)}
                         </p>
                       </div>
                     </div>
@@ -177,31 +198,56 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
     );
   };
 
-  const checkAnswer = (userAnswer: any, correctAnswer: any, questionType: string): boolean => {
-    if (userAnswer === null || userAnswer === undefined || correctAnswer === null || correctAnswer === undefined) {
+  const checkAnswer = (userAnswer: any, correctAnswer: any, questionType: string, options?: any): boolean => {
+    if (userAnswer === null || userAnswer === undefined) {
       return false;
     }
 
     if (questionType === 'multiple_choice' || questionType === 'true_false' || questionType === 'select_missing_word') {
+      if (correctAnswer === null || correctAnswer === undefined) return false;
       return String(userAnswer) === String(correctAnswer);
     }
 
     if (questionType === 'multiple_answer') {
-      const userArr = Array.isArray(userAnswer) ? userAnswer.sort() : [];
-      const correctArr = Array.isArray(correctAnswer) ? correctAnswer.sort() : [];
+      if (!Array.isArray(correctAnswer) || !Array.isArray(userAnswer)) return false;
+      const userArr = [...userAnswer].sort();
+      const correctArr = [...correctAnswer].sort();
       return JSON.stringify(userArr) === JSON.stringify(correctArr);
     }
 
     if (questionType === 'short_answer') {
+      if (correctAnswer === null || correctAnswer === undefined) return false;
       return String(userAnswer).toLowerCase().trim() === String(correctAnswer).toLowerCase().trim();
     }
 
     if (questionType === 'matching') {
-      if (typeof userAnswer === 'object' && typeof correctAnswer === 'object') {
-        const userEntries = Object.entries(userAnswer).sort();
-        const correctEntries = Object.entries(correctAnswer).sort();
-        return JSON.stringify(userEntries) === JSON.stringify(correctEntries);
+      // Build expected mapping from options (the correct pairs)
+      if (typeof userAnswer !== 'object' || !options) return false;
+      
+      const parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
+      if (!Array.isArray(parsedOptions)) return false;
+      
+      // Build expected mapping: {left: right, ...}
+      const expectedMapping: Record<string, string> = {};
+      parsedOptions.forEach((pair: { left: string; right: string }) => {
+        if (pair.left && pair.right) {
+          expectedMapping[pair.left] = pair.right;
+        }
+      });
+      
+      // Check if user answer matches expected mapping
+      const userKeys = Object.keys(userAnswer);
+      const expectedKeys = Object.keys(expectedMapping);
+      
+      if (userKeys.length !== expectedKeys.length) return false;
+      
+      for (const key of userKeys) {
+        if (expectedMapping[key] !== userAnswer[key]) {
+          return false;
+        }
       }
+      
+      return true;
     }
 
     return false;
