@@ -28,6 +28,7 @@ export function ElearningMateri() {
   useElearningRealtimeSubscription(selectedClassId || undefined);
 
   const isAdmin = profile?.role === 'admin';
+  const isSubAdmin = profile?.role === 'sub_admin';
   const isDosen = profile?.role === 'dosen';
   const isMahasiswa = profile?.role === 'mahasiswa';
   const typedClasses = (classes || []) as ClassWithRelations[];
@@ -79,7 +80,7 @@ export function ElearningMateri() {
 
   // Filter classes based on role
   const myClasses = typedClasses.filter((c) => {
-    if (isAdmin) return true;
+    if (isAdmin || isSubAdmin) return true;
     if (isDosen) {
       // Show classes where dosen is the creator OR assigned via course_instructors
       const isCreator = c.instructor_profile_id === profile?.id;
@@ -101,7 +102,7 @@ export function ElearningMateri() {
     assignment => selectedClass?.course_id === assignment.course_id &&
     (assignment.class_group_id === null || assignment.class_group_id === selectedClass?.class_group_id)
   );
-  const canEdit = isAdmin || isCreator || isAssignedDosen;
+  const canEdit = isAdmin || isSubAdmin || isCreator || isAssignedDosen;
 
   if (isLoading || loadingStudentClasses) {
     return (

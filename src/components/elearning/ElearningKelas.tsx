@@ -91,8 +91,9 @@ export function ElearningKelas() {
   });
 
   const isAdmin = profile?.role === 'admin';
+  const isSubAdmin = profile?.role === 'sub_admin';
   const isDosen = profile?.role === 'dosen';
-  const canManage = isAdmin || isDosen;
+  const canManage = isAdmin || isSubAdmin || isDosen;
 
   // Fetch dosen course assignments
   useEffect(() => {
@@ -117,7 +118,7 @@ export function ElearningKelas() {
 
   // Helper function to check if dosen can edit a class
   const canDosenEditClass = (cls: ClassWithRelations) => {
-    if (isAdmin) return true;
+    if (isAdmin || isSubAdmin) return true;
     if (!isDosen) return false;
     
     // Check if dosen is the creator

@@ -12,8 +12,8 @@ export default function ELearning() {
   const { user, loading, profile } = useAuth();
   const navigate = useNavigate();
 
-  const canViewRecap = profile?.role === 'admin' || profile?.role === 'dosen';
-  const canViewPresensi = profile?.role === 'admin' || profile?.role === 'dosen';
+  const canViewRecap = profile?.role === 'admin' || profile?.role === 'sub_admin' || profile?.role === 'dosen';
+  const canViewPresensi = profile?.role === 'admin' || profile?.role === 'sub_admin' || profile?.role === 'dosen';
 
   if (loading) {
     return (
