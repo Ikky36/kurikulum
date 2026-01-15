@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useStudentGrades } from '@/hooks/useStudents';
+import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,13 @@ export default function DashboardMahasiswa() {
   const { user, profile, role, refreshProfile, loading } = useAuth();
   const { data: grades, isLoading: gradesLoading } = useStudentGrades(user?.id || '');
   const { toast } = useToast();
+
+  // Enable realtime for student grades
+  useRealtimeSubscription({
+    table: 'grades',
+    queryKeys: [['student-grades', user?.id || '']],
+    enabled: !!user?.id,
+  });
   
   const [editMode, setEditMode] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || '');

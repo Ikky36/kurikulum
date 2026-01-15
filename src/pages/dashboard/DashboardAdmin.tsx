@@ -3,6 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useMultiTableRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,15 @@ export default function DashboardAdmin() {
   const { user, profile, role, refreshProfile, loading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // Enable realtime for admin dashboard data
+  useMultiTableRealtimeSubscription([
+    { table: 'profiles', queryKeys: [['admin-users'], ['admin-dosen'], ['profiles']] },
+    { table: 'courses', queryKeys: [['admin-courses'], ['courses']] },
+    { table: 'course_instructors', queryKeys: [['course-instructors'], ['admin-instructors']] },
+    { table: 'class_groups', queryKeys: [['class-groups']] },
+    { table: 'class_students', queryKeys: [['class-students']] },
+  ]);
   
   const [editMode, setEditMode] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || '');

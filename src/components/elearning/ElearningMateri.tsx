@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useElearningClasses, type ElearningClass } from '@/hooks/useElearning';
+import { useElearningRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -21,6 +22,9 @@ export function ElearningMateri() {
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const [studentClassGroupIds, setStudentClassGroupIds] = useState<string[]>([]);
   const [loadingStudentClasses, setLoadingStudentClasses] = useState(false);
+
+  // Enable realtime subscription for selected class materials/assignments
+  useElearningRealtimeSubscription(selectedClassId || undefined);
 
   const isAdmin = profile?.role === 'admin';
   const isDosen = profile?.role === 'dosen';

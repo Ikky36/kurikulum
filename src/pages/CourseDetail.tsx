@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCourse, useCourseInstructors, useCourseGrades, useCourseEnrollments, useCourseAssessments, useCourseAssessmentScores } from '@/hooks/useCourses';
+import { useMultiTableRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -33,6 +34,21 @@ export default function CourseDetail() {
   const { data: enrollments } = useCourseEnrollments(courseId!);
   const { data: assessments } = useCourseAssessments(courseId!);
   const { data: assessmentScores, refetch: refetchScores } = useCourseAssessmentScores(courseId!);
+
+  // Enable realtime for course-specific data
+  useMultiTableRealtimeSubscription(
+    courseId
+      ? [
+          { table: 'grades', queryKeys: [['course-grades', courseId], ['grades']] },
+          { table: 'student_assessment_scores', queryKeys: [['course-assessment-scores', courseId], ['assessment-scores']] },
+          { table: 'enrollments', queryKeys: [['course-enrollments', courseId]] },
+          { table: 'assessments', queryKeys: [['course-assessments', courseId]] },
+          { table: 'clos', queryKeys: [['course-clos', courseId]] },
+          { table: 'llos', queryKeys: [['clo-llos']] },
+        ]
+      : [],
+    !!courseId
+  );
   
   // Fetch instrumen penilaian for grading
   const { data: instrumenList } = useQuery({

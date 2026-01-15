@@ -12,6 +12,7 @@ import {
   type ElearningClass,
   type ElearningSession,
 } from '@/hooks/useElearning';
+import { useElearningRealtimeSubscription, useAttendanceRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -83,6 +84,10 @@ export function ElearningPresensi() {
   const [deletingSessionId, setDeletingSessionId] = useState<string | null>(null);
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, AttendanceRecord>>({});
   const [hasChanges, setHasChanges] = useState(false);
+
+  // Enable realtime subscriptions for sessions and attendance
+  useElearningRealtimeSubscription(selectedClassId || undefined);
+  useAttendanceRealtimeSubscription(selectedSessionId || undefined);
 
   const selectedClass = (classes as ClassWithRelations[] | undefined)?.find(
     (c) => c.id === selectedClassId
