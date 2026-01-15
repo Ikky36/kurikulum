@@ -132,6 +132,17 @@ serve(async (req) => {
       });
 
       if (!anthropicResponse.ok) {
+        if (anthropicResponse.status === 429) {
+          return new Response(
+            JSON.stringify({
+              error: "Terlalu banyak permintaan ke layanan AI. Silakan tunggu 30-60 detik lalu coba lagi.",
+              code: 429,
+              retry_after_seconds: 60,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         const errorText = await anthropicResponse.text();
         console.error("Anthropic API error:", anthropicResponse.status, errorText);
         throw new Error("Gagal terhubung ke Anthropic API. Periksa API Key Anda.");
@@ -156,8 +167,12 @@ serve(async (req) => {
       if (!response.ok) {
         if (response.status === 429) {
           return new Response(
-            JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({
+              error: "Terlalu banyak permintaan ke layanan AI. Silakan tunggu 30-60 detik lalu coba lagi.",
+              code: 429,
+              retry_after_seconds: 60,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
         const errorText = await response.text();
