@@ -115,8 +115,21 @@ function DroppableZone({ id, leftItem, matchedItem }: DroppableZoneProps) {
 export function MatchingQuestion({ options, value, onChange }: MatchingQuestionProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
-  const leftItems = options?.left || options?.items || [];
-  const rightItems = options?.right || options?.matches || [];
+  // Handle different data formats
+  // Format 1: { left: string[], right: string[] }
+  // Format 2: Array of { left: string, right: string } pairs
+  let leftItems: string[] = [];
+  let rightItems: string[] = [];
+
+  if (Array.isArray(options)) {
+    // Format 2: Array of pairs like [{left: "A", right: "1"}, {left: "B", right: "2"}]
+    leftItems = options.map((pair: { left: string; right: string }) => pair.left);
+    rightItems = options.map((pair: { left: string; right: string }) => pair.right);
+  } else if (options) {
+    // Format 1: { left: string[], right: string[] }
+    leftItems = options.left || options.items || [];
+    rightItems = options.right || options.matches || [];
+  }
 
   // Get unmatched right items
   const matchedRightItems = Object.values(value);
