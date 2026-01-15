@@ -306,6 +306,21 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
             rows={6}
           />
         )}
+
+        {/* Long Answer */}
+        {currentQuestion.question_type === 'long_answer' && (
+          <div className="space-y-2">
+            <Textarea
+              placeholder="Tulis jawaban panjang Anda di sini..."
+              value={answers[currentQuestion.id] || ''}
+              onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
+              rows={8}
+            />
+            <p className="text-xs text-muted-foreground">
+              * Soal ini akan dinilai manual oleh dosen
+            </p>
+          </div>
+        )}
       </CardContent>
       <CardFooter className="flex justify-between pt-4 border-t">
         <Button

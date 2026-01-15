@@ -33,6 +33,7 @@ const QUESTION_TYPES = [
   { value: 'multiple_choice', label: 'Pilihan Ganda', color: 'bg-blue-100 text-blue-700' },
   { value: 'true_false', label: 'Benar/Salah', color: 'bg-green-100 text-green-700' },
   { value: 'short_answer', label: 'Jawaban Singkat', color: 'bg-purple-100 text-purple-700' },
+  { value: 'long_answer', label: 'Jawaban Panjang', color: 'bg-indigo-100 text-indigo-700' },
   { value: 'matching', label: 'Menjodohkan', color: 'bg-orange-100 text-orange-700' },
   { value: 'select_missing_word', label: 'Pilih Kata yang Hilang', color: 'bg-pink-100 text-pink-700' },
 ];
@@ -241,6 +242,10 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
         correctAnswerToSave = JSON.stringify(correctMapping);
       } else if (manualForm.question_type === 'short_answer') {
         correctAnswerToSave = JSON.stringify(manualForm.options[0]);
+      } else if (manualForm.question_type === 'long_answer' || manualForm.question_type === 'essay') {
+        // Long answer/essay: store the expected answer as text (for reference, not auto-graded)
+        correctAnswerToSave = manualForm.options[0]?.trim() ? JSON.stringify(manualForm.options[0]) : null;
+        optionsToSave = null;
       } else {
         optionsToSave = manualForm.options.filter(o => o.trim()).length > 0 
           ? JSON.stringify(manualForm.options.filter(o => o.trim())) 
@@ -689,6 +694,14 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
                             </div>
                           )}
                           
+                          {/* Show answer key for long_answer/essay type */}
+                          {showAnswers && (q.question_type === 'long_answer' || q.question_type === 'essay') && (
+                            <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+                              <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">📝 Kunci Jawaban (Manual Grading): </span>
+                              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">{formatCorrectAnswer(q) || 'Tidak ada kunci jawaban'}</p>
+                            </div>
+                          )}
+                          
                           {/* Feedback */}
                           {showAnswers && q.feedback && (
                             <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
@@ -815,6 +828,23 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
                 pairs={manualForm.matching_pairs}
                 onChange={(pairs) => setManualForm({ ...manualForm, matching_pairs: pairs })}
               />
+            ) : manualForm.question_type === 'long_answer' || manualForm.question_type === 'essay' ? (
+              <div className="space-y-2">
+                <Label>Kunci Jawaban / Poin-poin Penting (Opsional)</Label>
+                <Textarea
+                  value={manualForm.options[0] || ''}
+                  onChange={(e) => {
+                    const newOptions = [...manualForm.options];
+                    newOptions[0] = e.target.value;
+                    setManualForm({ ...manualForm, options: newOptions });
+                  }}
+                  placeholder="Tuliskan kunci jawaban atau poin-poin penting yang diharapkan dalam jawaban mahasiswa..."
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground">
+                  ⚠️ Soal tipe ini akan dinilai manual oleh dosen dan tidak dihitung dalam skor otomatis.
+                </p>
+              </div>
             ) : (
               <div className="space-y-2">
                 <Label>Pilihan Jawaban</Label>

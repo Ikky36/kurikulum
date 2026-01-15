@@ -203,9 +203,41 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
       return false;
     }
 
-    if (questionType === 'multiple_choice' || questionType === 'true_false' || questionType === 'select_missing_word') {
+    // Essay and long_answer are manually graded
+    if (questionType === 'essay' || questionType === 'long_answer') {
+      return false; // Will be graded manually
+    }
+
+    if (questionType === 'multiple_choice' || questionType === 'select_missing_word') {
       if (correctAnswer === null || correctAnswer === undefined) return false;
-      return String(userAnswer) === String(correctAnswer);
+      
+      // Parse options if needed
+      const parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
+      
+      // Get correct option text if correctAnswer is an index
+      let correctText = correctAnswer;
+      if (typeof correctAnswer === 'number' && Array.isArray(parsedOptions)) {
+        correctText = parsedOptions[correctAnswer];
+      }
+      
+      // Compare user answer with correct option (case-insensitive)
+      return String(userAnswer).toLowerCase().trim() === String(correctText).toLowerCase().trim();
+    }
+
+    if (questionType === 'true_false') {
+      if (correctAnswer === null || correctAnswer === undefined) return false;
+      
+      // Parse options if needed
+      const parsedOptions = typeof options === 'string' ? JSON.parse(options) : (options || ['Benar', 'Salah']);
+      
+      // Get correct option text if correctAnswer is an index
+      let correctText = correctAnswer;
+      if (typeof correctAnswer === 'number' && Array.isArray(parsedOptions)) {
+        correctText = parsedOptions[correctAnswer];
+      }
+      
+      // Compare user answer with correct option (case-insensitive)
+      return String(userAnswer).toLowerCase().trim() === String(correctText).toLowerCase().trim();
     }
 
     if (questionType === 'multiple_answer') {
