@@ -158,15 +158,30 @@ Buat ${contentLength === 'short' ? '5' : contentLength === 'medium' ? '10' : '15
 
       setProgress(100);
 
+      if (result?.error) {
+        toast({
+          title: result.code === 429 ? 'AI sedang sibuk' : 'Error',
+          description: result.error,
+          variant: 'destructive',
+        });
+        return;
+      }
+
       if (result.content) {
         onGenerated(result.content);
         toast({ title: 'Sukses', description: 'Konten berhasil di-generate!' });
+      } else {
+        toast({
+          title: 'Error',
+          description: 'AI tidak mengembalikan konten. Silakan coba lagi.',
+          variant: 'destructive',
+        });
       }
     } catch (error: any) {
-      toast({ 
-        title: 'Error', 
-        description: error?.message || 'Gagal generate konten', 
-        variant: 'destructive' 
+      toast({
+        title: 'Error',
+        description: error?.message || 'Gagal generate konten',
+        variant: 'destructive',
       });
     } finally {
       clearInterval(progressInterval);

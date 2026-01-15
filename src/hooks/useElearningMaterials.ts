@@ -398,6 +398,14 @@ export function useCourseLLOs(courseId: string) {
 }
 
 // AI Generation hook
+export type AIGenerationResult = {
+  content?: string;
+  type?: string;
+  error?: string;
+  code?: number;
+  retry_after_seconds?: number;
+};
+
 export function useAIGeneration() {
   return useMutation({
     mutationFn: async (params: {
@@ -410,13 +418,39 @@ export function useAIGeneration() {
       studentAnswer?: string;
       correctAnswer?: string;
       questionText?: string;
-    }) => {
+    }): Promise<AIGenerationResult> => {
       const { data, error } = await supabase.functions.invoke('elearning-ai', {
         body: params,
       });
 
-      if (error) throw error;
-      return data;
+      // If the function responded with a non-2xx status, Supabase returns an `error` object.
+      // Convert it into a safe payload so callers won't crash on uncaught throws.
+      if (error) {
+        const status = (error as any)?.context?.status as number | undefined;
+
+        if (status === 429) {
+          return {
+            error: 'Terlalu banyak permintaan AI. Silakan tunggu sebentar lalu coba lagi.',
+            code: 429,
+          };
+        }
+
+        if (status === 402) {
+          return {
+            error: 'Kuota/limit AI sudah habis. Silakan tambah kuota penggunaan lalu coba lagi.',
+            code: 402,
+          };
+        }
+
+        return {
+          error: (error as any)?.message || 'Gagal memanggil layanan AI.',
+          code: status || 500,
+        };
+      }
+
+      // Function may still return a JSON error payload
+      const result = (data || {}) as AIGenerationResult;
+      return result;
     },
   });
 }

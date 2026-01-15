@@ -131,6 +131,14 @@ export default function Settings() {
 
   // Check AI connection status on mount
   const checkAiConnection = useCallback(async () => {
+    // Avoid hammering the AI endpoint when the user refreshes/navigates quickly
+    const lastCheck = Number(localStorage.getItem('ai_connection_last_check') || '0');
+    const now = Date.now();
+    if (now - lastCheck < 60_000) {
+      return;
+    }
+    localStorage.setItem('ai_connection_last_check', String(now));
+
     setAiConnectionStatus('checking');
     try {
       const { data, error } = await supabase.functions.invoke('elearning-ai', {
@@ -141,9 +149,9 @@ export default function Settings() {
         }
       });
 
-      if (error || data?.error) {
+      if (error || (data as any)?.error) {
         setAiConnectionStatus('error');
-      } else if (data?.content) {
+      } else if ((data as any)?.content) {
         setAiConnectionStatus('connected');
       } else {
         setAiConnectionStatus('error');
