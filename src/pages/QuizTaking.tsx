@@ -387,37 +387,51 @@ export default function QuizTaking() {
               {(assignment?.show_answer_mode === 'after_quiz' || assignment?.show_answer_mode === 'after_each') && (
                 <div className="space-y-4 mt-8">
                   <h3 className="font-semibold text-lg">Pembahasan</h3>
-                  {submissionResult.details.map((detail: any, idx: number) => (
-                    <Card key={idx} className={detail.isCorrect ? 'border-green-500/50' : 'border-red-500/50'}>
-                      <CardContent className="pt-4">
-                        <div className="flex items-start gap-3">
-                          <Badge variant={detail.isCorrect ? 'default' : 'destructive'}>
-                            {idx + 1}
-                          </Badge>
-                          <div className="flex-1 space-y-2">
-                            <p className="font-medium">{detail.question}</p>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <span className="text-muted-foreground">Jawaban Anda:</span>
-                                <p className={detail.isCorrect ? 'text-green-600' : 'text-red-600'}>
-                                  {String(detail.userAnswer || '-')}
+                  {submissionResult.details.map((detail: any, idx: number) => {
+                    const formatAnswer = (val: any) => {
+                      if (val === null || val === undefined) return '-';
+                      if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return String(val);
+                      try {
+                        return JSON.stringify(val);
+                      } catch {
+                        return String(val);
+                      }
+                    };
+
+                    const isCorrect = Boolean(detail?.is_correct);
+
+                    return (
+                      <Card key={idx} className={isCorrect ? 'border-green-500/50' : 'border-red-500/50'}>
+                        <CardContent className="pt-4">
+                          <div className="flex items-start gap-3">
+                            <Badge variant={isCorrect ? 'default' : 'destructive'}>
+                              {idx + 1}
+                            </Badge>
+                            <div className="flex-1 space-y-2">
+                              <p className="font-medium">{detail.question}</p>
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground">Jawaban Anda:</span>
+                                  <p className={isCorrect ? 'text-green-600' : 'text-red-600'}>
+                                    {formatAnswer(detail.user_answer)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Jawaban Benar:</span>
+                                  <p className="text-green-600">{formatAnswer(detail.correct_answer)}</p>
+                                </div>
+                              </div>
+                              {detail.feedback && (
+                                <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                                  💡 {detail.feedback}
                                 </p>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Jawaban Benar:</span>
-                                <p className="text-green-600">{String(detail.correctAnswer)}</p>
-                              </div>
+                              )}
                             </div>
-                            {detail.feedback && (
-                              <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
-                                💡 {detail.feedback}
-                              </p>
-                            )}
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
 
