@@ -166,14 +166,14 @@ export function ElearningKelas() {
         const matchingInstructors = (instructorData || [])
           .filter(ci => 
             ci.course_id === cls.course_id && 
-            ci.class_group_id === cls.class_group_id
+            (ci.class_group_id === null || ci.class_group_id === cls.class_group_id)
           )
           .map(ci => ci.profiles as unknown as AssignedInstructor)
           .filter(Boolean);
 
         return {
           ...cls,
-          assignedInstructors: matchingInstructors.length > 0 ? matchingInstructors : undefined
+          assignedInstructors: matchingInstructors
         };
       });
 
@@ -411,9 +411,9 @@ export function ElearningKelas() {
                 </div>
 
                 {/* Assigned Instructors from course_instructors */}
-                {cls.assignedInstructors && cls.assignedInstructors.length > 0 ? (
-                  <div className="pt-4 border-t">
-                    <p className="text-xs text-muted-foreground mb-2">Dosen Pengampu</p>
+                <div className="pt-4 border-t">
+                  <p className="text-xs text-muted-foreground mb-2">Dosen Pengampu</p>
+                  {cls.assignedInstructors && cls.assignedInstructors.length > 0 ? (
                     <div className="flex flex-col gap-2">
                       {cls.assignedInstructors.map((instructor) => (
                         <div key={instructor.id} className="flex items-center gap-2">
@@ -427,21 +427,10 @@ export function ElearningKelas() {
                         </div>
                       ))}
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 pt-4 border-t">
-                    <Avatar className="h-10 w-10 ring-2 ring-primary/20">
-                      <AvatarImage src={cls.instructor?.photo_url || undefined} />
-                      <AvatarFallback className="bg-primary/10 text-primary font-semibold">
-                        {cls.instructor?.full_name?.charAt(0) || '?'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground">Pembuat Kelas</p>
-                      <p className="font-medium text-sm truncate">{cls.instructor?.full_name}</p>
-                    </div>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic">Belum ada dosen ditugaskan</p>
+                  )}
+                </div>
 
                 {/* Actions */}
                 {canDosenEditClass(cls) && (
