@@ -14,6 +14,7 @@ export default function Index() {
 
   const appTitle = settings?.app_title || 'Student Achievement Tracker';
   const appTagline = settings?.app_tagline || 'Pantau dan kelola nilai mahasiswa Program Bahasa Arab dengan mudah. Visualisasi data yang jelas untuk hasil pembelajaran yang lebih baik.';
+  const logoUrl = settings?.logo_url;
 
   const totalStudents = courses?.reduce((sum, c) => sum + c.total_students, 0) || 0;
   
@@ -30,7 +31,11 @@ export default function Index() {
           <div className="container relative">
             <div className="max-w-3xl animate-fade-in">
               <div className="inline-flex items-center gap-2 rounded-full bg-primary-foreground/10 px-4 py-2 text-sm text-primary-foreground backdrop-blur-sm mb-6">
-                <GraduationCap className="h-4 w-4" />
+                {logoUrl ? (
+                  <img src={logoUrl} alt="Logo" className="h-5 w-5 object-cover rounded" />
+                ) : (
+                  <GraduationCap className="h-4 w-4" />
+                )}
                 <span>Program Bahasa Arab</span>
               </div>
               <h1 className="font-display text-4xl font-bold text-primary-foreground lg:text-5xl xl:text-6xl mb-4">

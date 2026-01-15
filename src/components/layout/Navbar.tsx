@@ -23,6 +23,7 @@ export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const appName = settings?.app_name || 'Tracker PBA';
+  const logoUrl = settings?.logo_url;
 
   const handleSignOut = async () => {
     await signOut();
@@ -46,8 +47,12 @@ export function Navbar() {
     <header className="sticky top-0 z-50 w-full border-b bg-card/80 backdrop-blur-lg">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-3 group">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-primary shadow-md group-hover:shadow-glow transition-shadow">
-            <GraduationCap className="h-5 w-5 text-primary-foreground" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-primary shadow-md group-hover:shadow-glow transition-shadow overflow-hidden">
+            {logoUrl ? (
+              <img src={logoUrl} alt={appName} className="h-10 w-10 object-cover" />
+            ) : (
+              <GraduationCap className="h-5 w-5 text-primary-foreground" />
+            )}
           </div>
           <div className="hidden sm:block">
             <h1 className="font-display text-lg font-bold text-foreground">
