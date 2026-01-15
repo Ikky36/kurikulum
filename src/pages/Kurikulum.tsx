@@ -35,10 +35,11 @@ type ProfilLulusan = { id: string; code: string; profil: string; deskripsi: stri
 type BahanKajianKelompok = { id: string; kelompok: string; bahan_kajian: string };
 
 function KurikulumContent() {
-  const { profile, hasAnyRole } = useAuth();
+  const { profile, hasAnyRole, role, user } = useAuth();
   const queryClient = useQueryClient();
   // Admin and sub_admin can edit curriculum
-  const canEdit = hasAnyRole(['admin', 'sub_admin']);
+  const canEditKurikulum = hasAnyRole(['admin', 'sub_admin']);
+  const isDosen = role === 'dosen';
   const { clearSelection } = useBulkSelect();
 
   // Enable realtime for curriculum-related tables
@@ -48,6 +49,27 @@ function KurikulumContent() {
     { table: 'llos', queryKeys: [['llos'], ['clo-llos']] },
     { table: 'curricula', queryKeys: [['curricula']] },
   ]);
+
+  // Fetch course instructors to check dosen assignments
+  const { data: courseInstructors = [] } = useQuery({
+    queryKey: ['course_instructors_kurikulum'],
+    queryFn: async () => {
+      const { data } = await supabase.from('course_instructors').select('course_id, instructor_profile_id');
+      return data || [];
+    },
+    enabled: isDosen,
+  });
+
+  // Check if dosen is assigned to a specific course
+  const isDosenAssignedToCourse = (courseId: string) => {
+    if (!isDosen || !user?.id) return false;
+    return courseInstructors.some(
+      (ci: any) => ci.course_id === courseId && ci.instructor_profile_id === user.id
+    );
+  };
+
+  // Combined edit permission - admin/sub_admin can edit all, dosen can edit assigned courses
+  const canEdit = canEditKurikulum;
 
   // State for dialogs
   const [editDialog, setEditDialog] = useState<{ type: string; data: any; isNew: boolean } | null>(null);
@@ -741,6 +763,11 @@ function KurikulumContent() {
 
   const renderMataKuliahTable = () => {
     const ids = courses.map((course: any) => course.id);
+    // Check if any dosen has edit access to any course (for showing action column header)
+    const dosenHasAnyCourseAccess = isDosen && courses.some((c: any) => isDosenAssignedToCourse(c.id));
+    const showMKActions = canEdit || dosenHasAnyCourseAccess;
+    // For bulk select, only admin/sub_admin can bulk select
+    const showBulkSelect = canEdit;
     
     return (
       <Card className="mb-6">
@@ -756,7 +783,7 @@ function KurikulumContent() {
           <Table>
             <TableHeader>
               <TableRow className="bg-primary hover:bg-primary">
-                {canEdit && (
+                {showBulkSelect && (
                   <TableHead className="text-primary-foreground w-12">
                     <BulkSelectAllCheckbox ids={ids} />
                   </TableHead>
@@ -768,7 +795,7 @@ function KurikulumContent() {
                 <TableHead className="text-primary-foreground">Semester</TableHead>
                 <TableHead className="text-primary-foreground">CPL/PLO</TableHead>
                 <TableHead className="text-primary-foreground">PL</TableHead>
-                {canEdit && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+                {showMKActions && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -777,9 +804,13 @@ function KurikulumContent() {
                   const coursePlos = course.course_plos?.map((cp: any) => cp.plos) || [];
                   const cplCodes = coursePlos.map((p: any) => p?.code).filter(Boolean);
                   const coursePls = course.course_profil_lulusan?.map((cpl: any) => cpl.profil_lulusan) || [];
+                  // Check if dosen can edit this specific course
+                  const canDosenEditThisCourse = isDosenAssignedToCourse(course.id);
+                  const canEditThisCourse = canEdit || canDosenEditThisCourse;
+                  
                   return (
                     <TableRow key={course.id}>
-                      {canEdit && (
+                      {showBulkSelect && (
                         <TableCell>
                           <BulkSelectCheckbox id={course.id} />
                         </TableCell>
@@ -843,36 +874,42 @@ function KurikulumContent() {
                           </div>
                         ) : '-'}
                       </TableCell>
-                      {canEdit && (
+                      {showMKActions && (
                         <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                const existingPlIds = course.course_profil_lulusan?.map((cpl: any) => cpl.profil_lulusan_id) || [];
-                                openEdit('courses', {
-                                  id: course.id,
-                                  code: course.code,
-                                  name: course.name,
-                                  semester: course.semester || '',
-                                  curriculum_id: course.curriculum_id || '',
-                                  passing_score: course.passing_score?.toString() || '60',
-                                  ploIds: course.course_plos?.map((cp: any) => cp.plo_id) || [],
-                                  plIds: existingPlIds,
-                                }, false);
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDelete('courses', course.id)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
+                          {canEditThisCourse ? (
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  const existingPlIds = course.course_profil_lulusan?.map((cpl: any) => cpl.profil_lulusan_id) || [];
+                                  openEdit('courses', {
+                                    id: course.id,
+                                    code: course.code,
+                                    name: course.name,
+                                    semester: course.semester || '',
+                                    curriculum_id: course.curriculum_id || '',
+                                    passing_score: course.passing_score?.toString() || '60',
+                                    ploIds: course.course_plos?.map((cp: any) => cp.plo_id) || [],
+                                    plIds: existingPlIds,
+                                  }, false);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              {canEdit && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => handleDelete('courses', course.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </TableCell>
                       )}
                     </TableRow>
@@ -880,14 +917,14 @@ function KurikulumContent() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={canEdit ? 9 : 7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={showBulkSelect ? 9 : (showMKActions ? 8 : 7)} className="text-center text-muted-foreground">
                     Belum ada data
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
-          {canEdit && <BulkActionBar onDelete={(ids) => handleBulkDelete('courses', ids)} itemName="mata kuliah" />}
+          {showBulkSelect && <BulkActionBar onDelete={(ids) => handleBulkDelete('courses', ids)} itemName="mata kuliah" />}
         </CardContent>
       </Card>
     );
