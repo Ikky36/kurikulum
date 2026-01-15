@@ -15,7 +15,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff, Scale, CheckCircle2, XCircle, Zap, Wifi, WifiOff } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff, Scale, CheckCircle2, XCircle, Zap, Wifi, WifiOff, Cloud } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { Curriculum, Program, AppSetting, InstrumenPenilaian } from '@/lib/types';
 import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
 import { SistemKuliahManager } from '@/components/admin/SistemKuliahManager';
@@ -55,6 +56,7 @@ export default function Settings() {
   const [testingAi, setTestingAi] = useState(false);
   const [aiTestResult, setAiTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [aiConnectionStatus, setAiConnectionStatus] = useState<'idle' | 'checking' | 'connected' | 'error'>('idle');
+  const [useLovableGateway, setUseLovableGateway] = useState(true);
 
   // Prompts state
   const [prompts, setPrompts] = useState<Record<string, string>>({});
@@ -117,6 +119,7 @@ export default function Settings() {
       setPrimaryColor(settingsMap['primary_color'] || '');
       setAiApiKey(settingsMap['ai_api_key'] || '');
       setAiProvider(settingsMap['ai_provider'] || 'gemini');
+      setUseLovableGateway(settingsMap['use_lovable_gateway'] !== 'false');
       
       // Load prompts
       const promptSettings: Record<string, string> = {};
@@ -454,6 +457,7 @@ export default function Settings() {
   const handleSaveAiSettings = async () => {
     await updateSettingMutation.mutateAsync({ key: 'ai_api_key', value: aiApiKey });
     await updateSettingMutation.mutateAsync({ key: 'ai_provider', value: aiProvider });
+    await updateSettingMutation.mutateAsync({ key: 'use_lovable_gateway', value: useLovableGateway ? 'true' : 'false' });
   };
 
   const handleTestAiConnection = async () => {
@@ -1020,45 +1024,71 @@ export default function Settings() {
                     </div>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Provider AI</Label>
-                      <Select value={aiProvider} onValueChange={setAiProvider}>
-                        <SelectTrigger className="w-full">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="gemini">Google Gemini</SelectItem>
-                          <SelectItem value="openai">OpenAI GPT</SelectItem>
-                          <SelectItem value="anthropic">Anthropic Claude</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>API Key</Label>
-                      <div className="flex gap-2">
-                        <div className="relative flex-1">
-                          <Input 
-                            type={showApiKey ? 'text' : 'password'}
-                            value={aiApiKey} 
-                            onChange={(e) => setAiApiKey(e.target.value)} 
-                            placeholder={aiProvider === 'gemini' ? 'AIza...' : aiProvider === 'openai' ? 'sk-...' : 'sk-ant-...'}
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7"
-                            onClick={() => setShowApiKey(!showApiKey)}
-                          >
-                            {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                          </Button>
+                    {/* Lovable Gateway Toggle */}
+                    <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/30">
+                      <div className="flex items-center gap-3">
+                        <Cloud className="h-5 w-5 text-primary" />
+                        <div>
+                          <Label className="text-base font-medium">Gunakan Lovable Gateway</Label>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Lovable Gateway menyediakan akses AI tanpa perlu API Key sendiri
+                          </p>
                         </div>
-                        <Button onClick={handleSaveAiSettings}>Simpan</Button>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        API Key digunakan untuk mengakses AI yang membantu generate deskripsi CPMK, LLO, dan lainnya.
-                      </p>
+                      <Switch
+                        checked={useLovableGateway}
+                        onCheckedChange={(checked) => {
+                          setUseLovableGateway(checked);
+                          // Auto-save when toggled
+                          updateSettingMutation.mutate({ key: 'use_lovable_gateway', value: checked ? 'true' : 'false' });
+                        }}
+                      />
                     </div>
+
+                    {/* Custom API Settings - Only show when Lovable Gateway is disabled */}
+                    {!useLovableGateway && (
+                      <>
+                        <div className="space-y-2">
+                          <Label>Provider AI</Label>
+                          <Select value={aiProvider} onValueChange={setAiProvider}>
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="gemini">Google Gemini</SelectItem>
+                              <SelectItem value="openai">OpenAI GPT</SelectItem>
+                              <SelectItem value="anthropic">Anthropic Claude</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label>API Key</Label>
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
+                              <Input 
+                                type={showApiKey ? 'text' : 'password'}
+                                value={aiApiKey} 
+                                onChange={(e) => setAiApiKey(e.target.value)} 
+                                placeholder={aiProvider === 'gemini' ? 'AIza...' : aiProvider === 'openai' ? 'sk-...' : 'sk-ant-...'}
+                              />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 h-7 w-7"
+                                onClick={() => setShowApiKey(!showApiKey)}
+                              >
+                                {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </Button>
+                            </div>
+                            <Button onClick={handleSaveAiSettings}>Simpan</Button>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            API Key digunakan untuk mengakses AI yang membantu generate deskripsi CPMK, LLO, dan lainnya.
+                          </p>
+                        </div>
+                      </>
+                    )}
 
                     {/* AI Connection Test */}
                     <div className="pt-4 border-t space-y-3">

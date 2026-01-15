@@ -30,44 +30,58 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check for GEMINI_API_KEY from environment first (priority)
-    const envGeminiKey = Deno.env.get("GEMINI_API_KEY");
-    
-    // Fetch AI settings from app_settings as fallback
+    // Fetch AI settings from app_settings
     const { data: settingsData } = await supabase
       .from("app_settings")
       .select("setting_key, setting_value")
-      .in("setting_key", ["ai_api_key", "ai_provider"]);
+      .in("setting_key", ["ai_api_key", "ai_provider", "use_lovable_gateway"]);
 
     const settings: Record<string, string> = {};
     settingsData?.forEach((s: { setting_key: string; setting_value: string | null }) => {
       settings[s.setting_key] = s.setting_value || "";
     });
 
-    // Use environment GEMINI_API_KEY if available, otherwise fall back to app_settings
-    const aiApiKey = envGeminiKey || settings["ai_api_key"];
-    // If using env key, default to gemini provider
-    const aiProvider = envGeminiKey ? "gemini" : (settings["ai_provider"] || "gemini");
-
-    if (!aiApiKey) {
-      throw new Error("API Key AI belum dikonfigurasi. Pastikan GEMINI_API_KEY sudah ditambahkan atau konfigurasi di halaman Pengaturan.");
-    }
-
-    // Determine API URL and model based on provider
+    // Check if we should use Lovable Gateway (default: true)
+    const useLovableGateway = settings["use_lovable_gateway"] !== "false";
+    
     let apiUrl = "";
     let model = "";
+    let aiApiKey = "";
+    let aiProvider = "";
 
-    if (aiProvider === "gemini") {
-      apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-      model = "gemini-2.0-flash";
-    } else if (aiProvider === "openai") {
-      apiUrl = "https://api.openai.com/v1/chat/completions";
-      model = "gpt-4o-mini";
-    } else if (aiProvider === "anthropic") {
-      apiUrl = "https://api.anthropic.com/v1/messages";
-      model = "claude-3-haiku-20240307";
+    if (useLovableGateway) {
+      // Use Lovable AI Gateway
+      const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+      if (!lovableApiKey) {
+        throw new Error("LOVABLE_API_KEY tidak tersedia. Pastikan Lovable Cloud sudah aktif.");
+      }
+      apiUrl = "https://ai.gateway.lovable.dev/v1/chat/completions";
+      model = "google/gemini-3-flash-preview";
+      aiApiKey = lovableApiKey;
+      aiProvider = "lovable";
     } else {
-      throw new Error("Provider AI tidak didukung. Gunakan gemini, openai, atau anthropic.");
+      // Use custom API key from environment or settings
+      const envGeminiKey = Deno.env.get("GEMINI_API_KEY");
+      aiApiKey = envGeminiKey || settings["ai_api_key"];
+      aiProvider = envGeminiKey ? "gemini" : (settings["ai_provider"] || "gemini");
+
+      if (!aiApiKey) {
+        throw new Error("API Key AI belum dikonfigurasi. Konfigurasi di halaman Pengaturan atau aktifkan Lovable Gateway.");
+      }
+
+      // Determine API URL and model based on provider
+      if (aiProvider === "gemini") {
+        apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+        model = "gemini-2.0-flash";
+      } else if (aiProvider === "openai") {
+        apiUrl = "https://api.openai.com/v1/chat/completions";
+        model = "gpt-4o-mini";
+      } else if (aiProvider === "anthropic") {
+        apiUrl = "https://api.anthropic.com/v1/messages";
+        model = "claude-3-haiku-20240307";
+      } else {
+        throw new Error("Provider AI tidak didukung. Gunakan gemini, openai, atau anthropic.");
+      }
     }
 
     const body: AIRequest = await req.json();
