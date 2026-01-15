@@ -80,6 +80,20 @@ serve(async (req) => {
       });
     }
 
+    // Check if email already exists in profiles
+    const { data: existingProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("email")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (existingProfile) {
+      return new Response(JSON.stringify({ error: `Email ${email} sudah terdaftar dalam sistem` }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Create user with admin API
     const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -89,7 +103,12 @@ serve(async (req) => {
     });
 
     if (createError) {
-      return new Response(JSON.stringify({ error: createError.message }), {
+      // Provide user-friendly error messages
+      let errorMessage = createError.message;
+      if (createError.message.includes("already been registered")) {
+        errorMessage = `Email ${email} sudah terdaftar dalam sistem`;
+      }
+      return new Response(JSON.stringify({ error: errorMessage }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
