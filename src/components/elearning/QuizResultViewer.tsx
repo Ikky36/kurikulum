@@ -223,10 +223,10 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
     if (questionType === 'matching') {
       // Build expected mapping from options (the correct pairs)
       if (typeof userAnswer !== 'object' || !options) return false;
-      
+
       const parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
       if (!Array.isArray(parsedOptions)) return false;
-      
+
       // Build expected mapping: {left: right, ...}
       const expectedMapping: Record<string, string> = {};
       parsedOptions.forEach((pair: { left: string; right: string }) => {
@@ -234,19 +234,20 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
           expectedMapping[pair.left] = pair.right;
         }
       });
-      
-      // Check if user answer matches expected mapping
-      const userKeys = Object.keys(userAnswer);
+
       const expectedKeys = Object.keys(expectedMapping);
-      
+      if (expectedKeys.length === 0) return false;
+
+      // Ensure the answer covers all pairs
+      const userKeys = Object.keys(userAnswer);
       if (userKeys.length !== expectedKeys.length) return false;
-      
-      for (const key of userKeys) {
-        if (expectedMapping[key] !== userAnswer[key]) {
+
+      for (const key of expectedKeys) {
+        if (userAnswer[key] !== expectedMapping[key]) {
           return false;
         }
       }
-      
+
       return true;
     }
 
