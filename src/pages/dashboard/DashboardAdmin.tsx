@@ -58,7 +58,8 @@ export default function DashboardAdmin() {
   // Role management state
   const [showRoleDialog, setShowRoleDialog] = useState(false);
   const [selectedUserForRole, setSelectedUserForRole] = useState<Profile | null>(null);
-  const [newRole, setNewRole] = useState<AppRole>('mahasiswa');
+  const [selectedUserRoles, setSelectedUserRoles] = useState<AppRole[]>([]);
+  const [newRoles, setNewRoles] = useState<AppRole[]>(['mahasiswa']);
 
   // User account management state
   const [showUserDialog, setShowUserDialog] = useState(false);
@@ -105,21 +106,52 @@ export default function DashboardAdmin() {
     },
   });
 
-  // Fetch all users
+  // Fetch all users with their roles
   const { data: allUsers, refetch: refetchUsers } = useQuery({
     queryKey: ['admin-users'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('profiles').select('*').order('full_name');
+      const { data: profiles, error } = await supabase.from('profiles').select('*').order('full_name');
       if (error) throw error;
-      return data as Profile[];
+      
+      // Fetch all user roles
+      const { data: userRoles, error: rolesError } = await supabase.from('user_roles').select('*');
+      if (rolesError) throw rolesError;
+      
+      // Map roles to users
+      const usersWithRoles = (profiles as Profile[]).map(p => ({
+        ...p,
+        roles: userRoles?.filter(r => r.user_id === p.id).map(r => r.role as AppRole) || [p.role],
+      }));
+      
+      return usersWithRoles;
     },
   });
 
-  // Fetch all instructors (dosen)
+  // Fetch all instructors (dosen) - users who have dosen role
   const { data: allDosen } = useQuery({
     queryKey: ['admin-dosen'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('profiles').select('*').eq('role', 'dosen').order('full_name');
+      // Get all user_ids that have dosen role
+      const { data: dosenRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'dosen');
+      if (rolesError) throw rolesError;
+      
+      const dosenUserIds = dosenRoles?.map(r => r.user_id) || [];
+      
+      if (dosenUserIds.length === 0) {
+        // Fallback to profile role if no user_roles entries
+        const { data, error } = await supabase.from('profiles').select('*').eq('role', 'dosen').order('full_name');
+        if (error) throw error;
+        return data as Profile[];
+      }
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('id', dosenUserIds)
+        .order('full_name');
       if (error) throw error;
       return data as Profile[];
     },
@@ -234,26 +266,39 @@ export default function DashboardAdmin() {
     },
   });
 
-  // Role mutation
+  // Role mutation - now supports multiple roles
   const updateRoleMutation = useMutation({
-    mutationFn: async ({ userId, role }: { userId: string; role: AppRole }) => {
-      // Update profiles table
+    mutationFn: async ({ userId, roles }: { userId: string; roles: AppRole[] }) => {
+      if (roles.length === 0) {
+        throw new Error('Minimal harus memilih satu role');
+      }
+      
+      // Determine primary role (highest privilege) for profiles table
+      let primaryRole: AppRole = 'mahasiswa';
+      if (roles.includes('admin')) primaryRole = 'admin';
+      else if (roles.includes('sub_admin')) primaryRole = 'sub_admin';
+      else if (roles.includes('dosen')) primaryRole = 'dosen';
+      else if (roles.includes('mahasiswa')) primaryRole = 'mahasiswa';
+      
+      // Update profiles table with primary role
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ role })
+        .update({ role: primaryRole })
         .eq('id', userId);
       if (profileError) throw profileError;
 
-      // Update user_roles table
+      // Delete existing user_roles
       const { error: deleteError } = await supabase
         .from('user_roles')
         .delete()
         .eq('user_id', userId);
       if (deleteError) throw deleteError;
 
+      // Insert all selected roles
+      const rolesToInsert = roles.map(r => ({ user_id: userId, role: r }));
       const { error: insertError } = await supabase
         .from('user_roles')
-        .insert({ user_id: userId, role });
+        .insert(rolesToInsert);
       if (insertError) throw insertError;
     },
     onSuccess: () => {
@@ -262,6 +307,7 @@ export default function DashboardAdmin() {
       toast({ title: 'Berhasil', description: 'Role berhasil diperbarui' });
       setShowRoleDialog(false);
       setSelectedUserForRole(null);
+      setNewRoles([]);
     },
     onError: (error: any) => {
       toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
@@ -976,9 +1022,17 @@ export default function DashboardAdmin() {
                         <TableCell className="capitalize">{(u as any).gender || '-'}</TableCell>
                         <TableCell className="text-muted-foreground">{u.email}</TableCell>
                         <TableCell>
-                          <Badge variant={u.role === 'admin' ? 'default' : u.role === 'sub_admin' ? 'default' : u.role === 'dosen' ? 'secondary' : 'outline'} className="capitalize">
-                            {u.role === 'sub_admin' ? 'Sub-Admin' : u.role}
-                          </Badge>
+                          <div className="flex flex-wrap gap-1">
+                            {(u.roles && u.roles.length > 0 ? u.roles : [u.role]).map((r) => (
+                              <Badge 
+                                key={r} 
+                                variant={r === 'admin' || r === 'sub_admin' ? 'default' : r === 'dosen' ? 'secondary' : 'outline'} 
+                                className="capitalize"
+                              >
+                                {r === 'sub_admin' ? 'Sub-Admin' : r}
+                              </Badge>
+                            ))}
+                          </div>
                         </TableCell>
                         <TableCell>{u.role === 'mahasiswa' ? u.nim : u.nip || '-'}</TableCell>
                         <TableCell>{u.role === 'mahasiswa' ? (u.enrollment_year || '-') : '-'}</TableCell>
@@ -1381,9 +1435,17 @@ export default function DashboardAdmin() {
                         </TableCell>
                         <TableCell>{u.email}</TableCell>
                         <TableCell>
-                          <Badge variant={u.role === 'admin' || u.role === 'sub_admin' ? 'default' : u.role === 'dosen' ? 'secondary' : 'outline'} className="capitalize">
-                            {u.role === 'sub_admin' ? 'Sub-Admin' : u.role}
-                          </Badge>
+                          <div className="flex flex-wrap gap-1">
+                            {(u.roles && u.roles.length > 0 ? u.roles : [u.role]).map((r) => (
+                              <Badge 
+                                key={r} 
+                                variant={r === 'admin' || r === 'sub_admin' ? 'default' : r === 'dosen' ? 'secondary' : 'outline'} 
+                                className="capitalize"
+                              >
+                                {r === 'sub_admin' ? 'Sub-Admin' : r}
+                              </Badge>
+                            ))}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Button 
@@ -1391,7 +1453,7 @@ export default function DashboardAdmin() {
                             size="icon"
                             onClick={() => {
                               setSelectedUserForRole(u);
-                              setNewRole(u.role);
+                              setNewRoles(u.roles || [u.role]);
                               setShowRoleDialog(true);
                             }}
                           >
@@ -1405,7 +1467,7 @@ export default function DashboardAdmin() {
               </CardContent>
             </Card>
 
-            {/* Role Dialog */}
+            {/* Role Dialog - Multi-select */}
             <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
               <DialogContent>
                 <DialogHeader>
@@ -1413,25 +1475,95 @@ export default function DashboardAdmin() {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Role Baru</Label>
-                    <Select value={newRole} onValueChange={(v) => setNewRole(v as AppRole)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mahasiswa">Mahasiswa</SelectItem>
-                        <SelectItem value="dosen">Dosen</SelectItem>
-                        {role === 'admin' && (
-                          <>
-                            <SelectItem value="sub_admin">Sub-Admin</SelectItem>
-                            <SelectItem value="admin">Admin</SelectItem>
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <Label>Pilih Role (dapat memilih lebih dari satu)</Label>
+                    <div className="border rounded-lg p-3 space-y-3">
+                      <label className="flex items-center gap-3 cursor-pointer hover:bg-muted p-2 rounded">
+                        <Checkbox
+                          checked={newRoles.includes('mahasiswa')}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setNewRoles([...newRoles, 'mahasiswa']);
+                            } else {
+                              setNewRoles(newRoles.filter(r => r !== 'mahasiswa'));
+                            }
+                          }}
+                        />
+                        <div>
+                          <span className="font-medium">Mahasiswa</span>
+                          <p className="text-xs text-muted-foreground">Akses untuk melihat nilai dan mengikuti kelas</p>
+                        </div>
+                      </label>
+                      <label className="flex items-center gap-3 cursor-pointer hover:bg-muted p-2 rounded">
+                        <Checkbox
+                          checked={newRoles.includes('dosen')}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setNewRoles([...newRoles, 'dosen']);
+                            } else {
+                              setNewRoles(newRoles.filter(r => r !== 'dosen'));
+                            }
+                          }}
+                        />
+                        <div>
+                          <span className="font-medium">Dosen</span>
+                          <p className="text-xs text-muted-foreground">Akses untuk mengelola mata kuliah dan menilai mahasiswa</p>
+                        </div>
+                      </label>
+                      {role === 'admin' && (
+                        <>
+                          <label className="flex items-center gap-3 cursor-pointer hover:bg-muted p-2 rounded">
+                            <Checkbox
+                              checked={newRoles.includes('sub_admin')}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setNewRoles([...newRoles, 'sub_admin']);
+                                } else {
+                                  setNewRoles(newRoles.filter(r => r !== 'sub_admin'));
+                                }
+                              }}
+                            />
+                            <div>
+                              <span className="font-medium">Sub-Admin</span>
+                              <p className="text-xs text-muted-foreground">Akses administrasi terbatas</p>
+                            </div>
+                          </label>
+                          <label className="flex items-center gap-3 cursor-pointer hover:bg-muted p-2 rounded">
+                            <Checkbox
+                              checked={newRoles.includes('admin')}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setNewRoles([...newRoles, 'admin']);
+                                } else {
+                                  setNewRoles(newRoles.filter(r => r !== 'admin'));
+                                }
+                              }}
+                            />
+                            <div>
+                              <span className="font-medium">Admin</span>
+                              <p className="text-xs text-muted-foreground">Akses penuh ke seluruh sistem</p>
+                            </div>
+                          </label>
+                        </>
+                      )}
+                    </div>
+                    {newRoles.length === 0 && (
+                      <p className="text-sm text-destructive">Minimal pilih satu role</p>
+                    )}
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button onClick={() => selectedUserForRole && updateRoleMutation.mutate({ userId: selectedUserForRole.id, role: newRole })}>
-                    Simpan
+                  <Button 
+                    onClick={() => selectedUserForRole && updateRoleMutation.mutate({ userId: selectedUserForRole.id, roles: newRoles })}
+                    disabled={newRoles.length === 0 || updateRoleMutation.isPending}
+                  >
+                    {updateRoleMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Menyimpan...
+                      </>
+                    ) : (
+                      'Simpan'
+                    )}
                   </Button>
                 </DialogFooter>
               </DialogContent>

@@ -1,8 +1,15 @@
 export type AppRole = 'mahasiswa' | 'dosen' | 'admin' | 'sub_admin';
 
+export interface UserRole {
+  id: string;
+  user_id: string;
+  role: AppRole;
+}
+
 export interface Profile {
   id: string;
-  role: AppRole;
+  role: AppRole; // Primary role from profiles table
+  roles?: AppRole[]; // All roles from user_roles table
   full_name: string;
   email: string;
   nim?: string;
