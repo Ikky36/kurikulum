@@ -212,9 +212,15 @@ Berikan feedback yang:
 
       if (!response.ok) {
         if (response.status === 429) {
+          // Return 200 so clients can handle gracefully (without causing a hard runtime crash),
+          // while still surfacing rate-limit info via `code`.
           return new Response(
-            JSON.stringify({ error: "Rate limit exceeded. Please try again later." }),
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            JSON.stringify({
+              error: "Terlalu banyak permintaan ke layanan AI. Silakan tunggu 30-60 detik lalu coba lagi.",
+              code: 429,
+              retry_after_seconds: 60,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
         const errorText = await response.text();
