@@ -79,6 +79,7 @@ export function ElearningKelas() {
   const [editingClass, setEditingClass] = useState<ClassWithRelations | null>(null);
   const [deletingClassId, setDeletingClassId] = useState<string | null>(null);
   const [classesWithInstructors, setClassesWithInstructors] = useState<ClassWithRelations[]>([]);
+  const [dosenCourseAssignments, setDosenCourseAssignments] = useState<{course_id: string, class_group_id: string | null}[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -92,6 +93,42 @@ export function ElearningKelas() {
   const isAdmin = profile?.role === 'admin';
   const isDosen = profile?.role === 'dosen';
   const canManage = isAdmin || isDosen;
+
+  // Fetch dosen course assignments
+  useEffect(() => {
+    const fetchDosenAssignments = async () => {
+      if (!profile?.id || !isDosen) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('course_instructors')
+          .select('course_id, class_group_id')
+          .eq('instructor_profile_id', profile.id);
+        
+        if (error) throw error;
+        setDosenCourseAssignments(data || []);
+      } catch (error) {
+        console.error('Error fetching dosen assignments:', error);
+      }
+    };
+
+    fetchDosenAssignments();
+  }, [profile?.id, isDosen]);
+
+  // Helper function to check if dosen can edit a class
+  const canDosenEditClass = (cls: ClassWithRelations) => {
+    if (isAdmin) return true;
+    if (!isDosen) return false;
+    
+    // Check if dosen is the creator
+    if (cls.instructor_profile_id === profile?.id) return true;
+    
+    // Check if dosen is assigned to the course via course_instructors
+    return dosenCourseAssignments.some(
+      assignment => assignment.course_id === cls.course_id &&
+      (assignment.class_group_id === null || assignment.class_group_id === cls.class_group_id)
+    );
+  };
 
   // Fetch assigned instructors for each class based on course_id and class_group_id
   useEffect(() => {
@@ -406,7 +443,7 @@ export function ElearningKelas() {
                 )}
 
                 {/* Actions */}
-                {(isAdmin || cls.instructor_profile_id === profile?.id) && (
+                {canDosenEditClass(cls) && (
                   <div className="flex gap-2 pt-4 border-t">
                     <Button
                       variant="outline"
