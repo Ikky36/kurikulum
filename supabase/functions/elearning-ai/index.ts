@@ -17,6 +17,7 @@ interface AIRequest {
   studentAnswer?: string;
   correctAnswer?: string;
   questionText?: string;
+  languageMode?: 'arabic' | 'indonesian' | 'mixed';
 }
 
 serve(async (req) => {
@@ -85,7 +86,35 @@ serve(async (req) => {
     }
 
     const body: AIRequest = await req.json();
-    const { type, context, topic, indicators, questionType, questionCount, studentAnswer, correctAnswer, questionText } = body;
+    const { type, context, topic, indicators, questionType, questionCount, studentAnswer, correctAnswer, questionText, languageMode } = body;
+
+    // Language instructions based on mode
+    let languageInstruction = '';
+    switch (languageMode) {
+      case 'arabic':
+        languageInstruction = `PENTING - BAHASA OUTPUT:
+- Gunakan bahasa Arab SEPENUHNYA untuk semua konten
+- Semua teks Arab WAJIB menggunakan harakat lengkap (fathah, kasrah, dhammah, sukun, tanwin, tasydid, dll)
+- Contoh format yang benar: "اَلْحَمْدُ لِلّٰهِ رَبِّ الْعَالَمِيْنَ" (dengan harakat lengkap)
+- Jangan gunakan bahasa Indonesia sama sekali
+- Pastikan teks Arab mudah dibaca dengan harakat yang tepat`;
+        break;
+      case 'mixed':
+        languageInstruction = `PENTING - BAHASA OUTPUT:
+- Gunakan DUA bahasa: Arab dan Indonesia
+- Untuk setiap bagian konten, tulis dalam bahasa Arab terlebih dahulu dengan harakat lengkap
+- Kemudian berikan terjemahan Indonesia di bawahnya
+- Format: Teks Arab (dengan harakat) → Terjemahan Indonesia
+- Contoh: "اَلْعِلْمُ نُوْرٌ" → "Ilmu adalah cahaya"
+- Semua teks Arab WAJIB menggunakan harakat lengkap (fathah, kasrah, dhammah, sukun, tanwin, tasydid)`;
+        break;
+      case 'indonesian':
+      default:
+        languageInstruction = `PENTING - BAHASA OUTPUT:
+- Gunakan bahasa Indonesia yang baik dan benar
+- Jika ada istilah Arab, sertakan dengan harakat lengkap dan terjemahannya`;
+        break;
+    }
 
     let systemPrompt = "";
     let userPrompt = "";
@@ -93,9 +122,10 @@ serve(async (req) => {
     switch (type) {
       case "generate_material":
         systemPrompt = `Anda adalah ahli pendidikan yang membantu dosen membuat materi pembelajaran yang berkualitas. 
-Gunakan bahasa Indonesia yang baik dan benar.
+${languageInstruction}
 Format output dalam HTML sederhana dengan tag <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>.
-Jangan gunakan markdown, hanya HTML.`;
+Jangan gunakan markdown, hanya HTML.
+${languageMode === 'arabic' || languageMode === 'mixed' ? 'Untuk teks Arab, gunakan tag <span dir="rtl" lang="ar" class="font-arabic"> untuk membungkus teks Arab.' : ''}`;
         userPrompt = `Buatkan materi pembelajaran dengan topik: "${topic}"
 ${indicators?.length ? `\nIndikator pembelajaran yang harus dicapai:\n${indicators.map((i, idx) => `${idx + 1}. ${i}`).join("\n")}` : ""}
 ${context ? `\nKonteks tambahan: ${context}` : ""}
@@ -108,9 +138,10 @@ Buatkan materi yang lengkap, terstruktur, dan mudah dipahami oleh mahasiswa.`;
         const qCount = questionCount || 5;
         
         systemPrompt = `Anda adalah ahli pendidikan yang membantu dosen membuat soal quiz yang berkualitas.
-Gunakan bahasa Indonesia yang baik dan benar.
+${languageInstruction}
 Output HARUS berupa JSON array yang valid tanpa markdown code block.
-Setiap soal HARUS memiliki: question_type, question_text, correct_answer, dan feedback.`;
+Setiap soal HARUS memiliki: question_type, question_text, correct_answer, dan feedback.
+${languageMode === 'arabic' || languageMode === 'mixed' ? 'Pastikan semua teks Arab dalam question_text, options, dan feedback menggunakan harakat lengkap.' : ''}`;
 
         let formatGuide = '';
         switch (qType) {

@@ -418,6 +418,7 @@ export function useAIGeneration() {
       studentAnswer?: string;
       correctAnswer?: string;
       questionText?: string;
+      languageMode?: 'arabic' | 'indonesian' | 'mixed';
     }): Promise<AIGenerationResult> => {
       const { data, error } = await supabase.functions.invoke('elearning-ai', {
         body: params,
