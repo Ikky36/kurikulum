@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.elearning-ai]
 verify_jwt = false
+
+[functions.admin-bulk-users]
+verify_jwt = false
