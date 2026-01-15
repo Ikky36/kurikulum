@@ -35,9 +35,10 @@ type ProfilLulusan = { id: string; code: string; profil: string; deskripsi: stri
 type BahanKajianKelompok = { id: string; kelompok: string; bahan_kajian: string };
 
 function KurikulumContent() {
-  const { profile } = useAuth();
+  const { profile, hasAnyRole } = useAuth();
   const queryClient = useQueryClient();
-  const isAdmin = profile?.role === 'admin';
+  // Admin and sub_admin can edit curriculum
+  const canEdit = hasAnyRole(['admin', 'sub_admin']);
   const { clearSelection } = useBulkSelect();
 
   // Enable realtime for curriculum-related tables
@@ -285,7 +286,7 @@ function KurikulumContent() {
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">{title}</CardTitle>
-          {isAdmin && (
+          {canEdit && (
             <Button size="sm" onClick={() => openEdit(table, { code: '', [valueKey]: '' }, true)}>
               <Plus className="h-4 w-4 mr-1" /> Tambah
             </Button>
@@ -295,7 +296,7 @@ function KurikulumContent() {
           <Table>
             <TableHeader>
               <TableRow className="bg-primary hover:bg-primary">
-                {isAdmin && (
+                {canEdit && (
                   <TableHead className="text-primary-foreground w-12">
                     <BulkSelectAllCheckbox ids={ids} />
                   </TableHead>
@@ -303,14 +304,14 @@ function KurikulumContent() {
                 <TableHead className="text-primary-foreground w-16">No</TableHead>
                 <TableHead className="text-primary-foreground w-24">Kode</TableHead>
                 <TableHead className="text-primary-foreground">{valueLabel}</TableHead>
-                {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+                {canEdit && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {data.length > 0 ? (
                 data.map((item, idx) => (
                   <TableRow key={item.id}>
-                    {isAdmin && (
+                    {canEdit && (
                       <TableCell>
                         <BulkSelectCheckbox id={item.id} />
                       </TableCell>
@@ -318,7 +319,7 @@ function KurikulumContent() {
                     <TableCell>{idx + 1}</TableCell>
                     <TableCell>{item.code}</TableCell>
                     <TableCell>{item[valueKey]}</TableCell>
-                    {isAdmin && (
+                    {canEdit && (
                       <TableCell>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" onClick={() => openEdit(table, item, false)}>
@@ -334,14 +335,14 @@ function KurikulumContent() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 5 : 3} className="text-center text-muted-foreground">
+                  <TableCell colSpan={canEdit ? 5 : 3} className="text-center text-muted-foreground">
                     Belum ada data
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
-          {isAdmin && <BulkActionBar onDelete={(ids) => handleBulkDelete(table, ids)} itemName="data" />}
+          {canEdit && <BulkActionBar onDelete={(ids) => handleBulkDelete(table, ids)} itemName="data" />}
         </CardContent>
       </Card>
     );
@@ -354,7 +355,7 @@ function KurikulumContent() {
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">PL - Profil Lulusan</CardTitle>
-          {isAdmin && (
+          {canEdit && (
             <Button size="sm" onClick={() => openEdit('profil_lulusan', { code: '', profil: '', deskripsi: '' }, true)}>
               <Plus className="h-4 w-4 mr-1" /> Tambah
             </Button>
@@ -364,7 +365,7 @@ function KurikulumContent() {
           <Table>
             <TableHeader>
               <TableRow className="bg-primary hover:bg-primary">
-                {isAdmin && (
+                {canEdit && (
                   <TableHead className="text-primary-foreground w-12">
                     <BulkSelectAllCheckbox ids={ids} />
                   </TableHead>
@@ -373,14 +374,14 @@ function KurikulumContent() {
                 <TableHead className="text-primary-foreground w-24">Kode</TableHead>
                 <TableHead className="text-primary-foreground">Profil Lulusan</TableHead>
                 <TableHead className="text-primary-foreground">Deskripsi</TableHead>
-                {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+                {canEdit && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {profilLulusan.length > 0 ? (
                 profilLulusan.map((item, idx) => (
                   <TableRow key={item.id}>
-                    {isAdmin && (
+                    {canEdit && (
                       <TableCell>
                         <BulkSelectCheckbox id={item.id} />
                       </TableCell>
@@ -389,7 +390,7 @@ function KurikulumContent() {
                     <TableCell>{item.code}</TableCell>
                     <TableCell>{item.profil}</TableCell>
                     <TableCell>{item.deskripsi || '-'}</TableCell>
-                    {isAdmin && (
+                    {canEdit && (
                       <TableCell>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" onClick={() => openEdit('profil_lulusan', item, false)}>
@@ -405,14 +406,14 @@ function KurikulumContent() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 6 : 4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={canEdit ? 6 : 4} className="text-center text-muted-foreground">
                     Belum ada data
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
-          {isAdmin && <BulkActionBar onDelete={(ids) => handleBulkDelete('profil_lulusan', ids)} itemName="profil lulusan" />}
+          {canEdit && <BulkActionBar onDelete={(ids) => handleBulkDelete('profil_lulusan', ids)} itemName="profil lulusan" />}
         </CardContent>
       </Card>
     );
@@ -425,7 +426,7 @@ function KurikulumContent() {
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">CPL - Capaian Pembelajaran Lulusan</CardTitle>
-          {isAdmin && (
+          {canEdit && (
             <Button size="sm" onClick={() => openEdit('plos', { code: '', description: '', profil_lulusan_ids: [] }, true)}>
               <Plus className="h-4 w-4 mr-1" /> Tambah
             </Button>
@@ -435,7 +436,7 @@ function KurikulumContent() {
           <Table>
             <TableHeader>
               <TableRow className="bg-primary hover:bg-primary">
-                {isAdmin && (
+                {canEdit && (
                   <TableHead className="text-primary-foreground w-12">
                     <BulkSelectAllCheckbox ids={ids} />
                   </TableHead>
@@ -444,7 +445,7 @@ function KurikulumContent() {
                 <TableHead className="text-primary-foreground w-24">Kode</TableHead>
                 <TableHead className="text-primary-foreground">CPL</TableHead>
                 <TableHead className="text-primary-foreground">PL</TableHead>
-                {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+                {canEdit && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -453,7 +454,7 @@ function KurikulumContent() {
                   const itemPls = item.plo_profil_lulusan?.map((ppl: any) => ppl.profil_lulusan).filter(Boolean) || [];
                   return (
                     <TableRow key={item.id}>
-                      {isAdmin && (
+                      {canEdit && (
                         <TableCell>
                           <BulkSelectCheckbox id={item.id} />
                         </TableCell>
@@ -490,7 +491,7 @@ function KurikulumContent() {
                           </div>
                         ) : '-'}
                       </TableCell>
-                      {isAdmin && (
+                      {canEdit && (
                         <TableCell>
                           <div className="flex gap-1">
                             <Button
@@ -520,14 +521,14 @@ function KurikulumContent() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 6 : 4} className="text-center text-muted-foreground">
+                  <TableCell colSpan={canEdit ? 6 : 4} className="text-center text-muted-foreground">
                     Belum ada data
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
-          {isAdmin && <BulkActionBar onDelete={(ids) => handleBulkDelete('plos', ids)} itemName="CPL" />}
+          {canEdit && <BulkActionBar onDelete={(ids) => handleBulkDelete('plos', ids)} itemName="CPL" />}
         </CardContent>
       </Card>
     );
@@ -595,7 +596,7 @@ function KurikulumContent() {
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">BK - Bahan Kajian</CardTitle>
-          {isAdmin && (
+          {canEdit && (
             <Button size="sm" onClick={() => setBkDialog(true)}>
               <Plus className="h-4 w-4 mr-1" /> Tambah
             </Button>
@@ -605,7 +606,7 @@ function KurikulumContent() {
           <Table>
             <TableHeader>
               <TableRow className="bg-primary hover:bg-primary">
-                {isAdmin && (
+                {canEdit && (
                   <TableHead className="text-primary-foreground w-12">
                     <BulkSelectAllCheckbox ids={ids} />
                   </TableHead>
@@ -613,14 +614,14 @@ function KurikulumContent() {
                 <TableHead className="text-primary-foreground w-16">No</TableHead>
                 <TableHead className="text-primary-foreground">Kelompok BK</TableHead>
                 <TableHead className="text-primary-foreground">Bahan Kajian</TableHead>
-                {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+                {canEdit && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {bahanKajianKelompok.length > 0 ? (
                 bahanKajianKelompok.map((item, idx) => (
                   <TableRow key={item.id}>
-                    {isAdmin && (
+                    {canEdit && (
                       <TableCell>
                         <BulkSelectCheckbox id={item.id} />
                       </TableCell>
@@ -634,7 +635,7 @@ function KurikulumContent() {
                         ))}
                       </ul>
                     </TableCell>
-                    {isAdmin && (
+                    {canEdit && (
                       <TableCell>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" onClick={() => openEditBk(item)}>
@@ -650,14 +651,14 @@ function KurikulumContent() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 5 : 3} className="text-center text-muted-foreground">
+                  <TableCell colSpan={canEdit ? 5 : 3} className="text-center text-muted-foreground">
                     Belum ada data
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
-          {isAdmin && <BulkActionBar onDelete={(ids) => handleBulkDelete('bahan_kajian_kelompok', ids)} itemName="bahan kajian" />}
+          {canEdit && <BulkActionBar onDelete={(ids) => handleBulkDelete('bahan_kajian_kelompok', ids)} itemName="bahan kajian" />}
 
           {/* Bahan Kajian Dialog */}
           <Dialog open={bkDialog} onOpenChange={(open) => { if (!open) resetBkForm(); }}>
@@ -745,7 +746,7 @@ function KurikulumContent() {
       <Card className="mb-6">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg">MK - Mata Kuliah</CardTitle>
-          {isAdmin && (
+          {canEdit && (
             <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', ploIds: [], plIds: [] }, true)}>
               <Plus className="h-4 w-4 mr-1" /> Tambah
             </Button>
@@ -755,7 +756,7 @@ function KurikulumContent() {
           <Table>
             <TableHeader>
               <TableRow className="bg-primary hover:bg-primary">
-                {isAdmin && (
+                {canEdit && (
                   <TableHead className="text-primary-foreground w-12">
                     <BulkSelectAllCheckbox ids={ids} />
                   </TableHead>
@@ -767,7 +768,7 @@ function KurikulumContent() {
                 <TableHead className="text-primary-foreground">Semester</TableHead>
                 <TableHead className="text-primary-foreground">CPL/PLO</TableHead>
                 <TableHead className="text-primary-foreground">PL</TableHead>
-                {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+                {canEdit && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -778,7 +779,7 @@ function KurikulumContent() {
                   const coursePls = course.course_profil_lulusan?.map((cpl: any) => cpl.profil_lulusan) || [];
                   return (
                     <TableRow key={course.id}>
-                      {isAdmin && (
+                      {canEdit && (
                         <TableCell>
                           <BulkSelectCheckbox id={course.id} />
                         </TableCell>
@@ -842,7 +843,7 @@ function KurikulumContent() {
                           </div>
                         ) : '-'}
                       </TableCell>
-                      {isAdmin && (
+                      {canEdit && (
                         <TableCell>
                           <div className="flex gap-1">
                             <Button
@@ -879,14 +880,14 @@ function KurikulumContent() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={isAdmin ? 9 : 7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={canEdit ? 9 : 7} className="text-center text-muted-foreground">
                     Belum ada data
                   </TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
-          {isAdmin && <BulkActionBar onDelete={(ids) => handleBulkDelete('courses', ids)} itemName="mata kuliah" />}
+          {canEdit && <BulkActionBar onDelete={(ids) => handleBulkDelete('courses', ids)} itemName="mata kuliah" />}
         </CardContent>
       </Card>
     );
