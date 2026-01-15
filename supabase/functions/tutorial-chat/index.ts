@@ -63,7 +63,10 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Fetch AI settings from app_settings
+    // Check for GEMINI_API_KEY from environment first (priority)
+    const envGeminiKey = Deno.env.get("GEMINI_API_KEY");
+
+    // Fetch AI settings from app_settings as fallback
     const { data: settingsData } = await supabase
       .from("app_settings")
       .select("setting_key, setting_value")
@@ -74,11 +77,13 @@ serve(async (req) => {
       settings[s.setting_key] = s.setting_value || "";
     });
 
-    const aiApiKey = settings["ai_api_key"];
-    const aiProvider = settings["ai_provider"] || "gemini";
+    // Use environment GEMINI_API_KEY if available, otherwise fall back to app_settings
+    const aiApiKey = envGeminiKey || settings["ai_api_key"];
+    // If using env key, default to gemini provider
+    const aiProvider = envGeminiKey ? "gemini" : (settings["ai_provider"] || "gemini");
 
     if (!aiApiKey) {
-      throw new Error("API Key AI belum dikonfigurasi. Silakan konfigurasi di halaman Pengaturan.");
+      throw new Error("API Key AI belum dikonfigurasi. Pastikan GEMINI_API_KEY sudah ditambahkan atau konfigurasi di halaman Pengaturan.");
     }
 
     // Determine API URL and model based on provider
