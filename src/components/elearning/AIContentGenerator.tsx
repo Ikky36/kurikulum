@@ -8,8 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { Wand2, Upload, FileText, Loader2, Sparkles, X } from 'lucide-react';
+import { Wand2, Upload, FileText, Loader2, Sparkles, X, Languages } from 'lucide-react';
 import { useAIGeneration } from '@/hooks/useElearningMaterials';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface AIContentGeneratorProps {
   type: 'material' | 'quiz';
@@ -21,6 +22,8 @@ interface AIContentGeneratorProps {
   questionType?: string;
   questionCount?: number;
 }
+
+type LanguageMode = 'arabic' | 'indonesian' | 'mixed';
 
 export function AIContentGenerator({ 
   type, 
@@ -42,6 +45,7 @@ export function AIContentGenerator({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationType, setGenerationType] = useState<'from_scratch' | 'from_file' | 'enhance'>('from_scratch');
   const [contentLength, setContentLength] = useState<'short' | 'medium' | 'long'>('medium');
+  const [languageMode, setLanguageMode] = useState<LanguageMode>('indonesian');
   const [progress, setProgress] = useState(0);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,6 +158,7 @@ Buat ${contentLength === 'short' ? '5' : contentLength === 'medium' ? '10' : '15
         indicators: indicators.length > 0 ? indicators : (lloData?.indikator || []),
         questionType: questionType,
         questionCount: questionCount,
+        languageMode: languageMode,
       });
 
       setProgress(100);
@@ -279,6 +284,47 @@ Buat ${contentLength === 'short' ? '5' : contentLength === 'medium' ? '10' : '15
             }
             className="min-h-[100px]"
           />
+        </div>
+
+        {/* Language Mode Toggle */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <Languages className="h-4 w-4" />
+            Bahasa Output
+          </Label>
+          <ToggleGroup 
+            type="single" 
+            value={languageMode} 
+            onValueChange={(v) => v && setLanguageMode(v as LanguageMode)}
+            className="justify-start flex-wrap"
+          >
+            <ToggleGroupItem 
+              value="arabic" 
+              className="flex-1 min-w-[100px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              <span className="font-arabic text-lg ml-1">عربي</span>
+              <span className="text-xs ml-1">Arab</span>
+            </ToggleGroupItem>
+            <ToggleGroupItem 
+              value="indonesian" 
+              className="flex-1 min-w-[100px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              🇮🇩 Indonesia
+            </ToggleGroupItem>
+            <ToggleGroupItem 
+              value="mixed" 
+              className="flex-1 min-w-[100px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              <span className="font-arabic">عربي</span>
+              <span className="mx-1">+</span>
+              <span>ID</span>
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <p className="text-xs text-muted-foreground">
+            {languageMode === 'arabic' && 'Output akan sepenuhnya dalam bahasa Arab dengan harakat lengkap'}
+            {languageMode === 'indonesian' && 'Output akan sepenuhnya dalam bahasa Indonesia'}
+            {languageMode === 'mixed' && 'Output akan menggunakan bahasa Arab (dengan harakat) dan terjemahan Indonesia'}
+          </p>
         </div>
 
         {/* Content Length */}
