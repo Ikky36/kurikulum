@@ -350,20 +350,41 @@ export default function DashboardAdmin() {
     },
   });
 
-  // Bulk delete mutation
+  // Bulk delete mutation - using batch function for speed
   const bulkDeleteUsersMutation = useMutation({
     mutationFn: async (userIds: string[]) => {
-      for (const userId of userIds) {
-        const { error: roleError } = await supabase.from('user_roles').delete().eq('user_id', userId);
-        if (roleError) console.error(roleError);
-        const { error: profileError } = await supabase.from('profiles').delete().eq('id', userId);
-        if (profileError) throw profileError;
+      // Process in batches of 50 for optimal performance
+      const batchSize = 50;
+      let totalDeleted = 0;
+      let totalFailed = 0;
+
+      for (let i = 0; i < userIds.length; i += batchSize) {
+        const batch = userIds.slice(i, i + batchSize);
+        
+        const { data, error } = await supabase.functions.invoke('admin-bulk-users', {
+          body: {
+            action: 'delete',
+            user_ids: batch,
+          },
+        });
+
+        if (error) {
+          totalFailed += batch.length;
+        } else if (data) {
+          totalDeleted += data.deleted || 0;
+          totalFailed += data.failed || 0;
+        }
       }
+
+      return { deleted: totalDeleted, failed: totalFailed };
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (result, variables) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
       queryClient.invalidateQueries({ queryKey: ['admin-dosen'] });
-      toast({ title: 'Berhasil', description: `${variables.length} akun berhasil dihapus` });
+      toast({ 
+        title: 'Berhasil', 
+        description: `${result.deleted} akun berhasil dihapus${result.failed > 0 ? `, ${result.failed} gagal` : ''}` 
+      });
       setShowBulkDeleteDialog(false);
       setSelectedUserIds([]);
     },

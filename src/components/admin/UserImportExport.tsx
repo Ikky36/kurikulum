@@ -248,7 +248,7 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
     }
   };
 
-  // Import valid data
+  // Import valid data - using batch function for speed
   const handleImport = async () => {
     const validData = importData.filter(row => row.isValid);
     if (validData.length === 0) {
@@ -259,63 +259,78 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
     setImporting(true);
     setImportProgress({ current: 0, total: validData.length });
 
-    let successCount = 0;
-    let errorCount = 0;
-
-    for (let i = 0; i < validData.length; i++) {
-      const row = validData[i];
-      setImportProgress({ current: i + 1, total: validData.length });
-
-      // Find sistem_kuliah_id
-      let sistemKuliahId: string | undefined;
-      if (row.sistem_kuliah && sistemKuliahList) {
-        const found = sistemKuliahList.find(sk => sk.name.toLowerCase() === row.sistem_kuliah?.toLowerCase());
-        if (found) {
-          sistemKuliahId = found.id;
+    try {
+      // Prepare batch data with sistem_kuliah_id mapping
+      const usersToCreate = validData.map(row => {
+        let sistemKuliahId: string | undefined;
+        if (row.sistem_kuliah && sistemKuliahList) {
+          const found = sistemKuliahList.find(sk => sk.name.toLowerCase() === row.sistem_kuliah?.toLowerCase());
+          if (found) {
+            sistemKuliahId = found.id;
+          }
         }
-      }
 
-      try {
-        const { data, error } = await supabase.functions.invoke('admin-create-user', {
+        return {
+          email: row.email,
+          password: row.password,
+          full_name: row.full_name,
+          role: row.role,
+          nim: row.nim,
+          nip: row.nip,
+          program: row.program,
+          class_group: row.class_group,
+          enrollment_year: row.enrollment_year ? parseInt(row.enrollment_year) : undefined,
+          gender: row.gender,
+          sistem_kuliah_id: sistemKuliahId,
+        };
+      });
+
+      // Process in batches of 50 for optimal performance
+      const batchSize = 50;
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (let i = 0; i < usersToCreate.length; i += batchSize) {
+        const batch = usersToCreate.slice(i, i + batchSize);
+        setImportProgress({ current: Math.min(i + batchSize, usersToCreate.length), total: usersToCreate.length });
+
+        const { data, error } = await supabase.functions.invoke('admin-bulk-users', {
           body: {
-            email: row.email,
-            password: row.password,
-            full_name: row.full_name,
-            role: row.role,
-            nim: row.nim,
-            nip: row.nip,
-            program: row.program,
-            class_group: row.class_group,
-            enrollment_year: row.enrollment_year ? parseInt(row.enrollment_year) : undefined,
-            gender: row.gender,
-            sistem_kuliah_id: sistemKuliahId,
+            action: 'create',
+            users: batch,
           },
         });
 
-        if (error || data?.error) {
-          errorCount++;
-        } else {
-          successCount++;
+        if (error) {
+          errorCount += batch.length;
+        } else if (data) {
+          successCount += data.created || 0;
+          errorCount += data.failed || 0;
         }
-      } catch (err) {
-        errorCount++;
       }
-    }
 
-    setImporting(false);
-    setShowImportDialog(false);
-    setImportData([]);
+      setImporting(false);
+      setShowImportDialog(false);
+      setImportData([]);
 
-    if (successCount > 0) {
-      onImportSuccess();
-      toast({
-        title: 'Import selesai',
-        description: `${successCount} akun berhasil diimport${errorCount > 0 ? `, ${errorCount} gagal` : ''}`,
-      });
-    } else {
+      if (successCount > 0) {
+        onImportSuccess();
+        toast({
+          title: 'Import selesai',
+          description: `${successCount} akun berhasil diimport${errorCount > 0 ? `, ${errorCount} gagal` : ''}`,
+        });
+      } else {
+        toast({
+          title: 'Import gagal',
+          description: 'Tidak ada akun yang berhasil diimport',
+          variant: 'destructive',
+        });
+      }
+    } catch (err: any) {
+      setImporting(false);
       toast({
         title: 'Import gagal',
-        description: 'Tidak ada akun yang berhasil diimport',
+        description: err.message || 'Terjadi kesalahan saat import',
         variant: 'destructive',
       });
     }
