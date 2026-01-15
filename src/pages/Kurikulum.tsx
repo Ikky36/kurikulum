@@ -15,6 +15,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { 
+  BulkSelectProvider, 
+  BulkSelectCheckbox, 
+  BulkSelectAllCheckbox, 
+  BulkActionBar,
+  useBulkSelect 
+} from '@/components/ui/bulk-select-table';
 
 type VmtsPtVisi = { id: string; visi: string };
 type VmtsPtMisi = { id: string; code: string; misi: string };
@@ -27,10 +34,11 @@ type VmtsPsStrategi = { id: string; code: string; strategi: string };
 type ProfilLulusan = { id: string; code: string; profil: string; deskripsi: string | null };
 type BahanKajianKelompok = { id: string; kelompok: string; bahan_kajian: string };
 
-export default function Kurikulum() {
+function KurikulumContent() {
   const { profile } = useAuth();
   const queryClient = useQueryClient();
   const isAdmin = profile?.role === 'admin';
+  const { clearSelection } = useBulkSelect();
 
   // Enable realtime for curriculum-related tables
   useMultiTableRealtimeSubscription([
@@ -200,6 +208,15 @@ export default function Kurikulum() {
     },
   });
 
+  // Bulk delete function
+  const handleBulkDelete = async (table: string, ids: string[]) => {
+    const { error } = await supabase.from(table as any).delete().in('id', ids);
+    if (error) throw error;
+    queryClient.invalidateQueries();
+    clearSelection();
+    toast.success(`${ids.length} data berhasil dihapus`);
+  };
+
   const openEdit = (type: string, data: any, isNew: boolean) => {
     setFormData(data || {});
     setEditDialog({ type, data, isNew });
@@ -255,272 +272,266 @@ export default function Kurikulum() {
     },
   });
 
-  const renderVisiTable = (title: string, data: { id: string; visi: string } | undefined, table: string) => (
-    <Card className="mb-6">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg">{title}</CardTitle>
-        {isAdmin && !data && (
-          <Button size="sm" onClick={() => openEdit(table, { visi: '' }, true)}>
-            <Plus className="h-4 w-4 mr-1" /> Tambah
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-primary hover:bg-primary">
-              <TableHead className="text-primary-foreground w-16">No</TableHead>
-              <TableHead className="text-primary-foreground">{title}</TableHead>
-              {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data ? (
-              <TableRow>
-                <TableCell>1</TableCell>
-                <TableCell>{data.visi}</TableCell>
-                {isAdmin && (
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(table, data, false)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(table, data.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                )}
-              </TableRow>
-            ) : (
-              <TableRow>
-                <TableCell colSpan={isAdmin ? 3 : 2} className="text-center text-muted-foreground">
-                  Belum ada data
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-
   const renderCodeTable = (
     title: string,
     data: { id: string; code: string; [key: string]: any }[],
     table: string,
     valueKey: string,
     valueLabel: string
-  ) => (
-    <Card className="mb-6">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg">{title}</CardTitle>
-        {isAdmin && (
-          <Button size="sm" onClick={() => openEdit(table, { code: '', [valueKey]: '' }, true)}>
-            <Plus className="h-4 w-4 mr-1" /> Tambah
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-primary hover:bg-primary">
-              <TableHead className="text-primary-foreground w-16">No</TableHead>
-              <TableHead className="text-primary-foreground w-24">Kode</TableHead>
-              <TableHead className="text-primary-foreground">{valueLabel}</TableHead>
-              {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {data.length > 0 ? (
-              data.map((item, idx) => (
-                <TableRow key={item.id}>
-                  <TableCell>{idx + 1}</TableCell>
-                  <TableCell>{item.code}</TableCell>
-                  <TableCell>{item[valueKey]}</TableCell>
-                  {isAdmin && (
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(table, item, false)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete(table, item.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={isAdmin ? 4 : 3} className="text-center text-muted-foreground">
-                  Belum ada data
-                </TableCell>
+  ) => {
+    const ids = data.map(item => item.id);
+    
+    return (
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">{title}</CardTitle>
+          {isAdmin && (
+            <Button size="sm" onClick={() => openEdit(table, { code: '', [valueKey]: '' }, true)}>
+              <Plus className="h-4 w-4 mr-1" /> Tambah
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-primary hover:bg-primary">
+                {isAdmin && (
+                  <TableHead className="text-primary-foreground w-12">
+                    <BulkSelectAllCheckbox ids={ids} />
+                  </TableHead>
+                )}
+                <TableHead className="text-primary-foreground w-16">No</TableHead>
+                <TableHead className="text-primary-foreground w-24">Kode</TableHead>
+                <TableHead className="text-primary-foreground">{valueLabel}</TableHead>
+                {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-
-  const renderProfilLulusanTable = () => (
-    <Card className="mb-6">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg">PL - Profil Lulusan</CardTitle>
-        {isAdmin && (
-          <Button size="sm" onClick={() => openEdit('profil_lulusan', { code: '', profil: '', deskripsi: '' }, true)}>
-            <Plus className="h-4 w-4 mr-1" /> Tambah
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-primary hover:bg-primary">
-              <TableHead className="text-primary-foreground w-16">No</TableHead>
-              <TableHead className="text-primary-foreground w-24">Kode</TableHead>
-              <TableHead className="text-primary-foreground">Profil Lulusan</TableHead>
-              <TableHead className="text-primary-foreground">Deskripsi</TableHead>
-              {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {profilLulusan.length > 0 ? (
-              profilLulusan.map((item, idx) => (
-                <TableRow key={item.id}>
-                  <TableCell>{idx + 1}</TableCell>
-                  <TableCell>{item.code}</TableCell>
-                  <TableCell>{item.profil}</TableCell>
-                  <TableCell>{item.deskripsi || '-'}</TableCell>
-                  {isAdmin && (
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit('profil_lulusan', item, false)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete('profil_lulusan', item.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={isAdmin ? 5 : 4} className="text-center text-muted-foreground">
-                  Belum ada data
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-
-  const renderCplTable = () => (
-    <Card className="mb-6">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg">CPL - Capaian Pembelajaran Lulusan</CardTitle>
-        {isAdmin && (
-          <Button size="sm" onClick={() => openEdit('plos', { code: '', description: '', profil_lulusan_ids: [] }, true)}>
-            <Plus className="h-4 w-4 mr-1" /> Tambah
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-primary hover:bg-primary">
-              <TableHead className="text-primary-foreground w-16">No</TableHead>
-              <TableHead className="text-primary-foreground w-24">Kode</TableHead>
-              <TableHead className="text-primary-foreground">CPL</TableHead>
-              <TableHead className="text-primary-foreground">PL</TableHead>
-              {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {plos.length > 0 ? (
-              plos.map((item: any, idx: number) => {
-                // Get PL from junction table
-                const itemPls = item.plo_profil_lulusan?.map((ppl: any) => ppl.profil_lulusan).filter(Boolean) || [];
-                return (
+            </TableHeader>
+            <TableBody>
+              {data.length > 0 ? (
+                data.map((item, idx) => (
                   <TableRow key={item.id}>
+                    {isAdmin && (
+                      <TableCell>
+                        <BulkSelectCheckbox id={item.id} />
+                      </TableCell>
+                    )}
                     <TableCell>{idx + 1}</TableCell>
-                    <TableCell>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="cursor-help font-medium">{item.code}</span>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-sm">
-                            <p>{item.description}</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableCell>
-                    <TableCell>{item.description}</TableCell>
-                    <TableCell>
-                      {itemPls.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {itemPls.map((pl: any, i: number) => (
-                            <TooltipProvider key={i}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="cursor-help bg-muted px-1.5 py-0.5 rounded text-xs">{pl.code}</span>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-sm">
-                                  <p>{pl.profil}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ))}
-                        </div>
-                      ) : '-'}
-                    </TableCell>
+                    <TableCell>{item.code}</TableCell>
+                    <TableCell>{item[valueKey]}</TableCell>
                     {isAdmin && (
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => openEdit('plos', { 
-                              id: item.id, 
-                              code: item.code, 
-                              description: item.description, 
-                              profil_lulusan_ids: item.plo_profil_lulusan?.map((ppl: any) => ppl.profil_lulusan_id) || []
-                            }, false)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete('plos', item.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(table, item, false)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(table, item.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={isAdmin ? 5 : 3} className="text-center text-muted-foreground">
+                    Belum ada data
+                  </TableCell>
                 </TableRow>
-                );
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={isAdmin ? 5 : 4} className="text-center text-muted-foreground">
-                  Belum ada data
-                </TableCell>
+              )}
+            </TableBody>
+          </Table>
+          {isAdmin && <BulkActionBar onDelete={(ids) => handleBulkDelete(table, ids)} itemName="data" />}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderProfilLulusanTable = () => {
+    const ids = profilLulusan.map(item => item.id);
+    
+    return (
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">PL - Profil Lulusan</CardTitle>
+          {isAdmin && (
+            <Button size="sm" onClick={() => openEdit('profil_lulusan', { code: '', profil: '', deskripsi: '' }, true)}>
+              <Plus className="h-4 w-4 mr-1" /> Tambah
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-primary hover:bg-primary">
+                {isAdmin && (
+                  <TableHead className="text-primary-foreground w-12">
+                    <BulkSelectAllCheckbox ids={ids} />
+                  </TableHead>
+                )}
+                <TableHead className="text-primary-foreground w-16">No</TableHead>
+                <TableHead className="text-primary-foreground w-24">Kode</TableHead>
+                <TableHead className="text-primary-foreground">Profil Lulusan</TableHead>
+                <TableHead className="text-primary-foreground">Deskripsi</TableHead>
+                {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
+            </TableHeader>
+            <TableBody>
+              {profilLulusan.length > 0 ? (
+                profilLulusan.map((item, idx) => (
+                  <TableRow key={item.id}>
+                    {isAdmin && (
+                      <TableCell>
+                        <BulkSelectCheckbox id={item.id} />
+                      </TableCell>
+                    )}
+                    <TableCell>{idx + 1}</TableCell>
+                    <TableCell>{item.code}</TableCell>
+                    <TableCell>{item.profil}</TableCell>
+                    <TableCell>{item.deskripsi || '-'}</TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit('profil_lulusan', item, false)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete('profil_lulusan', item.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={isAdmin ? 6 : 4} className="text-center text-muted-foreground">
+                    Belum ada data
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+          {isAdmin && <BulkActionBar onDelete={(ids) => handleBulkDelete('profil_lulusan', ids)} itemName="profil lulusan" />}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const renderCplTable = () => {
+    const ids = plos.map((item: any) => item.id);
+    
+    return (
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">CPL - Capaian Pembelajaran Lulusan</CardTitle>
+          {isAdmin && (
+            <Button size="sm" onClick={() => openEdit('plos', { code: '', description: '', profil_lulusan_ids: [] }, true)}>
+              <Plus className="h-4 w-4 mr-1" /> Tambah
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-primary hover:bg-primary">
+                {isAdmin && (
+                  <TableHead className="text-primary-foreground w-12">
+                    <BulkSelectAllCheckbox ids={ids} />
+                  </TableHead>
+                )}
+                <TableHead className="text-primary-foreground w-16">No</TableHead>
+                <TableHead className="text-primary-foreground w-24">Kode</TableHead>
+                <TableHead className="text-primary-foreground">CPL</TableHead>
+                <TableHead className="text-primary-foreground">PL</TableHead>
+                {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {plos.length > 0 ? (
+                plos.map((item: any, idx: number) => {
+                  const itemPls = item.plo_profil_lulusan?.map((ppl: any) => ppl.profil_lulusan).filter(Boolean) || [];
+                  return (
+                    <TableRow key={item.id}>
+                      {isAdmin && (
+                        <TableCell>
+                          <BulkSelectCheckbox id={item.id} />
+                        </TableCell>
+                      )}
+                      <TableCell>{idx + 1}</TableCell>
+                      <TableCell>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help font-medium">{item.code}</span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-sm">
+                              <p>{item.description}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                      <TableCell>{item.description}</TableCell>
+                      <TableCell>
+                        {itemPls.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {itemPls.map((pl: any, i: number) => (
+                              <TooltipProvider key={i}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-help bg-muted px-1.5 py-0.5 rounded text-xs">{pl.code}</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-sm">
+                                    <p>{pl.profil}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ))}
+                          </div>
+                        ) : '-'}
+                      </TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => openEdit('plos', { 
+                                id: item.id, 
+                                code: item.code, 
+                                description: item.description, 
+                                profil_lulusan_ids: item.plo_profil_lulusan?.map((ppl: any) => ppl.profil_lulusan_id) || []
+                              }, false)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete('plos', item.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={isAdmin ? 6 : 4} className="text-center text-muted-foreground">
+                    Belum ada data
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+          {isAdmin && <BulkActionBar onDelete={(ids) => handleBulkDelete('plos', ids)} itemName="CPL" />}
+        </CardContent>
+      </Card>
+    );
+  };
 
   // State for Bahan Kajian dialog
   const [bkDialog, setBkDialog] = useState(false);
@@ -577,293 +588,322 @@ export default function Kurikulum() {
     setBkDialog(true);
   };
 
-  const renderBahanKajianTable = () => (
-    <Card className="mb-6">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg">BK - Bahan Kajian</CardTitle>
-        {isAdmin && (
-          <Button size="sm" onClick={() => setBkDialog(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Tambah
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-primary hover:bg-primary">
-              <TableHead className="text-primary-foreground w-16">No</TableHead>
-              <TableHead className="text-primary-foreground">Kelompok BK</TableHead>
-              <TableHead className="text-primary-foreground">Bahan Kajian</TableHead>
-              {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {bahanKajianKelompok.length > 0 ? (
-              bahanKajianKelompok.map((item, idx) => (
-                <TableRow key={item.id}>
-                  <TableCell>{idx + 1}</TableCell>
-                  <TableCell>{item.kelompok}</TableCell>
-                  <TableCell>
-                    <ul className="list-disc list-inside space-y-1">
-                      {item.bahan_kajian.split(', ').map((bk, i) => (
-                        <li key={i} className="text-sm">{bk.trim()}</li>
-                      ))}
-                    </ul>
-                  </TableCell>
-                  {isAdmin && (
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEditBk(item)}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => handleDelete('bahan_kajian_kelompok', item.id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={isAdmin ? 4 : 3} className="text-center text-muted-foreground">
-                  Belum ada data
-                </TableCell>
+  const renderBahanKajianTable = () => {
+    const ids = bahanKajianKelompok.map(item => item.id);
+    
+    return (
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">BK - Bahan Kajian</CardTitle>
+          {isAdmin && (
+            <Button size="sm" onClick={() => setBkDialog(true)}>
+              <Plus className="h-4 w-4 mr-1" /> Tambah
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-primary hover:bg-primary">
+                {isAdmin && (
+                  <TableHead className="text-primary-foreground w-12">
+                    <BulkSelectAllCheckbox ids={ids} />
+                  </TableHead>
+                )}
+                <TableHead className="text-primary-foreground w-16">No</TableHead>
+                <TableHead className="text-primary-foreground">Kelompok BK</TableHead>
+                <TableHead className="text-primary-foreground">Bahan Kajian</TableHead>
+                {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-
-        {/* Bahan Kajian Dialog */}
-        <Dialog open={bkDialog} onOpenChange={(open) => { if (!open) resetBkForm(); }}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
-              <DialogTitle>{editingBk ? 'Edit Bahan Kajian' : 'Tambah Bahan Kajian'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <label className="text-sm font-medium">Kelompok BK</label>
-                <Input 
-                  value={bkKelompok} 
-                  onChange={(e) => setBkKelompok(e.target.value)} 
-                  placeholder="Contoh: Kelompok A"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium">Pilih Mata Kuliah</label>
-                <Select value={selectedCourseForBk} onValueChange={setSelectedCourseForBk}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih mata kuliah..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {courses.map((course: any) => (
-                      <SelectItem key={course.id} value={course.id}>
-                        {course.code} - {course.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              {selectedCourseForBk && (
-                <div>
-                  <label className="text-sm font-medium">Pilih Bahan Kajian dari SUB-CPMK/LLO</label>
-                  {availableBahanKajian.length > 0 ? (
-                    <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2 mt-2">
-                      {[...new Set(availableBahanKajian)].map((bk: string, idx: number) => (
-                        <div key={idx} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id={`bk-${idx}`}
-                            checked={selectedBahanKajian.includes(bk)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedBahanKajian([...selectedBahanKajian, bk]);
-                              } else {
-                                setSelectedBahanKajian(selectedBahanKajian.filter(s => s !== bk));
-                              }
-                            }}
-                            className="h-4 w-4 rounded border-gray-300"
-                          />
-                          <label htmlFor={`bk-${idx}`} className="text-sm cursor-pointer flex-1">
-                            {bk}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Tidak ada bahan kajian pada mata kuliah ini. Silakan tambahkan bahan kajian di SUB-CPMK/LLO mata kuliah.
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={resetBkForm}>Batal</Button>
-              <Button onClick={handleSaveBk} disabled={!bkKelompok || selectedBahanKajian.length === 0}>
-                {editingBk ? 'Simpan' : 'Tambah'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
-  );
-
-  const semesterOptions = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'];
-
-  const renderMataKuliahTable = () => (
-    <Card className="mb-6">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-lg">MK - Mata Kuliah</CardTitle>
-        {isAdmin && (
-          <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', ploIds: [], plIds: [] }, true)}>
-            <Plus className="h-4 w-4 mr-1" /> Tambah
-          </Button>
-        )}
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-primary hover:bg-primary">
-              <TableHead className="text-primary-foreground w-16">No</TableHead>
-              <TableHead className="text-primary-foreground w-24">Kode</TableHead>
-              <TableHead className="text-primary-foreground">Nama</TableHead>
-              <TableHead className="text-primary-foreground">Kurikulum</TableHead>
-              <TableHead className="text-primary-foreground">Semester</TableHead>
-              <TableHead className="text-primary-foreground">CPL/PLO</TableHead>
-              <TableHead className="text-primary-foreground">PL</TableHead>
-              {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {courses.length > 0 ? (
-              courses.map((course: any, idx: number) => {
-                const coursePlos = course.course_plos?.map((cp: any) => cp.plos) || [];
-                const cplCodes = coursePlos.map((p: any) => p?.code).filter(Boolean);
-                // Get PL from course_profil_lulusan junction
-                const coursePls = course.course_profil_lulusan?.map((cpl: any) => cpl.profil_lulusan) || [];
-                return (
-                  <TableRow key={course.id}>
+            </TableHeader>
+            <TableBody>
+              {bahanKajianKelompok.length > 0 ? (
+                bahanKajianKelompok.map((item, idx) => (
+                  <TableRow key={item.id}>
+                    {isAdmin && (
+                      <TableCell>
+                        <BulkSelectCheckbox id={item.id} />
+                      </TableCell>
+                    )}
                     <TableCell>{idx + 1}</TableCell>
+                    <TableCell>{item.kelompok}</TableCell>
                     <TableCell>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="cursor-help font-medium">{course.code}</span>
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-sm">
-                            <p>{course.name}</p>
-                                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </TableCell>
-                    <TableCell>
-                      <a href={`/mata-kuliah/${course.id}`} className="hover:text-primary hover:underline transition-colors">
-                        {course.name}
-                      </a>
-                    </TableCell>
-                    <TableCell>{course.curricula?.name || '-'}</TableCell>
-                    <TableCell>{course.semester || '-'}</TableCell>
-                    <TableCell>
-                      {cplCodes.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {cplCodes.map((code: string, i: number) => {
-                            const plo = plos.find((p: any) => p.code === code);
-                            return (
-                              <TooltipProvider key={i}>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <span className="cursor-help bg-muted px-1.5 py-0.5 rounded text-xs">{code}</span>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="max-w-sm">
-                                    <p>{plo?.description || code}</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            );
-                          })}
-                        </div>
-                      ) : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {coursePls.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {coursePls.map((pl: any, i: number) => (
-                            <TooltipProvider key={i}>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="cursor-help bg-muted px-1.5 py-0.5 rounded text-xs">{pl?.code}</span>
-                                </TooltipTrigger>
-                                <TooltipContent className="max-w-sm">
-                                  <p>{pl?.profil || pl?.code}</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          ))}
-                        </div>
-                      ) : '-'}
+                      <ul className="list-disc list-inside space-y-1">
+                        {item.bahan_kajian.split(', ').map((bk, i) => (
+                          <li key={i} className="text-sm">{bk.trim()}</li>
+                        ))}
+                      </ul>
                     </TableCell>
                     {isAdmin && (
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              // Get PL IDs from course_profil_lulusan junction
-                              const existingPlIds = course.course_profil_lulusan?.map((cpl: any) => cpl.profil_lulusan_id) || [];
-                              openEdit('courses', {
-                                id: course.id,
-                                code: course.code,
-                                name: course.name,
-                                semester: course.semester || '',
-                                curriculum_id: course.curriculum_id || '',
-                                passing_score: course.passing_score?.toString() || '60',
-                                ploIds: course.course_plos?.map((cp: any) => cp.plo_id) || [],
-                                plIds: existingPlIds,
-                              }, false);
-                            }}
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => openEditBk(item)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete('courses', course.id)}
-                          >
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete('bahan_kajian_kelompok', item.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
                       </TableCell>
                     )}
                   </TableRow>
-                );
-              })
-            ) : (
-              <TableRow>
-                <TableCell colSpan={isAdmin ? 8 : 7} className="text-center text-muted-foreground">
-                  Belum ada data
-                </TableCell>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={isAdmin ? 5 : 3} className="text-center text-muted-foreground">
+                    Belum ada data
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+          {isAdmin && <BulkActionBar onDelete={(ids) => handleBulkDelete('bahan_kajian_kelompok', ids)} itemName="bahan kajian" />}
+
+          {/* Bahan Kajian Dialog */}
+          <Dialog open={bkDialog} onOpenChange={(open) => { if (!open) resetBkForm(); }}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle>{editingBk ? 'Edit Bahan Kajian' : 'Tambah Bahan Kajian'}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Kelompok BK</label>
+                  <Input 
+                    value={bkKelompok} 
+                    onChange={(e) => setBkKelompok(e.target.value)} 
+                    placeholder="Contoh: Kelompok A"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Pilih Mata Kuliah</label>
+                  <Select value={selectedCourseForBk} onValueChange={setSelectedCourseForBk}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih mata kuliah..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {courses.map((course: any) => (
+                        <SelectItem key={course.id} value={course.id}>
+                          {course.code} - {course.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {selectedCourseForBk && (
+                  <div>
+                    <label className="text-sm font-medium">Pilih Bahan Kajian dari SUB-CPMK/LLO</label>
+                    {availableBahanKajian.length > 0 ? (
+                      <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2 mt-2">
+                        {[...new Set(availableBahanKajian)].map((bk: string, idx: number) => (
+                          <div key={idx} className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              id={`bk-${idx}`}
+                              checked={selectedBahanKajian.includes(bk)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedBahanKajian([...selectedBahanKajian, bk]);
+                                } else {
+                                  setSelectedBahanKajian(selectedBahanKajian.filter(s => s !== bk));
+                                }
+                              }}
+                              className="h-4 w-4 rounded border-gray-300"
+                            />
+                            <label htmlFor={`bk-${idx}`} className="text-sm cursor-pointer flex-1">
+                              {bk}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Tidak ada bahan kajian pada mata kuliah ini. Silakan tambahkan bahan kajian di SUB-CPMK/LLO mata kuliah.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={resetBkForm}>Batal</Button>
+                <Button onClick={handleSaveBk} disabled={!bkKelompok || selectedBahanKajian.length === 0}>
+                  {editingBk ? 'Simpan' : 'Tambah'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </CardContent>
+      </Card>
+    );
+  };
+
+  const semesterOptions = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'];
+
+  const renderMataKuliahTable = () => {
+    const ids = courses.map((course: any) => course.id);
+    
+    return (
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">MK - Mata Kuliah</CardTitle>
+          {isAdmin && (
+            <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', ploIds: [], plIds: [] }, true)}>
+              <Plus className="h-4 w-4 mr-1" /> Tambah
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-primary hover:bg-primary">
+                {isAdmin && (
+                  <TableHead className="text-primary-foreground w-12">
+                    <BulkSelectAllCheckbox ids={ids} />
+                  </TableHead>
+                )}
+                <TableHead className="text-primary-foreground w-16">No</TableHead>
+                <TableHead className="text-primary-foreground w-24">Kode</TableHead>
+                <TableHead className="text-primary-foreground">Nama</TableHead>
+                <TableHead className="text-primary-foreground">Kurikulum</TableHead>
+                <TableHead className="text-primary-foreground">Semester</TableHead>
+                <TableHead className="text-primary-foreground">CPL/PLO</TableHead>
+                <TableHead className="text-primary-foreground">PL</TableHead>
+                {isAdmin && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
-  );
+            </TableHeader>
+            <TableBody>
+              {courses.length > 0 ? (
+                courses.map((course: any, idx: number) => {
+                  const coursePlos = course.course_plos?.map((cp: any) => cp.plos) || [];
+                  const cplCodes = coursePlos.map((p: any) => p?.code).filter(Boolean);
+                  const coursePls = course.course_profil_lulusan?.map((cpl: any) => cpl.profil_lulusan) || [];
+                  return (
+                    <TableRow key={course.id}>
+                      {isAdmin && (
+                        <TableCell>
+                          <BulkSelectCheckbox id={course.id} />
+                        </TableCell>
+                      )}
+                      <TableCell>{idx + 1}</TableCell>
+                      <TableCell>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <span className="cursor-help font-medium">{course.code}</span>
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-sm">
+                              <p>{course.name}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                      <TableCell>
+                        <a href={`/mata-kuliah/${course.id}`} className="hover:text-primary hover:underline transition-colors">
+                          {course.name}
+                        </a>
+                      </TableCell>
+                      <TableCell>{course.curricula?.name || '-'}</TableCell>
+                      <TableCell>{course.semester || '-'}</TableCell>
+                      <TableCell>
+                        {cplCodes.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {cplCodes.map((code: string, i: number) => {
+                              const plo = plos.find((p: any) => p.code === code);
+                              return (
+                                <TooltipProvider key={i}>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="cursor-help bg-muted px-1.5 py-0.5 rounded text-xs">{code}</span>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="max-w-sm">
+                                      <p>{plo?.description || code}</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              );
+                            })}
+                          </div>
+                        ) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        {coursePls.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {coursePls.map((pl: any, i: number) => (
+                              <TooltipProvider key={i}>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="cursor-help bg-muted px-1.5 py-0.5 rounded text-xs">{pl?.code}</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-sm">
+                                    <p>{pl?.profil || pl?.code}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ))}
+                          </div>
+                        ) : '-'}
+                      </TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                const existingPlIds = course.course_profil_lulusan?.map((cpl: any) => cpl.profil_lulusan_id) || [];
+                                openEdit('courses', {
+                                  id: course.id,
+                                  code: course.code,
+                                  name: course.name,
+                                  semester: course.semester || '',
+                                  curriculum_id: course.curriculum_id || '',
+                                  passing_score: course.passing_score?.toString() || '60',
+                                  ploIds: course.course_plos?.map((cp: any) => cp.plo_id) || [],
+                                  plIds: existingPlIds,
+                                }, false);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete('courses', course.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={isAdmin ? 9 : 7} className="text-center text-muted-foreground">
+                    Belum ada data
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+          {isAdmin && <BulkActionBar onDelete={(ids) => handleBulkDelete('courses', ids)} itemName="mata kuliah" />}
+        </CardContent>
+      </Card>
+    );
+  };
 
   const renderEditDialog = () => {
     if (!editDialog) return null;
-    const { type, isNew } = editDialog;
+    const { type, isNew, data } = editDialog;
 
-    // CPL/PLO Dialog
+    // PLO specific dialog with PL multi-select
     if (type === 'plos') {
+      const selectedPlIds = (formData.profil_lulusan_ids as unknown as string[]) || [];
       return (
         <Dialog open onOpenChange={() => setEditDialog(null)}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>{isNew ? 'Tambah' : 'Edit'} CPL/PLO</DialogTitle>
+              <DialogTitle>{isNew ? 'Tambah' : 'Edit'} CPL</DialogTitle>
             </DialogHeader>
             <div className="space-y-4">
               <div>
@@ -871,23 +911,22 @@ export default function Kurikulum() {
                 <Input
                   value={formData.code || ''}
                   onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                  placeholder="Contoh: CPL-1"
+                  placeholder="CPL-1"
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Rumusan CPL/PLO</label>
+                <label className="text-sm font-medium">Deskripsi CPL</label>
                 <Textarea
                   value={formData.description || ''}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Masukkan rumusan CPL/PLO..."
-                  rows={4}
+                  placeholder="Deskripsi CPL"
+                  rows={3}
                 />
               </div>
               <div>
-                <label className="text-sm font-medium">Profil Lulusan (PL) - Dapat Memilih Lebih dari 1</label>
-                <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-2">
+                <label className="text-sm font-medium">Profil Lulusan (PL) - Multi-select</label>
+                <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-2 mt-1">
                   {profilLulusan.map((pl) => {
-                    const selectedPlIds = (formData.profil_lulusan_ids as unknown as string[]) || [];
                     return (
                       <label key={pl.id} className="flex items-center gap-2">
                         <input
@@ -917,7 +956,6 @@ export default function Kurikulum() {
                   const plIds = (profil_lulusan_ids as unknown as string[]) || [];
                   
                   if (isNew) {
-                    // Create the PLO first
                     const { data: newPlo, error: ploError } = await supabase
                       .from('plos')
                       .insert({ code, description })
@@ -929,7 +967,6 @@ export default function Kurikulum() {
                       return;
                     }
                     
-                    // Insert PL relationships
                     if (plIds.length > 0) {
                       const plRelations = plIds.map(plId => ({
                         plo_id: newPlo.id,
@@ -938,7 +975,6 @@ export default function Kurikulum() {
                       await supabase.from('plo_profil_lulusan').insert(plRelations);
                     }
                   } else {
-                    // Update PLO
                     const { error: ploError } = await supabase
                       .from('plos')
                       .update({ code, description })
@@ -949,7 +985,6 @@ export default function Kurikulum() {
                       return;
                     }
                     
-                    // Delete existing PL relationships and insert new ones
                     await supabase.from('plo_profil_lulusan').delete().eq('plo_id', id);
                     if (plIds.length > 0) {
                       const plRelations = plIds.map(plId => ({
@@ -1088,7 +1123,6 @@ export default function Kurikulum() {
                 onClick={async () => {
                   const { id, code, name, semester, curriculum_id, passing_score } = formData;
                   if (isNew) {
-                    // Create course
                     const { data: newCourse, error } = await supabase
                       .from('courses')
                       .insert({ 
@@ -1106,13 +1140,11 @@ export default function Kurikulum() {
                       return;
                     }
                     
-                    // Link PLOs
                     if (selectedPloIds.length > 0) {
                       const inserts = selectedPloIds.map(plo_id => ({ course_id: newCourse.id, plo_id }));
                       await supabase.from('course_plos').insert(inserts);
                     }
                     
-                    // Link PLs (Profil Lulusan)
                     const selectedPlIdsList = (formData.plIds as unknown as string[]) || [];
                     if (selectedPlIdsList.length > 0) {
                       const plInserts = selectedPlIdsList.map(profil_lulusan_id => ({ course_id: newCourse.id, profil_lulusan_id }));
@@ -1123,7 +1155,6 @@ export default function Kurikulum() {
                     toast.success('Mata kuliah berhasil ditambahkan');
                     setEditDialog(null);
                   } else {
-                    // Update course
                     const { error } = await supabase
                       .from('courses')
                       .update({ 
@@ -1140,14 +1171,12 @@ export default function Kurikulum() {
                       return;
                     }
                     
-                    // Update PLO links
                     await supabase.from('course_plos').delete().eq('course_id', id);
                     if (selectedPloIds.length > 0) {
                       const inserts = selectedPloIds.map(plo_id => ({ course_id: id, plo_id }));
                       await supabase.from('course_plos').insert(inserts);
                     }
                     
-                    // Update PL (Profil Lulusan) links
                     const selectedPlIdsList = (formData.plIds as unknown as string[]) || [];
                     await supabase.from('course_profil_lulusan').delete().eq('course_id', id);
                     if (selectedPlIdsList.length > 0) {
@@ -1295,13 +1324,12 @@ export default function Kurikulum() {
                   <Textarea
                     value={formData[field.key] || ''}
                     onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                    placeholder={`Masukkan ${field.label.toLowerCase()}`}
+                    rows={3}
                   />
                 ) : (
                   <Input
                     value={formData[field.key] || ''}
                     onChange={(e) => setFormData({ ...formData, [field.key]: e.target.value })}
-                    placeholder={`Masukkan ${field.label.toLowerCase()}`}
                   />
                 )}
               </div>
@@ -1321,43 +1349,57 @@ export default function Kurikulum() {
   return (
     <Layout>
       <div className="container py-8">
-        <h1 className="text-3xl font-bold mb-8">Kurikulum</h1>
+        <h1 className="font-display text-3xl font-bold mb-6">Kurikulum</h1>
 
-        <Tabs defaultValue="vmts-pt" className="space-y-6">
-          <TabsList className="flex flex-wrap h-auto gap-1">
-            <TabsTrigger value="vmts-pt">VMTS Perguruan Tinggi</TabsTrigger>
-            <TabsTrigger value="vmts-ps">VMTS Program Studi</TabsTrigger>
-            <TabsTrigger value="pl">PL - Profil Lulusan</TabsTrigger>
-            <TabsTrigger value="cpl">CPL - Capaian Pembelajaran</TabsTrigger>
-            <TabsTrigger value="bk">BK - Bahan Kajian</TabsTrigger>
-            <TabsTrigger value="mk">MK - Mata Kuliah</TabsTrigger>
+        <Tabs defaultValue="vmts-pt">
+          <TabsList className="grid grid-cols-2 lg:grid-cols-6 w-full mb-6">
+            <TabsTrigger value="vmts-pt">VMTS PT</TabsTrigger>
+            <TabsTrigger value="vmts-ps">VMTS PS</TabsTrigger>
+            <TabsTrigger value="profil-lulusan">PL</TabsTrigger>
+            <TabsTrigger value="cpl">CPL</TabsTrigger>
+            <TabsTrigger value="bahan-kajian">BK</TabsTrigger>
+            <TabsTrigger value="mata-kuliah">MK</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="vmts-pt" className="space-y-4">
-            {renderVisiTable('Visi PT', ptVisi, 'vmts_pt_visi')}
-            {renderCodeTable('Misi PT', ptMisi, 'vmts_pt_misi', 'misi', 'Misi PT')}
-            {renderCodeTable('Tujuan PT', ptTujuan, 'vmts_pt_tujuan', 'tujuan', 'Tujuan PT')}
-            {renderCodeTable('Strategi PT', ptStrategi, 'vmts_pt_strategi', 'strategi', 'Strategi PT')}
+          <TabsContent value="vmts-pt">
+            {renderCodeTable('Misi PT', ptMisi, 'vmts_pt_misi', 'misi', 'Misi Perguruan Tinggi')}
+            {renderCodeTable('Tujuan PT', ptTujuan, 'vmts_pt_tujuan', 'tujuan', 'Tujuan Perguruan Tinggi')}
+            {renderCodeTable('Strategi PT', ptStrategi, 'vmts_pt_strategi', 'strategi', 'Strategi Perguruan Tinggi')}
           </TabsContent>
 
-          <TabsContent value="vmts-ps" className="space-y-4">
-            {renderVisiTable('Visi Keilmuan PS', psVisi, 'vmts_ps_visi')}
-            {renderCodeTable('Misi PS', psMisi, 'vmts_ps_misi', 'misi', 'Misi PS')}
-            {renderCodeTable('Tujuan PS', psTujuan, 'vmts_ps_tujuan', 'tujuan', 'Tujuan PS')}
-            {renderCodeTable('Strategi PS', psStrategi, 'vmts_ps_strategi', 'strategi', 'Strategi PS')}
+          <TabsContent value="vmts-ps">
+            {renderCodeTable('Misi PS', psMisi, 'vmts_ps_misi', 'misi', 'Misi Program Studi')}
+            {renderCodeTable('Tujuan PS', psTujuan, 'vmts_ps_tujuan', 'tujuan', 'Tujuan Program Studi')}
+            {renderCodeTable('Strategi PS', psStrategi, 'vmts_ps_strategi', 'strategi', 'Strategi Program Studi')}
           </TabsContent>
 
-          <TabsContent value="pl">{renderProfilLulusanTable()}</TabsContent>
+          <TabsContent value="profil-lulusan">
+            {renderProfilLulusanTable()}
+          </TabsContent>
 
-          <TabsContent value="cpl">{renderCplTable()}</TabsContent>
+          <TabsContent value="cpl">
+            {renderCplTable()}
+          </TabsContent>
 
-          <TabsContent value="bk">{renderBahanKajianTable()}</TabsContent>
+          <TabsContent value="bahan-kajian">
+            {renderBahanKajianTable()}
+          </TabsContent>
 
-          <TabsContent value="mk">{renderMataKuliahTable()}</TabsContent>
+          <TabsContent value="mata-kuliah">
+            {renderMataKuliahTable()}
+          </TabsContent>
         </Tabs>
 
         {renderEditDialog()}
       </div>
     </Layout>
+  );
+}
+
+export default function Kurikulum() {
+  return (
+    <BulkSelectProvider>
+      <KurikulumContent />
+    </BulkSelectProvider>
   );
 }
