@@ -841,7 +841,7 @@ export default function DashboardAdmin() {
                                       <SelectItem key={p.id} value={p.name}>{p.name}</SelectItem>
                                     ))}
                                     {(!programs || programs.length === 0) && (
-                                      <SelectItem value="" disabled>Belum ada prodi. Buat di Pengaturan.</SelectItem>
+                                      <SelectItem value="__empty__" disabled>Belum ada prodi. Buat di Pengaturan.</SelectItem>
                                     )}
                                   </SelectContent>
                                 </Select>
@@ -855,7 +855,7 @@ export default function DashboardAdmin() {
                                       <SelectItem key={sk.id} value={sk.id}>{sk.name}</SelectItem>
                                     ))}
                                     {(!sistemKuliahList || sistemKuliahList.length === 0) && (
-                                      <SelectItem value="" disabled>Belum ada sistem kuliah. Buat di Pengaturan.</SelectItem>
+                                      <SelectItem value="__empty__" disabled>Belum ada sistem kuliah. Buat di Pengaturan.</SelectItem>
                                     )}
                                   </SelectContent>
                                 </Select>

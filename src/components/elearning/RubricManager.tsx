@@ -294,14 +294,14 @@ export function RubricManager({ classId, courseId, canEdit }: RubricManagerProps
             <div className="space-y-2">
               <Label htmlFor="rubric-assignment">Terkait Tugas/Quiz (Opsional)</Label>
               <Select 
-                value={newRubric.assignment_id} 
-                onValueChange={(value) => setNewRubric({ ...newRubric, assignment_id: value })}
+                value={newRubric.assignment_id || "none"} 
+                onValueChange={(value) => setNewRubric({ ...newRubric, assignment_id: value === "none" ? "" : value })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Pilih tugas/quiz..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Tidak terkait tugas</SelectItem>
+                  <SelectItem value="none">Tidak terkait tugas</SelectItem>
                   {assignments?.map((a) => (
                     <SelectItem key={a.id} value={a.id}>
                       {a.title}

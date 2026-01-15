@@ -412,8 +412,8 @@ export function AssessmentScoreImportExport({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Semua Kelas</SelectItem>
-                      {uniqueKelas.map(kelas => (
-                        <SelectItem key={kelas} value={kelas || ''}>{kelas}</SelectItem>
+                      {uniqueKelas.filter(kelas => kelas).map(kelas => (
+                        <SelectItem key={kelas} value={kelas!}>{kelas}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
