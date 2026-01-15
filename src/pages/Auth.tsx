@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { GraduationCap, Loader2, ArrowLeft } from 'lucide-react';
 import { z } from 'zod';
 
@@ -24,6 +25,7 @@ export default function Auth() {
   const { user, signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { data: appSettings } = useAppSettings();
   const [loading, setLoading] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
 
@@ -169,7 +171,7 @@ export default function Auth() {
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl gradient-primary shadow-lg">
               <GraduationCap className="h-7 w-7 text-primary-foreground" />
             </div>
-            <CardTitle className="font-display text-2xl">Tracker PBA</CardTitle>
+            <CardTitle className="font-display text-2xl">{appSettings?.app_name || 'Tracker PBA'}</CardTitle>
             <CardDescription>
               Masuk untuk mengakses dashboard
             </CardDescription>
