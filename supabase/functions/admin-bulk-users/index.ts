@@ -228,10 +228,26 @@ serve(async (req) => {
       // Process all deletions in parallel
       const promises = user_ids.map(async (userId) => {
         try {
-          const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+          // First try to delete from auth.users (this will cascade to profiles if FK exists)
+          const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
           
-          if (deleteError) {
-            return { userId, success: false, error: deleteError.message };
+          // If auth user doesn't exist, still try to delete from profiles directly
+          // This handles cases where profiles were created without auth entries
+          if (authDeleteError?.message?.includes("not found") || authDeleteError?.message?.includes("User not found")) {
+            // Delete from user_roles first
+            await supabaseAdmin.from("user_roles").delete().eq("user_id", userId);
+            
+            // Delete from profiles
+            const { error: profileError } = await supabaseAdmin.from("profiles").delete().eq("id", userId);
+            
+            if (profileError) {
+              return { userId, success: false, error: profileError.message };
+            }
+            return { userId, success: true };
+          }
+          
+          if (authDeleteError) {
+            return { userId, success: false, error: authDeleteError.message };
           }
           
           return { userId, success: true };
