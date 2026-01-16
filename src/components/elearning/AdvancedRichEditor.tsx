@@ -259,7 +259,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
     execCommand('hiliteColor', color);
   };
 
-  // Apply text direction (LTR/RTL)
+  // Apply text direction (LTR/RTL) - only changes direction, not font
   const applyTextDirection = useCallback((direction: 'ltr' | 'rtl') => {
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
@@ -278,19 +278,17 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
       }
       
       if (container && container !== editorRef.current) {
+        container.setAttribute('dir', direction);
         container.style.direction = direction;
         container.style.textAlign = direction === 'rtl' ? 'right' : 'left';
-        if (direction === 'rtl') {
-          container.style.fontFamily = "'Scheherazade New', 'Amiri', serif";
-        }
+        container.style.unicodeBidi = 'isolate';
       } else {
         // If no block element found, wrap in a div
         const div = document.createElement('div');
+        div.setAttribute('dir', direction);
         div.style.direction = direction;
         div.style.textAlign = direction === 'rtl' ? 'right' : 'left';
-        if (direction === 'rtl') {
-          div.style.fontFamily = "'Scheherazade New', 'Amiri', serif";
-        }
+        div.style.unicodeBidi = 'isolate';
         range.surroundContents(div);
       }
       
