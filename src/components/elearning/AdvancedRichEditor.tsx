@@ -11,7 +11,8 @@ import {
   Bold, Italic, Underline, Strikethrough, List, ListOrdered, 
   Link, Image, Video, AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Heading1, Heading2, Heading3, Type, Table, Undo, Redo,
-  Palette, FileVideo, ImageIcon, Quote, Code, Minus, Music
+  Palette, FileVideo, ImageIcon, Quote, Code, Minus, Music,
+  PilcrowLeft, PilcrowRight
 } from 'lucide-react';
 
 // Google Fonts list
@@ -258,6 +259,46 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
     execCommand('hiliteColor', color);
   };
 
+  // Apply text direction (LTR/RTL)
+  const applyTextDirection = useCallback((direction: 'ltr' | 'rtl') => {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+      const range = selection.getRangeAt(0);
+      
+      // Check if selection is within a block element
+      let container = range.commonAncestorContainer as HTMLElement;
+      if (container.nodeType === Node.TEXT_NODE) {
+        container = container.parentElement as HTMLElement;
+      }
+      
+      // Find the closest block-level parent
+      const blockElements = ['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'BLOCKQUOTE', 'PRE'];
+      while (container && !blockElements.includes(container.tagName) && container !== editorRef.current) {
+        container = container.parentElement as HTMLElement;
+      }
+      
+      if (container && container !== editorRef.current) {
+        container.style.direction = direction;
+        container.style.textAlign = direction === 'rtl' ? 'right' : 'left';
+        if (direction === 'rtl') {
+          container.style.fontFamily = "'Scheherazade New', 'Amiri', serif";
+        }
+      } else {
+        // If no block element found, wrap in a div
+        const div = document.createElement('div');
+        div.style.direction = direction;
+        div.style.textAlign = direction === 'rtl' ? 'right' : 'left';
+        if (direction === 'rtl') {
+          div.style.fontFamily = "'Scheherazade New', 'Amiri', serif";
+        }
+        range.surroundContents(div);
+      }
+      
+      handleInput();
+    }
+    editorRef.current?.focus();
+  }, [handleInput]);
+
   const ToolbarButton = ({ icon: Icon, onClick, title, active = false }: any) => (
     <Button
       type="button"
@@ -365,6 +406,12 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
           <ToolbarButton icon={AlignCenter} onClick={() => execCommand('justifyCenter')} title="Align Center" />
           <ToolbarButton icon={AlignRight} onClick={() => execCommand('justifyRight')} title="Align Right" />
           <ToolbarButton icon={AlignJustify} onClick={() => execCommand('justifyFull')} title="Justify" />
+
+          <Separator orientation="vertical" className="h-6" />
+
+          {/* Text Direction */}
+          <ToolbarButton icon={PilcrowLeft} onClick={() => applyTextDirection('ltr')} title="Teks dari Kiri (LTR)" />
+          <ToolbarButton icon={PilcrowRight} onClick={() => applyTextDirection('rtl')} title="Teks dari Kanan (RTL/Arab)" />
 
           <Separator orientation="vertical" className="h-6" />
 
