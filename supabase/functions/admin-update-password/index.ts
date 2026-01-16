@@ -71,12 +71,27 @@ serve(async (req) => {
       });
     }
 
+    // First verify the user exists in auth.users
+    const { data: existingUser, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    
+    if (getUserError || !existingUser?.user) {
+      console.log("User not found in auth.users:", userId, getUserError?.message);
+      return new Response(JSON.stringify({ 
+        error: "User not found in authentication system. This profile may have been created without an auth account.",
+        details: "Please delete this profile and recreate the user through the proper signup flow."
+      }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Update user password with admin API
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
       password,
     });
 
     if (updateError) {
+      console.log("Password update error:", updateError.message);
       return new Response(JSON.stringify({ error: updateError.message }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
