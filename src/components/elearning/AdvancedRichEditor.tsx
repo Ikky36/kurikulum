@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -60,6 +60,7 @@ interface AdvancedRichEditorProps {
 export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRichEditorProps) {
   const { toast } = useToast();
   const editorRef = useRef<HTMLDivElement>(null);
+  const isInternalChange = useRef(false);
   const [linkUrl, setLinkUrl] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
@@ -68,6 +69,17 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
   const [tableCols, setTableCols] = useState('3');
   const [selectedFont, setSelectedFont] = useState('inherit');
   const [selectedFontSize, setSelectedFontSize] = useState('16px');
+
+  // Only update innerHTML when value changes externally (not from user input)
+  useEffect(() => {
+    if (editorRef.current && !isInternalChange.current) {
+      // Only update if content is different to avoid unnecessary DOM changes
+      if (editorRef.current.innerHTML !== value) {
+        editorRef.current.innerHTML = value;
+      }
+    }
+    isInternalChange.current = false;
+  }, [value]);
 
   // Load Google Fonts dynamically
   const loadGoogleFont = useCallback((fontName: string) => {
@@ -94,6 +106,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
 
   const handleInput = useCallback(() => {
     if (editorRef.current) {
+      isInternalChange.current = true;
       onChange(editorRef.current.innerHTML);
     }
   }, [onChange]);
@@ -552,9 +565,9 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
         <div
           ref={editorRef}
           contentEditable
+          suppressContentEditableWarning
           className="min-h-[300px] p-4 focus:outline-none prose prose-sm max-w-none"
           onInput={handleInput}
-          dangerouslySetInnerHTML={{ __html: value }}
           style={{ fontFamily: selectedFont !== 'inherit' ? selectedFont : undefined }}
           data-placeholder={placeholder || 'Mulai menulis konten...'}
         />
