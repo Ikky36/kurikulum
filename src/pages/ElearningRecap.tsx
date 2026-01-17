@@ -208,7 +208,7 @@ export default function ElearningRecap() {
 
   return (
     <Layout>
-      <div className="space-y-8 p-2 md:p-0">
+      <div className="space-y-8 px-4 sm:px-6 lg:px-10 xl:px-16">
         {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>

@@ -156,7 +156,7 @@ export default function DashboardMahasiswa() {
 
   return (
     <Layout>
-      <div className="container py-8 lg:py-12">
+      <div className="container py-8 lg:py-12 px-4 sm:px-6 lg:px-10 xl:px-16">
         <div className="mb-8 animate-fade-in">
           <h1 className="font-display text-3xl font-bold lg:text-4xl mb-2">
             Dashboard Mahasiswa
