@@ -274,6 +274,8 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
 
   // Apply text direction (LTR/RTL) - only changes direction, not font
   const applyTextDirection = useCallback((direction: 'ltr' | 'rtl') => {
+    if (!editorRef.current) return;
+    
     const selection = window.getSelection();
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
@@ -307,7 +309,26 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
       
       handleInput();
     }
-    editorRef.current?.focus();
+    
+    // Focus and move cursor to appropriate side based on direction
+    editorRef.current.focus();
+    
+    // Move cursor to the end (right side for RTL, left side for LTR)
+    const sel = window.getSelection();
+    if (sel) {
+      const range = document.createRange();
+      if (direction === 'rtl') {
+        // For RTL, move cursor to the end of the content (which appears on the right)
+        range.selectNodeContents(editorRef.current);
+        range.collapse(false); // false = collapse to end
+      } else {
+        // For LTR, move cursor to the start of the content (which appears on the left)
+        range.selectNodeContents(editorRef.current);
+        range.collapse(true); // true = collapse to start
+      }
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
   }, [handleInput]);
 
   const ToolbarButton = ({ icon: Icon, onClick, title, active = false }: any) => (
