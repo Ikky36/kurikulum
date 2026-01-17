@@ -1350,7 +1350,7 @@ function KurikulumContent() {
 
   return (
     <Layout>
-      <div className="container py-8">
+      <div className="container py-8 px-4 sm:px-6 lg:px-10 xl:px-16">
         <h1 className="font-display text-3xl font-bold mb-6">Kurikulum</h1>
 
         <Tabs defaultValue="vmts-pt">
