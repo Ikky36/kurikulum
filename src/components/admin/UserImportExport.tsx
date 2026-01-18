@@ -313,11 +313,15 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
       setShowImportDialog(false);
       setImportData([]);
 
+      const skippedCount = importData.length - validData.length;
       if (successCount > 0) {
         onImportSuccess();
+        let message = `${successCount} akun berhasil diimport`;
+        if (skippedCount > 0) message += `, ${skippedCount} baris dilewati (data tidak valid)`;
+        if (errorCount > 0) message += `, ${errorCount} gagal tersimpan`;
         toast({
-          title: 'Import selesai',
-          description: `${successCount} akun berhasil diimport${errorCount > 0 ? `, ${errorCount} gagal` : ''}`,
+          title: 'Import Selesai',
+          description: message,
         });
       } else {
         toast({
@@ -368,6 +372,9 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
         <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Preview Import Data</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Data yang valid akan tetap diimport meskipun ada beberapa baris yang error.
+            </p>
           </DialogHeader>
 
           <div className="flex gap-4 mb-4">

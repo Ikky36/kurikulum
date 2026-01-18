@@ -189,8 +189,13 @@ export function AttendanceImportExport({
 
     setImporting(false);
     setShowImportDialog(false);
+    
+    const skippedCount = importData.length - validData.length;
+    const message = skippedCount > 0 
+      ? `${validData.length} data presensi berhasil diimport, ${skippedCount} baris dilewati (data tidak valid)`
+      : `${validData.length} data presensi berhasil diimport`;
+    toast.success(message);
     setImportData([]);
-    toast.success(`${validData.length} data presensi berhasil diimport`);
   };
 
   const validCount = importData.filter(r => r.isValid).length;
@@ -225,6 +230,9 @@ export function AttendanceImportExport({
         <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Preview Import Presensi</DialogTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Data yang valid akan tetap diimport meskipun ada beberapa baris yang error.
+            </p>
           </DialogHeader>
 
           <div className="flex gap-4 mb-4">

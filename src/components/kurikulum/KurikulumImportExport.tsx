@@ -150,11 +150,14 @@ export function KurikulumImportExport({ tableConfig, data }: KurikulumImportExpo
     setImportData([]);
     queryClient.invalidateQueries({ queryKey: [tableConfig.queryKey] });
 
+    const skippedCount = importData.length - validRows.length;
     if (successCount > 0) {
-      toast({ title: 'Import berhasil', description: `${successCount} data berhasil diimport` });
-    }
-    if (errorCount > 0) {
-      toast({ title: 'Beberapa data gagal', description: `${errorCount} data gagal diimport`, variant: 'destructive' });
+      let message = `${successCount} data berhasil diimport`;
+      if (skippedCount > 0) message += `, ${skippedCount} baris dilewati (error/sudah ada)`;
+      if (errorCount > 0) message += `, ${errorCount} gagal tersimpan`;
+      toast({ title: 'Import Selesai', description: message });
+    } else {
+      toast({ title: 'Import gagal', description: 'Tidak ada data yang berhasil diimport', variant: 'destructive' });
     }
   };
 
@@ -191,7 +194,7 @@ export function KurikulumImportExport({ tableConfig, data }: KurikulumImportExpo
           <DialogHeader>
             <DialogTitle>Import {tableConfig.displayName}</DialogTitle>
             <DialogDescription>
-              Preview data yang akan diimport
+              Preview data yang akan diimport. Data yang valid akan tetap diimport meskipun ada beberapa baris yang error.
             </DialogDescription>
           </DialogHeader>
 
