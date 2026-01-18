@@ -323,24 +323,41 @@ export function KurikulumTab() {
         const data = XLSX.utils.sheet_to_json<any>(ws);
 
         let addedCount = 0;
+        let skippedCount = 0;
+        let alreadyExistsCount = 0;
+        
         for (const row of data) {
           const nim = row['NIM']?.toString();
-          if (!nim) continue;
+          if (!nim) {
+            skippedCount++;
+            continue;
+          }
 
           // Find student by NIM
           const student = students?.find(s => s.nim === nim);
-          if (!student) continue;
+          if (!student) {
+            skippedCount++;
+            continue;
+          }
 
           // Check if already in class
           const alreadyInClass = classStudents?.some(cs => cs.class_group_id === classGroup.id && cs.student_profile_id === student.id);
-          if (alreadyInClass) continue;
+          if (alreadyInClass) {
+            alreadyExistsCount++;
+            continue;
+          }
 
           // Add to class
           const { error } = await supabase.from('class_students').insert([{ class_group_id: classGroup.id, student_profile_id: student.id }]);
           if (!error) addedCount++;
+          else skippedCount++;
         }
 
-        toast({ title: 'Berhasil', description: `${addedCount} mahasiswa berhasil ditambahkan ke kelas ${classGroup.name}` });
+        let message = `${addedCount} mahasiswa berhasil ditambahkan ke kelas ${classGroup.name}`;
+        if (skippedCount > 0) message += `, ${skippedCount} dilewati (NIM tidak ditemukan/kosong)`;
+        if (alreadyExistsCount > 0) message += `, ${alreadyExistsCount} sudah terdaftar`;
+        
+        toast({ title: 'Import Selesai', description: message });
         refetchClassStudents();
       } catch (error: any) {
         toast({ title: 'Gagal', description: error.message, variant: 'destructive' });

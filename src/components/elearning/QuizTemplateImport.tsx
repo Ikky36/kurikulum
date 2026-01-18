@@ -139,16 +139,22 @@ export function QuizTemplateImport({ onImport }: QuizTemplateImportProps) {
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData = XLSX.utils.sheet_to_json(worksheet);
 
-      const questions: ParsedQuestion[] = parseQuestions(jsonData, selectedType);
+      const totalRows = jsonData.length;
+      const { valid: questions, skipped } = parseQuestionsWithValidation(jsonData, selectedType);
       
       if (questions.length === 0) {
         throw new Error('Tidak ada soal yang valid ditemukan dalam file');
       }
 
       onImport(questions);
+      
+      const message = skipped > 0 
+        ? `${questions.length} soal berhasil diimport, ${skipped} baris dilewati (data tidak lengkap)`
+        : `${questions.length} soal berhasil diimport`;
+      
       toast({
         title: 'Import Berhasil',
-        description: `${questions.length} soal berhasil diimport`,
+        description: message,
       });
     } catch (error: any) {
       toast({
@@ -162,6 +168,12 @@ export function QuizTemplateImport({ onImport }: QuizTemplateImportProps) {
         fileInputRef.current.value = '';
       }
     }
+  };
+  
+  const parseQuestionsWithValidation = (data: any[], type: string): { valid: ParsedQuestion[]; skipped: number } => {
+    const allQuestions = parseQuestions(data, type);
+    const valid = allQuestions.filter(q => q.question_text && q.question_text.trim() !== '');
+    return { valid, skipped: allQuestions.length - valid.length };
   };
 
   const parseQuestions = (data: any[], type: string): ParsedQuestion[] => {

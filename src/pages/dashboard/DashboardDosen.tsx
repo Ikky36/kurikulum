@@ -291,6 +291,9 @@ export default function DashboardDosen() {
   };
 
   const handleImport = async () => {
+    let successCount = 0;
+    let errorCount = 0;
+    
     for (const item of importPreview) {
       const { error } = await supabase
         .from('grades')
@@ -303,17 +306,27 @@ export default function DashboardDosen() {
         }, { onConflict: 'course_id,student_profile_id' });
 
       if (error) {
-        toast({ title: 'Gagal import', description: error.message, variant: 'destructive' });
-        return;
+        errorCount++;
+      } else {
+        successCount++;
       }
     }
 
-    toast({ title: 'Berhasil', description: `${importPreview.length} nilai berhasil diimport` });
     setShowImportDialog(false);
     setImportPreview([]);
     setImportErrors([]);
     refetchGrades();
     queryClient.invalidateQueries({ queryKey: ['courses-with-stats'] });
+    
+    const skippedCount = importErrors.length;
+    if (successCount > 0) {
+      const message = skippedCount > 0 
+        ? `${successCount} nilai berhasil diimport, ${skippedCount} baris dilewati karena tidak valid${errorCount > 0 ? `, ${errorCount} gagal tersimpan` : ''}`
+        : `${successCount} nilai berhasil diimport${errorCount > 0 ? `, ${errorCount} gagal` : ''}`;
+      toast({ title: 'Import Selesai', description: message });
+    } else {
+      toast({ title: 'Import gagal', description: 'Tidak ada data yang berhasil diimport', variant: 'destructive' });
+    }
   };
 
   const getStudentGrade = (studentId: string) => {
@@ -526,6 +539,9 @@ export default function DashboardDosen() {
           <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Preview Import Nilai</DialogTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Data yang valid akan tetap diimport meskipun ada beberapa baris yang error.
+              </p>
             </DialogHeader>
             
             {importErrors.length > 0 && (
