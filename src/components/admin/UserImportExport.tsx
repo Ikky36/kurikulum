@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Download, Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Download, Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle, RefreshCw, RefreshCcw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Profile } from '@/lib/types';
 
@@ -37,9 +37,10 @@ interface ImportRow {
 interface UserImportExportProps {
   users: Profile[];
   onImportSuccess: () => void;
+  onSyncSuccess?: () => void;
 }
 
-export function UserImportExport({ users, onImportSuccess }: UserImportExportProps) {
+export function UserImportExport({ users, onImportSuccess, onSyncSuccess }: UserImportExportProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -48,6 +49,7 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
   const [updateIfExists, setUpdateIfExists] = useState(true);
+  const [syncing, setSyncing] = useState(false);
 
   const normalizeEmail = (email: string) => String(email || '').trim().toLowerCase();
 
@@ -440,6 +442,42 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
     }
   };
 
+  // Sync profiles for auth users without profiles
+  const handleSyncProfiles = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-sync-profiles');
+
+      if (error) {
+        toast({
+          title: 'Sinkronisasi gagal',
+          description: error.message || 'Terjadi kesalahan saat sinkronisasi',
+          variant: 'destructive',
+        });
+        setSyncing(false);
+        return;
+      }
+
+      if (data?.synced > 0) {
+        onSyncSuccess?.();
+        onImportSuccess(); // Also refresh users list
+      }
+
+      toast({
+        title: 'Sinkronisasi Selesai',
+        description: data?.message || `Berhasil sinkronisasi ${data?.synced || 0} profil`,
+      });
+    } catch (err: any) {
+      toast({
+        title: 'Sinkronisasi gagal',
+        description: err.message || 'Terjadi kesalahan saat sinkronisasi',
+        variant: 'destructive',
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const validCount = importData.filter(r => r.isValid).length;
   const invalidCount = importData.filter(r => !r.isValid).length;
   const existingCount = importData.filter(r => r.existsInDb && r.isValid).length;
@@ -459,6 +497,14 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
         <Button variant="outline" size="sm" onClick={handleExportUsers}>
           <Download className="h-4 w-4 mr-2" />
           Export Excel
+        </Button>
+        <Button variant="outline" size="sm" onClick={handleSyncProfiles} disabled={syncing}>
+          {syncing ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <RefreshCcw className="h-4 w-4 mr-2" />
+          )}
+          {syncing ? 'Menyinkronkan...' : 'Sinkronisasi Profil'}
         </Button>
         <input
           ref={fileInputRef}
