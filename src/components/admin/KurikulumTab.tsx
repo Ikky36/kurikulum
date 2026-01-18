@@ -33,7 +33,7 @@ export function KurikulumTab() {
   const [editingClass, setEditingClass] = useState<ClassGroup | null>(null);
   const [className, setClassName] = useState('');
   const [classDescription, setClassDescription] = useState('');
-  const [classSemester, setClassSemester] = useState<string>('');
+  const [classSemesters, setClassSemesters] = useState<string[]>([]);
   const [selectedClassForManage, setSelectedClassForManage] = useState<ClassGroup | null>(null);
   const [showManageStudentsDialog, setShowManageStudentsDialog] = useState(false);
   
@@ -185,7 +185,7 @@ export function KurikulumTab() {
   const resetClassForm = () => {
     setClassName('');
     setClassDescription('');
-    setClassSemester('');
+    setClassSemesters([]);
     setEditingClass(null);
     setShowClassDialog(false);
   };
@@ -194,7 +194,9 @@ export function KurikulumTab() {
     setEditingClass(classItem);
     setClassName(classItem.name);
     setClassDescription(classItem.description || '');
-    setClassSemester((classItem as any).semester || '');
+    // Parse semester - bisa berupa "1,2,3" atau "1"
+    const semesterValue = (classItem as any).semester || '';
+    setClassSemesters(semesterValue ? semesterValue.split(',').map((s: string) => s.trim()) : []);
     setShowClassDialog(true);
   };
 
@@ -202,13 +204,21 @@ export function KurikulumTab() {
     const classData = {
       name: className,
       description: classDescription || undefined,
-      semester: classSemester || null,
+      semester: classSemesters.length > 0 ? classSemesters.sort((a, b) => parseInt(a) - parseInt(b)).join(',') : null,
     };
     if (editingClass) {
       updateClassMutation.mutate({ id: editingClass.id, ...classData });
     } else {
       createClassMutation.mutate(classData);
     }
+  };
+
+  const toggleSemester = (sem: string) => {
+    setClassSemesters(prev => 
+      prev.includes(sem) 
+        ? prev.filter(s => s !== sem) 
+        : [...prev, sem]
+    );
   };
 
   // Get students in a class
@@ -475,20 +485,31 @@ export function KurikulumTab() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Semester</Label>
-                    <Select value={classSemester} onValueChange={setClassSemester}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Pilih semester..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Tidak terkait semester</SelectItem>
-                        {availableSemesters.map(sem => (
-                          <SelectItem key={sem} value={sem}>
-                            Semester {sem}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label>Semester (dapat pilih lebih dari 1)</Label>
+                    <div className="flex flex-wrap gap-2 p-3 border rounded-md">
+                      {availableSemesters.map(sem => (
+                        <label 
+                          key={sem} 
+                          className={`flex items-center gap-2 px-3 py-1.5 rounded-md border cursor-pointer transition-colors ${
+                            classSemesters.includes(sem) 
+                              ? 'bg-primary text-primary-foreground border-primary' 
+                              : 'bg-background hover:bg-muted'
+                          }`}
+                        >
+                          <Checkbox 
+                            checked={classSemesters.includes(sem)}
+                            onCheckedChange={() => toggleSemester(sem)}
+                            className={classSemesters.includes(sem) ? 'border-primary-foreground' : ''}
+                          />
+                          <span className="text-sm">Semester {sem}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {classSemesters.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Terpilih: {classSemesters.sort((a, b) => parseInt(a) - parseInt(b)).map(s => `Semester ${s}`).join(', ')}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Deskripsi (opsional)</Label>
@@ -532,7 +553,11 @@ export function KurikulumTab() {
                     </TableCell>
                     <TableCell>
                       {(classItem as any).semester ? (
-                        <Badge variant="secondary">Semester {(classItem as any).semester}</Badge>
+                        <div className="flex flex-wrap gap-1">
+                          {(classItem as any).semester.split(',').map((sem: string) => (
+                            <Badge key={sem.trim()} variant="secondary">Semester {sem.trim()}</Badge>
+                          ))}
+                        </div>
                       ) : (
                         <span className="text-muted-foreground text-sm">-</span>
                       )}

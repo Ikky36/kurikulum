@@ -77,14 +77,14 @@ export function useCoursesWithStats() {
           .filter(Boolean) || [];
 
         // Count students from class_students (via class_groups with matching semester)
-        // Match course semester with class_group semester
+        // Match course semester with class_group semester (class_group semester can be comma-separated like "1,2,3")
         const courseSemester = course.semester; // e.g., "Semester 1" or "1"
+        const courseSemNum = courseSemester?.replace(/\D/g, '') || '';
         const semesterClassGroups = classGroups?.filter(cg => {
-          if (!courseSemester || !cg.semester) return false;
-          // Normalize semester format for comparison
-          const courseSemNum = courseSemester.replace(/\D/g, '');
-          const classSemNum = cg.semester.replace(/\D/g, '');
-          return courseSemNum === classSemNum;
+          if (!courseSemNum || !cg.semester) return false;
+          // class_group semester can be comma-separated like "1,2,3"
+          const classSemesters = cg.semester.split(',').map(s => s.trim());
+          return classSemesters.includes(courseSemNum);
         }) || [];
         const semesterClassGroupIds = semesterClassGroups.map(cg => cg.id);
         const classStudentProfiles = classStudents?.filter(cs => semesterClassGroupIds.includes(cs.class_group_id)) || [];
@@ -201,11 +201,11 @@ export function useCourseEnrollments(courseId: string) {
         
         if (cgError) throw cgError;
         
-        // Filter class groups with matching semester
+        // Filter class groups with matching semester (class_group semester can be comma-separated like "1,2,3")
         const matchingClassGroups = classGroups?.filter(cg => {
           if (!cg.semester) return false;
-          const classSemNum = cg.semester.replace(/\D/g, '');
-          return courseSemNum === classSemNum;
+          const classSemesters = cg.semester.split(',').map(s => s.trim());
+          return classSemesters.includes(courseSemNum);
         }) || [];
 
         if (matchingClassGroups.length > 0) {
