@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { Navigate } from 'react-router-dom';
 import { Course, Profile, Grade } from '@/lib/types';
 import * as XLSX from 'xlsx';
+import { TableFilterHeader } from '@/components/ui/table-column-filter';
 
 export default function DashboardDosen() {
   const { user, profile, role, refreshProfile, loading } = useAuth();
@@ -44,6 +45,10 @@ export default function DashboardDosen() {
   const [importPreview, setImportPreview] = useState<any[]>([]);
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [showImportDialog, setShowImportDialog] = useState(false);
+
+  // Table filter state
+  const [gradeNameFilter, setGradeNameFilter] = useState('');
+  const [gradeNimFilter, setGradeNimFilter] = useState('');
 
   // Fetch assigned courses
   const { data: assignedCourses } = useQuery({
@@ -498,34 +503,73 @@ export default function DashboardDosen() {
                     <TableHeader>
                       <TableRow className="bg-primary hover:bg-primary">
                         <TableHead className="w-12 text-primary-foreground">No</TableHead>
-                        <TableHead className="text-primary-foreground">Nama Mahasiswa</TableHead>
-                        <TableHead className="text-primary-foreground">NIM</TableHead>
+                        <TableHead className="text-primary-foreground">
+                          <TableFilterHeader
+                            filterValue={gradeNameFilter}
+                            onFilterChange={setGradeNameFilter}
+                            placeholder="Filter nama..."
+                          >
+                            Nama Mahasiswa
+                          </TableFilterHeader>
+                        </TableHead>
+                        <TableHead className="text-primary-foreground">
+                          <TableFilterHeader
+                            filterValue={gradeNimFilter}
+                            onFilterChange={setGradeNimFilter}
+                            placeholder="Filter NIM..."
+                          >
+                            NIM
+                          </TableFilterHeader>
+                        </TableHead>
                         <TableHead className="w-32 text-primary-foreground">Nilai (0-100)</TableHead>
                         <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {enrollments?.map((enrollment, index) => {
-                        const currentGrade = getStudentGrade(enrollment.student?.id || '');
-                        return (
-                          <GradeRow 
-                            key={enrollment.id} 
-                            student={enrollment.student!} 
-                            currentGrade={currentGrade}
-                            passingScore={selectedCourse?.passing_score || 60}
-                            onSave={(score) => updateGradeMutation.mutate({ studentId: enrollment.student!.id, score })}
-                            isSaving={updateGradeMutation.isPending}
-                            rowNumber={index + 1}
-                          />
-                        );
-                      })}
-                      {(!enrollments || enrollments.length === 0) && (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                            Belum ada mahasiswa terdaftar pada mata kuliah ini
-                          </TableCell>
-                        </TableRow>
-                      )}
+                      {(() => {
+                        let filteredEnrollments = enrollments || [];
+                        
+                        if (gradeNameFilter) {
+                          const query = gradeNameFilter.toLowerCase();
+                          filteredEnrollments = filteredEnrollments.filter(e => 
+                            e.student?.full_name?.toLowerCase().includes(query)
+                          );
+                        }
+                        
+                        if (gradeNimFilter) {
+                          const query = gradeNimFilter.toLowerCase();
+                          filteredEnrollments = filteredEnrollments.filter(e => 
+                            e.student?.nim?.toLowerCase().includes(query)
+                          );
+                        }
+                        
+                        if (filteredEnrollments.length === 0) {
+                          return (
+                            <TableRow>
+                              <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                                {gradeNameFilter || gradeNimFilter 
+                                  ? 'Tidak ada mahasiswa yang sesuai dengan filter' 
+                                  : 'Belum ada mahasiswa terdaftar pada mata kuliah ini'}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        }
+                        
+                        return filteredEnrollments.map((enrollment, index) => {
+                          const currentGrade = getStudentGrade(enrollment.student?.id || '');
+                          return (
+                            <GradeRow 
+                              key={enrollment.id} 
+                              student={enrollment.student!} 
+                              currentGrade={currentGrade}
+                              passingScore={selectedCourse?.passing_score || 60}
+                              onSave={(score) => updateGradeMutation.mutate({ studentId: enrollment.student!.id, score })}
+                              isSaving={updateGradeMutation.isPending}
+                              rowNumber={index + 1}
+                            />
+                          );
+                        });
+                      })()}
                     </TableBody>
                   </Table>
                 </div>
