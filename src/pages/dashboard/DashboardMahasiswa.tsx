@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -24,6 +24,7 @@ import {
 import { User, Mail, BookOpen, Camera, Loader2, CheckCircle2, XCircle, Calendar, GraduationCap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link, Navigate } from 'react-router-dom';
+import { TableFilterHeader } from '@/components/ui/table-column-filter';
 
 export default function DashboardMahasiswa() {
   const { user, profile, role, refreshProfile, loading } = useAuth();
@@ -47,7 +48,10 @@ export default function DashboardMahasiswa() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
-  // Fetch sistem kuliah options
+  // Grade table filter state
+  const [gradeCodeFilter, setGradeCodeFilter] = useState('');
+  const [gradeCourseFilter, setGradeCourseFilter] = useState('');
+  const [gradeStatusFilter, setGradeStatusFilter] = useState('');
   const { data: sistemKuliahOptions } = useQuery({
     queryKey: ['sistem-kuliah'],
     queryFn: async () => {
@@ -423,16 +427,81 @@ export default function DashboardMahasiswa() {
                 <TableHeader>
                   <TableRow className="bg-primary hover:bg-primary">
                     <TableHead className="w-12 text-primary-foreground font-semibold">No</TableHead>
-                    <TableHead className="text-primary-foreground font-semibold">Kode</TableHead>
-                    <TableHead className="text-primary-foreground font-semibold">Mata Kuliah</TableHead>
+                    <TableHead className="text-primary-foreground font-semibold">
+                      <TableFilterHeader
+                        filterValue={gradeCodeFilter}
+                        onFilterChange={setGradeCodeFilter}
+                        placeholder="Filter kode..."
+                      >
+                        Kode
+                      </TableFilterHeader>
+                    </TableHead>
+                    <TableHead className="text-primary-foreground font-semibold">
+                      <TableFilterHeader
+                        filterValue={gradeCourseFilter}
+                        onFilterChange={setGradeCourseFilter}
+                        placeholder="Filter mata kuliah..."
+                      >
+                        Mata Kuliah
+                      </TableFilterHeader>
+                    </TableHead>
                     <TableHead className="text-primary-foreground font-semibold text-center">Passing Score</TableHead>
                     <TableHead className="text-primary-foreground font-semibold text-center">Nilai Akhir</TableHead>
-                    <TableHead className="text-primary-foreground font-semibold text-center">Status</TableHead>
+                    <TableHead className="text-primary-foreground font-semibold text-center">
+                      <TableFilterHeader
+                        filterValue={gradeStatusFilter}
+                        onFilterChange={setGradeStatusFilter}
+                        placeholder="lulus/belum..."
+                      >
+                        Status
+                      </TableFilterHeader>
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {grades && grades.length > 0 ? (
-                    grades.map((grade, index) => (
+                  {(() => {
+                    let filteredGrades = grades || [];
+                    
+                    if (gradeCodeFilter) {
+                      const query = gradeCodeFilter.toLowerCase();
+                      filteredGrades = filteredGrades.filter(g => 
+                        g.course?.code?.toLowerCase().includes(query)
+                      );
+                    }
+                    
+                    if (gradeCourseFilter) {
+                      const query = gradeCourseFilter.toLowerCase();
+                      filteredGrades = filteredGrades.filter(g => 
+                        g.course?.name?.toLowerCase().includes(query)
+                      );
+                    }
+                    
+                    if (gradeStatusFilter) {
+                      const query = gradeStatusFilter.toLowerCase();
+                      filteredGrades = filteredGrades.filter(g => {
+                        const isPassing = g.final_score >= (g.course?.passing_score || 60);
+                        if (query.includes('lulus') && !query.includes('belum')) {
+                          return isPassing;
+                        } else if (query.includes('belum')) {
+                          return !isPassing;
+                        }
+                        return true;
+                      });
+                    }
+                    
+                    if (filteredGrades.length === 0) {
+                      return (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                            {gradeCodeFilter || gradeCourseFilter || gradeStatusFilter 
+                              ? 'Tidak ada nilai yang sesuai dengan filter' 
+                              : (gradesLoading ? 'Memuat...' : 'Belum ada nilai')}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    }
+                    
+                    return filteredGrades.map((grade, index) => (
                       <TableRow key={grade.id} className="hover:bg-muted/30">
                         <TableCell className="text-center">{index + 1}</TableCell>
                         <TableCell>
@@ -476,14 +545,8 @@ export default function DashboardMahasiswa() {
                           )}
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        {gradesLoading ? 'Memuat...' : 'Belum ada nilai'}
-                      </TableCell>
-                    </TableRow>
-                  )}
+                    ));
+                  })()}
                 </TableBody>
               </Table>
             </div>

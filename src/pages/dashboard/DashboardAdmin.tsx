@@ -22,6 +22,7 @@ import { Course, Profile, AppRole, Program } from '@/lib/types';
 import { UserImportExport } from '@/components/admin/UserImportExport';
 import { UserPagination } from '@/components/admin/UserPagination';
 import { KurikulumTab } from '@/components/admin/KurikulumTab';
+import { TableFilterHeader } from '@/components/ui/table-column-filter';
 
 interface SistemKuliah {
   id: string;
@@ -84,6 +85,14 @@ export default function DashboardAdmin() {
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState<'all' | 'mahasiswa' | 'dosen' | 'admin' | 'sub_admin'>('all');
   
+  // User table column filter state
+  const [userNameFilter, setUserNameFilter] = useState('');
+  const [userGenderFilter, setUserGenderFilter] = useState('');
+  const [userEmailFilter, setUserEmailFilter] = useState('');
+  const [userNimNipFilter, setUserNimNipFilter] = useState('');
+  const [userAngkatanFilter, setUserAngkatanFilter] = useState('');
+  const [userProgramFilter, setUserProgramFilter] = useState('');
+  
   // Pagination state
   const [userCurrentPage, setUserCurrentPage] = useState(1);
   const [userPageSize, setUserPageSize] = useState(10);
@@ -95,6 +104,16 @@ export default function DashboardAdmin() {
   // Assignment bulk selection state
   const [selectedAssignmentIds, setSelectedAssignmentIds] = useState<string[]>([]);
   const [showBulkDeleteAssignmentDialog, setShowBulkDeleteAssignmentDialog] = useState(false);
+
+  // Assignment table filter state
+  const [assignmentCourseFilter, setAssignmentCourseFilter] = useState('');
+  const [assignmentClassFilter, setAssignmentClassFilter] = useState('');
+  const [assignmentDosenFilter, setAssignmentDosenFilter] = useState('');
+
+  // Role table filter state
+  const [roleNameFilter, setRoleNameFilter] = useState('');
+  const [roleEmailFilter, setRoleEmailFilter] = useState('');
+  const [roleRoleFilter, setRoleRoleFilter] = useState('');
 
   // Fetch all courses
   const { data: courses, refetch: refetchCourses } = useQuery({
@@ -453,7 +472,7 @@ export default function DashboardAdmin() {
     },
   });
 
-  // Filter users based on search and role - MUST be before early returns
+  // Filter users based on search, role, and column filters - MUST be before early returns
   const filteredUsers = useMemo(() => {
     return allUsers?.filter(u => {
       // Exclude current user if they're admin
@@ -462,19 +481,31 @@ export default function DashboardAdmin() {
       // Apply role filter
       if (userRoleFilter !== 'all' && u.role !== userRoleFilter) return false;
       
-      // Apply search filter
+      // Apply global search filter
       if (userSearchQuery) {
         const query = userSearchQuery.toLowerCase();
         const matchesName = u.full_name?.toLowerCase().includes(query);
         const matchesEmail = u.email?.toLowerCase().includes(query);
         const matchesNim = u.nim?.toLowerCase().includes(query);
         const matchesNip = u.nip?.toLowerCase().includes(query);
-        return matchesName || matchesEmail || matchesNim || matchesNip;
+        if (!(matchesName || matchesEmail || matchesNim || matchesNip)) return false;
       }
+      
+      // Apply column filters
+      if (userNameFilter && !u.full_name?.toLowerCase().includes(userNameFilter.toLowerCase())) return false;
+      if (userGenderFilter && !(u as any).gender?.toLowerCase().includes(userGenderFilter.toLowerCase())) return false;
+      if (userEmailFilter && !u.email?.toLowerCase().includes(userEmailFilter.toLowerCase())) return false;
+      if (userNimNipFilter) {
+        const nimNipMatch = u.nim?.toLowerCase().includes(userNimNipFilter.toLowerCase()) || 
+                           u.nip?.toLowerCase().includes(userNimNipFilter.toLowerCase());
+        if (!nimNipMatch) return false;
+      }
+      if (userAngkatanFilter && u.enrollment_year?.toString() !== userAngkatanFilter) return false;
+      if (userProgramFilter && !u.program?.toLowerCase().includes(userProgramFilter.toLowerCase())) return false;
       
       return true;
     }) || [];
-  }, [allUsers, userRoleFilter, userSearchQuery, user?.id]);
+  }, [allUsers, userRoleFilter, userSearchQuery, user?.id, userNameFilter, userGenderFilter, userEmailFilter, userNimNipFilter, userAngkatanFilter, userProgramFilter]);
 
   // Paginated users - MUST be before early returns
   const totalUserPages = Math.ceil(filteredUsers.length / userPageSize);
@@ -986,13 +1017,61 @@ export default function DashboardAdmin() {
                         />
                       </TableHead>
                       <TableHead className="w-12 text-primary-foreground">No</TableHead>
-                      <TableHead className="text-primary-foreground">Nama</TableHead>
-                      <TableHead className="text-primary-foreground">Gender</TableHead>
-                      <TableHead className="text-primary-foreground">Email</TableHead>
+                      <TableHead className="text-primary-foreground">
+                        <TableFilterHeader
+                          filterValue={userNameFilter}
+                          onFilterChange={setUserNameFilter}
+                          placeholder="Filter nama..."
+                        >
+                          Nama
+                        </TableFilterHeader>
+                      </TableHead>
+                      <TableHead className="text-primary-foreground">
+                        <TableFilterHeader
+                          filterValue={userGenderFilter}
+                          onFilterChange={setUserGenderFilter}
+                          placeholder="pria/wanita..."
+                        >
+                          Gender
+                        </TableFilterHeader>
+                      </TableHead>
+                      <TableHead className="text-primary-foreground">
+                        <TableFilterHeader
+                          filterValue={userEmailFilter}
+                          onFilterChange={setUserEmailFilter}
+                          placeholder="Filter email..."
+                        >
+                          Email
+                        </TableFilterHeader>
+                      </TableHead>
                       <TableHead className="text-primary-foreground">Role</TableHead>
-                      <TableHead className="text-primary-foreground">NIM/NIDN/NIDK</TableHead>
-                      <TableHead className="text-primary-foreground">Angkatan</TableHead>
-                      <TableHead className="text-primary-foreground">Program</TableHead>
+                      <TableHead className="text-primary-foreground">
+                        <TableFilterHeader
+                          filterValue={userNimNipFilter}
+                          onFilterChange={setUserNimNipFilter}
+                          placeholder="Filter NIM/NIP..."
+                        >
+                          NIM/NIDN/NIDK
+                        </TableFilterHeader>
+                      </TableHead>
+                      <TableHead className="text-primary-foreground">
+                        <TableFilterHeader
+                          filterValue={userAngkatanFilter}
+                          onFilterChange={setUserAngkatanFilter}
+                          placeholder="Filter angkatan..."
+                        >
+                          Angkatan
+                        </TableFilterHeader>
+                      </TableHead>
+                      <TableHead className="text-primary-foreground">
+                        <TableFilterHeader
+                          filterValue={userProgramFilter}
+                          onFilterChange={setUserProgramFilter}
+                          placeholder="Filter program..."
+                        >
+                          Program
+                        </TableFilterHeader>
+                      </TableHead>
                       <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1259,9 +1338,33 @@ export default function DashboardAdmin() {
                         />
                       </TableHead>
                       <TableHead className="w-12 text-primary-foreground">No</TableHead>
-                      <TableHead className="text-primary-foreground">Mata Kuliah</TableHead>
-                      <TableHead className="text-primary-foreground">Kelas</TableHead>
-                      <TableHead className="text-primary-foreground">Dosen</TableHead>
+                      <TableHead className="text-primary-foreground">
+                        <TableFilterHeader
+                          filterValue={assignmentCourseFilter}
+                          onFilterChange={setAssignmentCourseFilter}
+                          placeholder="Filter mata kuliah..."
+                        >
+                          Mata Kuliah
+                        </TableFilterHeader>
+                      </TableHead>
+                      <TableHead className="text-primary-foreground">
+                        <TableFilterHeader
+                          filterValue={assignmentClassFilter}
+                          onFilterChange={setAssignmentClassFilter}
+                          placeholder="Filter kelas..."
+                        >
+                          Kelas
+                        </TableFilterHeader>
+                      </TableHead>
+                      <TableHead className="text-primary-foreground">
+                        <TableFilterHeader
+                          filterValue={assignmentDosenFilter}
+                          onFilterChange={setAssignmentDosenFilter}
+                          placeholder="Filter dosen..."
+                        >
+                          Dosen
+                        </TableFilterHeader>
+                      </TableHead>
                       <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1283,13 +1386,39 @@ export default function DashboardAdmin() {
                         return acc;
                       }, {} as Record<string, { course: Course | null; classGroup: { id: string; name: string } | null; instructors: (Profile | null)[]; ids: string[] }>);
 
-                      const groupedEntries = Object.entries(grouped);
+                      // Apply filters
+                      let groupedEntries = Object.entries(grouped);
+                      
+                      if (assignmentCourseFilter) {
+                        const query = assignmentCourseFilter.toLowerCase();
+                        groupedEntries = groupedEntries.filter(([_, group]) => 
+                          group.course?.name?.toLowerCase().includes(query) || 
+                          group.course?.code?.toLowerCase().includes(query)
+                        );
+                      }
+                      
+                      if (assignmentClassFilter) {
+                        const query = assignmentClassFilter.toLowerCase();
+                        groupedEntries = groupedEntries.filter(([_, group]) => 
+                          group.classGroup?.name?.toLowerCase().includes(query) ||
+                          (!group.classGroup && query === '-')
+                        );
+                      }
+                      
+                      if (assignmentDosenFilter) {
+                        const query = assignmentDosenFilter.toLowerCase();
+                        groupedEntries = groupedEntries.filter(([_, group]) => 
+                          group.instructors.some(inst => inst?.full_name?.toLowerCase().includes(query))
+                        );
+                      }
                       
                       if (groupedEntries.length === 0) {
                         return (
                           <TableRow>
                             <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                              Belum ada penugasan
+                              {assignmentCourseFilter || assignmentClassFilter || assignmentDosenFilter 
+                                ? 'Tidak ada penugasan yang sesuai dengan filter' 
+                                : 'Belum ada penugasan'}
                             </TableCell>
                           </TableRow>
                         );
@@ -1416,54 +1545,112 @@ export default function DashboardAdmin() {
                   <TableHeader>
                     <TableRow className="bg-primary hover:bg-primary">
                       <TableHead className="w-12 text-primary-foreground">No</TableHead>
-                      <TableHead className="text-primary-foreground">Nama</TableHead>
-                      <TableHead className="text-primary-foreground">Email</TableHead>
-                      <TableHead className="text-primary-foreground">Role</TableHead>
+                      <TableHead className="text-primary-foreground">
+                        <TableFilterHeader
+                          filterValue={roleNameFilter}
+                          onFilterChange={setRoleNameFilter}
+                          placeholder="Filter nama..."
+                        >
+                          Nama
+                        </TableFilterHeader>
+                      </TableHead>
+                      <TableHead className="text-primary-foreground">
+                        <TableFilterHeader
+                          filterValue={roleEmailFilter}
+                          onFilterChange={setRoleEmailFilter}
+                          placeholder="Filter email..."
+                        >
+                          Email
+                        </TableFilterHeader>
+                      </TableHead>
+                      <TableHead className="text-primary-foreground">
+                        <TableFilterHeader
+                          filterValue={roleRoleFilter}
+                          onFilterChange={setRoleRoleFilter}
+                          placeholder="Filter role..."
+                        >
+                          Role
+                        </TableFilterHeader>
+                      </TableHead>
                       <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {allUsers?.filter(u => u.id !== user?.id).map((u, index) => (
-                      <TableRow key={u.id}>
-                        <TableCell className="text-center">{index + 1}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={u.photo_url || undefined} />
-                              <AvatarFallback>{u.full_name?.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <span className="font-medium">{u.full_name}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>{u.email}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {(u.roles && u.roles.length > 0 ? u.roles : [u.role]).map((r) => (
-                              <Badge 
-                                key={r} 
-                                variant={r === 'admin' || r === 'sub_admin' ? 'default' : r === 'dosen' ? 'secondary' : 'outline'} 
-                                className="capitalize"
-                              >
-                                {r === 'sub_admin' ? 'Sub-Admin' : r}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => {
-                              setSelectedUserForRole(u);
-                              setNewRoles(u.roles || [u.role]);
-                              setShowRoleDialog(true);
-                            }}
-                          >
-                            <UserCog className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {(() => {
+                      let filteredRoleUsers = allUsers?.filter(u => u.id !== user?.id) || [];
+                      
+                      if (roleNameFilter) {
+                        const query = roleNameFilter.toLowerCase();
+                        filteredRoleUsers = filteredRoleUsers.filter(u => u.full_name?.toLowerCase().includes(query));
+                      }
+                      
+                      if (roleEmailFilter) {
+                        const query = roleEmailFilter.toLowerCase();
+                        filteredRoleUsers = filteredRoleUsers.filter(u => u.email?.toLowerCase().includes(query));
+                      }
+                      
+                      if (roleRoleFilter) {
+                        const query = roleRoleFilter.toLowerCase();
+                        filteredRoleUsers = filteredRoleUsers.filter(u => {
+                          const roles = u.roles && u.roles.length > 0 ? u.roles : [u.role];
+                          return roles.some(r => r.toLowerCase().includes(query));
+                        });
+                      }
+                      
+                      if (filteredRoleUsers.length === 0) {
+                        return (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                              {roleNameFilter || roleEmailFilter || roleRoleFilter 
+                                ? 'Tidak ada pengguna yang sesuai dengan filter' 
+                                : 'Belum ada pengguna'}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      }
+                      
+                      return filteredRoleUsers.map((u, index) => (
+                        <TableRow key={u.id}>
+                          <TableCell className="text-center">{index + 1}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={u.photo_url || undefined} />
+                                <AvatarFallback>{u.full_name?.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{u.full_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>{u.email}</TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap gap-1">
+                              {(u.roles && u.roles.length > 0 ? u.roles : [u.role]).map((r) => (
+                                <Badge 
+                                  key={r} 
+                                  variant={r === 'admin' || r === 'sub_admin' ? 'default' : r === 'dosen' ? 'secondary' : 'outline'} 
+                                  className="capitalize"
+                                >
+                                  {r === 'sub_admin' ? 'Sub-Admin' : r}
+                                </Badge>
+                              ))}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => {
+                                setSelectedUserForRole(u);
+                                setNewRoles(u.roles || [u.role]);
+                                setShowRoleDialog(true);
+                              }}
+                            >
+                              <UserCog className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ));
+                    })()}
                   </TableBody>
                 </Table>
               </CardContent>
