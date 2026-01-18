@@ -528,7 +528,7 @@ export default function CourseDetail() {
             {/* Students Table */}
             <Card className="animate-slide-up" style={{ animationDelay: '200ms' }}>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-lg">Nilai Seluruh Mahasiswa</CardTitle>
+                <CardTitle className="text-lg">Daftar Mahasiswa</CardTitle>
                 {canEdit && assessments && assessments.length > 0 && (
                   <AssessmentScoreImportExport
                     courseId={courseId!}
