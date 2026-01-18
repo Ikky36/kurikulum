@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,6 +22,8 @@ import {
   BulkActionBar,
   useBulkSelect 
 } from '@/components/ui/bulk-select-table';
+import { KurikulumImportExport } from '@/components/kurikulum/KurikulumImportExport';
+import { KurikulumFilter } from '@/components/kurikulum/KurikulumFilter';
 
 type VmtsPtVisi = { id: string; visi: string };
 type VmtsPtMisi = { id: string; code: string; misi: string };
@@ -40,6 +42,18 @@ function KurikulumContent() {
   // Admin and sub_admin can edit curriculum
   const canEdit = hasAnyRole(['admin', 'sub_admin']);
   const { clearSelection } = useBulkSelect();
+
+  // Filter states
+  const [filterPtMisi, setFilterPtMisi] = useState('');
+  const [filterPtTujuan, setFilterPtTujuan] = useState('');
+  const [filterPtStrategi, setFilterPtStrategi] = useState('');
+  const [filterPsMisi, setFilterPsMisi] = useState('');
+  const [filterPsTujuan, setFilterPsTujuan] = useState('');
+  const [filterPsStrategi, setFilterPsStrategi] = useState('');
+  const [filterProfilLulusan, setFilterProfilLulusan] = useState('');
+  const [filterCpl, setFilterCpl] = useState('');
+  const [filterBk, setFilterBk] = useState('');
+  const [filterMk, setFilterMk] = useState('');
 
   // Enable realtime for curriculum-related tables
   useMultiTableRealtimeSubscription([
@@ -278,19 +292,50 @@ function KurikulumContent() {
     data: { id: string; code: string; [key: string]: any }[],
     table: string,
     valueKey: string,
-    valueLabel: string
+    valueLabel: string,
+    filterValue: string,
+    onFilterChange: (value: string) => void
   ) => {
-    const ids = data.map(item => item.id);
+    // Filter data
+    const filteredData = data.filter(item => {
+      const searchLower = filterValue.toLowerCase();
+      return (
+        item.code?.toLowerCase().includes(searchLower) ||
+        item[valueKey]?.toLowerCase().includes(searchLower)
+      );
+    });
+    
+    const ids = filteredData.map(item => item.id);
+    
+    const tableConfig = {
+      tableName: table,
+      displayName: title,
+      columns: [
+        { key: 'code', label: 'Kode', required: true },
+        { key: valueKey, label: valueLabel, required: true },
+      ],
+      queryKey: table,
+    };
     
     return (
       <Card className="mb-6">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle className="text-lg">{title}</CardTitle>
-          {canEdit && (
-            <Button size="sm" onClick={() => openEdit(table, { code: '', [valueKey]: '' }, true)}>
-              <Plus className="h-4 w-4 mr-1" /> Tambah
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <KurikulumFilter 
+              searchTerm={filterValue} 
+              onSearchChange={onFilterChange}
+              placeholder={`Cari ${title.toLowerCase()}...`}
+            />
+            {canEdit && (
+              <>
+                <KurikulumImportExport tableConfig={tableConfig} data={data} />
+                <Button size="sm" onClick={() => openEdit(table, { code: '', [valueKey]: '' }, true)}>
+                  <Plus className="h-4 w-4 mr-1" /> Tambah
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -308,8 +353,8 @@ function KurikulumContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.length > 0 ? (
-                data.map((item, idx) => (
+              {filteredData.length > 0 ? (
+                filteredData.map((item, idx) => (
                   <TableRow key={item.id}>
                     {canEdit && (
                       <TableCell>
@@ -336,7 +381,7 @@ function KurikulumContent() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={canEdit ? 5 : 3} className="text-center text-muted-foreground">
-                    Belum ada data
+                    {filterValue ? 'Tidak ada data yang cocok' : 'Belum ada data'}
                   </TableCell>
                 </TableRow>
               )}
@@ -349,17 +394,48 @@ function KurikulumContent() {
   };
 
   const renderProfilLulusanTable = () => {
-    const ids = profilLulusan.map(item => item.id);
+    // Filter data
+    const filteredProfilLulusan = profilLulusan.filter(item => {
+      const searchLower = filterProfilLulusan.toLowerCase();
+      return (
+        item.code?.toLowerCase().includes(searchLower) ||
+        item.profil?.toLowerCase().includes(searchLower) ||
+        item.deskripsi?.toLowerCase().includes(searchLower)
+      );
+    });
+    
+    const ids = filteredProfilLulusan.map(item => item.id);
+    
+    const tableConfig = {
+      tableName: 'profil_lulusan',
+      displayName: 'Profil Lulusan',
+      columns: [
+        { key: 'code', label: 'Kode', required: true },
+        { key: 'profil', label: 'Profil', required: true },
+        { key: 'deskripsi', label: 'Deskripsi', required: false },
+      ],
+      queryKey: 'profil_lulusan',
+    };
     
     return (
       <Card className="mb-6">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle className="text-lg">PL - Profil Lulusan</CardTitle>
-          {canEdit && (
-            <Button size="sm" onClick={() => openEdit('profil_lulusan', { code: '', profil: '', deskripsi: '' }, true)}>
-              <Plus className="h-4 w-4 mr-1" /> Tambah
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <KurikulumFilter 
+              searchTerm={filterProfilLulusan} 
+              onSearchChange={setFilterProfilLulusan}
+              placeholder="Cari profil lulusan..."
+            />
+            {canEdit && (
+              <>
+                <KurikulumImportExport tableConfig={tableConfig} data={profilLulusan} />
+                <Button size="sm" onClick={() => openEdit('profil_lulusan', { code: '', profil: '', deskripsi: '' }, true)}>
+                  <Plus className="h-4 w-4 mr-1" /> Tambah
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -378,8 +454,8 @@ function KurikulumContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {profilLulusan.length > 0 ? (
-                profilLulusan.map((item, idx) => (
+              {filteredProfilLulusan.length > 0 ? (
+                filteredProfilLulusan.map((item, idx) => (
                   <TableRow key={item.id}>
                     {canEdit && (
                       <TableCell>
@@ -407,7 +483,7 @@ function KurikulumContent() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={canEdit ? 6 : 4} className="text-center text-muted-foreground">
-                    Belum ada data
+                    {filterProfilLulusan ? 'Tidak ada data yang cocok' : 'Belum ada data'}
                   </TableCell>
                 </TableRow>
               )}
@@ -420,17 +496,46 @@ function KurikulumContent() {
   };
 
   const renderCplTable = () => {
-    const ids = plos.map((item: any) => item.id);
+    // Filter data
+    const filteredPlos = plos.filter((item: any) => {
+      const searchLower = filterCpl.toLowerCase();
+      return (
+        item.code?.toLowerCase().includes(searchLower) ||
+        item.description?.toLowerCase().includes(searchLower)
+      );
+    });
+    
+    const ids = filteredPlos.map((item: any) => item.id);
+    
+    const tableConfig = {
+      tableName: 'plos',
+      displayName: 'CPL',
+      columns: [
+        { key: 'code', label: 'Kode', required: true },
+        { key: 'description', label: 'Deskripsi CPL', required: true },
+      ],
+      queryKey: 'plos',
+    };
     
     return (
       <Card className="mb-6">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle className="text-lg">CPL - Capaian Pembelajaran Lulusan</CardTitle>
-          {canEdit && (
-            <Button size="sm" onClick={() => openEdit('plos', { code: '', description: '', profil_lulusan_ids: [] }, true)}>
-              <Plus className="h-4 w-4 mr-1" /> Tambah
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <KurikulumFilter 
+              searchTerm={filterCpl} 
+              onSearchChange={setFilterCpl}
+              placeholder="Cari CPL..."
+            />
+            {canEdit && (
+              <>
+                <KurikulumImportExport tableConfig={tableConfig} data={plos} />
+                <Button size="sm" onClick={() => openEdit('plos', { code: '', description: '', profil_lulusan_ids: [] }, true)}>
+                  <Plus className="h-4 w-4 mr-1" /> Tambah
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -449,8 +554,8 @@ function KurikulumContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {plos.length > 0 ? (
-                plos.map((item: any, idx: number) => {
+              {filteredPlos.length > 0 ? (
+                filteredPlos.map((item: any, idx: number) => {
                   const itemPls = item.plo_profil_lulusan?.map((ppl: any) => ppl.profil_lulusan).filter(Boolean) || [];
                   return (
                     <TableRow key={item.id}>
@@ -522,7 +627,7 @@ function KurikulumContent() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={canEdit ? 6 : 4} className="text-center text-muted-foreground">
-                    Belum ada data
+                    {filterCpl ? 'Tidak ada data yang cocok' : 'Belum ada data'}
                   </TableCell>
                 </TableRow>
               )}
@@ -590,17 +695,46 @@ function KurikulumContent() {
   };
 
   const renderBahanKajianTable = () => {
-    const ids = bahanKajianKelompok.map(item => item.id);
+    // Filter data
+    const filteredBk = bahanKajianKelompok.filter(item => {
+      const searchLower = filterBk.toLowerCase();
+      return (
+        item.kelompok?.toLowerCase().includes(searchLower) ||
+        item.bahan_kajian?.toLowerCase().includes(searchLower)
+      );
+    });
+    
+    const ids = filteredBk.map(item => item.id);
+    
+    const tableConfig = {
+      tableName: 'bahan_kajian_kelompok',
+      displayName: 'Bahan Kajian',
+      columns: [
+        { key: 'kelompok', label: 'Kelompok BK', required: true },
+        { key: 'bahan_kajian', label: 'Bahan Kajian', required: true },
+      ],
+      queryKey: 'bahan_kajian_kelompok',
+    };
     
     return (
       <Card className="mb-6">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle className="text-lg">BK - Bahan Kajian</CardTitle>
-          {canEdit && (
-            <Button size="sm" onClick={() => setBkDialog(true)}>
-              <Plus className="h-4 w-4 mr-1" /> Tambah
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <KurikulumFilter 
+              searchTerm={filterBk} 
+              onSearchChange={setFilterBk}
+              placeholder="Cari bahan kajian..."
+            />
+            {canEdit && (
+              <>
+                <KurikulumImportExport tableConfig={tableConfig} data={bahanKajianKelompok} />
+                <Button size="sm" onClick={() => setBkDialog(true)}>
+                  <Plus className="h-4 w-4 mr-1" /> Tambah
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -618,8 +752,8 @@ function KurikulumContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {bahanKajianKelompok.length > 0 ? (
-                bahanKajianKelompok.map((item, idx) => (
+              {filteredBk.length > 0 ? (
+                filteredBk.map((item, idx) => (
                   <TableRow key={item.id}>
                     {canEdit && (
                       <TableCell>
@@ -652,7 +786,7 @@ function KurikulumContent() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={canEdit ? 5 : 3} className="text-center text-muted-foreground">
-                    Belum ada data
+                    {filterBk ? 'Tidak ada data yang cocok' : 'Belum ada data'}
                   </TableCell>
                 </TableRow>
               )}
@@ -740,17 +874,48 @@ function KurikulumContent() {
   const semesterOptions = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'];
 
   const renderMataKuliahTable = () => {
-    const ids = courses.map((course: any) => course.id);
+    // Filter data
+    const filteredCourses = courses.filter((course: any) => {
+      const searchLower = filterMk.toLowerCase();
+      return (
+        course.code?.toLowerCase().includes(searchLower) ||
+        course.name?.toLowerCase().includes(searchLower) ||
+        course.semester?.toLowerCase().includes(searchLower)
+      );
+    });
+    
+    const ids = filteredCourses.map((course: any) => course.id);
+    
+    const tableConfig = {
+      tableName: 'courses',
+      displayName: 'Mata Kuliah',
+      columns: [
+        { key: 'code', label: 'Kode', required: true },
+        { key: 'name', label: 'Nama', required: true },
+        { key: 'semester', label: 'Semester', required: false },
+      ],
+      queryKey: 'courses_kurikulum',
+    };
     
     return (
       <Card className="mb-6">
-        <CardHeader className="flex flex-row items-center justify-between">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle className="text-lg">MK - Mata Kuliah</CardTitle>
-          {canEdit && (
-            <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', ploIds: [], plIds: [] }, true)}>
-              <Plus className="h-4 w-4 mr-1" /> Tambah
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <KurikulumFilter 
+              searchTerm={filterMk} 
+              onSearchChange={setFilterMk}
+              placeholder="Cari mata kuliah..."
+            />
+            {canEdit && (
+              <>
+                <KurikulumImportExport tableConfig={tableConfig} data={courses} />
+                <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', ploIds: [], plIds: [] }, true)}>
+                  <Plus className="h-4 w-4 mr-1" /> Tambah
+                </Button>
+              </>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
@@ -772,8 +937,8 @@ function KurikulumContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {courses.length > 0 ? (
-                courses.map((course: any, idx: number) => {
+              {filteredCourses.length > 0 ? (
+                filteredCourses.map((course: any, idx: number) => {
                   const coursePlos = course.course_plos?.map((cp: any) => cp.plos) || [];
                   const cplCodes = coursePlos.map((p: any) => p?.code).filter(Boolean);
                   const coursePls = course.course_profil_lulusan?.map((cpl: any) => cpl.profil_lulusan) || [];
@@ -1364,15 +1529,15 @@ function KurikulumContent() {
           </TabsList>
 
           <TabsContent value="vmts-pt">
-            {renderCodeTable('Misi PT', ptMisi, 'vmts_pt_misi', 'misi', 'Misi Perguruan Tinggi')}
-            {renderCodeTable('Tujuan PT', ptTujuan, 'vmts_pt_tujuan', 'tujuan', 'Tujuan Perguruan Tinggi')}
-            {renderCodeTable('Strategi PT', ptStrategi, 'vmts_pt_strategi', 'strategi', 'Strategi Perguruan Tinggi')}
+            {renderCodeTable('Misi PT', ptMisi, 'vmts_pt_misi', 'misi', 'Misi Perguruan Tinggi', filterPtMisi, setFilterPtMisi)}
+            {renderCodeTable('Tujuan PT', ptTujuan, 'vmts_pt_tujuan', 'tujuan', 'Tujuan Perguruan Tinggi', filterPtTujuan, setFilterPtTujuan)}
+            {renderCodeTable('Strategi PT', ptStrategi, 'vmts_pt_strategi', 'strategi', 'Strategi Perguruan Tinggi', filterPtStrategi, setFilterPtStrategi)}
           </TabsContent>
 
           <TabsContent value="vmts-ps">
-            {renderCodeTable('Misi PS', psMisi, 'vmts_ps_misi', 'misi', 'Misi Program Studi')}
-            {renderCodeTable('Tujuan PS', psTujuan, 'vmts_ps_tujuan', 'tujuan', 'Tujuan Program Studi')}
-            {renderCodeTable('Strategi PS', psStrategi, 'vmts_ps_strategi', 'strategi', 'Strategi Program Studi')}
+            {renderCodeTable('Misi PS', psMisi, 'vmts_ps_misi', 'misi', 'Misi Program Studi', filterPsMisi, setFilterPsMisi)}
+            {renderCodeTable('Tujuan PS', psTujuan, 'vmts_ps_tujuan', 'tujuan', 'Tujuan Program Studi', filterPsTujuan, setFilterPsTujuan)}
+            {renderCodeTable('Strategi PS', psStrategi, 'vmts_ps_strategi', 'strategi', 'Strategi Program Studi', filterPsStrategi, setFilterPsStrategi)}
           </TabsContent>
 
           <TabsContent value="profil-lulusan">
