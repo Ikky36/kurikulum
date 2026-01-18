@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.admin-bulk-users]
 verify_jwt = false
+
+[functions.admin-sync-profiles]
+verify_jwt = false
