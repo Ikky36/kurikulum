@@ -23,6 +23,7 @@ interface UserData {
 interface BulkCreateRequest {
   action: "create";
   users: UserData[];
+  updateIfExists?: boolean;
 }
 
 interface BulkDeleteRequest {
@@ -87,7 +88,7 @@ serve(async (req) => {
 
     // Handle bulk create
     if (body.action === "create") {
-      const { users } = body as BulkCreateRequest;
+      const { users, updateIfExists = false } = body as BulkCreateRequest;
       
       if (!users || !Array.isArray(users) || users.length === 0) {
         return new Response(JSON.stringify({ error: "No users provided" }), {
@@ -115,7 +116,7 @@ serve(async (req) => {
         }
       }
 
-      const results: { email: string; success: boolean; error?: string; userId?: string }[] = [];
+      const results: { email: string; success: boolean; error?: string; userId?: string; action?: string }[] = [];
       
       // Process all users in parallel with Promise.allSettled
       const promises = users.map(async (userData) => {
@@ -125,13 +126,56 @@ serve(async (req) => {
             return { email: userData.email, success: false, error: "Missing required fields" };
           }
 
-          // Create user with admin API
+          // Try to create user first
           const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
             email: userData.email,
             password: userData.password,
             email_confirm: true,
             user_metadata: { full_name: userData.full_name, role: userData.role },
           });
+
+          // If user already exists and updateIfExists is true, update the profile
+          if (createError && createError.message.includes("already been registered") && updateIfExists) {
+            // Find existing user by email
+            const { data: existingProfile } = await supabaseAdmin
+              .from("profiles")
+              .select("id")
+              .eq("email", userData.email)
+              .single();
+
+            if (existingProfile) {
+              // Update profile data
+              const { error: updateError } = await supabaseAdmin
+                .from("profiles")
+                .update({
+                  full_name: userData.full_name,
+                  role: userData.role as any,
+                  nim: userData.nim || null,
+                  nip: userData.nip || null,
+                  program: userData.program || null,
+                  class_group: userData.class_group || null,
+                  enrollment_year: userData.enrollment_year || null,
+                  gender: userData.gender || null,
+                  sistem_kuliah_id: userData.sistem_kuliah_id || null,
+                })
+                .eq("id", existingProfile.id);
+
+              if (updateError) {
+                return { email: userData.email, success: false, error: updateError.message };
+              }
+
+              // Optionally update password if user wants
+              if (userData.password) {
+                await supabaseAdmin.auth.admin.updateUserById(existingProfile.id, {
+                  password: userData.password,
+                });
+              }
+
+              return { email: userData.email, success: true, userId: existingProfile.id, action: "updated" };
+            } else {
+              return { email: userData.email, success: false, error: "User exists but profile not found" };
+            }
+          }
 
           if (createError) {
             return { email: userData.email, success: false, error: createError.message };
@@ -151,7 +195,7 @@ serve(async (req) => {
             })
             .eq("id", newUser.user.id);
 
-          return { email: userData.email, success: true, userId: newUser.user.id };
+          return { email: userData.email, success: true, userId: newUser.user.id, action: "created" };
         } catch (err: any) {
           return { email: userData.email, success: false, error: err.message || "Unknown error" };
         }
@@ -167,12 +211,14 @@ serve(async (req) => {
         }
       }
 
-      const successCount = results.filter(r => r.success).length;
+      const createdCount = results.filter(r => r.success && r.action === "created").length;
+      const updatedCount = results.filter(r => r.success && r.action === "updated").length;
       const failCount = results.filter(r => !r.success).length;
 
       return new Response(JSON.stringify({ 
         success: true, 
-        created: successCount,
+        created: createdCount,
+        updated: updatedCount,
         failed: failCount,
         results 
       }), {

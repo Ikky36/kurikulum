@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Download, Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
+import { Download, Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { Profile } from '@/lib/types';
 
@@ -29,6 +31,7 @@ interface ImportRow {
   sistem_kuliah?: string;
   isValid: boolean;
   errors: string[];
+  existsInDb: boolean;
 }
 
 interface UserImportExportProps {
@@ -44,6 +47,7 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
   const [importData, setImportData] = useState<ImportRow[]>([]);
   const [importing, setImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+  const [updateIfExists, setUpdateIfExists] = useState(true);
 
   // Fetch sistem kuliah for mapping
   const { data: sistemKuliahList } = useQuery({
@@ -193,10 +197,12 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
           const gender = String(row.gender || '').trim().toLowerCase();
           const sistemKuliah = String(row.sistem_kuliah || '').trim();
 
-          // Validation
+          // Check if email already exists in DB
+          const existsInDb = users.some(u => u.email.toLowerCase() === email);
+
+          // Validation - only mark as error if not exists or updateIfExists is false
           if (!email) errors.push('Email wajib diisi');
           else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Format email tidak valid');
-          else if (users.some(u => u.email.toLowerCase() === email)) errors.push('Email sudah terdaftar');
           
           if (!fullName) errors.push('Nama lengkap wajib diisi');
           if (!password) errors.push('Password wajib diisi');
@@ -231,6 +237,7 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
             sistem_kuliah: sistemKuliah || undefined,
             isValid: errors.length === 0,
             errors,
+            existsInDb,
           };
         });
 
@@ -287,7 +294,8 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
 
       // Process in batches of 50 for optimal performance
       const batchSize = 50;
-      let successCount = 0;
+      let createdCount = 0;
+      let updatedCount = 0;
       let errorCount = 0;
 
       for (let i = 0; i < usersToCreate.length; i += batchSize) {
@@ -298,13 +306,15 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
           body: {
             action: 'create',
             users: batch,
+            updateIfExists: updateIfExists,
           },
         });
 
         if (error) {
           errorCount += batch.length;
         } else if (data) {
-          successCount += data.created || 0;
+          createdCount += data.created || 0;
+          updatedCount += data.updated || 0;
           errorCount += data.failed || 0;
         }
       }
@@ -314,11 +324,15 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
       setImportData([]);
 
       const skippedCount = importData.length - validData.length;
-      if (successCount > 0) {
+      const totalSuccess = createdCount + updatedCount;
+      
+      if (totalSuccess > 0) {
         onImportSuccess();
-        let message = `${successCount} akun berhasil diimport`;
-        if (skippedCount > 0) message += `, ${skippedCount} baris dilewati (data tidak valid)`;
-        if (errorCount > 0) message += `, ${errorCount} gagal tersimpan`;
+        let message = '';
+        if (createdCount > 0) message += `${createdCount} akun baru dibuat`;
+        if (updatedCount > 0) message += `${message ? ', ' : ''}${updatedCount} akun diperbarui`;
+        if (skippedCount > 0) message += `${message ? ', ' : ''}${skippedCount} baris dilewati (data tidak valid)`;
+        if (errorCount > 0) message += `${message ? ', ' : ''}${errorCount} gagal`;
         toast({
           title: 'Import Selesai',
           description: message,
@@ -342,6 +356,8 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
 
   const validCount = importData.filter(r => r.isValid).length;
   const invalidCount = importData.filter(r => !r.isValid).length;
+  const existingCount = importData.filter(r => r.existsInDb && r.isValid).length;
+  const newCount = importData.filter(r => !r.existsInDb && r.isValid).length;
 
   return (
     <>
@@ -377,17 +393,43 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
             </p>
           </DialogHeader>
 
-          <div className="flex gap-4 mb-4">
+          <div className="flex flex-wrap gap-4 mb-4">
             <Badge variant="default" className="flex items-center gap-1">
               <CheckCircle className="h-3 w-3" />
               {validCount} Valid
             </Badge>
+            {newCount > 0 && (
+              <Badge variant="secondary" className="flex items-center gap-1">
+                {newCount} Baru
+              </Badge>
+            )}
+            {existingCount > 0 && (
+              <Badge variant="outline" className="flex items-center gap-1 border-amber-500 text-amber-600">
+                <RefreshCw className="h-3 w-3" />
+                {existingCount} Sudah Ada
+              </Badge>
+            )}
             {invalidCount > 0 && (
               <Badge variant="destructive" className="flex items-center gap-1">
                 <AlertCircle className="h-3 w-3" />
                 {invalidCount} Error
               </Badge>
             )}
+          </div>
+
+          {/* Update if exists option */}
+          <div className="flex items-center space-x-2 mb-4 p-3 bg-muted/50 rounded-lg">
+            <Checkbox 
+              id="updateIfExists" 
+              checked={updateIfExists} 
+              onCheckedChange={(checked) => setUpdateIfExists(checked as boolean)}
+            />
+            <Label htmlFor="updateIfExists" className="text-sm cursor-pointer">
+              <span className="font-medium">Update jika sudah ada</span>
+              <span className="text-muted-foreground ml-1">
+                - Jika email sudah terdaftar, data profil (nama, NIM, program, dll) akan diperbarui
+              </span>
+            </Label>
           </div>
 
           <div className="overflow-auto flex-1 border rounded-md">
@@ -402,18 +444,20 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
                   <TableHead className="text-primary-foreground">NIM/NIP</TableHead>
                   <TableHead className="text-primary-foreground">Angkatan</TableHead>
                   <TableHead className="text-primary-foreground">Sistem</TableHead>
-                  <TableHead className="text-primary-foreground">Error</TableHead>
+                  <TableHead className="text-primary-foreground">Keterangan</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {importData.map((row, idx) => (
-                  <TableRow key={idx} className={row.isValid ? '' : 'bg-destructive/5'}>
+                  <TableRow key={idx} className={!row.isValid ? 'bg-destructive/5' : row.existsInDb ? 'bg-amber-50 dark:bg-amber-950/20' : ''}>
                     <TableCell className="text-center">{idx + 1}</TableCell>
                     <TableCell>
-                      {row.isValid ? (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
-                      ) : (
+                      {!row.isValid ? (
                         <AlertCircle className="h-4 w-4 text-destructive" />
+                      ) : row.existsInDb ? (
+                        <RefreshCw className="h-4 w-4 text-amber-500" />
+                      ) : (
+                        <CheckCircle className="h-4 w-4 text-green-500" />
                       )}
                     </TableCell>
                     <TableCell className="font-mono text-sm">{row.email}</TableCell>
@@ -425,8 +469,14 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
                     <TableCell>{row.enrollment_year || '-'}</TableCell>
                     <TableCell>{row.sistem_kuliah || '-'}</TableCell>
                     <TableCell>
-                      {row.errors.length > 0 && (
+                      {row.errors.length > 0 ? (
                         <span className="text-xs text-destructive">{row.errors.join(', ')}</span>
+                      ) : row.existsInDb ? (
+                        <span className="text-xs text-amber-600">
+                          {updateIfExists ? 'Akan diperbarui' : 'Sudah ada (dilewati)'}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-green-600">Akan dibuat</span>
                       )}
                     </TableCell>
                   </TableRow>
