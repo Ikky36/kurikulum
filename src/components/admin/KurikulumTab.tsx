@@ -14,7 +14,7 @@ import { Plus, Trash2, Pencil, Users, Download, Upload, UserPlus, UserMinus, Sea
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ClassGroup, Profile, ClassStudent, Course } from '@/lib/types';
+import { ClassGroup, Profile, ClassStudent } from '@/lib/types';
 import * as XLSX from 'xlsx';
 
 type SistemKuliah = {
@@ -33,7 +33,7 @@ export function KurikulumTab() {
   const [editingClass, setEditingClass] = useState<ClassGroup | null>(null);
   const [className, setClassName] = useState('');
   const [classDescription, setClassDescription] = useState('');
-  const [classCourseId, setClassCourseId] = useState<string>('');
+  const [classSemester, setClassSemester] = useState<string>('');
   const [selectedClassForManage, setSelectedClassForManage] = useState<ClassGroup | null>(null);
   const [showManageStudentsDialog, setShowManageStudentsDialog] = useState(false);
   
@@ -48,34 +48,21 @@ export function KurikulumTab() {
   const [selectedStudentsInClass, setSelectedStudentsInClass] = useState<string[]>([]);
   const [searchInClassQuery, setSearchInClassQuery] = useState('');
 
-  // Fetch Class Groups with course data
+  // Fetch Class Groups
   const { data: classGroups, refetch: refetchClasses } = useQuery({
     queryKey: ['class-groups'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('class_groups')
-        .select('*, courses:course_id(*)')
+        .select('*')
         .order('name');
       if (error) throw error;
-      return data.map(cg => ({
-        ...cg,
-        course: cg.courses as any,
-      })) as (ClassGroup & { course?: any })[];
+      return data as (ClassGroup & { semester?: string })[];
     },
   });
 
-  // Fetch all courses for dropdown
-  const { data: courses } = useQuery({
-    queryKey: ['courses-for-class'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('courses')
-        .select('*')
-        .order('code');
-      if (error) throw error;
-      return data;
-    },
-  });
+  // Available semesters for dropdown
+  const availableSemesters = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
   // Fetch Students (mahasiswa only)
   const { data: students, refetch: refetchStudents } = useQuery({
@@ -119,7 +106,7 @@ export function KurikulumTab() {
 
   // Class mutations
   const createClassMutation = useMutation({
-    mutationFn: async (classData: { name: string; description?: string; course_id?: string | null }) => {
+    mutationFn: async (classData: { name: string; description?: string; semester?: string | null }) => {
       const { error } = await supabase.from('class_groups').insert([classData]);
       if (error) throw error;
     },
@@ -198,16 +185,16 @@ export function KurikulumTab() {
   const resetClassForm = () => {
     setClassName('');
     setClassDescription('');
-    setClassCourseId('');
+    setClassSemester('');
     setEditingClass(null);
     setShowClassDialog(false);
   };
 
-  const openEditClass = (classItem: ClassGroup) => {
+  const openEditClass = (classItem: ClassGroup & { semester?: string }) => {
     setEditingClass(classItem);
     setClassName(classItem.name);
     setClassDescription(classItem.description || '');
-    setClassCourseId(classItem.course_id || 'none');
+    setClassSemester((classItem as any).semester || '');
     setShowClassDialog(true);
   };
 
@@ -215,7 +202,7 @@ export function KurikulumTab() {
     const classData = {
       name: className,
       description: classDescription || undefined,
-      course_id: classCourseId && classCourseId !== 'none' ? classCourseId : null,
+      semester: classSemester || null,
     };
     if (editingClass) {
       updateClassMutation.mutate({ id: editingClass.id, ...classData });
@@ -488,21 +475,20 @@ export function KurikulumTab() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Mata Kuliah & Semester</Label>
-                    <Select value={classCourseId} onValueChange={setClassCourseId}>
+                    <Label>Semester</Label>
+                    <Select value={classSemester} onValueChange={setClassSemester}>
                       <SelectTrigger>
-                        <SelectValue placeholder="Pilih mata kuliah..." />
+                        <SelectValue placeholder="Pilih semester..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Tidak terkait mata kuliah</SelectItem>
-                        {courses?.map(course => (
-                          <SelectItem key={course.id} value={course.id}>
-                            {course.code} - {course.name} ({course.semester || 'Tanpa semester'})
+                        <SelectItem value="none">Tidak terkait semester</SelectItem>
+                        {availableSemesters.map(sem => (
+                          <SelectItem key={sem} value={sem}>
+                            Semester {sem}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <p className="text-xs text-muted-foreground">Kelas akan terkait dengan semester mata kuliah yang dipilih</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Deskripsi (opsional)</Label>
@@ -529,7 +515,6 @@ export function KurikulumTab() {
               <TableRow className="bg-primary hover:bg-primary">
                 <TableHead className="w-12 text-primary-foreground">No</TableHead>
                 <TableHead className="text-primary-foreground">Nama Kelas</TableHead>
-                <TableHead className="text-primary-foreground">Mata Kuliah</TableHead>
                 <TableHead className="text-primary-foreground">Semester</TableHead>
                 <TableHead className="text-primary-foreground">Deskripsi</TableHead>
                 <TableHead className="text-primary-foreground">Jumlah Mahasiswa</TableHead>
@@ -546,18 +531,8 @@ export function KurikulumTab() {
                       <Badge variant="secondary">{classItem.name}</Badge>
                     </TableCell>
                     <TableCell>
-                      {classItem.course ? (
-                        <span className="text-sm">
-                          <Badge variant="outline" className="font-mono mr-1">{classItem.course.code}</Badge>
-                          {classItem.course.name}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {classItem.course?.semester ? (
-                        <Badge variant="secondary">{classItem.course.semester}</Badge>
+                      {(classItem as any).semester ? (
+                        <Badge variant="secondary">Semester {(classItem as any).semester}</Badge>
                       ) : (
                         <span className="text-muted-foreground text-sm">-</span>
                       )}
@@ -621,7 +596,7 @@ export function KurikulumTab() {
               })}
               {(!classGroups || classGroups.length === 0) && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     Belum ada kelas. Klik "Tambah Kelas" untuk menambahkan.
                   </TableCell>
                 </TableRow>

@@ -29,6 +29,7 @@ export interface ClassGroup {
   name: string;
   description?: string;
   course_id?: string | null;
+  semester?: string | null;
   course?: Course;
   created_at: string;
   updated_at: string;
