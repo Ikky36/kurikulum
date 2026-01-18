@@ -49,6 +49,61 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
   const [updateIfExists, setUpdateIfExists] = useState(true);
 
+  const normalizeEmail = (email: string) => String(email || '').trim().toLowerCase();
+
+  const revalidateImportData = (rows: ImportRow[], updateFlag: boolean): ImportRow[] => {
+    return rows.map((r) => {
+      const errors: string[] = [];
+
+      const email = normalizeEmail(r.email);
+      const fullName = String(r.full_name || '').trim();
+      const password = String(r.password || '').trim();
+      const role = r.role;
+      const nim = String(r.nim || '').trim();
+      const nip = String(r.nip || '').trim();
+      const sistemKuliah = String(r.sistem_kuliah || '').trim();
+
+      const existsInDb = users.some((u) => u.email.toLowerCase() === email);
+
+      if (!email) errors.push('Email wajib diisi');
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Format email tidak valid');
+
+      if (!fullName) errors.push('Nama lengkap wajib diisi');
+
+      const passwordRequired = !existsInDb || !updateFlag;
+      if (passwordRequired) {
+        if (!password) errors.push('Password wajib diisi');
+        else if (password.length < 6) errors.push('Password minimal 6 karakter');
+      } else if (password && password.length < 6) {
+        errors.push('Password minimal 6 karakter');
+      }
+
+      if (!role || !['mahasiswa', 'dosen'].includes(role)) {
+        errors.push('Role harus mahasiswa atau dosen');
+      }
+
+      if (role === 'mahasiswa' && !nim) errors.push('NIM wajib untuk mahasiswa');
+      if (role === 'dosen' && !nip) errors.push('NIP wajib untuk dosen');
+
+      if (sistemKuliah && sistemKuliahList) {
+        const found = sistemKuliahList.find((sk) => sk.name.toLowerCase() === sistemKuliah.toLowerCase());
+        if (!found) {
+          errors.push(`Sistem kuliah "${sistemKuliah}" tidak ditemukan`);
+        }
+      }
+
+      return {
+        ...r,
+        email,
+        full_name: fullName,
+        password,
+        existsInDb,
+        isValid: errors.length === 0,
+        errors,
+      };
+    });
+  };
+
   // Fetch sistem kuliah for mapping
   const { data: sistemKuliahList } = useQuery({
     queryKey: ['sistem-kuliah'],
@@ -200,14 +255,15 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
           // Check if email already exists in DB
           const existsInDb = users.some(u => u.email.toLowerCase() === email);
 
-          // Validation - only mark as error if not exists or updateIfExists is false
+          // Validation
           if (!email) errors.push('Email wajib diisi');
           else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Format email tidak valid');
           
           if (!fullName) errors.push('Nama lengkap wajib diisi');
-          if (!password) errors.push('Password wajib diisi');
-          else if (password.length < 6) errors.push('Password minimal 6 karakter');
-          
+
+          // Password wajib untuk akun baru. Untuk akun yang sudah ada, password opsional jika "Update jika sudah ada" aktif.
+          if (!password && !(existsInDb && updateIfExists)) errors.push('Password wajib diisi');
+          else if (password && password.length < 6) errors.push('Password minimal 6 karakter');
           if (!role || !['mahasiswa', 'dosen'].includes(role)) {
             errors.push('Role harus mahasiswa atau dosen');
           }
@@ -422,7 +478,11 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
             <Checkbox 
               id="updateIfExists" 
               checked={updateIfExists} 
-              onCheckedChange={(checked) => setUpdateIfExists(checked as boolean)}
+              onCheckedChange={(checked) => {
+                const next = checked as boolean;
+                setUpdateIfExists(next);
+                setImportData((prev) => revalidateImportData(prev, next));
+              }}
             />
             <Label htmlFor="updateIfExists" className="text-sm cursor-pointer">
               <span className="font-medium">Update jika sudah ada</span>

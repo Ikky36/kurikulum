@@ -116,114 +116,172 @@ serve(async (req) => {
         }
       }
 
-      const results: { email: string; success: boolean; error?: string; userId?: string; action?: string }[] = [];
-      
-      // Process all users in parallel with Promise.allSettled
-      const promises = users.map(async (userData) => {
-        try {
-          // Validate required fields
-          if (!userData.email || !userData.password || !userData.full_name || !userData.role) {
-            return { email: userData.email, success: false, error: "Missing required fields" };
+      console.log(`[admin-bulk-users] action=create users=${users.length} updateIfExists=${updateIfExists}`);
+
+      const normalizeEmail = (email: string) => String(email || "").trim().toLowerCase();
+
+      const updateProfileById = async (profileId: string, userData: UserData) => {
+        return await supabaseAdmin
+          .from("profiles")
+          .update({
+            full_name: userData.full_name,
+            role: userData.role as any,
+            nim: userData.nim || null,
+            nip: userData.nip || null,
+            program: userData.program || null,
+            class_group: userData.class_group || null,
+            enrollment_year: userData.enrollment_year || null,
+            gender: userData.gender || null,
+            sistem_kuliah_id: userData.sistem_kuliah_id || null,
+          })
+          .eq("id", profileId);
+      };
+
+      const findProfileIdByEmail = async (email: string) => {
+        const { data, error } = await supabaseAdmin
+          .from("profiles")
+          .select("id")
+          .ilike("email", email)
+          .maybeSingle();
+
+        if (error) return { id: null as string | null, error };
+        return { id: data?.id ?? null, error: null };
+      };
+
+      const processUser = async (userData: UserData) => {
+        const email = normalizeEmail(userData.email);
+        const password = String(userData.password || "").trim();
+
+        if (!email || !userData.full_name || !userData.role) {
+          return { email, success: false, error: "Missing required fields" };
+        }
+
+        // If update is allowed and password is blank, try update-only flow.
+        // This avoids intermittent failures when admin API requires password for creation.
+        if (updateIfExists && !password) {
+          const { id: existingId, error: findErr } = await findProfileIdByEmail(email);
+          if (findErr) {
+            return { email, success: false, error: findErr.message };
+          }
+          if (!existingId) {
+            return { email, success: false, error: "Password wajib untuk akun baru" };
           }
 
-          // Try to create user first
-          const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-            email: userData.email,
-            password: userData.password,
-            email_confirm: true,
-            user_metadata: { full_name: userData.full_name, role: userData.role },
-          });
+          const { error: updateError } = await updateProfileById(existingId, userData);
+          if (updateError) {
+            return { email, success: false, error: updateError.message };
+          }
 
-          // If user already exists and updateIfExists is true, update the profile
-          if (createError && createError.message.includes("already been registered") && updateIfExists) {
-            // Find existing user by email
-            const { data: existingProfile } = await supabaseAdmin
-              .from("profiles")
-              .select("id")
-              .eq("email", userData.email)
-              .single();
+          return { email, success: true, userId: existingId, action: "updated" };
+        }
 
-            if (existingProfile) {
-              // Update profile data
-              const { error: updateError } = await supabaseAdmin
-                .from("profiles")
-                .update({
-                  full_name: userData.full_name,
-                  role: userData.role as any,
-                  nim: userData.nim || null,
-                  nip: userData.nip || null,
-                  program: userData.program || null,
-                  class_group: userData.class_group || null,
-                  enrollment_year: userData.enrollment_year || null,
-                  gender: userData.gender || null,
-                  sistem_kuliah_id: userData.sistem_kuliah_id || null,
-                })
-                .eq("id", existingProfile.id);
+        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true,
+          user_metadata: { full_name: userData.full_name, role: userData.role },
+        });
 
-              if (updateError) {
-                return { email: userData.email, success: false, error: updateError.message };
-              }
+        const alreadyExists =
+          !!createError &&
+          (createError.message?.toLowerCase().includes("already") ||
+            createError.message?.toLowerCase().includes("registered"));
 
-              // Optionally update password if user wants
-              if (userData.password) {
-                await supabaseAdmin.auth.admin.updateUserById(existingProfile.id, {
-                  password: userData.password,
-                });
-              }
+        if (createError && alreadyExists && updateIfExists) {
+          const { id: existingId, error: findErr } = await findProfileIdByEmail(email);
+          if (findErr) {
+            return { email, success: false, error: findErr.message };
+          }
 
-              return { email: userData.email, success: true, userId: existingProfile.id, action: "updated" };
-            } else {
-              return { email: userData.email, success: false, error: "User exists but profile not found" };
+          if (!existingId) {
+            return { email, success: false, error: "User exists but profile not found" };
+          }
+
+          const { error: updateError } = await updateProfileById(existingId, userData);
+          if (updateError) {
+            return { email, success: false, error: updateError.message };
+          }
+
+          // Optionally update password
+          if (password) {
+            const { error: passErr } = await supabaseAdmin.auth.admin.updateUserById(existingId, {
+              password,
+            });
+            if (passErr) {
+              console.warn(`[admin-bulk-users] failed to update password for ${email}: ${passErr.message}`);
             }
           }
 
-          if (createError) {
-            return { email: userData.email, success: false, error: createError.message };
+          return { email, success: true, userId: existingId, action: "updated" };
+        }
+
+        if (createError) {
+          return { email, success: false, error: createError.message };
+        }
+
+        // Update profile with additional data (user already created in auth)
+        const { error: profileUpdateError } = await supabaseAdmin
+          .from("profiles")
+          .update({
+            nim: userData.nim || null,
+            nip: userData.nip || null,
+            program: userData.program || null,
+            class_group: userData.class_group || null,
+            enrollment_year: userData.enrollment_year || null,
+            gender: userData.gender || null,
+            sistem_kuliah_id: userData.sistem_kuliah_id || null,
+          })
+          .eq("id", newUser.user.id);
+
+        if (profileUpdateError) {
+          return { email, success: false, error: profileUpdateError.message };
+        }
+
+        return { email, success: true, userId: newUser.user.id, action: "created" };
+      };
+
+      const mapWithConcurrency = async <T, R>(items: T[], limit: number, mapper: (item: T) => Promise<R>): Promise<R[]> => {
+        const results: R[] = new Array(items.length);
+        let nextIndex = 0;
+        const workers = Array.from({ length: Math.min(limit, items.length) }).map(async () => {
+          while (true) {
+            const current = nextIndex++;
+            if (current >= items.length) break;
+            results[current] = await mapper(items[current]);
           }
+        });
+        await Promise.all(workers);
+        return results;
+      };
 
-          // Update profile with additional data
-          await supabaseAdmin
-            .from("profiles")
-            .update({
-              nim: userData.nim || null,
-              nip: userData.nip || null,
-              program: userData.program || null,
-              class_group: userData.class_group || null,
-              enrollment_year: userData.enrollment_year || null,
-              gender: userData.gender || null,
-              sistem_kuliah_id: userData.sistem_kuliah_id || null,
-            })
-            .eq("id", newUser.user.id);
+      const results: { email: string; success: boolean; error?: string; userId?: string; action?: string }[] =
+        await mapWithConcurrency(users, 8, async (userData) => {
+          try {
+            return await processUser(userData);
+          } catch (err: any) {
+            console.error("[admin-bulk-users] processUser error:", err);
+            return { email: normalizeEmail((userData as any)?.email), success: false, error: err?.message || "Unknown error" };
+          }
+        });
 
-          return { email: userData.email, success: true, userId: newUser.user.id, action: "created" };
-        } catch (err: any) {
-          return { email: userData.email, success: false, error: err.message || "Unknown error" };
+      const createdCount = results.filter((r) => r.success && r.action === "created").length;
+      const updatedCount = results.filter((r) => r.success && r.action === "updated").length;
+      const failCount = results.filter((r) => !r.success).length;
+
+      console.log(`[admin-bulk-users] done created=${createdCount} updated=${updatedCount} failed=${failCount}`);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          created: createdCount,
+          updated: updatedCount,
+          failed: failCount,
+          results,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
-      });
-
-      const settledResults = await Promise.allSettled(promises);
-      
-      for (const result of settledResults) {
-        if (result.status === "fulfilled") {
-          results.push(result.value);
-        } else {
-          results.push({ email: "unknown", success: false, error: result.reason?.message || "Unknown error" });
-        }
-      }
-
-      const createdCount = results.filter(r => r.success && r.action === "created").length;
-      const updatedCount = results.filter(r => r.success && r.action === "updated").length;
-      const failCount = results.filter(r => !r.success).length;
-
-      return new Response(JSON.stringify({ 
-        success: true, 
-        created: createdCount,
-        updated: updatedCount,
-        failed: failCount,
-        results 
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      );
     }
 
     // Handle bulk delete
