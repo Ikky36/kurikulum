@@ -207,7 +207,7 @@ export function KurikulumTab() {
     setEditingClass(classItem);
     setClassName(classItem.name);
     setClassDescription(classItem.description || '');
-    setClassCourseId(classItem.course_id || '');
+    setClassCourseId(classItem.course_id || 'none');
     setShowClassDialog(true);
   };
 
@@ -215,7 +215,7 @@ export function KurikulumTab() {
     const classData = {
       name: className,
       description: classDescription || undefined,
-      course_id: classCourseId || null,
+      course_id: classCourseId && classCourseId !== 'none' ? classCourseId : null,
     };
     if (editingClass) {
       updateClassMutation.mutate({ id: editingClass.id, ...classData });
@@ -494,7 +494,7 @@ export function KurikulumTab() {
                         <SelectValue placeholder="Pilih mata kuliah..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Tidak terkait mata kuliah</SelectItem>
+                        <SelectItem value="none">Tidak terkait mata kuliah</SelectItem>
                         {courses?.map(course => (
                           <SelectItem key={course.id} value={course.id}>
                             {course.code} - {course.name} ({course.semester || 'Tanpa semester'})
