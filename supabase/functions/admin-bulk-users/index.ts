@@ -120,6 +120,49 @@ serve(async (req) => {
 
       const normalizeEmail = (email: string) => String(email || "").trim().toLowerCase();
 
+      const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+      const isRetryableAuthError = (err: any) => {
+        const status = Number(err?.status || err?.code || 0);
+        const msg = String(err?.message || "").toLowerCase();
+        // Typical transient cases: rate limiting / upstream / network-ish errors
+        return status === 429 || status === 500 || status === 502 || status === 503 || status === 504 || msg.includes("rate") || msg.includes("timeout");
+      };
+
+      const withRetry = async <T>(fn: () => Promise<T>, label: string, email: string, maxAttempts = 3): Promise<T> => {
+        let attempt = 0;
+        // Exponential backoff: 250ms, 750ms, 1750ms...
+        const delays = [250, 750, 1750, 3000];
+        while (true) {
+          attempt++;
+          try {
+            return await fn();
+          } catch (e: any) {
+            const retryable = isRetryableAuthError(e);
+            if (!retryable || attempt >= maxAttempts) {
+              console.warn(`[admin-bulk-users] ${label} failed email=${email} attempt=${attempt}/${maxAttempts} status=${e?.status} message=${e?.message}`);
+              throw e;
+            }
+            const delay = delays[Math.min(attempt - 1, delays.length - 1)];
+            console.warn(`[admin-bulk-users] ${label} retrying email=${email} attempt=${attempt}/${maxAttempts} in ${delay}ms (status=${e?.status} msg=${e?.message})`);
+            await sleep(delay);
+          }
+        }
+      };
+
+      const isAlreadyExistsError = (err: any) => {
+        const status = Number(err?.status || 0);
+        const msg = String(err?.message || "").toLowerCase();
+        return (
+          msg.includes("already") ||
+          msg.includes("registered") ||
+          msg.includes("exists") ||
+          msg.includes("duplicate") ||
+          msg.includes("users_email_key") ||
+          status === 409
+        );
+      };
+
       const updateProfileById = async (profileId: string, userData: UserData) => {
         return await supabaseAdmin
           .from("profiles")
@@ -175,38 +218,59 @@ serve(async (req) => {
           return { email, success: true, userId: existingId, action: "updated" };
         }
 
-        const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        const { data: newUser, error: createError }: any = await withRetry(
+          () =>
+            supabaseAdmin.auth.admin.createUser({
+              email,
+              password,
+              email_confirm: true,
+              user_metadata: { full_name: userData.full_name, role: userData.role },
+            }),
+          "createUser",
           email,
-          password,
-          email_confirm: true,
-          user_metadata: { full_name: userData.full_name, role: userData.role },
+          3
+        ).catch((e) => {
+          // Normalize to match the { data, error } shape used by supabase-js.
+          return { data: null, error: e };
         });
 
-        const alreadyExists =
-          !!createError &&
-          (createError.message?.toLowerCase().includes("already") ||
-            createError.message?.toLowerCase().includes("registered"));
+        const alreadyExists = !!createError && isAlreadyExistsError(createError);
+
+        if (createError) {
+          console.warn(
+            `[admin-bulk-users] createUser failed email=${email} status=${(createError as any)?.status} message=${createError.message}`
+          );
+        }
 
         if (createError && alreadyExists && updateIfExists) {
           const { id: existingId, error: findErr } = await findProfileIdByEmail(email);
           if (findErr) {
+            console.warn(`[admin-bulk-users] findProfileIdByEmail failed email=${email}: ${findErr.message}`);
             return { email, success: false, error: findErr.message };
           }
 
           if (!existingId) {
-            return { email, success: false, error: "User exists but profile not found" };
+            // Most common cause: the user exists in auth but profile row is missing.
+            // We cannot reliably map email -> auth user id without scanning auth users,
+            // so we return a clear error.
+            return { email, success: false, error: "Email sudah terdaftar tetapi profil tidak ditemukan. Hubungi admin untuk sinkronisasi profil." };
           }
 
           const { error: updateError } = await updateProfileById(existingId, userData);
           if (updateError) {
+            console.warn(`[admin-bulk-users] updateProfile failed email=${email}: ${updateError.message}`);
             return { email, success: false, error: updateError.message };
           }
 
           // Optionally update password
           if (password) {
-            const { error: passErr } = await supabaseAdmin.auth.admin.updateUserById(existingId, {
-              password,
-            });
+            const { error: passErr } = await withRetry(
+              () => supabaseAdmin.auth.admin.updateUserById(existingId, { password }),
+              "updateUserById(password)",
+              email,
+              3
+            ).catch((e) => ({ error: e } as any));
+
             if (passErr) {
               console.warn(`[admin-bulk-users] failed to update password for ${email}: ${passErr.message}`);
             }
@@ -255,7 +319,7 @@ serve(async (req) => {
       };
 
       const results: { email: string; success: boolean; error?: string; userId?: string; action?: string }[] =
-        await mapWithConcurrency(users, 8, async (userData) => {
+        await mapWithConcurrency(users, 4, async (userData) => {
           try {
             return await processUser(userData);
           } catch (err: any) {

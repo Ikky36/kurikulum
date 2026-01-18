@@ -353,6 +353,7 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
       let createdCount = 0;
       let updatedCount = 0;
       let errorCount = 0;
+      const failedDetails: { email: string; error: string }[] = [];
 
       for (let i = 0; i < usersToCreate.length; i += batchSize) {
         const batch = usersToCreate.slice(i, i + batchSize);
@@ -367,12 +368,41 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
         });
 
         if (error) {
+          // If the whole batch fails, keep per-row info so admin can fix/retry.
           errorCount += batch.length;
-        } else if (data) {
+          batch.forEach((u) => failedDetails.push({ email: u.email, error: error.message || 'Batch error' }));
+          continue;
+        }
+
+        if (data) {
           createdCount += data.created || 0;
           updatedCount += data.updated || 0;
           errorCount += data.failed || 0;
+
+          if (Array.isArray(data.results)) {
+            data.results
+              .filter((r: any) => !r?.success)
+              .forEach((r: any) =>
+                failedDetails.push({
+                  email: String(r?.email || ''),
+                  error: String(r?.error || 'Unknown error'),
+                })
+              );
+          }
         }
+      }
+
+      // Auto-download failure report (so admin tahu tepatnya baris mana yang gagal)
+      if (failedDetails.length > 0) {
+        const ws = XLSX.utils.json_to_sheet(
+          failedDetails.map((f) => ({
+            email: f.email,
+            error: f.error,
+          }))
+        );
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Gagal');
+        XLSX.writeFile(wb, `laporan_import_gagal_${new Date().toISOString().split('T')[0]}.xlsx`);
       }
 
       setImporting(false);
@@ -388,7 +418,7 @@ export function UserImportExport({ users, onImportSuccess }: UserImportExportPro
         if (createdCount > 0) message += `${createdCount} akun baru dibuat`;
         if (updatedCount > 0) message += `${message ? ', ' : ''}${updatedCount} akun diperbarui`;
         if (skippedCount > 0) message += `${message ? ', ' : ''}${skippedCount} baris dilewati (data tidak valid)`;
-        if (errorCount > 0) message += `${message ? ', ' : ''}${errorCount} gagal`;
+        if (errorCount > 0) message += `${message ? ', ' : ''}${errorCount} gagal (laporan diunduh)`;
         toast({
           title: 'Import Selesai',
           description: message,
