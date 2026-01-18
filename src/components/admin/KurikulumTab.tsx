@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Pencil, Users, Download, Upload, UserPlus, UserMinus, Search, Check, CheckCheck } from 'lucide-react';
+import { Plus, Trash2, Pencil, Users, Download, Upload, UserPlus, UserMinus, Search, Check, CheckCheck, X } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ClassGroup, Profile, ClassStudent } from '@/lib/types';
@@ -41,6 +42,10 @@ export function KurikulumTab() {
   const [sistemKuliahFilter, setSistemKuliahFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  
+  // State for bulk delete students in class
+  const [selectedStudentsInClass, setSelectedStudentsInClass] = useState<string[]>([]);
+  const [searchInClassQuery, setSearchInClassQuery] = useState('');
 
   // Fetch Class Groups
   const { data: classGroups, refetch: refetchClasses } = useQuery({
@@ -197,10 +202,29 @@ export function KurikulumTab() {
     return students?.filter(s => studentIds.includes(s.id)) || [];
   };
 
-  // Get students not in a class
+  // Get students not in a specific class (but can be in other classes - allows multi-class enrollment)
   const getStudentsNotInClass = (classGroupId: string) => {
-    const studentIds = classStudents?.filter(cs => cs.class_group_id === classGroupId).map(cs => cs.student_profile_id) || [];
-    return students?.filter(s => !studentIds.includes(s.id)) || [];
+    const studentIdsInThisClass = classStudents?.filter(cs => cs.class_group_id === classGroupId).map(cs => cs.student_profile_id) || [];
+    return students?.filter(s => !studentIdsInThisClass.includes(s.id)) || [];
+  };
+
+  // Get filtered students IN class
+  const getFilteredStudentsInClass = (classGroupId: string) => {
+    let filtered = getStudentsInClass(classGroupId);
+    if (searchInClassQuery) {
+      const query = searchInClassQuery.toLowerCase();
+      filtered = filtered.filter(s => 
+        s.full_name.toLowerCase().includes(query) || 
+        s.nim?.toLowerCase().includes(query)
+      );
+    }
+    return filtered;
+  };
+
+  // Get other classes a student belongs to
+  const getOtherClassesForStudent = (studentId: string, currentClassId: string) => {
+    const otherClassIds = classStudents?.filter(cs => cs.student_profile_id === studentId && cs.class_group_id !== currentClassId).map(cs => cs.class_group_id) || [];
+    return classGroups?.filter(cg => otherClassIds.includes(cg.id)) || [];
   };
 
   // Get available years from students
@@ -274,6 +298,41 @@ export function KurikulumTab() {
     );
   };
 
+  // Toggle individual student selection for students in class
+  const toggleStudentInClassSelection = (studentId: string) => {
+    setSelectedStudentsInClass(prev => 
+      prev.includes(studentId) 
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  // Select all students in class (filtered)
+  const selectAllStudentsInClass = (classGroupId: string) => {
+    const filtered = getFilteredStudentsInClass(classGroupId);
+    setSelectedStudentsInClass(filtered.map(s => s.id));
+  };
+
+  // Remove multiple students from class
+  const removeMultipleStudentsFromClassMutation = useMutation({
+    mutationFn: async ({ classGroupId, studentIds }: { classGroupId: string; studentIds: string[] }) => {
+      const { error } = await supabase
+        .from('class_students')
+        .delete()
+        .eq('class_group_id', classGroupId)
+        .in('student_profile_id', studentIds);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['class-students'] });
+      toast({ title: 'Berhasil', description: `${variables.studentIds.length} mahasiswa berhasil dihapus dari kelas` });
+      setSelectedStudentsInClass([]);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
   // Reset filters when dialog closes
   const resetManageDialog = () => {
     setYearFilter('all');
@@ -281,6 +340,8 @@ export function KurikulumTab() {
     setSistemKuliahFilter('all');
     setSearchQuery('');
     setSelectedStudents([]);
+    setSelectedStudentsInClass([]);
+    setSearchInClassQuery('');
     setShowManageStudentsDialog(false);
   };
 
@@ -514,25 +575,113 @@ export function KurikulumTab() {
             {/* Students in class */}
             <div className="flex flex-col">
               <h4 className="font-medium mb-2">Mahasiswa di Kelas ({selectedClassForManage ? getStudentsInClass(selectedClassForManage.id).length : 0})</h4>
-              <div className="border rounded-lg p-2 flex-1 overflow-y-auto max-h-[400px] space-y-1">
-                {selectedClassForManage && getStudentsInClass(selectedClassForManage.id).map(student => (
-                  <div key={student.id} className="flex items-center justify-between p-2 hover:bg-muted rounded">
-                    <div className="text-sm">
-                      <p className="font-medium">{student.full_name}</p>
-                      <p className="text-muted-foreground text-xs">{student.nim} • {student.enrollment_year || '-'} • {student.gender || '-'}</p>
-                    </div>
+              
+              {/* Search and bulk actions for students in class */}
+              <div className="space-y-2 mb-3">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cari nama atau NIM..."
+                    value={searchInClassQuery}
+                    onChange={(e) => setSearchInClassQuery(e.target.value)}
+                    className="pl-8 h-9"
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1 items-center">
+                  <span className="text-xs text-muted-foreground mr-1">Pilih:</span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-6 text-xs px-2 gap-1"
+                    onClick={() => selectedClassForManage && selectAllStudentsInClass(selectedClassForManage.id)}
+                  >
+                    <CheckCheck className="h-3 w-3" />
+                    Semua
+                  </Button>
+                  {selectedStudentsInClass.length > 0 && (
                     <Button 
                       variant="ghost" 
-                      size="icon"
-                      className="text-destructive hover:text-destructive h-8 w-8"
-                      onClick={() => removeStudentFromClassMutation.mutate({ classGroupId: selectedClassForManage.id, studentId: student.id })}
+                      size="sm" 
+                      className="h-6 text-xs px-2"
+                      onClick={() => setSelectedStudentsInClass([])}
                     >
-                      <UserMinus className="h-4 w-4" />
+                      <X className="h-3 w-3 mr-1" />
+                      Batal ({selectedStudentsInClass.length})
                     </Button>
-                  </div>
-                ))}
-                {selectedClassForManage && getStudentsInClass(selectedClassForManage.id).length === 0 && (
-                  <p className="text-muted-foreground text-sm text-center py-4">Belum ada mahasiswa</p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Bulk delete button */}
+              {selectedStudentsInClass.length > 0 && selectedClassForManage && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="destructive" 
+                      size="sm" 
+                      className="mb-2"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Hapus {selectedStudentsInClass.length} Mahasiswa dari Kelas
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Apakah Anda yakin ingin menghapus {selectedStudentsInClass.length} mahasiswa dari kelas {selectedClassForManage.name}? 
+                        Mahasiswa tidak akan dihapus dari sistem, hanya dihapus dari kelas ini.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Batal</AlertDialogCancel>
+                      <AlertDialogAction 
+                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        onClick={() => removeMultipleStudentsFromClassMutation.mutate({ 
+                          classGroupId: selectedClassForManage.id, 
+                          studentIds: selectedStudentsInClass 
+                        })}
+                      >
+                        Hapus
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+              
+              <div className="border rounded-lg p-2 flex-1 overflow-y-auto max-h-[300px] space-y-1">
+                {selectedClassForManage && getFilteredStudentsInClass(selectedClassForManage.id).map(student => {
+                  const otherClasses = getOtherClassesForStudent(student.id, selectedClassForManage.id);
+                  return (
+                    <div key={student.id} className="flex items-center gap-2 p-2 hover:bg-muted rounded">
+                      <Checkbox
+                        checked={selectedStudentsInClass.includes(student.id)}
+                        onCheckedChange={() => toggleStudentInClassSelection(student.id)}
+                      />
+                      <div className="text-sm flex-1">
+                        <p className="font-medium">{student.full_name}</p>
+                        <p className="text-muted-foreground text-xs">{student.nim} • {student.enrollment_year || '-'} • {student.gender || '-'}</p>
+                        {otherClasses.length > 0 && (
+                          <p className="text-xs text-blue-600">
+                            Juga di kelas: {otherClasses.map(c => c.name).join(', ')}
+                          </p>
+                        )}
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="text-destructive hover:text-destructive h-8 w-8"
+                        onClick={() => removeStudentFromClassMutation.mutate({ classGroupId: selectedClassForManage.id, studentId: student.id })}
+                      >
+                        <UserMinus className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+                {selectedClassForManage && getFilteredStudentsInClass(selectedClassForManage.id).length === 0 && (
+                  <p className="text-muted-foreground text-sm text-center py-4">
+                    {searchInClassQuery ? 'Tidak ada mahasiswa yang cocok' : 'Belum ada mahasiswa'}
+                  </p>
                 )}
               </div>
             </div>
