@@ -42,6 +42,8 @@ export default function CourseDetail() {
           { table: 'grades', queryKeys: [['course-grades', courseId], ['grades']] },
           { table: 'student_assessment_scores', queryKeys: [['course-assessment-scores', courseId], ['assessment-scores']] },
           { table: 'enrollments', queryKeys: [['course-enrollments', courseId]] },
+          { table: 'class_students', queryKeys: [['course-enrollments', courseId], ['class-students']] },
+          { table: 'class_groups', queryKeys: [['course-enrollments', courseId], ['class-groups']] },
           { table: 'assessments', queryKeys: [['course-assessments', courseId]] },
           { table: 'clos', queryKeys: [['course-clos', courseId]] },
           { table: 'llos', queryKeys: [['clo-llos']] },
@@ -116,8 +118,13 @@ export default function CourseDetail() {
       // Calculate Poin: average of all assessment scores
       const poin = assessmentCount > 0 ? totalScoresSum / assessmentCount : null;
       
+      // Get class_group from enrollment data (may come from class_students)
+      const classGroupName = (e as any).class_group_name || e.student?.class_group;
+      
       return {
         ...e.student,
+        class_group: classGroupName,
+        class_group_id: (e as any).class_group_id,
         grade: grade?.final_score,
         isPassing: achievementPercentage !== null ? achievementPercentage >= (course?.passing_score || 60) : null,
         assessmentScores: studentAssessmentScores,
@@ -532,14 +539,14 @@ export default function CourseDetail() {
                       name: a.name,
                       weight: a.weight || 0,
                     }))}
-                    students={enrollments?.map(e => ({
-                      id: e.student?.id || '',
-                      full_name: e.student?.full_name || '',
-                      nim: e.student?.nim || null,
-                      enrollment_year: e.student?.enrollment_year || null,
-                      class_group: e.student?.class_group || null,
-                      email: e.student?.email || null,
-                    })) || []}
+                    students={studentsWithGrades.map(s => ({
+                      id: s?.id || '',
+                      full_name: s?.full_name || '',
+                      nim: s?.nim || null,
+                      enrollment_year: s?.enrollment_year || null,
+                      class_group: s?.class_group || null,
+                      email: s?.email || null,
+                    }))}
                     existingScores={assessmentScores?.map(s => ({
                       assessment_id: s.assessment_id,
                       student_profile_id: s.student_profile_id,

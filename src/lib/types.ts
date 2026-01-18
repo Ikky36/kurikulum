@@ -28,6 +28,8 @@ export interface ClassGroup {
   id: string;
   name: string;
   description?: string;
+  course_id?: string | null;
+  course?: Course;
   created_at: string;
   updated_at: string;
 }
