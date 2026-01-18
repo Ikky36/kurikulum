@@ -46,12 +46,26 @@ export function useCoursesWithStats() {
       
       if (instructorsError) throw instructorsError;
 
-      // Get enrollment counts
+      // Get enrollment counts from enrollments table
       const { data: enrollments, error: enrollmentsError } = await supabase
         .from('enrollments')
         .select('course_id');
       
       if (enrollmentsError) throw enrollmentsError;
+
+      // Get class groups with course relationship to count students from class_students
+      const { data: classGroups, error: classGroupsError } = await supabase
+        .from('class_groups')
+        .select('id, course_id');
+      
+      if (classGroupsError) throw classGroupsError;
+
+      // Get all class_students to count students per class
+      const { data: classStudents, error: classStudentsError } = await supabase
+        .from('class_students')
+        .select('class_group_id, student_profile_id');
+      
+      if (classStudentsError) throw classStudentsError;
 
       // Calculate stats for each course
       const coursesWithStats: CourseWithStats[] = courses.map((course) => {
@@ -62,6 +76,16 @@ export function useCoursesWithStats() {
           .map(i => i.profiles as unknown as Profile)
           .filter(Boolean) || [];
 
+        // Count students from class_students (via class_groups linked to course)
+        const courseClassGroups = classGroups?.filter(cg => cg.course_id === course.id) || [];
+        const courseClassGroupIds = courseClassGroups.map(cg => cg.id);
+        const classStudentProfiles = classStudents?.filter(cs => courseClassGroupIds.includes(cs.class_group_id)) || [];
+        // Use unique student IDs in case student is in multiple classes for same course
+        const uniqueClassStudents = new Set(classStudentProfiles.map(cs => cs.student_profile_id));
+        
+        // Total students = max of enrollments or class_students
+        const totalStudents = Math.max(courseEnrollments.length, uniqueClassStudents.size);
+
         const totalScore = courseGrades.reduce((sum, g) => sum + (g.final_score || 0), 0);
         const averageScore = courseGrades.length > 0 ? totalScore / courseGrades.length : 0;
         const passingCount = courseGrades.filter(g => (g.final_score || 0) >= course.passing_score).length;
@@ -69,7 +93,7 @@ export function useCoursesWithStats() {
         return {
           ...course,
           average_score: averageScore,
-          total_students: courseEnrollments.length,
+          total_students: totalStudents,
           passing_count: passingCount,
           instructors: courseInstructors,
         };
@@ -147,6 +171,51 @@ export function useCourseEnrollments(courseId: string) {
   return useQuery({
     queryKey: ['course-enrollments', courseId],
     queryFn: async () => {
+      // First try to get students from class_students via class_groups linked to this course
+      const { data: classGroups, error: cgError } = await supabase
+        .from('class_groups')
+        .select('id, name')
+        .eq('course_id', courseId);
+      
+      if (cgError) throw cgError;
+
+      if (classGroups && classGroups.length > 0) {
+        const classGroupIds = classGroups.map(cg => cg.id);
+        const classGroupMap = Object.fromEntries(classGroups.map(cg => [cg.id, cg.name]));
+        
+        // Get students from class_students
+        const { data: classStudents, error: csError } = await supabase
+          .from('class_students')
+          .select(`
+            *,
+            profiles:student_profile_id (*)
+          `)
+          .in('class_group_id', classGroupIds);
+        
+        if (csError) throw csError;
+
+        if (classStudents && classStudents.length > 0) {
+          // Transform class_students to match enrollment format
+          // Use unique students (in case same student is in multiple classes)
+          const uniqueStudentMap = new Map();
+          classStudents.forEach(cs => {
+            if (!uniqueStudentMap.has(cs.student_profile_id)) {
+              uniqueStudentMap.set(cs.student_profile_id, {
+                id: cs.id,
+                course_id: courseId,
+                student_profile_id: cs.student_profile_id,
+                created_at: cs.created_at,
+                student: cs.profiles as unknown as Profile,
+                class_group_id: cs.class_group_id,
+                class_group_name: classGroupMap[cs.class_group_id],
+              });
+            }
+          });
+          return Array.from(uniqueStudentMap.values());
+        }
+      }
+
+      // Fallback to enrollments table if no class_students data
       const { data, error } = await supabase
         .from('enrollments')
         .select(`

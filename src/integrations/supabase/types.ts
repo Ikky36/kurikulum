@@ -202,6 +202,7 @@ export type Database = {
       }
       class_groups: {
         Row: {
+          course_id: string | null
           created_at: string
           description: string | null
           id: string
@@ -209,6 +210,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          course_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
@@ -216,13 +218,22 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          course_id?: string | null
           created_at?: string
           description?: string | null
           id?: string
           name?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "class_groups_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       class_students: {
         Row: {
