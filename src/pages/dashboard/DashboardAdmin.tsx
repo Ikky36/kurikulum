@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useMultiTableRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
+import { useLoginAs } from '@/hooks/useLoginAs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,7 @@ export default function DashboardAdmin() {
   const { user, profile, role, refreshProfile, loading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { saveAdminSession } = useLoginAs();
 
   // Enable realtime for admin dashboard data
   useMultiTableRealtimeSubscription([
@@ -485,11 +487,23 @@ export default function DashboardAdmin() {
 
   // Login As handler
   const handleLoginAs = async (targetUser: Profile) => {
-    if (!targetUser.id) return;
+    if (!targetUser.id || !profile) return;
     
     setLoginAsLoading(targetUser.id);
     
     try {
+      // Save admin session before impersonating
+      const saved = await saveAdminSession(
+        targetUser.full_name,
+        profile.full_name,
+        profile.email,
+        role || 'admin'
+      );
+      
+      if (!saved) {
+        throw new Error('Gagal menyimpan sesi admin');
+      }
+      
       const { data, error } = await supabase.functions.invoke('admin-login-as', {
         body: { target_user_id: targetUser.id },
       });
@@ -515,13 +529,15 @@ export default function DashboardAdmin() {
         
         toast({ 
           title: 'Berhasil', 
-          description: `Anda sekarang login sebagai ${targetUser.full_name}` 
+          description: `Anda sekarang login sebagai ${targetUser.full_name}. Klik banner kuning untuk kembali ke akun admin.` 
         });
         
         // Redirect to dashboard
         window.location.href = '/dashboard';
       }
     } catch (error: any) {
+      // Clear saved session on error
+      localStorage.removeItem('lovable_admin_session');
       toast({ 
         title: 'Gagal', 
         description: error.message, 
