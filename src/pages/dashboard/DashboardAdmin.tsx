@@ -1046,33 +1046,53 @@ export default function DashboardAdmin() {
                         </TableFilterHeader>
                       </TableHead>
                       <TableHead className="text-primary-foreground">Role</TableHead>
-                      <TableHead className="text-primary-foreground">
-                        <TableFilterHeader
-                          filterValue={userNimNipFilter}
-                          onFilterChange={setUserNimNipFilter}
-                          placeholder="Filter NIM/NIP..."
-                        >
-                          NIM/NIDN/NIDK
-                        </TableFilterHeader>
-                      </TableHead>
-                      <TableHead className="text-primary-foreground">
-                        <TableFilterHeader
-                          filterValue={userAngkatanFilter}
-                          onFilterChange={setUserAngkatanFilter}
-                          placeholder="Filter angkatan..."
-                        >
-                          Angkatan
-                        </TableFilterHeader>
-                      </TableHead>
-                      <TableHead className="text-primary-foreground">
-                        <TableFilterHeader
-                          filterValue={userProgramFilter}
-                          onFilterChange={setUserProgramFilter}
-                          placeholder="Filter program..."
-                        >
-                          Program
-                        </TableFilterHeader>
-                      </TableHead>
+                      {/* NIM column for mahasiswa */}
+                      {(userRoleFilter === 'all' || userRoleFilter === 'mahasiswa') && (
+                        <TableHead className="text-primary-foreground">
+                          <TableFilterHeader
+                            filterValue={userNimNipFilter}
+                            onFilterChange={setUserNimNipFilter}
+                            placeholder="Filter NIM..."
+                          >
+                            NIM
+                          </TableFilterHeader>
+                        </TableHead>
+                      )}
+                      {/* NIDN/NIDK/NIPY column for dosen */}
+                      {(userRoleFilter === 'all' || userRoleFilter === 'dosen') && (
+                        <TableHead className="text-primary-foreground">
+                          <TableFilterHeader
+                            filterValue={userNimNipFilter}
+                            onFilterChange={setUserNimNipFilter}
+                            placeholder="Filter NIDN/NIDK/NIPY..."
+                          >
+                            NIDN/NIDK/NIPY
+                          </TableFilterHeader>
+                        </TableHead>
+                      )}
+                      {/* Angkatan & Program only for mahasiswa or all */}
+                      {(userRoleFilter === 'all' || userRoleFilter === 'mahasiswa') && (
+                        <>
+                          <TableHead className="text-primary-foreground">
+                            <TableFilterHeader
+                              filterValue={userAngkatanFilter}
+                              onFilterChange={setUserAngkatanFilter}
+                              placeholder="Filter angkatan..."
+                            >
+                              Angkatan
+                            </TableFilterHeader>
+                          </TableHead>
+                          <TableHead className="text-primary-foreground">
+                            <TableFilterHeader
+                              filterValue={userProgramFilter}
+                              onFilterChange={setUserProgramFilter}
+                              placeholder="Filter program..."
+                            >
+                              Program
+                            </TableFilterHeader>
+                          </TableHead>
+                        </>
+                      )}
                       <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1116,9 +1136,21 @@ export default function DashboardAdmin() {
                             ))}
                           </div>
                         </TableCell>
-                        <TableCell>{u.role === 'mahasiswa' ? u.nim : u.nip || '-'}</TableCell>
-                        <TableCell>{u.role === 'mahasiswa' ? (u.enrollment_year || '-') : '-'}</TableCell>
-                        <TableCell>{u.role === 'mahasiswa' ? (u.program || '-') : '-'}</TableCell>
+                        {/* NIM column for mahasiswa */}
+                        {(userRoleFilter === 'all' || userRoleFilter === 'mahasiswa') && (
+                          <TableCell>{u.role === 'mahasiswa' ? (u.nim || '-') : '-'}</TableCell>
+                        )}
+                        {/* NIDN/NIDK/NIPY column for dosen */}
+                        {(userRoleFilter === 'all' || userRoleFilter === 'dosen') && (
+                          <TableCell>{u.role === 'dosen' ? (u.nip || '-') : '-'}</TableCell>
+                        )}
+                        {/* Angkatan & Program only for mahasiswa or all */}
+                        {(userRoleFilter === 'all' || userRoleFilter === 'mahasiswa') && (
+                          <>
+                            <TableCell>{u.role === 'mahasiswa' ? (u.enrollment_year || '-') : '-'}</TableCell>
+                            <TableCell>{u.role === 'mahasiswa' ? (u.program || '-') : '-'}</TableCell>
+                          </>
+                        )}
                         <TableCell>
                           <div className="flex gap-1">
                             <Button variant="ghost" size="icon" onClick={() => openEditUser(u)}>
@@ -1141,7 +1173,7 @@ export default function DashboardAdmin() {
                     ))}
                     {filteredUsers.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={userRoleFilter === 'admin' || userRoleFilter === 'sub_admin' ? 7 : userRoleFilter === 'dosen' ? 8 : userRoleFilter === 'mahasiswa' ? 10 : 11} className="text-center py-8 text-muted-foreground">
                           {userSearchQuery || userRoleFilter !== 'all' 
                             ? 'Tidak ada akun yang sesuai dengan filter' 
                             : 'Belum ada akun pengguna'}
