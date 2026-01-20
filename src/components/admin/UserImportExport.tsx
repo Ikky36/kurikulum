@@ -10,9 +10,14 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Download, Upload, FileSpreadsheet, Loader2, AlertCircle, CheckCircle, RefreshCw, RefreshCcw } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { Profile } from '@/lib/types';
+import { Profile, AppRole } from '@/lib/types';
 
 interface SistemKuliah {
+  id: string;
+  name: string;
+}
+
+interface Program {
   id: string;
   name: string;
 }
@@ -21,11 +26,10 @@ interface ImportRow {
   email: string;
   full_name: string;
   password: string;
-  role: 'mahasiswa' | 'dosen';
+  role: AppRole;
   nim?: string;
   nip?: string;
   program?: string;
-  class_group?: string;
   enrollment_year?: string;
   gender?: string;
   sistem_kuliah?: string;
@@ -38,9 +42,63 @@ interface UserImportExportProps {
   users: Profile[];
   onImportSuccess: () => void;
   onSyncSuccess?: () => void;
+  selectedRole?: 'all' | AppRole;
 }
 
-export function UserImportExport({ users, onImportSuccess, onSyncSuccess }: UserImportExportProps) {
+// Define columns for each role
+const getRoleColumns = (role: 'all' | AppRole) => {
+  const baseColumns = [
+    { key: 'email', label: 'Email', width: 25, required: true },
+    { key: 'full_name', label: 'Nama Lengkap', width: 20, required: true },
+    { key: 'password', label: 'Password', width: 15, required: true },
+    { key: 'gender', label: 'Gender', width: 10, required: false },
+  ];
+
+  switch (role) {
+    case 'mahasiswa':
+      return [
+        ...baseColumns,
+        { key: 'nim', label: 'NIM', width: 15, required: true },
+        { key: 'enrollment_year', label: 'Angkatan', width: 12, required: false },
+        { key: 'program', label: 'Program Studi', width: 25, required: false },
+        { key: 'sistem_kuliah', label: 'Sistem Kuliah', width: 15, required: false },
+      ];
+    case 'dosen':
+      return [
+        ...baseColumns,
+        { key: 'nip', label: 'NIDN/NIDK', width: 20, required: true },
+      ];
+    case 'admin':
+    case 'sub_admin':
+      return baseColumns;
+    default:
+      // 'all' - include all possible columns with role column
+      return [
+        { key: 'email', label: 'Email', width: 25, required: true },
+        { key: 'full_name', label: 'Nama Lengkap', width: 20, required: true },
+        { key: 'password', label: 'Password', width: 15, required: true },
+        { key: 'role', label: 'Role', width: 12, required: true },
+        { key: 'gender', label: 'Gender', width: 10, required: false },
+        { key: 'nim', label: 'NIM', width: 15, required: false },
+        { key: 'nip', label: 'NIDN/NIDK', width: 20, required: false },
+        { key: 'enrollment_year', label: 'Angkatan', width: 12, required: false },
+        { key: 'program', label: 'Program Studi', width: 25, required: false },
+        { key: 'sistem_kuliah', label: 'Sistem Kuliah', width: 15, required: false },
+      ];
+  }
+};
+
+const getRoleName = (role: 'all' | AppRole) => {
+  switch (role) {
+    case 'mahasiswa': return 'Mahasiswa';
+    case 'dosen': return 'Dosen';
+    case 'admin': return 'Admin';
+    case 'sub_admin': return 'Sub-Admin';
+    default: return 'Semua';
+  }
+};
+
+export function UserImportExport({ users, onImportSuccess, onSyncSuccess, selectedRole = 'all' }: UserImportExportProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   
@@ -52,6 +110,33 @@ export function UserImportExport({ users, onImportSuccess, onSyncSuccess }: User
   const [syncing, setSyncing] = useState(false);
 
   const normalizeEmail = (email: string) => String(email || '').trim().toLowerCase();
+
+  // Fetch sistem kuliah for mapping
+  const { data: sistemKuliahList } = useQuery({
+    queryKey: ['sistem-kuliah'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('sistem_kuliah')
+        .select('*')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data as SistemKuliah[];
+    },
+  });
+
+  // Fetch programs for mapping
+  const { data: programsList } = useQuery({
+    queryKey: ['programs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('programs')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      return data as Program[];
+    },
+  });
 
   const revalidateImportData = (rows: ImportRow[], updateFlag: boolean): ImportRow[] => {
     return rows.map((r) => {
@@ -80,12 +165,15 @@ export function UserImportExport({ users, onImportSuccess, onSyncSuccess }: User
         errors.push('Password minimal 6 karakter');
       }
 
-      if (!role || !['mahasiswa', 'dosen'].includes(role)) {
-        errors.push('Role harus mahasiswa atau dosen');
+      // Validate role based on selectedRole
+      if (selectedRole === 'all') {
+        if (!role || !['mahasiswa', 'dosen', 'admin', 'sub_admin'].includes(role)) {
+          errors.push('Role harus mahasiswa, dosen, admin, atau sub_admin');
+        }
       }
 
       if (role === 'mahasiswa' && !nim) errors.push('NIM wajib untuk mahasiswa');
-      if (role === 'dosen' && !nip) errors.push('NIP wajib untuk dosen');
+      if (role === 'dosen' && !nip) errors.push('NIDN/NIDK wajib untuk dosen');
 
       if (sistemKuliah && sistemKuliahList) {
         const found = sistemKuliahList.find((sk) => sk.name.toLowerCase() === sistemKuliah.toLowerCase());
@@ -106,117 +194,158 @@ export function UserImportExport({ users, onImportSuccess, onSyncSuccess }: User
     });
   };
 
-  // Fetch sistem kuliah for mapping
-  const { data: sistemKuliahList } = useQuery({
-    queryKey: ['sistem-kuliah'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('sistem_kuliah')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
-      if (error) throw error;
-      return data as SistemKuliah[];
-    },
-  });
-
-  // Download template Excel
+  // Download template Excel based on selected role
   const handleDownloadTemplate = () => {
-    const templateData = [
-      {
+    const columns = getRoleColumns(selectedRole);
+    const roleName = getRoleName(selectedRole);
+    
+    // Create template data based on role
+    let templateData: Record<string, any>[] = [];
+    
+    if (selectedRole === 'mahasiswa') {
+      templateData = [{
         email: 'mahasiswa@example.com',
         full_name: 'Nama Mahasiswa',
         password: 'password123',
-        role: 'mahasiswa',
-        nim: '12345678',
-        nip: '',
-        program: 'Pendidikan Bahasa Arab',
-        class_group: 'A',
-        enrollment_year: '2024',
         gender: 'pria',
-        sistem_kuliah: 'Reguler',
-      },
-      {
+        nim: '12345678',
+        enrollment_year: '2024',
+        program: programsList?.[0]?.name || 'Pendidikan Bahasa Arab',
+        sistem_kuliah: sistemKuliahList?.[0]?.name || 'Reguler',
+      }];
+    } else if (selectedRole === 'dosen') {
+      templateData = [{
         email: 'dosen@example.com',
         full_name: 'Nama Dosen',
         password: 'password123',
-        role: 'dosen',
-        nim: '',
-        nip: '198501012020011001',
-        program: 'Pendidikan Bahasa Arab',
-        class_group: '',
-        enrollment_year: '',
         gender: 'pria',
-        sistem_kuliah: '',
-      },
-    ];
+        nip: '198501012020011001',
+      }];
+    } else if (selectedRole === 'admin' || selectedRole === 'sub_admin') {
+      templateData = [{
+        email: `${selectedRole}@example.com`,
+        full_name: `Nama ${roleName}`,
+        password: 'password123',
+        gender: 'pria',
+      }];
+    } else {
+      // 'all' - combined template
+      templateData = [
+        {
+          email: 'mahasiswa@example.com',
+          full_name: 'Nama Mahasiswa',
+          password: 'password123',
+          role: 'mahasiswa',
+          gender: 'pria',
+          nim: '12345678',
+          nip: '',
+          enrollment_year: '2024',
+          program: programsList?.[0]?.name || 'Pendidikan Bahasa Arab',
+          sistem_kuliah: sistemKuliahList?.[0]?.name || 'Reguler',
+        },
+        {
+          email: 'dosen@example.com',
+          full_name: 'Nama Dosen',
+          password: 'password123',
+          role: 'dosen',
+          gender: 'pria',
+          nim: '',
+          nip: '198501012020011001',
+          enrollment_year: '',
+          program: '',
+          sistem_kuliah: '',
+        },
+      ];
+    }
 
     const ws = XLSX.utils.json_to_sheet(templateData);
     
     // Set column widths
-    ws['!cols'] = [
-      { wch: 25 }, // email
-      { wch: 20 }, // full_name
-      { wch: 15 }, // password
-      { wch: 12 }, // role
-      { wch: 12 }, // nim
-      { wch: 20 }, // nip
-      { wch: 25 }, // program
-      { wch: 10 }, // class_group
-      { wch: 12 }, // enrollment_year
-      { wch: 10 }, // gender
-      { wch: 15 }, // sistem_kuliah
-    ];
+    ws['!cols'] = columns.map(col => ({ wch: col.width }));
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Template Akun');
-    XLSX.writeFile(wb, 'template_import_akun.xlsx');
+    XLSX.utils.book_append_sheet(wb, ws, `Template ${roleName}`);
+    XLSX.writeFile(wb, `template_import_${selectedRole === 'all' ? 'akun' : selectedRole}.xlsx`);
 
-    toast({ title: 'Template berhasil diunduh', description: 'Silakan isi data sesuai format template' });
+    toast({ title: 'Template berhasil diunduh', description: `Template untuk ${roleName.toLowerCase()} telah diunduh` });
   };
 
-  // Export users to Excel
+  // Export users to Excel based on selected role
   const handleExportUsers = () => {
-    if (!users || users.length === 0) {
-      toast({ title: 'Tidak ada data', description: 'Tidak ada akun untuk diekspor', variant: 'destructive' });
+    // Filter users based on selected role
+    let filteredUsers = users;
+    if (selectedRole !== 'all') {
+      filteredUsers = users.filter(u => u.role === selectedRole);
+    } else {
+      // Exclude admin from export when 'all' is selected
+      filteredUsers = users.filter(u => u.role !== 'admin');
+    }
+
+    if (filteredUsers.length === 0) {
+      toast({ title: 'Tidak ada data', description: `Tidak ada akun ${getRoleName(selectedRole).toLowerCase()} untuk diekspor`, variant: 'destructive' });
       return;
     }
 
-    const exportData = users
-      .filter(u => u.role !== 'admin')
-      .map(u => ({
-        email: u.email,
-        full_name: u.full_name,
-        role: u.role,
-        nim: u.nim || '',
-        nip: u.nip || '',
-        program: u.program || '',
-        class_group: u.class_group || '',
-        enrollment_year: u.enrollment_year || '',
-        gender: (u as any).gender || '',
-        sistem_kuliah: '', // Will be filled with lookup
-      }));
+    const columns = getRoleColumns(selectedRole);
+    
+    const exportData = filteredUsers.map(u => {
+      const row: Record<string, any> = {};
+      
+      columns.forEach(col => {
+        switch (col.key) {
+          case 'email':
+            row[col.key] = u.email;
+            break;
+          case 'full_name':
+            row[col.key] = u.full_name;
+            break;
+          case 'password':
+            row[col.key] = ''; // Password not exported for security
+            break;
+          case 'role':
+            row[col.key] = u.role;
+            break;
+          case 'gender':
+            row[col.key] = (u as any).gender || '';
+            break;
+          case 'nim':
+            row[col.key] = u.nim || '';
+            break;
+          case 'nip':
+            row[col.key] = u.nip || '';
+            break;
+          case 'enrollment_year':
+            row[col.key] = u.enrollment_year || '';
+            break;
+          case 'program':
+            row[col.key] = u.program || '';
+            break;
+          case 'sistem_kuliah':
+            // Lookup sistem kuliah name from ID
+            if (u.sistem_kuliah_id && sistemKuliahList) {
+              const sk = sistemKuliahList.find(s => s.id === u.sistem_kuliah_id);
+              row[col.key] = sk?.name || '';
+            } else {
+              row[col.key] = '';
+            }
+            break;
+          default:
+            row[col.key] = '';
+        }
+      });
+      
+      return row;
+    });
 
     const ws = XLSX.utils.json_to_sheet(exportData);
-    
-    ws['!cols'] = [
-      { wch: 25 },
-      { wch: 20 },
-      { wch: 12 },
-      { wch: 12 },
-      { wch: 20 },
-      { wch: 25 },
-      { wch: 10 },
-      { wch: 12 },
-      { wch: 10 },
-      { wch: 15 },
-    ];
+    ws['!cols'] = columns.map(col => ({ wch: col.width }));
 
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Data Akun');
-    XLSX.writeFile(wb, `export_akun_${new Date().toISOString().split('T')[0]}.xlsx`);
+    const roleName = getRoleName(selectedRole);
+    XLSX.utils.book_append_sheet(wb, ws, `Data ${roleName}`);
+    XLSX.writeFile(wb, `export_${selectedRole === 'all' ? 'akun' : selectedRole}_${new Date().toISOString().split('T')[0]}.xlsx`);
 
-    toast({ title: 'Export berhasil', description: `${exportData.length} akun berhasil diekspor` });
+    toast({ title: 'Export berhasil', description: `${exportData.length} akun ${roleName.toLowerCase()} berhasil diekspor` });
   };
 
   // Handle file upload
@@ -239,17 +368,20 @@ export function UserImportExport({ users, onImportSuccess, onSyncSuccess }: User
         }
 
         // Validate and parse data
-        const parsedData: ImportRow[] = jsonData.map((row, index) => {
+        const parsedData: ImportRow[] = jsonData.map((row) => {
           const errors: string[] = [];
           
           const email = String(row.email || '').trim().toLowerCase();
           const fullName = String(row.full_name || '').trim();
           const password = String(row.password || '').trim();
-          const role = String(row.role || '').trim().toLowerCase();
+          // If role is specified in file, use it; otherwise use selectedRole
+          let role = String(row.role || selectedRole).trim().toLowerCase() as AppRole;
+          if (selectedRole !== 'all') {
+            role = selectedRole; // Force the selected role if not 'all'
+          }
           const nim = String(row.nim || '').trim();
           const nip = String(row.nip || '').trim();
           const program = String(row.program || '').trim();
-          const classGroup = String(row.class_group || '').trim();
           const enrollmentYear = String(row.enrollment_year || '').trim();
           const gender = String(row.gender || '').trim().toLowerCase();
           const sistemKuliah = String(row.sistem_kuliah || '').trim();
@@ -263,15 +395,20 @@ export function UserImportExport({ users, onImportSuccess, onSyncSuccess }: User
           
           if (!fullName) errors.push('Nama lengkap wajib diisi');
 
-          // Password wajib untuk akun baru. Untuk akun yang sudah ada, password opsional jika "Update jika sudah ada" aktif.
+          // Password wajib untuk akun baru
           if (!password && !(existsInDb && updateIfExists)) errors.push('Password wajib diisi');
           else if (password && password.length < 6) errors.push('Password minimal 6 karakter');
-          if (!role || !['mahasiswa', 'dosen'].includes(role)) {
-            errors.push('Role harus mahasiswa atau dosen');
+          
+          // Role validation
+          if (selectedRole === 'all') {
+            if (!role || !['mahasiswa', 'dosen', 'admin', 'sub_admin'].includes(role)) {
+              errors.push('Role harus mahasiswa, dosen, admin, atau sub_admin');
+            }
           }
           
+          // Role-specific validation
           if (role === 'mahasiswa' && !nim) errors.push('NIM wajib untuk mahasiswa');
-          if (role === 'dosen' && !nip) errors.push('NIP wajib untuk dosen');
+          if (role === 'dosen' && !nip) errors.push('NIDN/NIDK wajib untuk dosen');
 
           // Validate sistem kuliah if provided
           if (sistemKuliah && sistemKuliahList) {
@@ -285,11 +422,10 @@ export function UserImportExport({ users, onImportSuccess, onSyncSuccess }: User
             email,
             full_name: fullName,
             password,
-            role: (role === 'mahasiswa' || role === 'dosen') ? role : 'mahasiswa',
+            role: (['mahasiswa', 'dosen', 'admin', 'sub_admin'].includes(role) ? role : 'mahasiswa') as AppRole,
             nim: nim || undefined,
             nip: nip || undefined,
             program: program || undefined,
-            class_group: classGroup || undefined,
             enrollment_year: enrollmentYear || undefined,
             gender: gender || undefined,
             sistem_kuliah: sistemKuliah || undefined,
@@ -343,7 +479,6 @@ export function UserImportExport({ users, onImportSuccess, onSyncSuccess }: User
           nim: row.nim,
           nip: row.nip,
           program: row.program,
-          class_group: row.class_group,
           enrollment_year: row.enrollment_year ? parseInt(row.enrollment_year) : undefined,
           gender: row.gender,
           sistem_kuliah_id: sistemKuliahId,
@@ -370,7 +505,6 @@ export function UserImportExport({ users, onImportSuccess, onSyncSuccess }: User
         });
 
         if (error) {
-          // If the whole batch fails, keep per-row info so admin can fix/retry.
           errorCount += batch.length;
           batch.forEach((u) => failedDetails.push({ email: u.email, error: error.message || 'Batch error' }));
           continue;
@@ -394,7 +528,7 @@ export function UserImportExport({ users, onImportSuccess, onSyncSuccess }: User
         }
       }
 
-      // Auto-download failure report (so admin tahu tepatnya baris mana yang gagal)
+      // Auto-download failure report
       if (failedDetails.length > 0) {
         const ws = XLSX.utils.json_to_sheet(
           failedDetails.map((f) => ({
@@ -460,7 +594,7 @@ export function UserImportExport({ users, onImportSuccess, onSyncSuccess }: User
 
       if (data?.synced > 0) {
         onSyncSuccess?.();
-        onImportSuccess(); // Also refresh users list
+        onImportSuccess();
       }
 
       toast({
@@ -483,137 +617,119 @@ export function UserImportExport({ users, onImportSuccess, onSyncSuccess }: User
   const existingCount = importData.filter(r => r.existsInDb && r.isValid).length;
   const newCount = importData.filter(r => !r.existsInDb && r.isValid).length;
 
+  const columns = getRoleColumns(selectedRole);
+  const roleName = getRoleName(selectedRole);
+
   return (
     <>
       <div className="flex gap-2">
         <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
           <FileSpreadsheet className="h-4 w-4 mr-2" />
-          Download Template
+          Template {roleName}
         </Button>
         <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
           <Upload className="h-4 w-4 mr-2" />
-          Import Excel
+          Import {roleName}
         </Button>
         <Button variant="outline" size="sm" onClick={handleExportUsers}>
           <Download className="h-4 w-4 mr-2" />
-          Export Excel
+          Export {roleName}
         </Button>
         <Button variant="outline" size="sm" onClick={handleSyncProfiles} disabled={syncing}>
-          {syncing ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <RefreshCcw className="h-4 w-4 mr-2" />
-          )}
-          {syncing ? 'Menyinkronkan...' : 'Sinkronisasi Profil'}
+          {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCcw className="h-4 w-4 mr-2" />}
+          Sync Profil
         </Button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".xlsx,.xls"
-          className="hidden"
-          onChange={handleFileUpload}
-        />
       </div>
+      
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept=".xlsx,.xls"
+        onChange={handleFileUpload}
+      />
 
       {/* Import Preview Dialog */}
-      <Dialog open={showImportDialog} onOpenChange={(open) => { if (!importing) setShowImportDialog(open); }}>
-        <DialogContent className="max-w-5xl max-h-[85vh] overflow-hidden flex flex-col">
+      <Dialog open={showImportDialog} onOpenChange={setShowImportDialog}>
+        <DialogContent className="max-w-5xl max-h-[80vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <DialogTitle>Preview Import Data</DialogTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Data yang valid akan tetap diimport meskipun ada beberapa baris yang error.
-            </p>
+            <DialogTitle>Preview Import {roleName}</DialogTitle>
           </DialogHeader>
-
-          <div className="flex flex-wrap gap-4 mb-4">
-            <Badge variant="default" className="flex items-center gap-1">
-              <CheckCircle className="h-3 w-3" />
-              {validCount} Valid
+          
+          <div className="flex items-center gap-4 flex-wrap">
+            <Badge variant="outline" className="gap-1">
+              <CheckCircle className="h-3 w-3 text-primary" />
+              Valid: {validCount}
             </Badge>
-            {newCount > 0 && (
-              <Badge variant="secondary" className="flex items-center gap-1">
-                {newCount} Baru
-              </Badge>
-            )}
-            {existingCount > 0 && (
-              <Badge variant="outline" className="flex items-center gap-1 border-amber-500 text-amber-600">
-                <RefreshCw className="h-3 w-3" />
-                {existingCount} Sudah Ada
-              </Badge>
-            )}
-            {invalidCount > 0 && (
-              <Badge variant="destructive" className="flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                {invalidCount} Error
-              </Badge>
-            )}
+            <Badge variant="outline" className="gap-1">
+              <AlertCircle className="h-3 w-3 text-destructive" />
+              Invalid: {invalidCount}
+            </Badge>
+            <Badge variant="outline" className="gap-1">
+              <RefreshCw className="h-3 w-3 text-primary" />
+              Baru: {newCount}
+            </Badge>
+            <Badge variant="outline" className="gap-1">
+              <RefreshCw className="h-3 w-3 text-accent-foreground" />
+              Sudah Ada: {existingCount}
+            </Badge>
+            
+            <div className="flex items-center gap-2 ml-auto">
+              <Checkbox 
+                id="updateIfExists" 
+                checked={updateIfExists} 
+                onCheckedChange={(checked) => {
+                  setUpdateIfExists(!!checked);
+                  setImportData(revalidateImportData(importData, !!checked));
+                }}
+              />
+              <Label htmlFor="updateIfExists" className="text-sm cursor-pointer">
+                Update jika sudah ada
+              </Label>
+            </div>
           </div>
 
-          {/* Update if exists option */}
-          <div className="flex items-center space-x-2 mb-4 p-3 bg-muted/50 rounded-lg">
-            <Checkbox 
-              id="updateIfExists" 
-              checked={updateIfExists} 
-              onCheckedChange={(checked) => {
-                const next = checked as boolean;
-                setUpdateIfExists(next);
-                setImportData((prev) => revalidateImportData(prev, next));
-              }}
-            />
-            <Label htmlFor="updateIfExists" className="text-sm cursor-pointer">
-              <span className="font-medium">Update jika sudah ada</span>
-              <span className="text-muted-foreground ml-1">
-                - Jika email sudah terdaftar, data profil (nama, NIM, program, dll) akan diperbarui
+          {importing && (
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="text-sm text-muted-foreground">
+                Mengimport {importProgress.current} dari {importProgress.total}...
               </span>
-            </Label>
-          </div>
+            </div>
+          )}
 
-          <div className="overflow-auto flex-1 border rounded-md">
+          <div className="overflow-auto flex-1">
             <Table>
               <TableHeader>
-                <TableRow className="bg-primary hover:bg-primary">
-                  <TableHead className="w-12 text-primary-foreground">No</TableHead>
-                  <TableHead className="w-12 text-primary-foreground">Status</TableHead>
-                  <TableHead className="text-primary-foreground">Email</TableHead>
-                  <TableHead className="text-primary-foreground">Nama</TableHead>
-                  <TableHead className="text-primary-foreground">Role</TableHead>
-                  <TableHead className="text-primary-foreground">NIM/NIP</TableHead>
-                  <TableHead className="text-primary-foreground">Angkatan</TableHead>
-                  <TableHead className="text-primary-foreground">Sistem</TableHead>
-                  <TableHead className="text-primary-foreground">Keterangan</TableHead>
+                <TableRow>
+                  <TableHead className="w-20">Status</TableHead>
+                  {columns.map(col => (
+                    <TableHead key={col.key}>{col.label}</TableHead>
+                  ))}
+                  <TableHead>Error</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {importData.map((row, idx) => (
-                  <TableRow key={idx} className={!row.isValid ? 'bg-destructive/5' : row.existsInDb ? 'bg-amber-50 dark:bg-amber-950/20' : ''}>
-                    <TableCell className="text-center">{idx + 1}</TableCell>
+                {importData.map((row, index) => (
+                  <TableRow key={index} className={!row.isValid ? 'bg-destructive/10' : row.existsInDb ? 'bg-accent' : ''}>
                     <TableCell>
-                      {!row.isValid ? (
-                        <AlertCircle className="h-4 w-4 text-destructive" />
-                      ) : row.existsInDb ? (
-                        <RefreshCw className="h-4 w-4 text-amber-500" />
+                      {row.isValid ? (
+                        row.existsInDb ? (
+                          <Badge variant="secondary">Update</Badge>
+                        ) : (
+                          <Badge variant="outline" className="border-primary text-primary">Baru</Badge>
+                        )
                       ) : (
-                        <CheckCircle className="h-4 w-4 text-green-500" />
+                        <Badge variant="destructive">Error</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="font-mono text-sm">{row.email}</TableCell>
-                    <TableCell>{row.full_name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">{row.role}</Badge>
-                    </TableCell>
-                    <TableCell>{row.role === 'mahasiswa' ? row.nim : row.nip}</TableCell>
-                    <TableCell>{row.enrollment_year || '-'}</TableCell>
-                    <TableCell>{row.sistem_kuliah || '-'}</TableCell>
-                    <TableCell>
-                      {row.errors.length > 0 ? (
-                        <span className="text-xs text-destructive">{row.errors.join(', ')}</span>
-                      ) : row.existsInDb ? (
-                        <span className="text-xs text-amber-600">
-                          {updateIfExists ? 'Akan diperbarui' : 'Sudah ada (dilewati)'}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-green-600">Akan dibuat</span>
-                      )}
+                    {columns.map(col => (
+                      <TableCell key={col.key} className="max-w-[150px] truncate">
+                        {(row as any)[col.key] || '-'}
+                      </TableCell>
+                    ))}
+                    <TableCell className="text-destructive text-xs max-w-[200px]">
+                      {row.errors.join(', ')}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -621,33 +737,18 @@ export function UserImportExport({ users, onImportSuccess, onSyncSuccess }: User
             </Table>
           </div>
 
-          {importing && (
-            <div className="mt-4">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Mengimport... ({importProgress.current}/{importProgress.total})
-              </div>
-              <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-primary transition-all duration-300"
-                  style={{ width: `${(importProgress.current / importProgress.total) * 100}%` }}
-                />
-              </div>
-            </div>
-          )}
-
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowImportDialog(false)} disabled={importing}>
               Batal
             </Button>
-            <Button onClick={handleImport} disabled={importing || validCount === 0}>
+            <Button onClick={handleImport} disabled={validCount === 0 || importing}>
               {importing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Mengimport...
                 </>
               ) : (
-                `Import ${validCount} Akun Valid`
+                `Import ${validCount} Akun`
               )}
             </Button>
           </DialogFooter>

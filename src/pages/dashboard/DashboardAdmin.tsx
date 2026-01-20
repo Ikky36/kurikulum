@@ -918,7 +918,8 @@ export default function DashboardAdmin() {
                     onImportSuccess={() => {
                       refetchUsers();
                       queryClient.invalidateQueries({ queryKey: ['admin-dosen'] });
-                    }} 
+                    }}
+                    selectedRole={userRoleFilter}
                   />
                   
                   {/* Search and Filter */}
