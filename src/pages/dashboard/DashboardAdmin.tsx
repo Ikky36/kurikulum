@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target, Eye, EyeOff, Settings, CheckSquare } from 'lucide-react';
+import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target, Eye, EyeOff, Settings, CheckSquare, LogIn } from 'lucide-react';
 import { Navigate, Link } from 'react-router-dom';
 import { Course, Profile, AppRole, Program } from '@/lib/types';
 import { UserImportExport } from '@/components/admin/UserImportExport';
@@ -101,6 +101,11 @@ export default function DashboardAdmin() {
   // Bulk selection state
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false);
+  
+  // Login As state
+  const [loginAsLoading, setLoginAsLoading] = useState<string | null>(null);
+  const [showLoginAsDialog, setShowLoginAsDialog] = useState(false);
+  const [userToLoginAs, setUserToLoginAs] = useState<Profile | null>(null);
   
   // Assignment bulk selection state
   const [selectedAssignmentIds, setSelectedAssignmentIds] = useState<string[]>([]);
@@ -477,6 +482,57 @@ export default function DashboardAdmin() {
       toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
     },
   });
+
+  // Login As handler
+  const handleLoginAs = async (targetUser: Profile) => {
+    if (!targetUser.id) return;
+    
+    setLoginAsLoading(targetUser.id);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-login-as', {
+        body: { target_user_id: targetUser.id },
+      });
+      
+      if (error) {
+        throw new Error(error.message || 'Gagal login sebagai user');
+      }
+      
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      
+      if (data?.token_hash) {
+        // Verify the OTP token to get the session
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: data.token_hash,
+          type: 'magiclink',
+        });
+        
+        if (verifyError) {
+          throw new Error(verifyError.message);
+        }
+        
+        toast({ 
+          title: 'Berhasil', 
+          description: `Anda sekarang login sebagai ${targetUser.full_name}` 
+        });
+        
+        // Redirect to dashboard
+        window.location.href = '/dashboard';
+      }
+    } catch (error: any) {
+      toast({ 
+        title: 'Gagal', 
+        description: error.message, 
+        variant: 'destructive' 
+      });
+    } finally {
+      setLoginAsLoading(null);
+      setShowLoginAsDialog(false);
+      setUserToLoginAs(null);
+    }
+  };
 
   // Filter users based on search, role, and column filters - MUST be before early returns
   // Changed: Show users with multiple roles in each role's tab
@@ -1188,8 +1244,29 @@ export default function DashboardAdmin() {
                         )}
                         <TableCell>
                           <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" onClick={() => openEditUser(u)}>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => openEditUser(u)}
+                              title="Edit"
+                            >
                               <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              onClick={() => {
+                                setUserToLoginAs(u);
+                                setShowLoginAsDialog(true);
+                              }}
+                              disabled={loginAsLoading === u.id}
+                              title="Login sebagai user ini"
+                            >
+                              {loginAsLoading === u.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <LogIn className="h-4 w-4" />
+                              )}
                             </Button>
                             <Button 
                               variant="ghost" 
@@ -1199,6 +1276,7 @@ export default function DashboardAdmin() {
                                 setUserToDelete(u);
                                 setShowDeleteUserDialog(true);
                               }}
+                              title="Hapus"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -1275,6 +1353,40 @@ export default function DashboardAdmin() {
                       </>
                     ) : (
                       `Hapus ${selectedUserIds.length} Akun`
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Login As Confirmation Dialog */}
+            <Dialog open={showLoginAsDialog} onOpenChange={setShowLoginAsDialog}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Konfirmasi Login Sebagai User</DialogTitle>
+                </DialogHeader>
+                <p className="text-muted-foreground">
+                  Anda akan login sebagai <span className="font-semibold text-foreground">{userToLoginAs?.full_name}</span>. 
+                  Ini akan mengakhiri sesi Anda saat ini dan memulai sesi baru sebagai user tersebut.
+                </p>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setShowLoginAsDialog(false)}>
+                    Batal
+                  </Button>
+                  <Button 
+                    onClick={() => userToLoginAs && handleLoginAs(userToLoginAs)}
+                    disabled={loginAsLoading !== null}
+                  >
+                    {loginAsLoading !== null ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Memproses...
+                      </>
+                    ) : (
+                      <>
+                        <LogIn className="h-4 w-4 mr-2" />
+                        Login Sebagai User
+                      </>
                     )}
                   </Button>
                 </DialogFooter>
