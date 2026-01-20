@@ -23,6 +23,7 @@ import { UserImportExport } from '@/components/admin/UserImportExport';
 import { UserPagination } from '@/components/admin/UserPagination';
 import { KurikulumTab } from '@/components/admin/KurikulumTab';
 import { TableFilterHeader } from '@/components/ui/table-column-filter';
+import { TableSortHeader, SortConfig, sortData } from '@/components/ui/table-sort-header';
 
 interface SistemKuliah {
   id: string;
@@ -114,6 +115,11 @@ export default function DashboardAdmin() {
   const [roleNameFilter, setRoleNameFilter] = useState('');
   const [roleEmailFilter, setRoleEmailFilter] = useState('');
   const [roleRoleFilter, setRoleRoleFilter] = useState('');
+
+  // Sorting state
+  const [userSort, setUserSort] = useState<SortConfig | null>(null);
+  const [assignmentSort, setAssignmentSort] = useState<SortConfig | null>(null);
+  const [roleSort, setRoleSort] = useState<SortConfig | null>(null);
 
   // Fetch all courses
   const { data: courses, refetch: refetchCourses } = useQuery({
@@ -473,13 +479,17 @@ export default function DashboardAdmin() {
   });
 
   // Filter users based on search, role, and column filters - MUST be before early returns
+  // Changed: Show users with multiple roles in each role's tab
   const filteredUsers = useMemo(() => {
-    return allUsers?.filter(u => {
+    const filtered = allUsers?.filter(u => {
       // Exclude current user if they're admin
       if (u.id === user?.id) return false;
       
-      // Apply role filter
-      if (userRoleFilter !== 'all' && u.role !== userRoleFilter) return false;
+      // Apply role filter - show users who have this role (including those with multiple roles)
+      if (userRoleFilter !== 'all') {
+        const userRoles = u.roles && u.roles.length > 0 ? u.roles : [u.role];
+        if (!userRoles.includes(userRoleFilter)) return false;
+      }
       
       // Apply global search filter
       if (userSearchQuery) {
@@ -505,7 +515,21 @@ export default function DashboardAdmin() {
       
       return true;
     }) || [];
-  }, [allUsers, userRoleFilter, userSearchQuery, user?.id, userNameFilter, userGenderFilter, userEmailFilter, userNimNipFilter, userAngkatanFilter, userProgramFilter]);
+    
+    // Apply sorting
+    return sortData(filtered, userSort, (item, key) => {
+      switch (key) {
+        case 'name': return item.full_name;
+        case 'gender': return (item as any).gender;
+        case 'email': return item.email;
+        case 'nim': return item.nim;
+        case 'nip': return item.nip;
+        case 'enrollment_year': return item.enrollment_year;
+        case 'program': return item.program;
+        default: return null;
+      }
+    });
+  }, [allUsers, userRoleFilter, userSearchQuery, user?.id, userNameFilter, userGenderFilter, userEmailFilter, userNimNipFilter, userAngkatanFilter, userProgramFilter, userSort]);
 
   // Paginated users - MUST be before early returns
   const totalUserPages = Math.ceil(filteredUsers.length / userPageSize);
@@ -1019,77 +1043,88 @@ export default function DashboardAdmin() {
                       </TableHead>
                       <TableHead className="w-12 text-primary-foreground">No</TableHead>
                       <TableHead className="text-primary-foreground">
-                        <TableFilterHeader
-                          filterValue={userNameFilter}
-                          onFilterChange={setUserNameFilter}
-                          placeholder="Filter nama..."
+                        <TableSortHeader
+                          sortKey="name"
+                          currentSort={userSort}
+                          onSort={setUserSort}
+                          sortType="text"
                         >
                           Nama
-                        </TableFilterHeader>
+                        </TableSortHeader>
                       </TableHead>
                       <TableHead className="text-primary-foreground">
-                        <TableFilterHeader
+                        <TableSortHeader
+                          sortKey="gender"
+                          currentSort={userSort}
+                          onSort={setUserSort}
+                          sortType="text"
+                          filterOptions={['pria', 'wanita']}
                           filterValue={userGenderFilter}
                           onFilterChange={setUserGenderFilter}
-                          placeholder="pria/wanita..."
+                          filterPlaceholder="Filter gender..."
                         >
                           Gender
-                        </TableFilterHeader>
+                        </TableSortHeader>
                       </TableHead>
                       <TableHead className="text-primary-foreground">
-                        <TableFilterHeader
-                          filterValue={userEmailFilter}
-                          onFilterChange={setUserEmailFilter}
-                          placeholder="Filter email..."
+                        <TableSortHeader
+                          sortKey="email"
+                          currentSort={userSort}
+                          onSort={setUserSort}
+                          sortType="text"
                         >
                           Email
-                        </TableFilterHeader>
+                        </TableSortHeader>
                       </TableHead>
                       <TableHead className="text-primary-foreground">Role</TableHead>
                       {/* NIM column for mahasiswa */}
                       {(userRoleFilter === 'all' || userRoleFilter === 'mahasiswa') && (
                         <TableHead className="text-primary-foreground">
-                          <TableFilterHeader
-                            filterValue={userNimNipFilter}
-                            onFilterChange={setUserNimNipFilter}
-                            placeholder="Filter NIM..."
+                          <TableSortHeader
+                            sortKey="nim"
+                            currentSort={userSort}
+                            onSort={setUserSort}
+                            sortType="text"
                           >
                             NIM
-                          </TableFilterHeader>
+                          </TableSortHeader>
                         </TableHead>
                       )}
                       {/* NIDN/NIDK/NIPY column for dosen */}
                       {(userRoleFilter === 'all' || userRoleFilter === 'dosen') && (
                         <TableHead className="text-primary-foreground">
-                          <TableFilterHeader
-                            filterValue={userNimNipFilter}
-                            onFilterChange={setUserNimNipFilter}
-                            placeholder="Filter NIDN/NIDK/NIPY..."
+                          <TableSortHeader
+                            sortKey="nip"
+                            currentSort={userSort}
+                            onSort={setUserSort}
+                            sortType="text"
                           >
                             NIDN/NIDK/NIPY
-                          </TableFilterHeader>
+                          </TableSortHeader>
                         </TableHead>
                       )}
                       {/* Angkatan & Program only for mahasiswa or all */}
                       {(userRoleFilter === 'all' || userRoleFilter === 'mahasiswa') && (
                         <>
                           <TableHead className="text-primary-foreground">
-                            <TableFilterHeader
-                              filterValue={userAngkatanFilter}
-                              onFilterChange={setUserAngkatanFilter}
-                              placeholder="Filter angkatan..."
+                            <TableSortHeader
+                              sortKey="enrollment_year"
+                              currentSort={userSort}
+                              onSort={setUserSort}
+                              sortType="number"
                             >
                               Angkatan
-                            </TableFilterHeader>
+                            </TableSortHeader>
                           </TableHead>
                           <TableHead className="text-primary-foreground">
-                            <TableFilterHeader
-                              filterValue={userProgramFilter}
-                              onFilterChange={setUserProgramFilter}
-                              placeholder="Filter program..."
+                            <TableSortHeader
+                              sortKey="program"
+                              currentSort={userSort}
+                              onSort={setUserSort}
+                              sortType="text"
                             >
                               Program
-                            </TableFilterHeader>
+                            </TableSortHeader>
                           </TableHead>
                         </>
                       )}
@@ -1372,31 +1407,34 @@ export default function DashboardAdmin() {
                       </TableHead>
                       <TableHead className="w-12 text-primary-foreground">No</TableHead>
                       <TableHead className="text-primary-foreground">
-                        <TableFilterHeader
-                          filterValue={assignmentCourseFilter}
-                          onFilterChange={setAssignmentCourseFilter}
-                          placeholder="Filter mata kuliah..."
+                        <TableSortHeader
+                          sortKey="course"
+                          currentSort={assignmentSort}
+                          onSort={setAssignmentSort}
+                          sortType="text"
                         >
                           Mata Kuliah
-                        </TableFilterHeader>
+                        </TableSortHeader>
                       </TableHead>
                       <TableHead className="text-primary-foreground">
-                        <TableFilterHeader
-                          filterValue={assignmentClassFilter}
-                          onFilterChange={setAssignmentClassFilter}
-                          placeholder="Filter kelas..."
+                        <TableSortHeader
+                          sortKey="class"
+                          currentSort={assignmentSort}
+                          onSort={setAssignmentSort}
+                          sortType="text"
                         >
                           Kelas
-                        </TableFilterHeader>
+                        </TableSortHeader>
                       </TableHead>
                       <TableHead className="text-primary-foreground">
-                        <TableFilterHeader
-                          filterValue={assignmentDosenFilter}
-                          onFilterChange={setAssignmentDosenFilter}
-                          placeholder="Filter dosen..."
+                        <TableSortHeader
+                          sortKey="dosen"
+                          currentSort={assignmentSort}
+                          onSort={setAssignmentSort}
+                          sortType="text"
                         >
                           Dosen
-                        </TableFilterHeader>
+                        </TableSortHeader>
                       </TableHead>
                       <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                     </TableRow>
@@ -1579,31 +1617,38 @@ export default function DashboardAdmin() {
                     <TableRow className="bg-primary hover:bg-primary">
                       <TableHead className="w-12 text-primary-foreground">No</TableHead>
                       <TableHead className="text-primary-foreground">
-                        <TableFilterHeader
-                          filterValue={roleNameFilter}
-                          onFilterChange={setRoleNameFilter}
-                          placeholder="Filter nama..."
+                        <TableSortHeader
+                          sortKey="name"
+                          currentSort={roleSort}
+                          onSort={setRoleSort}
+                          sortType="text"
                         >
                           Nama
-                        </TableFilterHeader>
+                        </TableSortHeader>
                       </TableHead>
                       <TableHead className="text-primary-foreground">
-                        <TableFilterHeader
-                          filterValue={roleEmailFilter}
-                          onFilterChange={setRoleEmailFilter}
-                          placeholder="Filter email..."
+                        <TableSortHeader
+                          sortKey="email"
+                          currentSort={roleSort}
+                          onSort={setRoleSort}
+                          sortType="text"
                         >
                           Email
-                        </TableFilterHeader>
+                        </TableSortHeader>
                       </TableHead>
                       <TableHead className="text-primary-foreground">
-                        <TableFilterHeader
+                        <TableSortHeader
+                          sortKey="role"
+                          currentSort={roleSort}
+                          onSort={setRoleSort}
+                          sortType="text"
+                          filterOptions={['mahasiswa', 'dosen', 'sub_admin', 'admin']}
                           filterValue={roleRoleFilter}
                           onFilterChange={setRoleRoleFilter}
-                          placeholder="Filter role..."
+                          filterPlaceholder="Filter role..."
                         >
                           Role
-                        </TableFilterHeader>
+                        </TableSortHeader>
                       </TableHead>
                       <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                     </TableRow>
@@ -1612,29 +1657,29 @@ export default function DashboardAdmin() {
                     {(() => {
                       let filteredRoleUsers = allUsers?.filter(u => u.id !== user?.id) || [];
                       
-                      if (roleNameFilter) {
-                        const query = roleNameFilter.toLowerCase();
-                        filteredRoleUsers = filteredRoleUsers.filter(u => u.full_name?.toLowerCase().includes(query));
-                      }
-                      
-                      if (roleEmailFilter) {
-                        const query = roleEmailFilter.toLowerCase();
-                        filteredRoleUsers = filteredRoleUsers.filter(u => u.email?.toLowerCase().includes(query));
-                      }
-                      
-                      if (roleRoleFilter) {
-                        const query = roleRoleFilter.toLowerCase();
+                      // Apply category filter for role
+                      if (roleRoleFilter && roleRoleFilter !== 'all') {
                         filteredRoleUsers = filteredRoleUsers.filter(u => {
                           const roles = u.roles && u.roles.length > 0 ? u.roles : [u.role];
-                          return roles.some(r => r.toLowerCase().includes(query));
+                          return roles.includes(roleRoleFilter as any);
                         });
                       }
+                      
+                      // Apply sorting
+                      filteredRoleUsers = sortData(filteredRoleUsers, roleSort, (item, key) => {
+                        switch (key) {
+                          case 'name': return item.full_name;
+                          case 'email': return item.email;
+                          case 'role': return item.role;
+                          default: return null;
+                        }
+                      });
                       
                       if (filteredRoleUsers.length === 0) {
                         return (
                           <TableRow>
                             <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                              {roleNameFilter || roleEmailFilter || roleRoleFilter 
+                              {roleRoleFilter && roleRoleFilter !== 'all'
                                 ? 'Tidak ada pengguna yang sesuai dengan filter' 
                                 : 'Belum ada pengguna'}
                             </TableCell>

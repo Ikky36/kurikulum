@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/bulk-select-table';
 import { KurikulumImportExport } from '@/components/kurikulum/KurikulumImportExport';
 import { KurikulumFilter } from '@/components/kurikulum/KurikulumFilter';
+import { TableSortHeader, SortConfig, sortData } from '@/components/ui/table-sort-header';
 
 type VmtsPtVisi = { id: string; visi: string };
 type VmtsPtMisi = { id: string; code: string; misi: string };
@@ -54,6 +55,18 @@ function KurikulumContent() {
   const [filterCpl, setFilterCpl] = useState('');
   const [filterBk, setFilterBk] = useState('');
   const [filterMk, setFilterMk] = useState('');
+  
+  // Sort states for each table
+  const [sortPtMisi, setSortPtMisi] = useState<SortConfig | null>(null);
+  const [sortPtTujuan, setSortPtTujuan] = useState<SortConfig | null>(null);
+  const [sortPtStrategi, setSortPtStrategi] = useState<SortConfig | null>(null);
+  const [sortPsMisi, setSortPsMisi] = useState<SortConfig | null>(null);
+  const [sortPsTujuan, setSortPsTujuan] = useState<SortConfig | null>(null);
+  const [sortPsStrategi, setSortPsStrategi] = useState<SortConfig | null>(null);
+  const [sortProfilLulusan, setSortProfilLulusan] = useState<SortConfig | null>(null);
+  const [sortCpl, setSortCpl] = useState<SortConfig | null>(null);
+  const [sortBk, setSortBk] = useState<SortConfig | null>(null);
+  const [sortMk, setSortMk] = useState<SortConfig | null>(null);
 
   // Enable realtime for curriculum-related tables
   useMultiTableRealtimeSubscription([
@@ -294,15 +307,26 @@ function KurikulumContent() {
     valueKey: string,
     valueLabel: string,
     filterValue: string,
-    onFilterChange: (value: string) => void
+    onFilterChange: (value: string) => void,
+    sortConfig: SortConfig | null,
+    onSortChange: (config: SortConfig) => void
   ) => {
     // Filter data
-    const filteredData = data.filter(item => {
+    let filteredData = data.filter(item => {
       const searchLower = filterValue.toLowerCase();
       return (
         item.code?.toLowerCase().includes(searchLower) ||
         item[valueKey]?.toLowerCase().includes(searchLower)
       );
+    });
+    
+    // Apply sorting
+    filteredData = sortData(filteredData, sortConfig, (item, key) => {
+      switch (key) {
+        case 'code': return item.code;
+        case 'value': return item[valueKey];
+        default: return null;
+      }
     });
     
     const ids = filteredData.map(item => item.id);
@@ -347,8 +371,26 @@ function KurikulumContent() {
                   </TableHead>
                 )}
                 <TableHead className="text-primary-foreground w-16">No</TableHead>
-                <TableHead className="text-primary-foreground w-24">Kode</TableHead>
-                <TableHead className="text-primary-foreground">{valueLabel}</TableHead>
+                <TableHead className="text-primary-foreground w-24">
+                  <TableSortHeader
+                    sortKey="code"
+                    currentSort={sortConfig}
+                    onSort={onSortChange}
+                    sortType="text"
+                  >
+                    Kode
+                  </TableSortHeader>
+                </TableHead>
+                <TableHead className="text-primary-foreground">
+                  <TableSortHeader
+                    sortKey="value"
+                    currentSort={sortConfig}
+                    onSort={onSortChange}
+                    sortType="text"
+                  >
+                    {valueLabel}
+                  </TableSortHeader>
+                </TableHead>
                 {canEdit && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
@@ -1529,15 +1571,15 @@ function KurikulumContent() {
           </TabsList>
 
           <TabsContent value="vmts-pt">
-            {renderCodeTable('Misi PT', ptMisi, 'vmts_pt_misi', 'misi', 'Misi Perguruan Tinggi', filterPtMisi, setFilterPtMisi)}
-            {renderCodeTable('Tujuan PT', ptTujuan, 'vmts_pt_tujuan', 'tujuan', 'Tujuan Perguruan Tinggi', filterPtTujuan, setFilterPtTujuan)}
-            {renderCodeTable('Strategi PT', ptStrategi, 'vmts_pt_strategi', 'strategi', 'Strategi Perguruan Tinggi', filterPtStrategi, setFilterPtStrategi)}
+            {renderCodeTable('Misi PT', ptMisi, 'vmts_pt_misi', 'misi', 'Misi Perguruan Tinggi', filterPtMisi, setFilterPtMisi, sortPtMisi, setSortPtMisi)}
+            {renderCodeTable('Tujuan PT', ptTujuan, 'vmts_pt_tujuan', 'tujuan', 'Tujuan Perguruan Tinggi', filterPtTujuan, setFilterPtTujuan, sortPtTujuan, setSortPtTujuan)}
+            {renderCodeTable('Strategi PT', ptStrategi, 'vmts_pt_strategi', 'strategi', 'Strategi Perguruan Tinggi', filterPtStrategi, setFilterPtStrategi, sortPtStrategi, setSortPtStrategi)}
           </TabsContent>
 
           <TabsContent value="vmts-ps">
-            {renderCodeTable('Misi PS', psMisi, 'vmts_ps_misi', 'misi', 'Misi Program Studi', filterPsMisi, setFilterPsMisi)}
-            {renderCodeTable('Tujuan PS', psTujuan, 'vmts_ps_tujuan', 'tujuan', 'Tujuan Program Studi', filterPsTujuan, setFilterPsTujuan)}
-            {renderCodeTable('Strategi PS', psStrategi, 'vmts_ps_strategi', 'strategi', 'Strategi Program Studi', filterPsStrategi, setFilterPsStrategi)}
+            {renderCodeTable('Misi PS', psMisi, 'vmts_ps_misi', 'misi', 'Misi Program Studi', filterPsMisi, setFilterPsMisi, sortPsMisi, setSortPsMisi)}
+            {renderCodeTable('Tujuan PS', psTujuan, 'vmts_ps_tujuan', 'tujuan', 'Tujuan Program Studi', filterPsTujuan, setFilterPsTujuan, sortPsTujuan, setSortPsTujuan)}
+            {renderCodeTable('Strategi PS', psStrategi, 'vmts_ps_strategi', 'strategi', 'Strategi Program Studi', filterPsStrategi, setFilterPsStrategi, sortPsStrategi, setSortPsStrategi)}
           </TabsContent>
 
           <TabsContent value="profil-lulusan">
