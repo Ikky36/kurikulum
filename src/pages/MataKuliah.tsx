@@ -18,6 +18,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Curriculum } from '@/lib/types';
 import { toast } from 'sonner';
+import { TableSortHeader, SortConfig, sortData } from '@/components/ui/table-sort-header';
 
 export default function MataKuliah() {
   const { data: courses, isLoading, error, refetch } = useCoursesWithStats();
@@ -33,6 +34,9 @@ export default function MataKuliah() {
   const [curriculumFilter, setCurriculumFilter] = useState('all');
   const [semesterFilter, setSemesterFilter] = useState('all');
   const [instructorFilter, setInstructorFilter] = useState('all');
+  
+  // Sort state
+  const [courseSort, setCourseSort] = useState<SortConfig | null>(null);
   
   // Edit dialog state
   const [editDialog, setEditDialog] = useState<{ course: any; isNew: boolean } | null>(null);
@@ -150,18 +154,32 @@ export default function MataKuliah() {
     return curricula?.find(c => c.id === curriculumId)?.name || null;
   };
 
-  // Filtered courses
+  // Filtered and sorted courses
   const filteredCourses = useMemo(() => {
     if (!courses) return [];
     
-    return courses.filter(course => {
+    let result = courses.filter(course => {
       if (codeFilter !== 'all' && course.code !== codeFilter) return false;
       if (curriculumFilter !== 'all' && course.curriculum_id !== curriculumFilter) return false;
       if (semesterFilter !== 'all' && course.semester !== semesterFilter) return false;
       if (instructorFilter !== 'all' && !course.instructors.some(i => i.full_name === instructorFilter)) return false;
       return true;
     });
-  }, [courses, codeFilter, curriculumFilter, semesterFilter, instructorFilter]);
+    
+    // Apply sorting
+    return sortData(result, courseSort, (item, key) => {
+      switch (key) {
+        case 'code': return item.code;
+        case 'name': return item.name;
+        case 'curriculum': return getCurriculumName(item.curriculum_id);
+        case 'instructor': return item.instructors[0]?.full_name || null;
+        case 'students': return item.total_students;
+        case 'average': return item.average_score;
+        case 'semester': return item.semester;
+        default: return null;
+      }
+    });
+  }, [courses, codeFilter, curriculumFilter, semesterFilter, instructorFilter, courseSort, curricula]);
 
   const renderCourseRow = (course: typeof filteredCourses[0], i: number) => {
     const rowContent = (
@@ -338,59 +356,97 @@ export default function MataKuliah() {
                   <TableRow className="bg-primary hover:bg-primary">
                     <TableHead className="w-12 font-semibold text-primary-foreground">No</TableHead>
                     <TableHead className="font-semibold text-primary-foreground">
-                      <Select value={codeFilter} onValueChange={setCodeFilter}>
-                        <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground">
-                          <SelectValue placeholder="Kode" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Semua Kode</SelectItem>
-                          {filterOptions.codes.map(code => (
-                            <SelectItem key={code} value={code}>{code}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableHead>
-                    <TableHead className="font-semibold text-primary-foreground">Mata Kuliah</TableHead>
-                    <TableHead className="font-semibold text-primary-foreground">
-                      <Select value={curriculumFilter} onValueChange={setCurriculumFilter}>
-                        <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground">
-                          <SelectValue placeholder="Kurikulum" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Kurikulum</SelectItem>
-                          {curricula?.map(c => (
-                            <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <TableSortHeader
+                        sortKey="code"
+                        currentSort={courseSort}
+                        onSort={setCourseSort}
+                        sortType="text"
+                        filterOptions={filterOptions.codes}
+                        filterValue={codeFilter}
+                        onFilterChange={setCodeFilter}
+                        filterPlaceholder="Filter kode..."
+                      >
+                        Kode
+                      </TableSortHeader>
                     </TableHead>
                     <TableHead className="font-semibold text-primary-foreground">
-                      <Select value={instructorFilter} onValueChange={setInstructorFilter}>
-                        <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground">
-                          <SelectValue placeholder="Dosen Pengajar" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Dosen</SelectItem>
-                          {filterOptions.instructors.map(name => (
-                            <SelectItem key={name} value={name}>{name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <TableSortHeader
+                        sortKey="name"
+                        currentSort={courseSort}
+                        onSort={setCourseSort}
+                        sortType="text"
+                      >
+                        Mata Kuliah
+                      </TableSortHeader>
                     </TableHead>
-                    <TableHead className="font-semibold text-primary-foreground text-center">Mahasiswa</TableHead>
-                    <TableHead className="font-semibold text-primary-foreground text-center">Rata-rata</TableHead>
                     <TableHead className="font-semibold text-primary-foreground">
-                      <Select value={semesterFilter} onValueChange={setSemesterFilter}>
-                        <SelectTrigger className="w-auto border-0 bg-transparent text-primary-foreground h-auto p-0 gap-1 font-semibold hover:opacity-80 [&>svg]:text-primary-foreground mx-auto">
-                          <SelectValue placeholder="Semester" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Semester</SelectItem>
-                          {filterOptions.semesters.map(sem => (
-                            <SelectItem key={sem} value={sem}>{sem}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <TableSortHeader
+                        sortKey="curriculum"
+                        currentSort={courseSort}
+                        onSort={setCourseSort}
+                        sortType="text"
+                        filterOptions={curricula?.map(c => c.name) || []}
+                        filterValue={curriculumFilter === 'all' ? 'all' : curricula?.find(c => c.id === curriculumFilter)?.name || 'all'}
+                        onFilterChange={(val) => {
+                          if (val === 'all') {
+                            setCurriculumFilter('all');
+                          } else {
+                            const found = curricula?.find(c => c.name === val);
+                            setCurriculumFilter(found?.id || 'all');
+                          }
+                        }}
+                        filterPlaceholder="Filter kurikulum..."
+                      >
+                        Kurikulum
+                      </TableSortHeader>
+                    </TableHead>
+                    <TableHead className="font-semibold text-primary-foreground">
+                      <TableSortHeader
+                        sortKey="instructor"
+                        currentSort={courseSort}
+                        onSort={setCourseSort}
+                        sortType="text"
+                        filterOptions={filterOptions.instructors}
+                        filterValue={instructorFilter}
+                        onFilterChange={setInstructorFilter}
+                        filterPlaceholder="Filter dosen..."
+                      >
+                        Dosen Pengajar
+                      </TableSortHeader>
+                    </TableHead>
+                    <TableHead className="font-semibold text-primary-foreground text-center">
+                      <TableSortHeader
+                        sortKey="students"
+                        currentSort={courseSort}
+                        onSort={setCourseSort}
+                        sortType="number"
+                      >
+                        Mahasiswa
+                      </TableSortHeader>
+                    </TableHead>
+                    <TableHead className="font-semibold text-primary-foreground text-center">
+                      <TableSortHeader
+                        sortKey="average"
+                        currentSort={courseSort}
+                        onSort={setCourseSort}
+                        sortType="number"
+                      >
+                        Rata-rata
+                      </TableSortHeader>
+                    </TableHead>
+                    <TableHead className="font-semibold text-primary-foreground">
+                      <TableSortHeader
+                        sortKey="semester"
+                        currentSort={courseSort}
+                        onSort={setCourseSort}
+                        sortType="text"
+                        filterOptions={filterOptions.semesters}
+                        filterValue={semesterFilter}
+                        onFilterChange={setSemesterFilter}
+                        filterPlaceholder="Filter semester..."
+                      >
+                        Semester
+                      </TableSortHeader>
                     </TableHead>
                     {canEdit && <TableHead className="font-semibold text-primary-foreground w-24">Aksi</TableHead>}
                     <TableHead className="text-primary-foreground"></TableHead>
