@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Users, TrendingUp, ChevronRight, Lock, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,6 +36,7 @@ export default function MataKuliah() {
   const [curriculumFilter, setCurriculumFilter] = useState('all');
   const [semesterFilter, setSemesterFilter] = useState('all');
   const [instructorFilter, setInstructorFilter] = useState('all');
+  const [isGenapSemester, setIsGenapSemester] = useState(false); // false = ganjil, true = genap
   
   // Sort state
   const [courseSort, setCourseSort] = useState<SortConfig | null>(null);
@@ -156,11 +159,24 @@ export default function MataKuliah() {
     return curricula?.find(c => c.id === curriculumId)?.name || null;
   };
 
+  // Helper to determine if semester is genap (even) or ganjil (odd)
+  const isSemesterGenap = (semester: string | null | undefined) => {
+    if (!semester) return null;
+    const match = semester.match(/\d+/);
+    if (!match) return null;
+    const num = parseInt(match[0]);
+    return num % 2 === 0; // even = genap
+  };
+
   // Filtered and sorted courses
   const filteredCourses = useMemo(() => {
     if (!courses) return [];
     
     let result = courses.filter(course => {
+      // Apply genap/ganjil filter
+      const semesterIsGenap = isSemesterGenap(course.semester);
+      if (semesterIsGenap !== null && semesterIsGenap !== isGenapSemester) return false;
+      
       if (codeFilter !== 'all' && course.code !== codeFilter) return false;
       if (curriculumFilter !== 'all' && course.curriculum_id !== curriculumFilter) return false;
       if (semesterFilter !== 'all' && course.semester !== semesterFilter) return false;
@@ -182,7 +198,7 @@ export default function MataKuliah() {
         default: return null;
       }
     });
-  }, [courses, codeFilter, curriculumFilter, semesterFilter, instructorFilter, courseSort, curricula]);
+  }, [courses, codeFilter, curriculumFilter, semesterFilter, instructorFilter, courseSort, curricula, isGenapSemester]);
 
   const renderCourseRow = (course: typeof filteredCourses[0], i: number) => {
     const rowContent = (
@@ -348,14 +364,41 @@ export default function MataKuliah() {
           </Card>
         ) : (
           <Card className="overflow-hidden animate-slide-up">
-            {canEdit && (
-              <CardHeader className="flex flex-row items-center justify-between border-b">
+            <CardHeader className="flex flex-row items-center justify-between border-b flex-wrap gap-4">
+              <div className="flex items-center gap-6">
                 <CardTitle className="text-lg">Daftar Mata Kuliah</CardTitle>
+                <div className="flex items-center gap-3 bg-muted/50 rounded-lg px-4 py-2">
+                  <Label 
+                    htmlFor="semester-switch" 
+                    className={cn(
+                      "text-sm font-medium cursor-pointer transition-colors",
+                      !isGenapSemester ? "text-primary" : "text-muted-foreground"
+                    )}
+                  >
+                    Ganjil
+                  </Label>
+                  <Switch
+                    id="semester-switch"
+                    checked={isGenapSemester}
+                    onCheckedChange={setIsGenapSemester}
+                  />
+                  <Label 
+                    htmlFor="semester-switch" 
+                    className={cn(
+                      "text-sm font-medium cursor-pointer transition-colors",
+                      isGenapSemester ? "text-primary" : "text-muted-foreground"
+                    )}
+                  >
+                    Genap
+                  </Label>
+                </div>
+              </div>
+              {canEdit && (
                 <Button size="sm" onClick={() => openEditDialog(null, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
-              </CardHeader>
-            )}
+              )}
+            </CardHeader>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
