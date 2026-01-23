@@ -47,6 +47,7 @@ export interface Course {
   code: string;
   name: string;
   semester?: string;
+  sks?: number;
   passing_score: number;
   curriculum_id?: string | null;
   created_at: string;

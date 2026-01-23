@@ -379,9 +379,15 @@ export default function CourseDetail() {
               {course.name}
             </h1>
           </div>
-          <p className="text-muted-foreground mt-2">
-            Semester {course.semester}
-          </p>
+          <div className="flex items-center gap-4 text-muted-foreground mt-2">
+            <span>Semester {course.semester}</span>
+            {(course as any).sks !== undefined && (course as any).sks > 0 && (
+              <>
+                <span>•</span>
+                <span>{(course as any).sks} SKS</span>
+              </>
+            )}
+          </div>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
@@ -406,7 +412,14 @@ export default function CourseDetail() {
               {/* Instructor Card */}
               <Card className="animate-slide-up">
                 <CardHeader>
-                  <CardTitle className="text-lg">Dosen Pengajar</CardTitle>
+                  <CardTitle className="text-lg">Info Mata Kuliah</CardTitle>
+                  <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+                    <span>Semester: {course.semester || '-'}</span>
+                    {(course as any).sks !== undefined && (
+                      <span>SKS: {(course as any).sks}</span>
+                    )}
+                    <span>KKM: {course.passing_score}%</span>
+                  </div>
                   {classFilter !== 'all' && (
                     <p className="text-sm text-muted-foreground">Kelas: {classFilter}</p>
                   )}
