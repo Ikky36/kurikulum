@@ -935,6 +935,7 @@ function KurikulumContent() {
         { key: 'code', label: 'Kode', required: true },
         { key: 'name', label: 'Nama', required: true },
         { key: 'semester', label: 'Semester', required: false },
+        { key: 'sks', label: 'SKS', required: false },
       ],
       queryKey: 'courses_kurikulum',
     };
@@ -952,7 +953,7 @@ function KurikulumContent() {
             {canEdit && (
               <>
                 <KurikulumImportExport tableConfig={tableConfig} data={courses} />
-                <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', ploIds: [], plIds: [] }, true)}>
+                <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', sks: '0', ploIds: [], plIds: [] }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
               </>
@@ -973,6 +974,7 @@ function KurikulumContent() {
                 <TableHead className="text-primary-foreground">Nama</TableHead>
                 <TableHead className="text-primary-foreground">Kurikulum</TableHead>
                 <TableHead className="text-primary-foreground">Semester</TableHead>
+                <TableHead className="text-primary-foreground w-16">SKS</TableHead>
                 <TableHead className="text-primary-foreground">CPL/PLO</TableHead>
                 <TableHead className="text-primary-foreground">PL</TableHead>
                 {canEdit && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
@@ -1012,6 +1014,7 @@ function KurikulumContent() {
                       </TableCell>
                       <TableCell>{course.curricula?.name || '-'}</TableCell>
                       <TableCell>{course.semester || '-'}</TableCell>
+                      <TableCell>{course.sks ?? 0}</TableCell>
                       <TableCell>
                         {cplCodes.length > 0 ? (
                           <div className="flex flex-wrap gap-1">
@@ -1066,6 +1069,7 @@ function KurikulumContent() {
                                   semester: course.semester || '',
                                   curriculum_id: course.curriculum_id || '',
                                   passing_score: course.passing_score?.toString() || '60',
+                                  sks: course.sks?.toString() || '0',
                                   ploIds: course.course_plos?.map((cp: any) => cp.plo_id) || [],
                                   plIds: existingPlIds,
                                 }, false);
@@ -1088,7 +1092,7 @@ function KurikulumContent() {
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={canEdit ? 9 : 7} className="text-center text-muted-foreground">
+                  <TableCell colSpan={canEdit ? 10 : 8} className="text-center text-muted-foreground">
                     Belum ada data
                   </TableCell>
                 </TableRow>
@@ -1255,13 +1259,26 @@ function KurikulumContent() {
                   </Select>
                 </div>
               </div>
-              <div>
-                <label className="text-sm font-medium">Nama Mata Kuliah</label>
-                <Input
-                  value={formData.name || ''}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Nama mata kuliah"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Nama Mata Kuliah</label>
+                  <Input
+                    value={formData.name || ''}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Nama mata kuliah"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">SKS</label>
+                  <Input
+                    type="number"
+                    value={formData.sks || '0'}
+                    onChange={(e) => setFormData({ ...formData, sks: e.target.value })}
+                    placeholder="0"
+                    min={0}
+                    max={24}
+                  />
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium">Kurikulum</label>
@@ -1330,7 +1347,7 @@ function KurikulumContent() {
               </Button>
               <Button 
                 onClick={async () => {
-                  const { id, code, name, semester, curriculum_id, passing_score } = formData;
+                  const { id, code, name, semester, curriculum_id, passing_score, sks } = formData;
                   if (isNew) {
                     const { data: newCourse, error } = await supabase
                       .from('courses')
@@ -1339,7 +1356,8 @@ function KurikulumContent() {
                         name, 
                         semester: semester || null, 
                         curriculum_id: curriculum_id || null,
-                        passing_score: parseInt(passing_score) || 60
+                        passing_score: parseInt(passing_score) || 60,
+                        sks: parseInt(sks) || 0
                       })
                       .select()
                       .single();
@@ -1371,7 +1389,8 @@ function KurikulumContent() {
                         name, 
                         semester: semester || null, 
                         curriculum_id: curriculum_id || null,
-                        passing_score: parseInt(passing_score) || 60
+                        passing_score: parseInt(passing_score) || 60,
+                        sks: parseInt(sks) || 0
                       })
                       .eq('id', id);
                     

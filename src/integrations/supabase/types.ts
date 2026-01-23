@@ -475,6 +475,7 @@ export type Database = {
           name: string
           passing_score: number
           semester: string | null
+          sks: number | null
           updated_at: string
         }
         Insert: {
@@ -485,6 +486,7 @@ export type Database = {
           name: string
           passing_score?: number
           semester?: string | null
+          sks?: number | null
           updated_at?: string
         }
         Update: {
@@ -495,6 +497,7 @@ export type Database = {
           name?: string
           passing_score?: number
           semester?: string | null
+          sks?: number | null
           updated_at?: string
         }
         Relationships: [

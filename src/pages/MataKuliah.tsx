@@ -40,8 +40,8 @@ export default function MataKuliah() {
   
   // Edit dialog state
   const [editDialog, setEditDialog] = useState<{ course: any; isNew: boolean } | null>(null);
-  const [formData, setFormData] = useState<{ code: string; name: string; semester: string; curriculum_id: string; passing_score: string }>({
-    code: '', name: '', semester: '', curriculum_id: '', passing_score: '60'
+  const [formData, setFormData] = useState<{ code: string; name: string; semester: string; curriculum_id: string; passing_score: string; sks: string }>({
+    code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', sks: '0'
   });
 
   // Fetch curricula for filter and display
@@ -68,6 +68,7 @@ export default function MataKuliah() {
         semester: formData.semester || null,
         curriculum_id: formData.curriculum_id || null,
         passing_score: parseInt(formData.passing_score) || 60,
+        sks: parseInt(formData.sks) || 0,
       };
 
       if (isNew) {
@@ -113,9 +114,10 @@ export default function MataKuliah() {
         semester: course.semester || '',
         curriculum_id: course.curriculum_id || '',
         passing_score: course.passing_score?.toString() || '60',
+        sks: course.sks?.toString() || '0',
       });
     } else {
-      setFormData({ code: '', name: '', semester: '', curriculum_id: '', passing_score: '60' });
+      setFormData({ code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', sks: '0' });
     }
     setEditDialog({ course, isNew });
   };
@@ -176,6 +178,7 @@ export default function MataKuliah() {
         case 'students': return item.total_students;
         case 'average': return item.average_score;
         case 'semester': return item.semester;
+        case 'sks': return (item as any).sks ?? 0;
         default: return null;
       }
     });
@@ -248,6 +251,9 @@ export default function MataKuliah() {
         </TableCell>
         <TableCell className="text-center">
           <Badge variant="outline">{course.semester || '-'}</Badge>
+        </TableCell>
+        <TableCell className="text-center">
+          <span className="font-medium">{(course as any).sks ?? 0}</span>
         </TableCell>
         {canEdit && (
           <TableCell>
@@ -448,6 +454,16 @@ export default function MataKuliah() {
                         Semester
                       </TableSortHeader>
                     </TableHead>
+                    <TableHead className="font-semibold text-primary-foreground text-center">
+                      <TableSortHeader
+                        sortKey="sks"
+                        currentSort={courseSort}
+                        onSort={setCourseSort}
+                        sortType="number"
+                      >
+                        SKS
+                      </TableSortHeader>
+                    </TableHead>
                     {canEdit && <TableHead className="font-semibold text-primary-foreground w-24">Aksi</TableHead>}
                     <TableHead className="text-primary-foreground"></TableHead>
                   </TableRow>
@@ -456,7 +472,7 @@ export default function MataKuliah() {
                   {filteredCourses.map((course, i) => renderCourseRow(course, i))}
                   {filteredCourses.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={canEdit ? 10 : 9} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={canEdit ? 11 : 10} className="text-center py-8 text-muted-foreground">
                         Tidak ada mata kuliah yang sesuai filter
                       </TableCell>
                     </TableRow>
@@ -517,16 +533,29 @@ export default function MataKuliah() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <label className="text-sm font-medium">Nilai Kelulusan (%)</label>
-                  <Input
-                    type="number"
-                    value={formData.passing_score}
-                    onChange={(e) => setFormData({ ...formData, passing_score: e.target.value })}
-                    placeholder="60"
-                    min={0}
-                    max={100}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium">SKS</label>
+                    <Input
+                      type="number"
+                      value={formData.sks}
+                      onChange={(e) => setFormData({ ...formData, sks: e.target.value })}
+                      placeholder="0"
+                      min={0}
+                      max={24}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Nilai Kelulusan (%)</label>
+                    <Input
+                      type="number"
+                      value={formData.passing_score}
+                      onChange={(e) => setFormData({ ...formData, passing_score: e.target.value })}
+                      placeholder="60"
+                      min={0}
+                      max={100}
+                    />
+                  </div>
                 </div>
               </div>
               <DialogFooter>
