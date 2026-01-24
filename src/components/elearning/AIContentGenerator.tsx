@@ -152,9 +152,15 @@ Format output JSON:
 Buat ${contentLength === 'short' ? '5' : contentLength === 'medium' ? '10' : '15'} soal dengan variasi tipe (multiple_choice, true_false, short_answer).`;
       }
 
+      // Build context with file content if available
+      const contextWithFile = fileContent 
+        ? `${prompt ? prompt + '\n\n' : ''}KONTEN FILE REFERENSI:\n${fileContent}` 
+        : undefined;
+      
       const result = await generateAI.mutateAsync({
         type: type === 'material' ? 'generate_material' : 'generate_quiz',
         topic: prompt || defaultTopic || 'Generate content',
+        context: contextWithFile,
         indicators: indicators.length > 0 ? indicators : (lloData?.indikator || []),
         questionType: questionType,
         questionCount: questionCount,
