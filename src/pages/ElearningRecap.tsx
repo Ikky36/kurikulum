@@ -24,12 +24,12 @@ type ClassWithRelations = ElearningClass & {
 };
 
 export default function ElearningRecap() {
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, hasRole, hasAnyRole } = useAuth();
   const [selectedClassId, setSelectedClassId] = useState<string>('');
   const { data: classes, isLoading: loadingClasses } = useElearningClasses();
 
-  const isAdmin = profile?.role === 'admin';
-  const isDosen = profile?.role === 'dosen';
+  const isAdmin = hasAnyRole(['admin', 'sub_admin']);
+  const isDosen = hasRole('dosen');
   const typedClasses = (classes || []) as ClassWithRelations[];
   const myClasses = typedClasses.filter(
     (c) => isAdmin || c.instructor_profile_id === profile?.id
