@@ -9,11 +9,13 @@ export const containsArabic = (text: string): boolean => {
 };
 
 // Function to wrap Arabic text segments with proper styling
+// Uses dir="auto" and unicode-bidi: plaintext to handle mixed content correctly
 export const formatArabicContent = (html: string): string => {
   if (!html || !containsArabic(html)) return html;
   
-  // If the content contains Arabic, wrap the entire content with Arabic styling
-  return `<div class="arabic-content" style="font-family: 'Scheherazade New', 'Amiri', serif; direction: rtl; text-align: right; font-size: 1.3em; line-height: 2; font-feature-settings: 'liga' 1, 'calt' 1;">${html}</div>`;
+  // Use dir="auto" to let the browser determine direction per paragraph
+  // This prevents issues with punctuation and numbers in mixed content
+  return `<div class="bidi-arabic-content" dir="auto" style="unicode-bidi: plaintext;">${html}</div>`;
 };
 
 interface ArabicTextProps {
@@ -50,6 +52,7 @@ export const useArabicDetection = (content: string) => {
 };
 
 // Component to render HTML content with automatic Arabic detection
+// Uses dir="auto" for proper bidirectional text handling
 interface ArabicHtmlContentProps {
   html: string;
   className?: string;
@@ -59,23 +62,13 @@ export const ArabicHtmlContent: React.FC<ArabicHtmlContentProps> = ({
   html, 
   className 
 }) => {
-  const hasArabic = containsArabic(html);
-  
   return (
     <div 
       className={cn(
-        "prose prose-sm max-w-none dark:prose-invert",
-        hasArabic && "font-arabic",
+        "prose prose-sm max-w-none dark:prose-invert bidi-content",
         className
       )}
-      dir={hasArabic ? "rtl" : undefined}
-      lang={hasArabic ? "ar" : undefined}
-      style={hasArabic ? {
-        fontFamily: "'Scheherazade New', 'Amiri', serif",
-        fontSize: '1.3em',
-        lineHeight: 2,
-        fontFeatureSettings: "'liga' 1, 'calt' 1"
-      } : undefined}
+      dir="auto"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

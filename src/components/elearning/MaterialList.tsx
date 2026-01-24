@@ -265,13 +265,8 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
               {viewingMaterial.content_type === 'text' && (
                 <>
                   <div 
-                    className={`prose prose-sm max-w-none dark:prose-invert p-4 bg-muted/30 rounded-lg ${containsArabic(viewingMaterial.content || '') ? 'font-arabic' : ''}`}
-                    dir={containsArabic(viewingMaterial.content || '') ? 'rtl' : undefined}
-                    style={containsArabic(viewingMaterial.content || '') ? {
-                      fontFamily: "'Scheherazade New', 'Amiri', serif",
-                      fontSize: '1.3em',
-                      lineHeight: 2,
-                    } : undefined}
+                    className="prose prose-sm max-w-none dark:prose-invert p-4 bg-muted/30 rounded-lg bidi-content"
+                    dir="auto"
                     dangerouslySetInnerHTML={{ __html: viewingMaterial.content?.replace(/<!-- EMBEDDED_QUIZ:.+? -->/g, '') || '' }}
                   />
                   {/* Embedded Quiz */}

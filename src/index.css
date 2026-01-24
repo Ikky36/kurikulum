@@ -239,6 +239,36 @@
   font-feature-settings: "liga" 1, "calt" 1;
 }
 
+/* Bidirectional content - handles mixed Arabic/Indonesian text properly */
+.bidi-content {
+  unicode-bidi: plaintext;
+}
+
+.bidi-content p,
+.bidi-content div,
+.bidi-content li,
+.bidi-content span,
+.bidi-content td,
+.bidi-content th,
+.bidi-content h1,
+.bidi-content h2,
+.bidi-content h3,
+.bidi-content h4,
+.bidi-content h5,
+.bidi-content h6 {
+  unicode-bidi: plaintext;
+  text-align: start;
+}
+
+/* Style Arabic text within bidi content */
+.bidi-content [dir="rtl"],
+.bidi-content [lang="ar"] {
+  font-family: "Scheherazade New", "Amiri", serif !important;
+  font-size: 1.3em;
+  line-height: 2;
+  font-feature-settings: "liga" 1, "calt" 1;
+}
+
 /* Auto-detect Arabic text in content */
 .prose :is(p, span, div, li, td, th, h1, h2, h3, h4, h5, h6):has([dir="rtl"]),
 .prose [dir="rtl"] {
