@@ -180,6 +180,7 @@ export type Database = {
         Row: {
           bahan_kajian: string
           created_at: string
+          curriculum_id: string | null
           id: string
           kelompok: string
           updated_at: string
@@ -187,6 +188,7 @@ export type Database = {
         Insert: {
           bahan_kajian: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           kelompok: string
           updated_at?: string
@@ -194,11 +196,20 @@ export type Database = {
         Update: {
           bahan_kajian?: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           kelompok?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bahan_kajian_kelompok_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       class_groups: {
         Row: {
@@ -1265,6 +1276,7 @@ export type Database = {
         Row: {
           code: string
           created_at: string
+          curriculum_id: string | null
           description: string
           id: string
           profil_lulusan_id: string | null
@@ -1273,6 +1285,7 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
+          curriculum_id?: string | null
           description: string
           id?: string
           profil_lulusan_id?: string | null
@@ -1281,12 +1294,20 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          curriculum_id?: string | null
           description?: string
           id?: string
           profil_lulusan_id?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "plos_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "plos_profil_lulusan_id_fkey"
             columns: ["profil_lulusan_id"]
@@ -1300,6 +1321,7 @@ export type Database = {
         Row: {
           code: string
           created_at: string
+          curriculum_id: string | null
           deskripsi: string | null
           id: string
           profil: string
@@ -1308,6 +1330,7 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
+          curriculum_id?: string | null
           deskripsi?: string | null
           id?: string
           profil: string
@@ -1316,12 +1339,21 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          curriculum_id?: string | null
           deskripsi?: string | null
           id?: string
           profil?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profil_lulusan_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -1771,6 +1803,7 @@ export type Database = {
         Row: {
           code: string
           created_at: string
+          curriculum_id: string | null
           id: string
           misi: string
           updated_at: string
@@ -1778,6 +1811,7 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           misi: string
           updated_at?: string
@@ -1785,16 +1819,26 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           misi?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vmts_ps_misi_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vmts_ps_strategi: {
         Row: {
           code: string
           created_at: string
+          curriculum_id: string | null
           id: string
           strategi: string
           updated_at: string
@@ -1802,6 +1846,7 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           strategi: string
           updated_at?: string
@@ -1809,16 +1854,26 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           strategi?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vmts_ps_strategi_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vmts_ps_tujuan: {
         Row: {
           code: string
           created_at: string
+          curriculum_id: string | null
           id: string
           tujuan: string
           updated_at: string
@@ -1826,6 +1881,7 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           tujuan: string
           updated_at?: string
@@ -1833,37 +1889,58 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           tujuan?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vmts_ps_tujuan_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vmts_ps_visi: {
         Row: {
           created_at: string
+          curriculum_id: string | null
           id: string
           updated_at: string
           visi: string
         }
         Insert: {
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           updated_at?: string
           visi: string
         }
         Update: {
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           updated_at?: string
           visi?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vmts_ps_visi_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vmts_pt_misi: {
         Row: {
           code: string
           created_at: string
+          curriculum_id: string | null
           id: string
           misi: string
           updated_at: string
@@ -1871,6 +1948,7 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           misi: string
           updated_at?: string
@@ -1878,16 +1956,26 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           misi?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vmts_pt_misi_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vmts_pt_strategi: {
         Row: {
           code: string
           created_at: string
+          curriculum_id: string | null
           id: string
           strategi: string
           updated_at: string
@@ -1895,6 +1983,7 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           strategi: string
           updated_at?: string
@@ -1902,16 +1991,26 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           strategi?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vmts_pt_strategi_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vmts_pt_tujuan: {
         Row: {
           code: string
           created_at: string
+          curriculum_id: string | null
           id: string
           tujuan: string
           updated_at: string
@@ -1919,6 +2018,7 @@ export type Database = {
         Insert: {
           code: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           tujuan: string
           updated_at?: string
@@ -1926,32 +2026,52 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           tujuan?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vmts_pt_tujuan_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vmts_pt_visi: {
         Row: {
           created_at: string
+          curriculum_id: string | null
           id: string
           updated_at: string
           visi: string
         }
         Insert: {
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           updated_at?: string
           visi: string
         }
         Update: {
           created_at?: string
+          curriculum_id?: string | null
           id?: string
           updated_at?: string
           visi?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vmts_pt_visi_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

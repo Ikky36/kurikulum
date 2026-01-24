@@ -44,6 +44,9 @@ function KurikulumContent() {
   const canEdit = hasAnyRole(['admin', 'sub_admin']);
   const { clearSelection } = useBulkSelect();
 
+  // Selected curriculum filter state
+  const [selectedCurriculumId, setSelectedCurriculumId] = useState<string>('all');
+
   // Filter states
   const [filterPtMisi, setFilterPtMisi] = useState('');
   const [filterPtTujuan, setFilterPtTujuan] = useState('');
@@ -191,6 +194,20 @@ function KurikulumContent() {
     [curricula]
   );
 
+  // Get active curricula for dropdown
+  const activeCurricula = useMemo(() => 
+    curricula.filter((c: any) => c.is_active),
+    [curricula]
+  );
+
+  // Determine which curriculum IDs to filter by
+  const filterCurriculumIds = useMemo(() => {
+    if (selectedCurriculumId === 'all') {
+      return activeCurriculumIds;
+    }
+    return [selectedCurriculumId];
+  }, [selectedCurriculumId, activeCurriculumIds]);
+
   const { data: courses = [] } = useQuery({
     queryKey: ['courses_kurikulum'],
     queryFn: async () => {
@@ -199,12 +216,58 @@ function KurikulumContent() {
     },
   });
 
-  // Filter courses by active curricula
+  // Filter courses by selected curriculum
   const filteredCourses = useMemo(() => 
     courses.filter((course: any) => 
-      !course.curriculum_id || activeCurriculumIds.includes(course.curriculum_id)
+      !course.curriculum_id || filterCurriculumIds.includes(course.curriculum_id)
     ),
-    [courses, activeCurriculumIds]
+    [courses, filterCurriculumIds]
+  );
+
+  // Filter VMTS PT data by selected curriculum
+  const filteredPtMisi = useMemo(() =>
+    ptMisi.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [ptMisi, filterCurriculumIds]
+  );
+  const filteredPtTujuan = useMemo(() =>
+    ptTujuan.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [ptTujuan, filterCurriculumIds]
+  );
+  const filteredPtStrategi = useMemo(() =>
+    ptStrategi.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [ptStrategi, filterCurriculumIds]
+  );
+
+  // Filter VMTS PS data by selected curriculum
+  const filteredPsMisi = useMemo(() =>
+    psMisi.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [psMisi, filterCurriculumIds]
+  );
+  const filteredPsTujuan = useMemo(() =>
+    psTujuan.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [psTujuan, filterCurriculumIds]
+  );
+  const filteredPsStrategi = useMemo(() =>
+    psStrategi.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [psStrategi, filterCurriculumIds]
+  );
+
+  // Filter Profil Lulusan by selected curriculum
+  const filteredProfilLulusanData = useMemo(() =>
+    profilLulusan.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [profilLulusan, filterCurriculumIds]
+  );
+
+  // Filter PLOs (CPL) by selected curriculum
+  const filteredPlosData = useMemo(() =>
+    plos.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [plos, filterCurriculumIds]
+  );
+
+  // Filter Bahan Kajian by selected curriculum
+  const filteredBahanKajianData = useMemo(() =>
+    bahanKajianKelompok.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [bahanKajianKelompok, filterCurriculumIds]
   );
 
   const { data: llos = [] } = useQuery({
@@ -450,8 +513,8 @@ function KurikulumContent() {
   };
 
   const renderProfilLulusanTable = () => {
-    // Filter data
-    const filteredProfilLulusan = profilLulusan.filter(item => {
+    // Filter data - use pre-filtered data based on curriculum
+    const displayedProfilLulusan = filteredProfilLulusanData.filter(item => {
       const searchLower = filterProfilLulusan.toLowerCase();
       return (
         item.code?.toLowerCase().includes(searchLower) ||
@@ -460,7 +523,7 @@ function KurikulumContent() {
       );
     });
     
-    const ids = filteredProfilLulusan.map(item => item.id);
+    const ids = displayedProfilLulusan.map(item => item.id);
     
     const tableConfig = {
       tableName: 'profil_lulusan',
@@ -510,8 +573,8 @@ function KurikulumContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredProfilLulusan.length > 0 ? (
-                filteredProfilLulusan.map((item, idx) => (
+              {displayedProfilLulusan.length > 0 ? (
+                displayedProfilLulusan.map((item, idx) => (
                   <TableRow key={item.id}>
                     {canEdit && (
                       <TableCell>
@@ -552,8 +615,8 @@ function KurikulumContent() {
   };
 
   const renderCplTable = () => {
-    // Filter data
-    const filteredPlos = plos.filter((item: any) => {
+    // Filter data - use pre-filtered data based on curriculum
+    const displayedPlos = filteredPlosData.filter((item: any) => {
       const searchLower = filterCpl.toLowerCase();
       return (
         item.code?.toLowerCase().includes(searchLower) ||
@@ -561,7 +624,7 @@ function KurikulumContent() {
       );
     });
     
-    const ids = filteredPlos.map((item: any) => item.id);
+    const ids = displayedPlos.map((item: any) => item.id);
     
     const tableConfig = {
       tableName: 'plos',
@@ -610,8 +673,8 @@ function KurikulumContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPlos.length > 0 ? (
-                filteredPlos.map((item: any, idx: number) => {
+              {displayedPlos.length > 0 ? (
+                displayedPlos.map((item: any, idx: number) => {
                   const itemPls = item.plo_profil_lulusan?.map((ppl: any) => ppl.profil_lulusan).filter(Boolean) || [];
                   return (
                     <TableRow key={item.id}>
@@ -751,8 +814,8 @@ function KurikulumContent() {
   };
 
   const renderBahanKajianTable = () => {
-    // Filter data
-    const filteredBk = bahanKajianKelompok.filter(item => {
+    // Filter data - use pre-filtered data based on curriculum
+    const displayedBk = filteredBahanKajianData.filter(item => {
       const searchLower = filterBk.toLowerCase();
       return (
         item.kelompok?.toLowerCase().includes(searchLower) ||
@@ -760,7 +823,7 @@ function KurikulumContent() {
       );
     });
     
-    const ids = filteredBk.map(item => item.id);
+    const ids = displayedBk.map(item => item.id);
     
     const tableConfig = {
       tableName: 'bahan_kajian_kelompok',
@@ -808,8 +871,8 @@ function KurikulumContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredBk.length > 0 ? (
-                filteredBk.map((item, idx) => (
+              {displayedBk.length > 0 ? (
+                displayedBk.map((item, idx) => (
                   <TableRow key={item.id}>
                     {canEdit && (
                       <TableCell>
@@ -898,7 +961,7 @@ function KurikulumContent() {
                                   setSelectedBahanKajian(selectedBahanKajian.filter(s => s !== bk));
                                 }
                               }}
-                              className="h-4 w-4 rounded border-gray-300"
+                              className="h-4 w-4 rounded border-border"
                             />
                             <label htmlFor={`bk-${idx}`} className="text-sm cursor-pointer flex-1">
                               {bk}
@@ -1591,7 +1654,23 @@ function KurikulumContent() {
   return (
     <Layout>
       <div className="container py-8 px-4 sm:px-6 lg:px-10 xl:px-16">
-        <h1 className="font-display text-3xl font-bold mb-6">Kurikulum</h1>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+          <h1 className="font-display text-3xl font-bold">Kurikulum</h1>
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-muted-foreground">Filter Kurikulum:</label>
+            <Select value={selectedCurriculumId} onValueChange={setSelectedCurriculumId}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Semua Kurikulum Aktif" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Kurikulum Aktif</SelectItem>
+                {activeCurricula.map((c: any) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
         <Tabs defaultValue="vmts-pt">
           <TabsList className="grid grid-cols-2 lg:grid-cols-6 w-full mb-6">
@@ -1604,15 +1683,15 @@ function KurikulumContent() {
           </TabsList>
 
           <TabsContent value="vmts-pt">
-            {renderCodeTable('Misi PT', ptMisi, 'vmts_pt_misi', 'misi', 'Misi Perguruan Tinggi', filterPtMisi, setFilterPtMisi, sortPtMisi, setSortPtMisi)}
-            {renderCodeTable('Tujuan PT', ptTujuan, 'vmts_pt_tujuan', 'tujuan', 'Tujuan Perguruan Tinggi', filterPtTujuan, setFilterPtTujuan, sortPtTujuan, setSortPtTujuan)}
-            {renderCodeTable('Strategi PT', ptStrategi, 'vmts_pt_strategi', 'strategi', 'Strategi Perguruan Tinggi', filterPtStrategi, setFilterPtStrategi, sortPtStrategi, setSortPtStrategi)}
+            {renderCodeTable('Misi PT', filteredPtMisi, 'vmts_pt_misi', 'misi', 'Misi Perguruan Tinggi', filterPtMisi, setFilterPtMisi, sortPtMisi, setSortPtMisi)}
+            {renderCodeTable('Tujuan PT', filteredPtTujuan, 'vmts_pt_tujuan', 'tujuan', 'Tujuan Perguruan Tinggi', filterPtTujuan, setFilterPtTujuan, sortPtTujuan, setSortPtTujuan)}
+            {renderCodeTable('Strategi PT', filteredPtStrategi, 'vmts_pt_strategi', 'strategi', 'Strategi Perguruan Tinggi', filterPtStrategi, setFilterPtStrategi, sortPtStrategi, setSortPtStrategi)}
           </TabsContent>
 
           <TabsContent value="vmts-ps">
-            {renderCodeTable('Misi PS', psMisi, 'vmts_ps_misi', 'misi', 'Misi Program Studi', filterPsMisi, setFilterPsMisi, sortPsMisi, setSortPsMisi)}
-            {renderCodeTable('Tujuan PS', psTujuan, 'vmts_ps_tujuan', 'tujuan', 'Tujuan Program Studi', filterPsTujuan, setFilterPsTujuan, sortPsTujuan, setSortPsTujuan)}
-            {renderCodeTable('Strategi PS', psStrategi, 'vmts_ps_strategi', 'strategi', 'Strategi Program Studi', filterPsStrategi, setFilterPsStrategi, sortPsStrategi, setSortPsStrategi)}
+            {renderCodeTable('Misi PS', filteredPsMisi, 'vmts_ps_misi', 'misi', 'Misi Program Studi', filterPsMisi, setFilterPsMisi, sortPsMisi, setSortPsMisi)}
+            {renderCodeTable('Tujuan PS', filteredPsTujuan, 'vmts_ps_tujuan', 'tujuan', 'Tujuan Program Studi', filterPsTujuan, setFilterPsTujuan, sortPsTujuan, setSortPsTujuan)}
+            {renderCodeTable('Strategi PS', filteredPsStrategi, 'vmts_ps_strategi', 'strategi', 'Strategi Program Studi', filterPsStrategi, setFilterPsStrategi, sortPsStrategi, setSortPsStrategi)}
           </TabsContent>
 
           <TabsContent value="profil-lulusan">
