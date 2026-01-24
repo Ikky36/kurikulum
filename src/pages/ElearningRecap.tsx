@@ -31,9 +31,35 @@ export default function ElearningRecap() {
   const isAdmin = hasAnyRole(['admin', 'sub_admin']);
   const isDosen = hasRole('dosen');
   const typedClasses = (classes || []) as ClassWithRelations[];
-  const myClasses = typedClasses.filter(
-    (c) => isAdmin || c.instructor_profile_id === profile?.id
-  );
+
+  // For dosen: allow selecting classes where they are the class instructor OR assigned via course_instructors
+  // (needed when elearning_classes.instructor_profile_id is not set to the dosen, but they are assigned).
+  const { data: courseInstructorAssignments } = useQuery({
+    queryKey: ['course-instructors', profile?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('course_instructors')
+        .select('course_id, class_group_id')
+        .eq('instructor_profile_id', profile?.id || '');
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!profile?.id && isDosen,
+  });
+
+  const myClasses = typedClasses.filter((c) => {
+    if (isAdmin) return true;
+    if (!isDosen) return false;
+
+    if (c.instructor_profile_id === profile?.id) return true;
+
+    const assignments = courseInstructorAssignments || [];
+    return assignments.some(
+      (a) =>
+        a.course_id === c.course_id &&
+        (a.class_group_id === null || a.class_group_id === c.class_group_id)
+    );
+  });
   const selectedClass = myClasses.find(c => c.id === selectedClassId);
 
   // Fetch attendance recap
