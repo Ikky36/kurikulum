@@ -21,13 +21,27 @@ export function useCoursesWithStats() {
   return useQuery({
     queryKey: ['courses-with-stats'],
     queryFn: async () => {
+      // First, get active curricula
+      const { data: activeCurricula, error: curriculaError } = await supabase
+        .from('curricula')
+        .select('id')
+        .eq('is_active', true);
+      
+      if (curriculaError) throw curriculaError;
+      const activeCurriculumIds = activeCurricula?.map(c => c.id) || [];
+
       // Get all courses
-      const { data: courses, error: coursesError } = await supabase
+      const { data: allCourses, error: coursesError } = await supabase
         .from('courses')
         .select('*')
         .order('code');
       
       if (coursesError) throw coursesError;
+      
+      // Filter courses: only those with active curriculum or no curriculum
+      const courses = allCourses?.filter(course => 
+        !course.curriculum_id || activeCurriculumIds.includes(course.curriculum_id)
+      ) || [];
 
       // Get all grades
       const { data: grades, error: gradesError } = await supabase

@@ -185,6 +185,12 @@ function KurikulumContent() {
     },
   });
 
+  // Get active curriculum IDs for filtering
+  const activeCurriculumIds = useMemo(() => 
+    curricula.filter((c: any) => c.is_active).map((c: any) => c.id),
+    [curricula]
+  );
+
   const { data: courses = [] } = useQuery({
     queryKey: ['courses_kurikulum'],
     queryFn: async () => {
@@ -192,6 +198,14 @@ function KurikulumContent() {
       return data || [];
     },
   });
+
+  // Filter courses by active curricula
+  const filteredCourses = useMemo(() => 
+    courses.filter((course: any) => 
+      !course.curriculum_id || activeCurriculumIds.includes(course.curriculum_id)
+    ),
+    [courses, activeCurriculumIds]
+  );
 
   const { data: llos = [] } = useQuery({
     queryKey: ['llos_bahan_kajian'],
@@ -916,8 +930,8 @@ function KurikulumContent() {
   const semesterOptions = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'];
 
   const renderMataKuliahTable = () => {
-    // Filter data
-    const filteredCourses = courses.filter((course: any) => {
+    // Filter data - start from filteredCourses which already excludes inactive curricula
+    const displayedCourses = filteredCourses.filter((course: any) => {
       const searchLower = filterMk.toLowerCase();
       return (
         course.code?.toLowerCase().includes(searchLower) ||
@@ -926,7 +940,7 @@ function KurikulumContent() {
       );
     });
     
-    const ids = filteredCourses.map((course: any) => course.id);
+    const ids = displayedCourses.map((course: any) => course.id);
     
     const tableConfig = {
       tableName: 'courses',
@@ -981,8 +995,8 @@ function KurikulumContent() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCourses.length > 0 ? (
-                filteredCourses.map((course: any, idx: number) => {
+              {displayedCourses.length > 0 ? (
+                displayedCourses.map((course: any, idx: number) => {
                   const coursePlos = course.course_plos?.map((cp: any) => cp.plos) || [];
                   const cplCodes = coursePlos.map((p: any) => p?.code).filter(Boolean);
                   const coursePls = course.course_profil_lulusan?.map((cpl: any) => cpl.profil_lulusan) || [];
