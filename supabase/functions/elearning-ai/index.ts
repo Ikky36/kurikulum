@@ -128,7 +128,7 @@ Jangan gunakan markdown, hanya HTML.
 ${languageMode === 'arabic' || languageMode === 'mixed' ? 'Untuk teks Arab, gunakan tag <span dir="rtl" lang="ar" class="font-arabic"> untuk membungkus teks Arab.' : ''}`;
         userPrompt = `Buatkan materi pembelajaran dengan topik: "${topic}"
 ${indicators?.length ? `\nIndikator pembelajaran yang harus dicapai:\n${indicators.map((i, idx) => `${idx + 1}. ${i}`).join("\n")}` : ""}
-${context ? `\nKonteks tambahan: ${context}` : ""}
+${context ? `\n\n=== REFERENSI/KONTEKS ===\n${context}\n=== AKHIR REFERENSI ===\n\nGunakan referensi di atas sebagai sumber utama untuk membuat materi. Pastikan materi yang dihasilkan BERDASARKAN konten referensi tersebut.` : ""}
 
 Buatkan materi yang lengkap, terstruktur, dan mudah dipahami oleh mahasiswa.`;
         break;
@@ -175,6 +175,7 @@ correct_answer adalah index pilihan yang benar.`;
 
 Topik: ${topic}
 ${indicators?.length ? `\nIndikator yang diuji:\n${indicators.map((i, idx) => `${idx + 1}. ${i}`).join("\n")}` : ""}
+${context ? `\n\n=== REFERENSI/KONTEN FILE ===\n${context}\n=== AKHIR REFERENSI ===\n\nPENTING: Buat soal-soal yang BERDASARKAN konten referensi di atas. Semua soal HARUS relevan dan diambil dari materi dalam referensi tersebut.` : ""}
 
 ${formatGuide}
 
@@ -182,6 +183,7 @@ PENTING:
 - Buat TEPAT ${qCount} soal, tidak lebih tidak kurang
 - Semua soal harus bertipe "${qType}"
 - Setiap soal WAJIB memiliki feedback yang menjelaskan jawaban
+${context ? '- Semua soal HARUS berdasarkan konten dari file referensi yang diberikan' : ''}
 - Output HANYA JSON array tanpa teks lain atau markdown
 
 Contoh output yang valid:
