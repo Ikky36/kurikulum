@@ -11,14 +11,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Wand2, Trash2, HelpCircle, ChevronDown, Upload, Shield, Sparkles, FileText, CheckCircle, Pencil, Eye, EyeOff, Save, X, Database, Plus, BookmarkPlus, Play, List } from 'lucide-react';
+import { Loader2, Wand2, Trash2, HelpCircle, ChevronDown, Upload, Shield, Sparkles, FileText, CheckCircle, Pencil, Eye, EyeOff, Save, X, Database, Plus, BookmarkPlus, Play, List, CheckSquare } from 'lucide-react';
 import { QuizTemplateImport, type ParsedQuestion } from './QuizTemplateImport';
 import { SEBConfigGenerator } from './SEBConfigGenerator';
 import { AIContentGenerator } from './AIContentGenerator';
 import { QuestionBankDialog } from './QuestionBankDialog';
 import { QuizPreview } from '@/components/quiz/QuizPreview';
 import { MatchingQuestionEditor } from '@/components/quiz/MatchingQuestionEditor';
+import { BulkSelectProvider, useBulkSelect, BulkSelectCheckbox, BulkSelectAllCheckbox } from '@/components/ui/bulk-select-table';
 
 interface QuizManagerProps {
   assignmentId: string;
@@ -37,6 +39,315 @@ const QUESTION_TYPES = [
   { value: 'matching', label: 'Menjodohkan', color: 'bg-orange-100 text-orange-700' },
   { value: 'select_missing_word', label: 'Pilih Kata yang Hilang', color: 'bg-pink-100 text-pink-700' },
 ];
+
+// Komponen untuk daftar soal dengan fitur bulk select
+interface QuestionsListWithBulkProps {
+  questions: any[] | undefined;
+  showAnswers: boolean;
+  setShowAnswers: (show: boolean) => void;
+  setPreviewMode: (mode: 'single' | 'all') => void;
+  setShowPreview: (show: boolean) => void;
+  setPreviewQuestionIndex: (index: number) => void;
+  getQuestionTypeInfo: (type: string) => { value: string; label: string; color: string };
+  formatOptions: (question: any) => React.ReactNode;
+  formatCorrectAnswer: (question: any) => string;
+  handleSaveToBank: (question: any) => void;
+  openEditDialog: (question: any) => void;
+  handleDeleteQuestion: (id: string) => void;
+  onBulkDelete: (ids: string[]) => Promise<void>;
+  onBulkSaveToBank: (ids: string[]) => Promise<void>;
+}
+
+function QuestionsListWithBulk({
+  questions,
+  showAnswers,
+  setShowAnswers,
+  setPreviewMode,
+  setShowPreview,
+  setPreviewQuestionIndex,
+  getQuestionTypeInfo,
+  formatOptions,
+  formatCorrectAnswer,
+  handleSaveToBank,
+  openEditDialog,
+  handleDeleteQuestion,
+  onBulkDelete,
+  onBulkSaveToBank,
+}: QuestionsListWithBulkProps) {
+  const { selectedIds, selectionCount, clearSelection, toggleAll, isAllSelected, isSomeSelected } = useBulkSelect();
+  const [isBulkMode, setIsBulkMode] = useState(false);
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [isBulkSaving, setIsBulkSaving] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
+  const questionIds = (questions || []).map((q: any) => q.id);
+
+  const handleBulkDelete = async () => {
+    setIsBulkDeleting(true);
+    try {
+      await onBulkDelete(Array.from(selectedIds));
+      clearSelection();
+      setIsBulkMode(false);
+    } finally {
+      setIsBulkDeleting(false);
+      setShowBulkDeleteConfirm(false);
+    }
+  };
+
+  const handleBulkSaveToBank = async () => {
+    setIsBulkSaving(true);
+    try {
+      await onBulkSaveToBank(Array.from(selectedIds));
+      clearSelection();
+      setIsBulkMode(false);
+    } finally {
+      setIsBulkSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h3 className="text-lg font-semibold flex items-center gap-2">
+          <FileText className="h-5 w-5" />
+          Daftar Soal
+        </h3>
+        <div className="flex items-center gap-2 flex-wrap">
+          {questions && questions.length > 0 && (
+            <Button
+              variant={isBulkMode ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => {
+                setIsBulkMode(!isBulkMode);
+                if (isBulkMode) clearSelection();
+              }}
+              className="gap-2"
+            >
+              <CheckSquare className="h-4 w-4" />
+              {isBulkMode ? 'Batal Pilih' : 'Pilih Soal'}
+            </Button>
+          )}
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowAnswers(!showAnswers)}
+            className="gap-2"
+          >
+            {showAnswers ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            {showAnswers ? 'Sembunyikan' : 'Tampilkan'} Jawaban
+          </Button>
+          {questions && questions.length > 0 && (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  setPreviewMode('all');
+                  setShowPreview(true);
+                }}
+                className="gap-2"
+              >
+                <List className="h-4 w-4" />
+                Preview Semua
+              </Button>
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={() => {
+                  setPreviewMode('single');
+                  setPreviewQuestionIndex(0);
+                  setShowPreview(true);
+                }}
+                className="gap-2"
+              >
+                <Play className="h-4 w-4" />
+                Coba Soal
+              </Button>
+            </>
+          )}
+          <Badge variant="secondary" className="text-base px-3 py-1">
+            {questions?.length || 0} Soal
+          </Badge>
+        </div>
+      </div>
+
+      {/* Bulk Mode Header */}
+      {isBulkMode && questions && questions.length > 0 && (
+        <Card className="bg-muted/50 border-dashed">
+          <CardContent className="py-3">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={isAllSelected(questionIds) ? true : isSomeSelected(questionIds) ? "indeterminate" : false}
+                  onCheckedChange={() => toggleAll(questionIds)}
+                />
+                <span className="text-sm font-medium">
+                  {selectionCount > 0 ? `${selectionCount} soal dipilih` : 'Pilih semua soal'}
+                </span>
+              </div>
+              {selectionCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBulkSaveToBank}
+                    disabled={isBulkSaving}
+                    className="gap-2"
+                  >
+                    {isBulkSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookmarkPlus className="h-4 w-4" />}
+                    Simpan ke Bank Soal
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setShowBulkDeleteConfirm(true)}
+                    disabled={isBulkDeleting}
+                    className="gap-2"
+                  >
+                    {isBulkDeleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    Hapus
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      
+      {questions?.length === 0 ? (
+        <Card className="border-dashed border-2">
+          <CardContent className="py-12 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+              <HelpCircle className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h4 className="font-semibold mb-2">Belum Ada Soal</h4>
+            <p className="text-muted-foreground text-sm max-w-md mx-auto">
+              Tambahkan soal secara manual, dari bank soal, import dari Excel, atau generate dengan AI.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {questions?.map((q: any, idx: number) => {
+            const typeInfo = getQuestionTypeInfo(q.question_type);
+            const isSelected = selectedIds.has(q.id);
+            return (
+              <Card key={q.id} className={`group hover:shadow-md transition-shadow ${isBulkMode && isSelected ? 'ring-2 ring-primary' : ''}`}>
+                <CardContent className="py-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4 flex-1">
+                      {isBulkMode && (
+                        <div className="pt-1">
+                          <BulkSelectCheckbox id={q.id} />
+                        </div>
+                      )}
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
+                          {idx + 1}
+                        </span>
+                        <Badge className="text-xs">{q.points} pts</Badge>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          {q.question_code && (
+                            <Badge variant="outline" className="font-mono text-xs">
+                              {q.question_code}
+                            </Badge>
+                          )}
+                          <Badge variant="secondary" className={`text-xs ${typeInfo.color}`}>
+                            {typeInfo.label}
+                          </Badge>
+                        </div>
+                        <p className="text-sm leading-relaxed font-medium bidi-content" dir="auto">{q.question_text}</p>
+                        
+                        {/* Show options with correct answer highlighted */}
+                        {showAnswers && formatOptions(q)}
+                        
+                        {/* Show correct answer for short answer type */}
+                        {showAnswers && q.question_type === 'short_answer' && (
+                          <div className="mt-2 p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                            <span className="text-xs text-green-600 dark:text-green-400 font-medium">Jawaban Benar: </span>
+                            <span className="text-sm text-green-700 dark:text-green-300">{formatCorrectAnswer(q)}</span>
+                          </div>
+                        )}
+                        
+                        {/* Show answer key for long_answer/essay type */}
+                        {showAnswers && (q.question_type === 'long_answer' || q.question_type === 'essay') && (
+                          <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+                            <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">📝 Kunci Jawaban (Manual Grading): </span>
+                            <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">{formatCorrectAnswer(q) || 'Tidak ada kunci jawaban'}</p>
+                          </div>
+                        )}
+                        
+                        {/* Feedback */}
+                        {showAnswers && q.feedback && (
+                          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                            <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">💡 Feedback:</p>
+                            <p className="text-sm text-blue-700 dark:text-blue-300">{q.feedback}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    {!isBulkMode && (
+                      <div className="flex flex-col gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          title="Simpan ke Bank Soal"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity" 
+                          onClick={() => handleSaveToBank(q)}
+                        >
+                          <BookmarkPlus className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="opacity-0 group-hover:opacity-100 transition-opacity" 
+                          onClick={() => openEditDialog(q)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity" 
+                          onClick={() => handleDeleteQuestion(q.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog open={showBulkDeleteConfirm} onOpenChange={setShowBulkDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Konfirmasi Hapus</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Anda akan menghapus {selectionCount} soal. Tindakan ini tidak dapat dibatalkan.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowBulkDeleteConfirm(false)} disabled={isBulkDeleting}>
+              Batal
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDelete} disabled={isBulkDeleting}>
+              {isBulkDeleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+              Ya, Hapus
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
 export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', isSafeExamMode, sebPassword, sebQuitPassword }: QuizManagerProps) {
   const { toast } = useToast();
@@ -591,161 +902,50 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Questions List */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Daftar Soal
-          </h3>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setShowAnswers(!showAnswers)}
-              className="gap-2"
-            >
-              {showAnswers ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              {showAnswers ? 'Sembunyikan' : 'Tampilkan'} Jawaban
-            </Button>
-            {questions && questions.length > 0 && (
-              <>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => {
-                    setPreviewMode('all');
-                    setShowPreview(true);
-                  }}
-                  className="gap-2"
-                >
-                  <List className="h-4 w-4" />
-                  Preview Semua
-                </Button>
-                <Button 
-                  variant="default" 
-                  size="sm" 
-                  onClick={() => {
-                    setPreviewMode('single');
-                    setPreviewQuestionIndex(0);
-                    setShowPreview(true);
-                  }}
-                  className="gap-2"
-                >
-                  <Play className="h-4 w-4" />
-                  Coba Soal
-                </Button>
-              </>
-            )}
-            <Badge variant="secondary" className="text-base px-3 py-1">
-              {questions?.length || 0} Soal
-            </Badge>
-          </div>
-        </div>
-        
-        {questions?.length === 0 ? (
-          <Card className="border-dashed border-2">
-            <CardContent className="py-12 text-center">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                <HelpCircle className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <h4 className="font-semibold mb-2">Belum Ada Soal</h4>
-              <p className="text-muted-foreground text-sm max-w-md mx-auto">
-                Tambahkan soal secara manual, dari bank soal, import dari Excel, atau generate dengan AI.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {questions?.map((q: any, idx: number) => {
-              const typeInfo = getQuestionTypeInfo(q.question_type);
-              return (
-                <Card key={q.id} className="group hover:shadow-md transition-shadow">
-                  <CardContent className="py-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-4 flex-1">
-                        <div className="flex flex-col items-center gap-1">
-                          <span className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-sm font-bold text-primary">
-                            {idx + 1}
-                          </span>
-                          <Badge className="text-xs">{q.points} pts</Badge>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            {q.question_code && (
-                              <Badge variant="outline" className="font-mono text-xs">
-                                {q.question_code}
-                              </Badge>
-                            )}
-                            <Badge variant="secondary" className={`text-xs ${typeInfo.color}`}>
-                              {typeInfo.label}
-                            </Badge>
-                          </div>
-                          <p className="text-sm leading-relaxed font-medium">{q.question_text}</p>
-                          
-                          {/* Show options with correct answer highlighted */}
-                          {showAnswers && formatOptions(q)}
-                          
-                          {/* Show correct answer for short answer type */}
-                          {showAnswers && q.question_type === 'short_answer' && (
-                            <div className="mt-2 p-2 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
-                              <span className="text-xs text-green-600 dark:text-green-400 font-medium">Jawaban Benar: </span>
-                              <span className="text-sm text-green-700 dark:text-green-300">{formatCorrectAnswer(q)}</span>
-                            </div>
-                          )}
-                          
-                          {/* Show answer key for long_answer/essay type */}
-                          {showAnswers && (q.question_type === 'long_answer' || q.question_type === 'essay') && (
-                            <div className="mt-2 p-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
-                              <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">📝 Kunci Jawaban (Manual Grading): </span>
-                              <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">{formatCorrectAnswer(q) || 'Tidak ada kunci jawaban'}</p>
-                            </div>
-                          )}
-                          
-                          {/* Feedback */}
-                          {showAnswers && q.feedback && (
-                            <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-                              <p className="text-xs text-blue-600 dark:text-blue-400 font-medium mb-1">💡 Feedback:</p>
-                              <p className="text-sm text-blue-700 dark:text-blue-300">{q.feedback}</p>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          title="Simpan ke Bank Soal"
-                          className="opacity-0 group-hover:opacity-100 transition-opacity" 
-                          onClick={() => handleSaveToBank(q)}
-                        >
-                          <BookmarkPlus className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="opacity-0 group-hover:opacity-100 transition-opacity" 
-                          onClick={() => openEditDialog(q)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity" 
-                          onClick={() => handleDeleteQuestion(q.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
+      {/* Questions List with Bulk Select */}
+      <BulkSelectProvider>
+        <QuestionsListWithBulk
+          questions={questions}
+          showAnswers={showAnswers}
+          setShowAnswers={setShowAnswers}
+          setPreviewMode={setPreviewMode}
+          setShowPreview={setShowPreview}
+          setPreviewQuestionIndex={setPreviewQuestionIndex}
+          getQuestionTypeInfo={getQuestionTypeInfo}
+          formatOptions={formatOptions}
+          formatCorrectAnswer={formatCorrectAnswer}
+          handleSaveToBank={handleSaveToBank}
+          openEditDialog={openEditDialog}
+          handleDeleteQuestion={handleDeleteQuestion}
+          onBulkDelete={async (ids: string[]) => {
+            for (const id of ids) {
+              await deleteQuestion.mutateAsync(id);
+            }
+            toast({ title: 'Sukses', description: `${ids.length} soal berhasil dihapus` });
+          }}
+          onBulkSaveToBank={async (ids: string[]) => {
+            if (!user) return;
+            const selectedQuestions = (questions || []).filter((q: any) => ids.includes(q.id));
+            const questionsToAdd = selectedQuestions.map((q: any) => {
+              const options = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+              const correctAnswer = typeof q.correct_answer === 'string' ? JSON.parse(q.correct_answer) : q.correct_answer;
+              return {
+                course_id: courseId,
+                instructor_profile_id: user.id,
+                question_code: q.question_code || generateNextCode(),
+                question_type: q.question_type,
+                question_text: q.question_text,
+                options: options,
+                correct_answer: correctAnswer,
+                feedback: q.feedback || null,
+                points: q.points,
+              };
+            });
+            await batchAddToBank.mutateAsync(questionsToAdd);
+            toast({ title: 'Sukses', description: `${ids.length} soal berhasil disimpan ke bank soal` });
+          }}
+        />
+      </BulkSelectProvider>
 
       {/* Question Bank Dialog */}
       <QuestionBankDialog

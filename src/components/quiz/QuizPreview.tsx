@@ -378,8 +378,8 @@ export function QuizPreview({ questions, open, onOpenChange, mode, initialQuesti
             </CardHeader>
             <CardContent className="space-y-4">
               <p 
-                className={`text-base font-medium leading-relaxed ${containsArabic(currentQuestion.question_text) ? 'font-arabic' : ''}`}
-                dir={containsArabic(currentQuestion.question_text) ? 'rtl' : undefined}
+                className={`text-base font-medium leading-relaxed bidi-content ${containsArabic(currentQuestion.question_text) ? 'font-arabic' : ''}`}
+                dir="auto"
                 style={containsArabic(currentQuestion.question_text) ? {
                   fontFamily: "'Scheherazade New', 'Amiri', serif",
                   fontSize: '1.3em',
@@ -501,8 +501,8 @@ export function QuizPreview({ questions, open, onOpenChange, mode, initialQuesti
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <p 
-                    className={`text-base font-medium leading-relaxed ${containsArabic(question.question_text) ? 'font-arabic' : ''}`}
-                    dir={containsArabic(question.question_text) ? 'rtl' : undefined}
+                    className={`text-base font-medium leading-relaxed bidi-content ${containsArabic(question.question_text) ? 'font-arabic' : ''}`}
+                    dir="auto"
                     style={containsArabic(question.question_text) ? {
                       fontFamily: "'Scheherazade New', 'Amiri', serif",
                       fontSize: '1.3em',
