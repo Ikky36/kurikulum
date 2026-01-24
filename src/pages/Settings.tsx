@@ -826,6 +826,7 @@ export default function Settings() {
                         <TableHead className="w-12 text-primary-foreground">No</TableHead>
                         <TableHead className="text-primary-foreground">Nama Kurikulum</TableHead>
                         <TableHead className="text-primary-foreground">Deskripsi</TableHead>
+                        <TableHead className="w-20 text-primary-foreground text-center">Aktif</TableHead>
                         <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -834,9 +835,19 @@ export default function Settings() {
                         <TableRow key={curriculum.id}>
                           <TableCell className="text-center">{index + 1}</TableCell>
                           <TableCell>
-                            <Badge variant="secondary">{curriculum.name}</Badge>
+                            <Badge variant={curriculum.is_active ? "secondary" : "outline"} className={!curriculum.is_active ? "opacity-50" : ""}>
+                              {curriculum.name}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground">{curriculum.description || '-'}</TableCell>
+                          <TableCell className="text-center">
+                            <Switch 
+                              checked={curriculum.is_active}
+                              onCheckedChange={(checked) => {
+                                updateCurriculumMutation.mutate({ id: curriculum.id, is_active: checked });
+                              }}
+                            />
+                          </TableCell>
                           <TableCell>
                             <div className="flex gap-1">
                               <Button variant="ghost" size="icon" onClick={() => openEditCurriculum(curriculum)}>
@@ -856,7 +867,7 @@ export default function Settings() {
                       ))}
                       {(!curricula || curricula.length === 0) && (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                             Belum ada kurikulum. Klik "Tambah Kurikulum" untuk menambahkan.
                           </TableCell>
                         </TableRow>

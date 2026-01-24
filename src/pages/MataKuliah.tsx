@@ -47,8 +47,18 @@ export default function MataKuliah() {
     code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', sks: '0'
   });
 
-  // Fetch curricula for filter and display
+  // Fetch curricula for filter and display (only active ones)
   const { data: curricula } = useQuery({
+    queryKey: ['curricula', 'active'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('curricula').select('*').eq('is_active', true).order('name');
+      if (error) throw error;
+      return data as Curriculum[];
+    },
+  });
+
+  // Fetch all curricula including inactive for filtering purposes
+  const { data: allCurricula } = useQuery({
     queryKey: ['curricula'],
     queryFn: async () => {
       const { data, error } = await supabase.from('curricula').select('*').order('name');
