@@ -217,8 +217,8 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
       </CardHeader>
       <CardContent className="space-y-6 pt-4">
         <div 
-          className={`text-lg font-medium prose prose-sm max-w-none dark:prose-invert ${containsArabic(currentQuestion.question_text) ? 'font-arabic' : ''}`}
-          dir={containsArabic(currentQuestion.question_text) ? 'rtl' : undefined}
+          className={`text-lg font-medium prose prose-sm max-w-none dark:prose-invert bidi-content ${containsArabic(currentQuestion.question_text) ? 'font-arabic' : ''}`}
+          dir="auto"
           style={containsArabic(currentQuestion.question_text) ? {
             fontFamily: "'Scheherazade New', 'Amiri', serif",
             fontSize: '1.3em',
@@ -239,17 +239,18 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
                 return (
                   <div 
                     key={option.id} 
-                    className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors ${
+                    className={`flex items-center space-x-3 p-3 rounded-lg border transition-colors bidi-content ${
                       answers[currentQuestion.id] === idx 
                         ? 'bg-primary/5 border-primary' 
                         : 'hover:bg-muted'
                     }`}
-                    dir={isArabicOption ? 'rtl' : undefined}
+                    dir="auto"
                   >
                     <RadioGroupItem value={String(idx)} id={`q-${currentQuestion.id}-opt-${idx}`} />
                     <Label 
                       htmlFor={`q-${currentQuestion.id}-opt-${idx}`} 
-                      className={`flex-1 cursor-pointer ${isArabicOption ? 'font-arabic' : ''}`}
+                      className={`flex-1 cursor-pointer bidi-content ${isArabicOption ? 'font-arabic' : ''}`}
+                      dir="auto"
                       style={isArabicOption ? {
                         fontFamily: "'Scheherazade New', 'Amiri', serif",
                         fontSize: '1.2em',

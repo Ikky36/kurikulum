@@ -133,8 +133,8 @@ export function QuestionBankDialog({ open, onOpenChange, courseId, onSelectQuest
                       <Badge className="text-xs">{q.points} pts</Badge>
                     </div>
                     <p 
-                      className={`text-sm line-clamp-2 ${containsArabic(q.question_text) ? 'font-arabic' : ''}`}
-                      dir={containsArabic(q.question_text) ? 'rtl' : undefined}
+                      className={`text-sm line-clamp-2 bidi-content ${containsArabic(q.question_text) ? 'font-arabic' : ''}`}
+                      dir="auto"
                       style={containsArabic(q.question_text) ? {
                         fontFamily: "'Scheherazade New', 'Amiri', serif",
                         fontSize: '1.1em',
