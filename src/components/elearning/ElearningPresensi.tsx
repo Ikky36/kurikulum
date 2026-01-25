@@ -74,10 +74,14 @@ interface AttendanceRecord {
   notes: string;
 }
 
-export function ElearningPresensi() {
+interface ElearningPresensiProps {
+  selectedClassId: string;
+}
+
+export function ElearningPresensi({ selectedClassId: propSelectedClassId }: ElearningPresensiProps) {
   const { profile } = useAuth();
   const { data: classes, isLoading: classesLoading } = useElearningClasses();
-  const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const selectedClassId = propSelectedClassId;
   const [selectedSessionId, setSelectedSessionId] = useState<string>('');
   const [sessionDialogOpen, setSessionDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -330,28 +334,6 @@ export function ElearningPresensi() {
 
   return (
     <div className="space-y-6">
-      {/* Class Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Pilih Kelas</CardTitle>
-          <CardDescription>Pilih kelas untuk mengelola presensi</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Select value={selectedClassId} onValueChange={(v) => { setSelectedClassId(v); setSelectedSessionId(''); }}>
-            <SelectTrigger className="max-w-md">
-              <SelectValue placeholder="Pilih kelas..." />
-            </SelectTrigger>
-            <SelectContent>
-              {myClasses.map((cls) => (
-                <SelectItem key={cls.id} value={cls.id}>
-                  {cls.title} - {cls.class_group?.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
       {selectedClassId && (
         <>
           {/* Sessions List */}
