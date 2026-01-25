@@ -159,8 +159,8 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
                   <div className="flex-1 space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <p 
-                        className={`font-medium ${containsArabic(question.question_text) ? 'font-arabic' : ''}`}
-                        dir={containsArabic(question.question_text) ? 'rtl' : undefined}
+                        className={`font-medium bidi-content ${containsArabic(question.question_text) ? 'font-arabic' : ''}`}
+                        dir="auto"
                         style={containsArabic(question.question_text) ? {
                           fontFamily: "'Scheherazade New', 'Amiri', serif",
                           fontSize: '1.3em',
@@ -179,8 +179,8 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
                       <div className="space-y-1">
                         <span className="text-muted-foreground font-medium">Jawaban Anda:</span>
                         <p 
-                          className={`p-2 rounded ${isCorrect ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'} ${containsArabic(getAnswerDisplay(userAnswer, question.question_type, question.options)) ? 'font-arabic' : ''}`}
-                          dir={containsArabic(getAnswerDisplay(userAnswer, question.question_type, question.options)) ? 'rtl' : undefined}
+                          className={`p-2 rounded bidi-content ${isCorrect ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'} ${containsArabic(getAnswerDisplay(userAnswer, question.question_type, question.options)) ? 'font-arabic' : ''}`}
+                          dir="auto"
                           style={containsArabic(getAnswerDisplay(userAnswer, question.question_type, question.options)) ? {
                             fontFamily: "'Scheherazade New', 'Amiri', serif",
                             fontSize: '1.2em',
@@ -193,8 +193,8 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
                       <div className="space-y-1">
                         <span className="text-muted-foreground font-medium">Jawaban Benar:</span>
                         <p 
-                          className={`p-2 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 ${containsArabic(getCorrectAnswerDisplay(question)) ? 'font-arabic' : ''}`}
-                          dir={containsArabic(getCorrectAnswerDisplay(question)) ? 'rtl' : undefined}
+                          className={`p-2 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 bidi-content ${containsArabic(getCorrectAnswerDisplay(question)) ? 'font-arabic' : ''}`}
+                          dir="auto"
                           style={containsArabic(getCorrectAnswerDisplay(question)) ? {
                             fontFamily: "'Scheherazade New', 'Amiri', serif",
                             fontSize: '1.2em',

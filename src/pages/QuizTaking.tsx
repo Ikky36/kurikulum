@@ -410,8 +410,8 @@ export default function QuizTaking() {
                             </Badge>
                             <div className="flex-1 space-y-2">
                               <p 
-                                className={`font-medium ${containsArabic(detail.question || '') ? 'font-arabic' : ''}`}
-                                dir={containsArabic(detail.question || '') ? 'rtl' : undefined}
+                                className={`font-medium bidi-content ${containsArabic(detail.question || '') ? 'font-arabic' : ''}`}
+                                dir="auto"
                                 style={containsArabic(detail.question || '') ? {
                                   fontFamily: "'Scheherazade New', 'Amiri', serif",
                                   fontSize: '1.3em',
@@ -422,8 +422,8 @@ export default function QuizTaking() {
                                 <div>
                                   <span className="text-muted-foreground">Jawaban Anda:</span>
                                   <p 
-                                    className={`${isCorrect ? 'text-green-600' : 'text-red-600'} ${containsArabic(formatAnswer(detail.user_answer)) ? 'font-arabic' : ''}`}
-                                    dir={containsArabic(formatAnswer(detail.user_answer)) ? 'rtl' : undefined}
+                                    className={`bidi-content ${isCorrect ? 'text-green-600' : 'text-red-600'} ${containsArabic(formatAnswer(detail.user_answer)) ? 'font-arabic' : ''}`}
+                                    dir="auto"
                                     style={containsArabic(formatAnswer(detail.user_answer)) ? {
                                       fontFamily: "'Scheherazade New', 'Amiri', serif",
                                       fontSize: '1.2em',
@@ -436,8 +436,8 @@ export default function QuizTaking() {
                                 <div>
                                   <span className="text-muted-foreground">Jawaban Benar:</span>
                                   <p 
-                                    className={`text-green-600 ${containsArabic(formatAnswer(detail.correct_answer)) ? 'font-arabic' : ''}`}
-                                    dir={containsArabic(formatAnswer(detail.correct_answer)) ? 'rtl' : undefined}
+                                    className={`text-green-600 bidi-content ${containsArabic(formatAnswer(detail.correct_answer)) ? 'font-arabic' : ''}`}
+                                    dir="auto"
                                     style={containsArabic(formatAnswer(detail.correct_answer)) ? {
                                       fontFamily: "'Scheherazade New', 'Amiri', serif",
                                       fontSize: '1.2em',
@@ -521,8 +521,8 @@ export default function QuizTaking() {
                 <Badge variant="secondary">{currentQuestion.points} poin</Badge>
               </div>
               <CardTitle 
-                className={`text-xl mt-4 ${containsArabic(currentQuestion.question_text) ? 'font-arabic' : ''}`}
-                dir={containsArabic(currentQuestion.question_text) ? 'rtl' : undefined}
+                className={`text-xl mt-4 bidi-content ${containsArabic(currentQuestion.question_text) ? 'font-arabic' : ''}`}
+                dir="auto"
                 style={containsArabic(currentQuestion.question_text) ? {
                   fontFamily: "'Scheherazade New', 'Amiri', serif",
                   fontSize: '1.5rem',
@@ -558,10 +558,10 @@ export default function QuizTaking() {
                       return (
                         <Label
                           key={idx}
-                          className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors hover:bg-muted ${
+                          className={`flex items-center gap-3 p-4 rounded-lg border cursor-pointer transition-colors hover:bg-muted bidi-content ${
                             answers[currentQuestion.id] === option ? 'border-primary bg-primary/5' : ''
                           } ${isArabicOption ? 'font-arabic' : ''}`}
-                          dir={isArabicOption ? 'rtl' : undefined}
+                          dir="auto"
                           style={isArabicOption ? {
                             fontFamily: "'Scheherazade New', 'Amiri', serif",
                             fontSize: '1.3em',
@@ -569,7 +569,7 @@ export default function QuizTaking() {
                           } : undefined}
                         >
                           <RadioGroupItem value={option} />
-                          <span>{option}</span>
+                          <span className="bidi-content" dir="auto">{option}</span>
                         </Label>
                       );
                     });

@@ -348,8 +348,8 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
             <Card className="mt-2">
               <CardContent className="py-4">
                 <div 
-                  className={`prose prose-sm max-w-none dark:prose-invert material-preview ${containsArabic(content) ? 'font-arabic' : ''}`}
-                  dir={containsArabic(content) ? 'rtl' : undefined}
+                  className={`prose prose-sm max-w-none dark:prose-invert material-preview bidi-content ${containsArabic(content) ? 'font-arabic' : ''}`}
+                  dir="auto"
                   style={containsArabic(content) ? {
                     fontFamily: "'Scheherazade New', 'Amiri', serif",
                     fontSize: '1.3em',

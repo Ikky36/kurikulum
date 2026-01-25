@@ -36,10 +36,11 @@ export const ArabicText: React.FC<ArabicTextProps> = ({
     Component,
     {
       className: cn(
+        'bidi-content',
         isArabic && 'font-arabic',
         className
       ),
-      dir: isArabic ? 'rtl' : undefined,
+      dir: 'auto',
       lang: isArabic ? 'ar' : undefined,
     },
     children
