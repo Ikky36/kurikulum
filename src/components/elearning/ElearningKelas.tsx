@@ -44,7 +44,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Users, BookOpen, Eye, EyeOff, Globe, GraduationCap, Calendar } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, BookOpen, Eye, EyeOff, Globe, GraduationCap, Calendar, LogIn } from 'lucide-react';
 
 type AssignedInstructor = {
   id: string;
@@ -59,7 +59,19 @@ type ClassWithRelations = ElearningClass & {
   assignedInstructors?: AssignedInstructor[];
 };
 
-export function ElearningKelas() {
+interface SelectedClassInfo {
+  id: string;
+  title: string;
+  courseId: string;
+  courseName: string;
+  classGroupName: string;
+}
+
+interface ElearningKelasProps {
+  onEnterClass?: (classInfo: SelectedClassInfo) => void;
+}
+
+export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
   const { profile } = useAuth();
   const { data: classes, isLoading } = useElearningClasses();
   const { data: courses } = useCourses();
@@ -433,30 +445,48 @@ export function ElearningKelas() {
                 </div>
 
                 {/* Actions */}
-                {canDosenEditClass(cls) && (
-                  <div className="flex gap-2 pt-4 border-t">
+                <div className="flex gap-2 pt-4 border-t">
+                  {onEnterClass && (
                     <Button
-                      variant="outline"
                       size="sm"
-                      className="flex-1 gap-2 hover:bg-primary hover:text-primary-foreground transition-colors"
-                      onClick={() => openEditDialog(cls)}
+                      className="flex-1 gap-2"
+                      onClick={() => onEnterClass({
+                        id: cls.id,
+                        title: cls.title,
+                        courseId: cls.course?.id || '',
+                        courseName: cls.course ? `${cls.course.code} - ${cls.course.name}` : '',
+                        classGroupName: cls.class_group?.name || ''
+                      })}
                     >
-                      <Edit className="h-4 w-4" />
-                      Edit Kelas
+                      <LogIn className="h-4 w-4" />
+                      Masuk Kelas
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-2 text-destructive hover:text-destructive-foreground hover:bg-destructive transition-colors"
-                      onClick={() => {
-                        setDeletingClassId(cls.id);
-                        setDeleteDialogOpen(true);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                )}
+                  )}
+                  {canDosenEditClass(cls) && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className={`gap-2 hover:bg-primary hover:text-primary-foreground transition-colors ${onEnterClass ? '' : 'flex-1'}`}
+                        onClick={() => openEditDialog(cls)}
+                      >
+                        <Edit className="h-4 w-4" />
+                        {!onEnterClass && 'Edit Kelas'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2 text-destructive hover:text-destructive-foreground hover:bg-destructive transition-colors"
+                        onClick={() => {
+                          setDeletingClassId(cls.id);
+                          setDeleteDialogOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </>
+                  )}
+                </div>
               </CardContent>
             </Card>
           ))}
