@@ -206,15 +206,32 @@ export default function DashboardAdmin() {
     },
   });
 
-  // Fetch class groups for assignment
+  // Fetch class groups for assignment (with semester)
   const { data: classGroups } = useQuery({
     queryKey: ['class-groups-assign'],
     queryFn: async () => {
       const { data, error } = await supabase.from('class_groups').select('*').order('name');
       if (error) throw error;
-      return data as { id: string; name: string; description?: string }[];
+      return data as { id: string; name: string; description?: string; semester?: string | null }[];
     },
   });
+
+  // Filter class groups based on selected course's semester
+  const getFilteredClassGroups = () => {
+    if (!selectedCourseForAssign || !classGroups) return classGroups || [];
+    
+    const selectedCourse = courses?.find(c => c.id === selectedCourseForAssign);
+    if (!selectedCourse?.semester) return classGroups;
+    
+    const courseSemester = selectedCourse.semester;
+    
+    return classGroups.filter(cg => {
+      if (!cg.semester) return false;
+      // Handle comma-separated semester values (e.g., "1, 2, 3")
+      const classSemesters = cg.semester.split(',').map(s => s.trim());
+      return classSemesters.includes(courseSemester);
+    });
+  };
 
   // Fetch programs from settings
   const { data: programs } = useQuery({
@@ -1430,7 +1447,7 @@ export default function DashboardAdmin() {
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <Label>Mata Kuliah</Label>
-                          <Select value={selectedCourseForAssign} onValueChange={(v) => { setSelectedCourseForAssign(v); setSelectedDosenForAssign([]); }}>
+                          <Select value={selectedCourseForAssign} onValueChange={(v) => { setSelectedCourseForAssign(v); setSelectedDosenForAssign([]); setSelectedClassForAssign(''); }}>
                             <SelectTrigger><SelectValue placeholder="Pilih mata kuliah" /></SelectTrigger>
                             <SelectContent>
                               {courses?.map((course) => (
@@ -1441,15 +1458,22 @@ export default function DashboardAdmin() {
                         </div>
                         <div className="space-y-2">
                           <Label>Kelas (Opsional)</Label>
-                          <Select value={selectedClassForAssign || 'none'} onValueChange={(v) => setSelectedClassForAssign(v === 'none' ? '' : v)}>
+                          <Select 
+                            value={selectedClassForAssign || 'none'} 
+                            onValueChange={(v) => setSelectedClassForAssign(v === 'none' ? '' : v)}
+                            disabled={!selectedCourseForAssign}
+                          >
                             <SelectTrigger><SelectValue placeholder="Pilih kelas (opsional)" /></SelectTrigger>
                             <SelectContent>
                               <SelectItem value="none">Tanpa Kelas</SelectItem>
-                              {classGroups?.map((cg) => (
-                                <SelectItem key={cg.id} value={cg.id}>{cg.name}</SelectItem>
+                              {getFilteredClassGroups().map((cg) => (
+                                <SelectItem key={cg.id} value={cg.id}>{cg.name} {cg.semester ? `(Sem. ${cg.semester})` : ''}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
+                          {selectedCourseForAssign && getFilteredClassGroups().length === 0 && (
+                            <p className="text-muted-foreground text-sm">Tidak ada kelas dengan semester yang sesuai</p>
+                          )}
                         </div>
                         <div className="space-y-2">
                           <Label>Dosen (dapat memilih lebih dari satu)</Label>
