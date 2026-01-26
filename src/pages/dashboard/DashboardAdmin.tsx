@@ -788,10 +788,19 @@ export default function DashboardAdmin() {
     setShowUserDialog(true);
   };
 
-  // Get available dosen for assignment (exclude already assigned to selected course)
-  const getAvailableDosenForCourse = (courseId: string) => {
+  // Get available dosen for assignment (exclude already assigned to same course + class combination)
+  const getAvailableDosenForCourse = (courseId: string, classGroupId?: string) => {
     const assignedIds = courseInstructors
-      ?.filter(ci => ci.course?.id === courseId)
+      ?.filter(ci => {
+        // Must match course
+        if (ci.course?.id !== courseId) return false;
+        // Must match class (null == null is true)
+        if (classGroupId) {
+          return ci.class_group_id === classGroupId;
+        } else {
+          return ci.class_group_id === null;
+        }
+      })
       .map(ci => ci.instructor?.id) || [];
     return allDosen?.filter(d => !assignedIds.includes(d.id)) || [];
   };
@@ -1531,7 +1540,7 @@ export default function DashboardAdmin() {
                           <Label>Dosen (dapat memilih lebih dari satu)</Label>
                           <div className="border rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
                             {selectedCourseForAssign ? (
-                              getAvailableDosenForCourse(selectedCourseForAssign).map(dosen => (
+                              getAvailableDosenForCourse(selectedCourseForAssign, selectedClassForAssign || undefined).map(dosen => (
                                 <label key={dosen.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted p-1 rounded">
                                   <input
                                     type="checkbox"
@@ -1551,8 +1560,8 @@ export default function DashboardAdmin() {
                             ) : (
                               <p className="text-muted-foreground text-sm">Pilih mata kuliah terlebih dahulu</p>
                             )}
-                            {selectedCourseForAssign && getAvailableDosenForCourse(selectedCourseForAssign).length === 0 && (
-                              <p className="text-muted-foreground text-sm">Semua dosen sudah ditugaskan ke mata kuliah ini</p>
+                            {selectedCourseForAssign && getAvailableDosenForCourse(selectedCourseForAssign, selectedClassForAssign || undefined).length === 0 && (
+                              <p className="text-muted-foreground text-sm">Semua dosen sudah ditugaskan ke kombinasi mata kuliah dan kelas ini</p>
                             )}
                           </div>
                         </div>
