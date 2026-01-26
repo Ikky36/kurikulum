@@ -227,13 +227,22 @@ export default function DashboardAdmin() {
     const selectedCourse = courses?.find(c => c.id === selectedCourseForAssign);
     if (!selectedCourse?.semester) return classGroups;
     
-    const courseSemester = selectedCourse.semester;
+    // Extract semester number from course (e.g., "Semester 6" -> "6" or "6" -> "6")
+    const courseSemesterMatch = selectedCourse.semester.match(/\d+/);
+    if (!courseSemesterMatch) return classGroups;
+    const courseSemesterNum = courseSemesterMatch[0];
     
     return classGroups.filter(cg => {
       if (!cg.semester) return false;
+      
+      // Extract semester number from class group (e.g., "6" -> "6" or "Semester 6" -> "6")
+      const classSemesterMatch = cg.semester.match(/\d+/);
+      if (!classSemesterMatch) return false;
+      const classSemesterNum = classSemesterMatch[0];
+      
       // Handle comma-separated semester values (e.g., "1, 2, 3")
-      const classSemesters = cg.semester.split(',').map(s => s.trim());
-      return classSemesters.includes(courseSemester);
+      const classSemesters = cg.semester.split(',').map(s => s.trim().match(/\d+/)?.[0] || '').filter(Boolean);
+      return classSemesters.includes(courseSemesterNum);
     });
   };
 
