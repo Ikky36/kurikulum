@@ -1090,7 +1090,7 @@ function KurikulumContent() {
                         </a>
                       </TableCell>
                       <TableCell>{course.curricula?.name || '-'}</TableCell>
-                      <TableCell>{course.semester || '-'}</TableCell>
+                      <TableCell>{course.semester ? `Semester ${course.semester}` : '-'}</TableCell>
                       <TableCell>{course.sks ?? 0}</TableCell>
                       <TableCell>
                         {cplCodes.length > 0 ? (
