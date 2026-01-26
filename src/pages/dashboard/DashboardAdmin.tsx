@@ -14,6 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
@@ -58,6 +60,8 @@ export default function DashboardAdmin() {
   const [selectedCourseForAssign, setSelectedCourseForAssign] = useState('');
   const [selectedDosenForAssign, setSelectedDosenForAssign] = useState<string[]>([]);
   const [selectedClassForAssign, setSelectedClassForAssign] = useState('');
+  const [courseSearchOpen, setCourseSearchOpen] = useState(false);
+  const [courseSearchQuery, setCourseSearchQuery] = useState('');
 
   // Role management state
   const [showRoleDialog, setShowRoleDialog] = useState(false);
@@ -1447,14 +1451,62 @@ export default function DashboardAdmin() {
                       <div className="space-y-4">
                         <div className="space-y-2">
                           <Label>Mata Kuliah</Label>
-                          <Select value={selectedCourseForAssign} onValueChange={(v) => { setSelectedCourseForAssign(v); setSelectedDosenForAssign([]); setSelectedClassForAssign(''); }}>
-                            <SelectTrigger><SelectValue placeholder="Pilih mata kuliah" /></SelectTrigger>
-                            <SelectContent>
-                              {courses?.map((course) => (
-                                <SelectItem key={course.id} value={course.id}>{course.code} - {course.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Popover open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                aria-expanded={courseSearchOpen}
+                                className="w-full justify-between font-normal"
+                              >
+                                {selectedCourseForAssign
+                                  ? (() => {
+                                      const course = courses?.find(c => c.id === selectedCourseForAssign);
+                                      return course ? `${course.code} - ${course.name}${course.semester ? ` (Sem. ${course.semester})` : ''}` : 'Pilih mata kuliah...';
+                                    })()
+                                  : 'Pilih mata kuliah...'}
+                                <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[400px] p-0" align="start">
+                              <Command>
+                                <CommandInput 
+                                  placeholder="Cari mata kuliah..." 
+                                  value={courseSearchQuery}
+                                  onValueChange={setCourseSearchQuery}
+                                />
+                                <CommandList>
+                                  <CommandEmpty>Mata kuliah tidak ditemukan.</CommandEmpty>
+                                  <CommandGroup>
+                                    {courses?.filter(course => {
+                                      const searchLower = courseSearchQuery.toLowerCase();
+                                      return course.code.toLowerCase().includes(searchLower) ||
+                                             course.name.toLowerCase().includes(searchLower);
+                                    }).map((course) => (
+                                      <CommandItem
+                                        key={course.id}
+                                        value={`${course.code} ${course.name}`}
+                                        onSelect={() => {
+                                          setSelectedCourseForAssign(course.id);
+                                          setSelectedDosenForAssign([]);
+                                          setSelectedClassForAssign('');
+                                          setCourseSearchOpen(false);
+                                          setCourseSearchQuery('');
+                                        }}
+                                      >
+                                        <span className="font-medium">{course.code}</span>
+                                        <span className="mx-2">-</span>
+                                        <span className="flex-1 truncate">{course.name}</span>
+                                        {course.semester && (
+                                          <Badge variant="secondary" className="ml-2">Sem. {course.semester}</Badge>
+                                        )}
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
                         </div>
                         <div className="space-y-2">
                           <Label>Kelas (Opsional)</Label>
