@@ -990,7 +990,7 @@ function KurikulumContent() {
     );
   };
 
-  const semesterOptions = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'];
+  const semesterOptions = ['1', '2', '3', '4', '5', '6', '7', '8'];
 
   const renderMataKuliahTable = () => {
     // Filter data - start from filteredCourses which already excludes inactive curricula
@@ -1330,7 +1330,7 @@ function KurikulumContent() {
                     </SelectTrigger>
                     <SelectContent>
                       {semesterOptions.map(sem => (
-                        <SelectItem key={sem} value={sem}>{sem}</SelectItem>
+                        <SelectItem key={sem} value={sem}>Semester {sem}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
