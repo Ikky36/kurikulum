@@ -47,9 +47,15 @@ type NavigationItem = {
 
 export function MaterialFullViewer({ material, onClose }: MaterialFullViewerProps) {
   const isMobile = useIsMobile();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Desktop: sidebar terbuka secara default, Mobile: tertutup
+  const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const [activeItemId, setActiveItemId] = useState<string>('');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
+  
+  // Update sidebar state when switching between mobile/desktop
+  useEffect(() => {
+    setSidebarOpen(!isMobile);
+  }, [isMobile]);
 
   // Build navigation items from sections
   const navigationItems: NavigationItem[] = [];
@@ -129,62 +135,6 @@ export function MaterialFullViewer({ material, onClose }: MaterialFullViewerProp
     setSidebarOpen(false);
   };
 
-  // Sidebar content component
-  const SidebarContent = () => (
-    <>
-      {/* Navigation Items */}
-      <ScrollArea className="flex-1">
-        <div className="p-2">
-          {navigationItems.map((item, index) => {
-            const isActive = item.id === activeItemId;
-            const isCompleted = completedItems.has(item.id);
-            const isQuiz = item.type === 'quiz-before' || item.type === 'quiz-after';
-            
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleNavigate(item.id)}
-                className={cn(
-                  "w-full text-left px-3 py-3 rounded-lg mb-1 transition-colors flex items-center gap-3",
-                  isActive 
-                    ? "bg-primary text-primary-foreground" 
-                    : "hover:bg-muted active:bg-muted",
-                  isQuiz && !isActive && "text-muted-foreground"
-                )}
-              >
-                <div className="shrink-0">
-                  {isCompleted ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
-                  ) : isQuiz ? (
-                    <HelpCircle className="h-5 w-5" />
-                  ) : (
-                    <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
-                      {(item.sectionIndex ?? 0) + 1}
-                    </span>
-                  )}
-                </div>
-                <span className="text-sm font-medium line-clamp-2">{item.title}</span>
-              </button>
-            );
-          })}
-        </div>
-      </ScrollArea>
-      
-      {/* Progress */}
-      <div className="p-4 border-t bg-background shrink-0">
-        <div className="text-xs text-muted-foreground mb-2">
-          Progress: {completedItems.size}/{navigationItems.length}
-        </div>
-        <div className="h-2 bg-muted rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-primary transition-all"
-            style={{ width: `${(completedItems.size / navigationItems.length) * 100}%` }}
-          />
-        </div>
-      </div>
-    </>
-  );
-
   // If no sections, show single content mode
   if (sections.length === 0 && material.content) {
     return (
@@ -201,8 +151,8 @@ export function MaterialFullViewer({ material, onClose }: MaterialFullViewerProp
         </div>
         
         {/* Content */}
-        <ScrollArea className="flex-1">
-          <div className="max-w-4xl mx-auto p-4 sm:p-6">
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-8">
             {material.llo && (
               <Card className="bg-primary/5 border-primary/20 mb-6">
                 <CardContent className="py-3">
@@ -213,18 +163,18 @@ export function MaterialFullViewer({ material, onClose }: MaterialFullViewerProp
               </Card>
             )}
             <div 
-              className="prose prose-sm max-w-none dark:prose-invert bidi-content"
+              className="prose prose-sm sm:prose-base max-w-none dark:prose-invert bidi-content"
               dir="auto"
               dangerouslySetInnerHTML={{ __html: material.content || '' }}
             />
           </div>
-        </ScrollArea>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+    <div className="fixed inset-0 z-50 bg-background flex">
       {/* Mobile Sheet Sidebar */}
       {isMobile && (
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
@@ -240,44 +190,135 @@ export function MaterialFullViewer({ material, onClose }: MaterialFullViewerProp
                 </Badge>
               )}
             </SheetHeader>
-            <SidebarContent />
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {/* Navigation Items */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="p-2">
+                  {navigationItems.map((item) => {
+                    const isActive = item.id === activeItemId;
+                    const isCompleted = completedItems.has(item.id);
+                    const isQuiz = item.type === 'quiz-before' || item.type === 'quiz-after';
+                    
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => handleNavigate(item.id)}
+                        className={cn(
+                          "w-full text-left px-3 py-3 rounded-lg mb-1 transition-colors flex items-center gap-3",
+                          isActive 
+                            ? "bg-primary text-primary-foreground" 
+                            : "hover:bg-muted active:bg-muted",
+                          isQuiz && !isActive && "text-muted-foreground"
+                        )}
+                      >
+                        <div className="shrink-0">
+                          {isCompleted ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          ) : isQuiz ? (
+                            <HelpCircle className="h-5 w-5" />
+                          ) : (
+                            <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
+                              {(item.sectionIndex ?? 0) + 1}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-sm font-medium line-clamp-2">{item.title}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              
+              {/* Progress */}
+              <div className="p-4 border-t bg-background shrink-0">
+                <div className="text-xs text-muted-foreground mb-2">
+                  Progress: {completedItems.size}/{navigationItems.length}
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-primary transition-all"
+                    style={{ width: `${(completedItems.size / navigationItems.length) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
           </SheetContent>
         </Sheet>
       )}
 
-      {/* Desktop Sidebar */}
-      {!isMobile && (
-        <div className={cn(
-          "fixed left-0 top-0 h-full bg-muted/30 border-r flex flex-col transition-all duration-300 z-10",
-          sidebarOpen ? "w-80" : "w-0 overflow-hidden"
-        )}>
-          {sidebarOpen && (
-            <>
-              {/* Sidebar Header */}
-              <div className="p-4 border-b bg-background shrink-0">
-                <div className="flex items-center justify-between gap-2">
-                  <h2 className="font-semibold truncate">{material.title}</h2>
-                  <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-                {material.llo && (
-                  <Badge variant="secondary" className="mt-2">
-                    {material.llo.code}
-                  </Badge>
-                )}
-              </div>
-              <SidebarContent />
-            </>
-          )}
+      {/* Desktop Sidebar - Always visible when open */}
+      {!isMobile && sidebarOpen && (
+        <div className="w-80 h-full bg-muted/30 border-r flex flex-col shrink-0">
+          {/* Sidebar Header */}
+          <div className="p-4 border-b bg-background shrink-0">
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="font-semibold truncate">{material.title}</h2>
+              <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            {material.llo && (
+              <Badge variant="secondary" className="mt-2">
+                {material.llo.code}
+              </Badge>
+            )}
+          </div>
+          
+          {/* Navigation Items */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-2">
+              {navigationItems.map((item) => {
+                const isActive = item.id === activeItemId;
+                const isCompleted = completedItems.has(item.id);
+                const isQuiz = item.type === 'quiz-before' || item.type === 'quiz-after';
+                
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleNavigate(item.id)}
+                    className={cn(
+                      "w-full text-left px-3 py-3 rounded-lg mb-1 transition-colors flex items-center gap-3",
+                      isActive 
+                        ? "bg-primary text-primary-foreground" 
+                        : "hover:bg-muted active:bg-muted",
+                      isQuiz && !isActive && "text-muted-foreground"
+                    )}
+                  >
+                    <div className="shrink-0">
+                      {isCompleted ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : isQuiz ? (
+                        <HelpCircle className="h-5 w-5" />
+                      ) : (
+                        <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-sm font-medium">
+                          {(item.sectionIndex ?? 0) + 1}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-sm font-medium line-clamp-2">{item.title}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          
+          {/* Progress */}
+          <div className="p-4 border-t bg-background shrink-0">
+            <div className="text-xs text-muted-foreground mb-2">
+              Progress: {completedItems.size}/{navigationItems.length}
+            </div>
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary transition-all"
+                style={{ width: `${(completedItems.size / navigationItems.length) * 100}%` }}
+              />
+            </div>
+          </div>
         </div>
       )}
 
       {/* Main Content */}
-      <div className={cn(
-        "flex-1 flex flex-col min-w-0 transition-all duration-300",
-        !isMobile && sidebarOpen && "ml-80"
-      )}>
+      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-3 sm:px-4 py-3 border-b bg-background/95 backdrop-blur shrink-0 gap-2">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -306,19 +347,19 @@ export function MaterialFullViewer({ material, onClose }: MaterialFullViewerProp
 
         {/* Mobile: Show current section title */}
         {isMobile && activeItem && (
-          <div className="px-4 py-2 border-b bg-muted/30">
+          <div className="px-4 py-2 border-b bg-muted/30 shrink-0">
             <p className="text-sm font-medium truncate">{activeItem.title}</p>
           </div>
         )}
         
-        {/* Content Area */}
-        <ScrollArea className="flex-1">
-          <div className="max-w-4xl mx-auto p-4 sm:p-6">
+        {/* Content Area - Scrollable */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-8">
             {activeItem?.type === 'section' && (
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">{activeItem.title}</h1>
                 <div 
-                  className="prose prose-sm max-w-none dark:prose-invert bidi-content prose-img:rounded-lg prose-img:max-w-full"
+                  className="prose prose-sm sm:prose-base max-w-none dark:prose-invert bidi-content prose-img:rounded-lg prose-img:max-w-full"
                   dir="auto"
                   dangerouslySetInnerHTML={{ __html: getActiveSection()?.content || '' }}
                 />
@@ -336,9 +377,9 @@ export function MaterialFullViewer({ material, onClose }: MaterialFullViewerProp
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
         
-        {/* Footer Navigation - Mobile optimized */}
+        {/* Footer Navigation */}
         <div className="flex items-center justify-between px-3 sm:px-4 py-3 border-t bg-background shrink-0 gap-2">
           <Button
             variant="outline"
