@@ -5,20 +5,30 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Plus, Trash2, ChevronDown, ChevronUp, GripVertical, Sparkles, BookOpen } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, BookOpen, HelpCircle, X } from 'lucide-react';
 import { AdvancedRichEditor } from './AdvancedRichEditor';
 import { AIContentGenerator } from './AIContentGenerator';
+import { useElearningAssignments } from '@/hooks/useElearningMaterials';
+
+export interface SectionQuiz {
+  assignmentId: string;
+  title: string;
+}
 
 export interface MaterialSection {
   id: string;
   title: string;
   content: string;
+  quizBefore?: SectionQuiz | null;
+  quizAfter?: SectionQuiz | null;
 }
 
 interface MaterialSectionEditorProps {
   sections: MaterialSection[];
   onChange: (sections: MaterialSection[]) => void;
   courseId: string;
+  classId?: string;
   lloData?: { code: string; description: string; indikator?: string[] } | null;
 }
 
@@ -26,10 +36,14 @@ export function MaterialSectionEditor({
   sections, 
   onChange, 
   courseId,
+  classId,
   lloData 
 }: MaterialSectionEditorProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [showAIForSection, setShowAIForSection] = useState<string | null>(null);
+  
+  const { data: assignments } = useElearningAssignments(classId || '');
+  const quizAssignments = (assignments || []).filter((a: any) => a.assignment_type === 'quiz');
 
   const generateId = () => `section_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -38,6 +52,8 @@ export function MaterialSectionEditor({
       id: generateId(),
       title: `Section ${sections.length + 1}`,
       content: '',
+      quizBefore: null,
+      quizAfter: null,
     };
     onChange([...sections, newSection]);
     setExpandedSections(prev => new Set([...prev, newSection.id]));
@@ -80,6 +96,27 @@ export function MaterialSectionEditor({
   const handleAIGenerated = (sectionId: string, content: string) => {
     updateSection(sectionId, { content });
     setShowAIForSection(null);
+  };
+
+  const handleQuizChange = (sectionId: string, position: 'before' | 'after', quizId: string) => {
+    const quiz = quizAssignments.find((q: any) => q.id === quizId);
+    if (position === 'before') {
+      updateSection(sectionId, { 
+        quizBefore: quizId && quiz ? { assignmentId: quizId, title: quiz.title } : null 
+      });
+    } else {
+      updateSection(sectionId, { 
+        quizAfter: quizId && quiz ? { assignmentId: quizId, title: quiz.title } : null 
+      });
+    }
+  };
+
+  const removeQuiz = (sectionId: string, position: 'before' | 'after') => {
+    if (position === 'before') {
+      updateSection(sectionId, { quizBefore: null });
+    } else {
+      updateSection(sectionId, { quizAfter: null });
+    }
   };
 
   return (
@@ -151,6 +188,22 @@ export function MaterialSectionEditor({
                       placeholder="Judul section..."
                       onClick={(e) => e.stopPropagation()}
                     />
+
+                    {/* Quiz indicators */}
+                    <div className="flex items-center gap-1">
+                      {section.quizBefore && (
+                        <Badge variant="outline" className="gap-1 text-xs bg-blue-50 text-blue-700 border-blue-200">
+                          <HelpCircle className="h-3 w-3" />
+                          Quiz Before
+                        </Badge>
+                      )}
+                      {section.quizAfter && (
+                        <Badge variant="outline" className="gap-1 text-xs bg-green-50 text-green-700 border-green-200">
+                          <HelpCircle className="h-3 w-3" />
+                          Quiz After
+                        </Badge>
+                      )}
+                    </div>
                     
                     <div className="flex items-center gap-1">
                       <CollapsibleTrigger asChild>
@@ -173,6 +226,46 @@ export function MaterialSectionEditor({
                 
                 <CollapsibleContent>
                   <CardContent className="pt-4 space-y-4">
+                    {/* Quiz Before Section */}
+                    {classId && quizAssignments.length > 0 && (
+                      <div className="space-y-2 p-3 bg-blue-50/50 rounded-lg border border-blue-200/50">
+                        <Label className="text-sm flex items-center gap-2 text-blue-700">
+                          <HelpCircle className="h-4 w-4" />
+                          Quiz Sebelum Section
+                        </Label>
+                        {section.quizBefore ? (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="gap-1">
+                              {section.quizBefore.title}
+                            </Badge>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => removeQuiz(section.id, 'before')}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Select 
+                            value="" 
+                            onValueChange={(v) => handleQuizChange(section.id, 'before', v)}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Pilih quiz..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {quizAssignments.map((q: any) => (
+                                <SelectItem key={q.id} value={q.id}>{q.title}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    )}
+
                     {/* AI Generator for this section */}
                     <div className="flex justify-end">
                       <Button
@@ -201,6 +294,46 @@ export function MaterialSectionEditor({
                       value={section.content} 
                       onChange={(content) => updateSection(section.id, { content })} 
                     />
+
+                    {/* Quiz After Section */}
+                    {classId && quizAssignments.length > 0 && (
+                      <div className="space-y-2 p-3 bg-green-50/50 rounded-lg border border-green-200/50">
+                        <Label className="text-sm flex items-center gap-2 text-green-700">
+                          <HelpCircle className="h-4 w-4" />
+                          Quiz Setelah Section
+                        </Label>
+                        {section.quizAfter ? (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="gap-1">
+                              {section.quizAfter.title}
+                            </Badge>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => removeQuiz(section.id, 'after')}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <Select 
+                            value="" 
+                            onValueChange={(v) => handleQuizChange(section.id, 'after', v)}
+                          >
+                            <SelectTrigger className="h-9">
+                              <SelectValue placeholder="Pilih quiz..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {quizAssignments.map((q: any) => (
+                                <SelectItem key={q.id} value={q.id}>{q.title}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    )}
                   </CardContent>
                 </CollapsibleContent>
               </Collapsible>

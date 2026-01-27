@@ -6,11 +6,13 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { BookOpen, FileText, Video, Image, Trash2, Pencil, Eye, Plus, GripVertical, Lock, CheckCircle, Box } from 'lucide-react';
+import { BookOpen, FileText, Video, Image, Trash2, Pencil, Eye, Plus, GripVertical, Lock, CheckCircle, Box, Maximize2 } from 'lucide-react';
 import { MaterialEditor } from './MaterialEditor';
 import { H5PViewer } from './H5PViewer';
 import { MaterialQuiz } from './MaterialQuiz';
+import { MaterialFullViewer } from './MaterialFullViewer';
 import { containsArabic } from '@/components/ui/arabic-text';
+import type { MaterialSection } from './MaterialSectionEditor';
 
 interface MaterialListProps {
   classId: string;
@@ -18,10 +20,11 @@ interface MaterialListProps {
   canEdit: boolean;
 }
 
-type MaterialWithLLO = ElearningMaterial & {
+type MaterialWithLLO = Omit<ElearningMaterial, 'sections'> & {
   llo?: { id: string; code: string; description: string } | null;
   prerequisite_material_id?: string | null;
   prerequisite_assignment_id?: string | null;
+  sections?: MaterialSection[] | null;
 };
 
 export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) {
@@ -32,8 +35,13 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
   const [showEditor, setShowEditor] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<MaterialWithLLO | null>(null);
   const [viewingMaterial, setViewingMaterial] = useState<MaterialWithLLO | null>(null);
+  const [fullViewMaterial, setFullViewMaterial] = useState<MaterialWithLLO | null>(null);
 
-  const typedMaterials = (materials || []) as MaterialWithLLO[];
+  // Parse materials and handle sections type conversion
+  const typedMaterials: MaterialWithLLO[] = (materials || []).map((m: any) => ({
+    ...m,
+    sections: Array.isArray(m.sections) ? m.sections as MaterialSection[] : null,
+  }));
 
   const handleDelete = async (id: string) => {
     try {
@@ -165,6 +173,18 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
 
                   {/* Actions */}
                   <div className="flex items-center justify-end gap-2 mt-4 pt-4 border-t">
+                    {/* Full View for multi-section materials */}
+                    {material.sections && material.sections.length > 0 && (
+                      <Button 
+                        variant="default" 
+                        size="sm" 
+                        onClick={() => setFullViewMaterial(material)}
+                        className="gap-2"
+                      >
+                        <Maximize2 className="h-4 w-4" />
+                        Buka Materi
+                      </Button>
+                    )}
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -172,7 +192,7 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
                       className="gap-2"
                     >
                       <Eye className="h-4 w-4" />
-                      Lihat
+                      {material.sections && material.sections.length > 0 ? 'Preview' : 'Lihat'}
                     </Button>
                     {canEdit && (
                       <>
@@ -231,7 +251,7 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
           <MaterialEditor
             classId={classId}
             courseId={courseId}
-            material={editingMaterial}
+            material={editingMaterial as any}
             onSuccess={() => {
               setShowEditor(false);
               setEditingMaterial(null);
@@ -264,20 +284,58 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
               )}
               {viewingMaterial.content_type === 'text' && (
                 <>
-                  <div 
-                    className="prose prose-sm max-w-none dark:prose-invert p-4 bg-muted/30 rounded-lg bidi-content"
-                    dir="auto"
-                    dangerouslySetInnerHTML={{ __html: viewingMaterial.content?.replace(/<!-- EMBEDDED_QUIZ:.+? -->/g, '') || '' }}
-                  />
-                  {/* Embedded Quiz */}
-                  {getEmbeddedQuizId(viewingMaterial.content) && (
-                    <div className="mt-6 pt-6 border-t">
-                      <h3 className="text-lg font-semibold mb-4">Quiz Materi</h3>
-                      <MaterialQuiz 
-                        assignmentId={getEmbeddedQuizId(viewingMaterial.content)!}
-                        assignmentTitle="Quiz Materi"
-                      />
+                  {/* Show sections if available */}
+                  {viewingMaterial.sections && viewingMaterial.sections.length > 0 ? (
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground">
+                          Materi ini memiliki {viewingMaterial.sections.length} section
+                        </p>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            setViewingMaterial(null);
+                            setFullViewMaterial(viewingMaterial);
+                          }}
+                          className="gap-2"
+                        >
+                          <Maximize2 className="h-4 w-4" />
+                          Buka Full Mode
+                        </Button>
+                      </div>
+                      {viewingMaterial.sections.map((section, idx) => (
+                        <Card key={section.id} className="bg-muted/30">
+                          <CardContent className="py-4">
+                            <h4 className="font-medium mb-2">
+                              Section {idx + 1}: {section.title}
+                            </h4>
+                            <div 
+                              className="prose prose-sm max-w-none dark:prose-invert bidi-content line-clamp-3"
+                              dir="auto"
+                              dangerouslySetInnerHTML={{ __html: section.content?.substring(0, 200) + '...' || '' }}
+                            />
+                          </CardContent>
+                        </Card>
+                      ))}
                     </div>
+                  ) : (
+                    <>
+                      <div 
+                        className="prose prose-sm max-w-none dark:prose-invert p-4 bg-muted/30 rounded-lg bidi-content"
+                        dir="auto"
+                        dangerouslySetInnerHTML={{ __html: viewingMaterial.content?.replace(/<!-- EMBEDDED_QUIZ:.+? -->/g, '') || '' }}
+                      />
+                      {/* Embedded Quiz */}
+                      {getEmbeddedQuizId(viewingMaterial.content) && (
+                        <div className="mt-6 pt-6 border-t">
+                          <h3 className="text-lg font-semibold mb-4">Quiz Materi</h3>
+                          <MaterialQuiz 
+                            assignmentId={getEmbeddedQuizId(viewingMaterial.content)!}
+                            assignmentTitle="Quiz Materi"
+                          />
+                        </div>
+                      )}
+                    </>
                   )}
                 </>
               )}
@@ -319,6 +377,14 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Full View Mode */}
+      {fullViewMaterial && (
+        <MaterialFullViewer
+          material={fullViewMaterial}
+          onClose={() => setFullViewMaterial(null)}
+        />
+      )}
     </div>
   );
 }
