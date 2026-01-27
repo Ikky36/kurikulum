@@ -149,7 +149,7 @@ Format output JSON:
   }
 ]
 
-Buat ${contentLength === 'short' ? '5' : contentLength === 'medium' ? '10' : '15'} soal dengan variasi tipe (multiple_choice, true_false, short_answer).`;
+Buat ${questionCount} soal dengan variasi tipe (multiple_choice, true_false, short_answer).`;
       }
 
       // Build context with file content if available
@@ -333,20 +333,22 @@ Buat ${contentLength === 'short' ? '5' : contentLength === 'medium' ? '10' : '15
           </p>
         </div>
 
-        {/* Content Length */}
-        <div className="space-y-2">
-          <Label>Panjang Konten</Label>
-          <Select value={contentLength} onValueChange={(v: any) => setContentLength(v)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="short">Pendek ({type === 'material' ? '500-800 kata' : '5 soal'})</SelectItem>
-              <SelectItem value="medium">Sedang ({type === 'material' ? '1000-1500 kata' : '10 soal'})</SelectItem>
-              <SelectItem value="long">Panjang ({type === 'material' ? '2000-3000 kata' : '15 soal'})</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Content Length - Only show for material type */}
+        {type === 'material' && (
+          <div className="space-y-2">
+            <Label>Panjang Konten</Label>
+            <Select value={contentLength} onValueChange={(v: any) => setContentLength(v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="short">Pendek (500-800 kata)</SelectItem>
+                <SelectItem value="medium">Sedang (1000-1500 kata)</SelectItem>
+                <SelectItem value="long">Panjang (2000-3000 kata)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         {/* Progress */}
         {isGenerating && (
