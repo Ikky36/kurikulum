@@ -257,7 +257,7 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
                     <div className="mt-2 w-16 h-20 bg-gradient-to-t from-yellow-300 to-yellow-200 dark:from-yellow-600 dark:to-yellow-500 rounded-t-lg flex items-center justify-center">
                       <span className="text-2xl font-bold text-yellow-700 dark:text-yellow-100">1</span>
                     </div>
-                    <p className="text-xs font-medium mt-1 text-center truncate w-20">{topThree[0]?.full_name.split(' ')[0]}</p>
+                    <p className="text-xs font-medium mt-1 text-center truncate w-24">{topThree[0]?.full_name}</p>
                     <Badge className="bg-yellow-100 text-yellow-700 text-xs mt-1">{topThree[0]?.best_score?.toFixed(0) ?? 0}%</Badge>
                   </div>
                   
