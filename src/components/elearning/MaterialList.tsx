@@ -129,45 +129,32 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
                 </div>
 
                 <div className="flex-1 p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-4 flex-1">
-                      <div className="p-3 bg-primary/10 rounded-xl shrink-0">
-                        {getContentTypeIcon(material.content_type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <h3 className="text-lg font-semibold group-hover:text-primary transition-colors">
-                            {material.title}
-                          </h3>
-                          {hasPrerequisite(material) && (
-                            <Badge variant="outline" className="gap-1 text-orange-600 border-orange-300">
-                              <Lock className="h-3 w-3" />
-                              Bersyarat
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-sm text-muted-foreground line-clamp-2">
-                          {material.content_type === 'text' 
-                            ? material.content?.replace(/<[^>]*>/g, '').substring(0, 150) + '...'
-                            : material.file_url}
-                        </p>
-                        {material.llo && (
-                          <Badge variant="secondary" className="mt-2">
-                            {material.llo.code}
+                  <div className="flex items-start gap-4">
+                    <div className="p-3 bg-primary/10 rounded-xl shrink-0">
+                      {getContentTypeIcon(material.content_type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <h3 className="text-lg font-semibold group-hover:text-primary transition-colors">
+                          {material.title}
+                        </h3>
+                        {hasPrerequisite(material) && (
+                          <Badge variant="outline" className="gap-1 text-orange-600 border-orange-300">
+                            <Lock className="h-3 w-3" />
+                            Bersyarat
                           </Badge>
                         )}
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge 
-                        variant={material.is_published ? 'default' : 'secondary'}
-                        className={material.is_published ? 'bg-green-100 text-green-700' : ''}
-                      >
-                        {material.is_published ? (
-                          <><CheckCircle className="h-3 w-3 mr-1" />Published</>
-                        ) : 'Draft'}
-                      </Badge>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {material.content_type === 'text' 
+                          ? material.content?.replace(/<[^>]*>/g, '').substring(0, 150) + '...'
+                          : material.file_url}
+                      </p>
+                      {material.llo && (
+                        <Badge variant="secondary" className="mt-2">
+                          {material.llo.code}
+                        </Badge>
+                      )}
                     </div>
                   </div>
 
