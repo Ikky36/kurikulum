@@ -3,6 +3,7 @@ import { CourseScoreCard } from '@/components/charts/CourseScoreCard';
 import { PLOAchievementChart } from '@/components/charts/PLOAchievementChart';
 import { useCoursesWithStats } from '@/hooks/useCourses';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { useAllStudents } from '@/hooks/useStudents';
 import { Skeleton } from '@/components/ui/skeleton';
 import { GraduationCap, BookOpen, Users, TrendingUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,16 +12,18 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 export default function Index() {
   const { data: courses, isLoading, error } = useCoursesWithStats();
   const { data: settings } = useAppSettings();
+  const { data: allStudents } = useAllStudents();
 
   const appTitle = settings?.app_title || 'Student Achievement Tracker';
   const appTagline = settings?.app_tagline || 'Pantau dan kelola nilai mahasiswa Program Bahasa Arab dengan mudah. Visualisasi data yang jelas untuk hasil pembelajaran yang lebih baik.';
   const logoUrl = settings?.logo_url;
 
-  const totalStudents = courses?.reduce((sum, c) => sum + c.total_students, 0) || 0;
+  const totalStudents = allStudents?.length || 0;
   
   // Calculate total weighted average across all courses
+  const totalEnrollments = courses?.reduce((sum, c) => sum + c.total_students, 0) || 0;
   const totalWeightedSum = courses?.reduce((sum, c) => sum + (c.average_score * c.total_students), 0) || 0;
-  const averageAllCourses = totalStudents > 0 ? totalWeightedSum / totalStudents : 0;
+  const averageAllCourses = totalEnrollments > 0 ? totalWeightedSum / totalEnrollments : 0;
 
   return (
     <TooltipProvider>
@@ -54,7 +57,7 @@ export default function Index() {
             <div className="grid gap-4 sm:grid-cols-3 max-w-3xl w-full">
               {[
                 { icon: BookOpen, label: 'Mata Kuliah', value: courses?.length || 0, color: 'text-primary', tooltip: 'Total mata kuliah yang tersedia' },
-                { icon: Users, label: 'Total Mahasiswa', value: totalStudents, color: 'text-secondary-foreground', tooltip: 'Total mahasiswa terdaftar di semua mata kuliah' },
+                { icon: Users, label: 'Total Mahasiswa', value: totalStudents, color: 'text-secondary-foreground', tooltip: 'Total seluruh mahasiswa' },
                 { icon: TrendingUp, label: 'Rata-rata Nilai', value: averageAllCourses.toFixed(1), color: 'text-success', tooltip: 'Rata-rata nilai akhir dari semua mahasiswa' },
               ].map((stat, i) => (
                 <Tooltip key={stat.label}>
