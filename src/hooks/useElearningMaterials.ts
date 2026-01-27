@@ -292,6 +292,27 @@ export function useDeleteQuizQuestion() {
   });
 }
 
+// Batch update quiz questions points
+export function useBatchUpdateQuestionPoints() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ questionIds, points }: { questionIds: string[]; points: number }) => {
+      const { data: result, error } = await supabase
+        .from('elearning_quiz_questions')
+        .update({ points })
+        .in('id', questionIds)
+        .select();
+
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['quiz-questions'] });
+    },
+  });
+}
+
 // Fetch submissions for an assignment
 export function useAssignmentSubmissions(assignmentId: string) {
   return useQuery({

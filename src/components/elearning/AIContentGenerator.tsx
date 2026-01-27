@@ -21,6 +21,7 @@ interface AIContentGeneratorProps {
   indicators?: string[];
   questionType?: string;
   questionCount?: number;
+  totalPoints?: number;
 }
 
 type LanguageMode = 'arabic' | 'indonesian' | 'mixed';
@@ -33,7 +34,8 @@ export function AIContentGenerator({
   defaultTopic = '',
   indicators = [],
   questionType = 'multiple_choice',
-  questionCount = 5
+  questionCount = 5,
+  totalPoints = 100
 }: AIContentGeneratorProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);

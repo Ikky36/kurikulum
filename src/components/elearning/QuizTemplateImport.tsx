@@ -2,12 +2,17 @@ import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Upload, FileText, HelpCircle, CheckSquare, ArrowLeftRight, Type } from 'lucide-react';
+import { Download, Upload, FileText, HelpCircle, CheckSquare, ArrowLeftRight, Type, Calculator } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface QuizTemplateImportProps {
   onImport: (questions: ParsedQuestion[]) => void;
+  totalPoints?: number;
+  onTotalPointsChange?: (value: number) => void;
 }
 
 export interface ParsedQuestion {
@@ -26,11 +31,13 @@ const QUESTION_TYPES = [
   { value: 'matching', label: 'Menjodohkan', icon: ArrowLeftRight },
 ];
 
-export function QuizTemplateImport({ onImport }: QuizTemplateImportProps) {
+export function QuizTemplateImport({ onImport, totalPoints = 100, onTotalPointsChange }: QuizTemplateImportProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedType, setSelectedType] = useState('multiple_choice');
   const [isImporting, setIsImporting] = useState(false);
+  const [localTotalPoints, setLocalTotalPoints] = useState(totalPoints.toString());
+  const [useDistribution, setUseDistribution] = useState(true);
 
   const downloadTemplate = (type: string) => {
     let data: any[];
@@ -146,7 +153,18 @@ export function QuizTemplateImport({ onImport }: QuizTemplateImportProps) {
         throw new Error('Tidak ada soal yang valid ditemukan dalam file');
       }
 
-      onImport(questions);
+      // Distribute points if enabled
+      let finalQuestions = questions;
+      if (useDistribution && questions.length > 0) {
+        const totalPts = parseInt(localTotalPoints) || 100;
+        const pointsPerQuestion = Math.round((totalPts / questions.length) * 100) / 100;
+        finalQuestions = questions.map(q => ({
+          ...q,
+          points: pointsPerQuestion,
+        }));
+      }
+
+      onImport(finalQuestions);
       
       const message = skipped > 0 
         ? `${questions.length} soal berhasil diimport, ${skipped} baris dilewati (data tidak lengkap)`
@@ -307,10 +325,44 @@ export function QuizTemplateImport({ onImport }: QuizTemplateImportProps) {
                 </div>
               </div>
 
+              {/* Total Points Distribution */}
+              <div className="flex items-center gap-4 p-3 bg-muted/30 rounded-lg border">
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id={`use-distribution-${type.value}`}
+                    checked={useDistribution}
+                    onCheckedChange={(checked) => setUseDistribution(checked === true)}
+                  />
+                  <Label htmlFor={`use-distribution-${type.value}`} className="cursor-pointer flex items-center gap-1.5 text-sm">
+                    <Calculator className="h-4 w-4" />
+                    Distribusi poin merata
+                  </Label>
+                </div>
+                {useDistribution && (
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm whitespace-nowrap">Total:</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={localTotalPoints}
+                      onChange={(e) => setLocalTotalPoints(e.target.value)}
+                      className="w-24 h-8"
+                      placeholder="100"
+                    />
+                    <span className="text-sm text-muted-foreground">poin</span>
+                  </div>
+                )}
+              </div>
+
               <div className="bg-muted/50 p-3 rounded-lg">
                 <p className="text-sm text-muted-foreground">
                   <strong>Petunjuk:</strong> Download template terlebih dahulu, isi soal sesuai format, 
                   lalu upload file yang sudah diisi. Format file: .xlsx atau .xls
+                  {useDistribution && (
+                    <span className="block mt-1">
+                      ⚡ Poin di file akan diabaikan dan didistribusikan merata dari total poin.
+                    </span>
+                  )}
                 </p>
               </div>
             </TabsContent>
