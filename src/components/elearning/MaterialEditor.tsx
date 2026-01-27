@@ -384,6 +384,7 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
                 sections={sections}
                 onChange={setSections}
                 courseId={courseId}
+                classId={classId}
                 lloData={selectedLlo ? { code: selectedLlo.code, description: selectedLlo.description, indikator: selectedLlo.indikator || [] } : undefined}
               />
             </>
