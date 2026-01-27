@@ -283,41 +283,44 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
                 <div
                   key={entry.student_profile_id}
                   className={cn(
-                    'flex items-center gap-3 p-3 rounded-lg border transition-all',
+                    'flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 rounded-lg border transition-all',
                     getRankBgClass(entry.rank, entry.has_submitted)
                   )}
                 >
-                  {/* Rank */}
-                  <div className="w-8 flex justify-center">
-                    {getRankIcon(entry.rank, entry.has_submitted)}
+                  {/* Top row on mobile: Rank, Avatar, Name & NIM */}
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    {/* Rank */}
+                    <div className="w-6 sm:w-8 flex justify-center shrink-0">
+                      {getRankIcon(entry.rank, entry.has_submitted)}
+                    </div>
+
+                    {/* Avatar */}
+                    <Avatar className="h-9 w-9 sm:h-10 sm:w-10 shrink-0">
+                      <AvatarImage src={entry.photo_url || ''} />
+                      <AvatarFallback className="text-xs">
+                        {getInitials(entry.full_name)}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    {/* Name & NIM */}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{entry.full_name}</p>
+                      {entry.nim && (
+                        <p className="text-xs text-muted-foreground">{entry.nim}</p>
+                      )}
+                    </div>
                   </div>
 
-                  {/* Avatar */}
-                  <Avatar className="h-10 w-10 shrink-0">
-                    <AvatarImage src={entry.photo_url || ''} />
-                    <AvatarFallback className="text-xs">
-                      {getInitials(entry.full_name)}
-                    </AvatarFallback>
-                  </Avatar>
-
-                  {/* Name & NIM */}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{entry.full_name}</p>
-                    {entry.nim && (
-                      <p className="text-xs text-muted-foreground">{entry.nim}</p>
-                    )}
-                  </div>
-
-                  {/* Score & Attempts */}
-                  <div className="flex flex-col items-end shrink-0">
+                  {/* Score & Attempts - second row on mobile */}
+                  <div className="flex items-center justify-between sm:justify-end gap-2 pl-9 sm:pl-0 shrink-0">
                     {entry.has_submitted ? (
                       <>
-                        <span className={cn('font-bold text-lg', getScoreColor(entry.best_score))}>
-                          {entry.best_score?.toFixed(0) ?? 0}%
-                        </span>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1 sm:order-1">
                           <TrendingUp className="h-3 w-3" />
-                          {entry.attempts}x
+                          {entry.attempts}x percobaan
+                        </span>
+                        <span className={cn('font-bold text-base sm:text-lg sm:order-2 sm:ml-2', getScoreColor(entry.best_score))}>
+                          {entry.best_score?.toFixed(0) ?? 0}%
                         </span>
                       </>
                     ) : (
