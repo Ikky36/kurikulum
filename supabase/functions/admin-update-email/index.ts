@@ -62,10 +62,19 @@ serve(async (req) => {
     }
 
     // Parse request body
-    const { userId, password } = await req.json();
+    const { userId, email } = await req.json();
 
-    if (!userId || !password) {
-      return new Response(JSON.stringify({ error: "Missing required fields" }), {
+    if (!userId || !email) {
+      return new Response(JSON.stringify({ error: "Missing required fields: userId and email" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return new Response(JSON.stringify({ error: "Invalid email format" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -85,18 +94,54 @@ serve(async (req) => {
       });
     }
 
-    // Update user password with admin API
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
-      password,
-    });
+    // Check if new email is already in use by another user
+    const { data: existingEmail } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .eq("email", email)
+      .neq("id", userId)
+      .maybeSingle();
 
-    if (updateError) {
-      console.log("Password update error:", updateError.message);
-      return new Response(JSON.stringify({ error: updateError.message }), {
+    if (existingEmail) {
+      return new Response(JSON.stringify({ error: "Email sudah digunakan oleh akun lain" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Update user email in auth.users with admin API
+    const { error: updateAuthError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
+      email,
+      email_confirm: true, // Auto-confirm the new email
+    });
+
+    if (updateAuthError) {
+      console.log("Email update error in auth:", updateAuthError.message);
+      return new Response(JSON.stringify({ error: updateAuthError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Also update email in profiles table
+    const { error: updateProfileError } = await supabaseAdmin
+      .from("profiles")
+      .update({ email })
+      .eq("id", userId);
+
+    if (updateProfileError) {
+      console.log("Email update error in profiles:", updateProfileError.message);
+      // Try to revert auth email if profile update fails
+      await supabaseAdmin.auth.admin.updateUserById(userId, {
+        email: existingUser.user.email,
+      });
+      return new Response(JSON.stringify({ error: "Failed to update profile email: " + updateProfileError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log("Email updated successfully for user:", userId, "to:", email);
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

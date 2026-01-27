@@ -416,10 +416,19 @@ export default function DashboardAdmin() {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: async ({ id, password, ...userData }: Partial<Profile> & { id: string; password?: string }) => {
-      // Update profile data
+    mutationFn: async ({ id, password, email, originalEmail, ...userData }: Partial<Profile> & { id: string; password?: string; originalEmail?: string }) => {
+      // Update profile data (excluding email which is handled separately)
       const { error } = await supabase.from('profiles').update(userData).eq('id', id);
       if (error) throw error;
+      
+      // If email changed, update via edge function
+      if (email && originalEmail && email !== originalEmail) {
+        const { data, error: emailError } = await supabase.functions.invoke('admin-update-email', {
+          body: { userId: id, email },
+        });
+        if (emailError) throw emailError;
+        if (data?.error) throw new Error(data.error);
+      }
       
       // If password is provided, update via edge function
       if (password) {
@@ -744,6 +753,7 @@ export default function DashboardAdmin() {
       const updateData: any = {
         full_name: userFullName,
         email: userEmail,
+        originalEmail: editingUser.email, // Track original email for change detection
         role: userRole,
         nim: userRole === 'mahasiswa' ? userNim : null,
         nip: userRole === 'dosen' ? userNip : null,
@@ -932,7 +942,10 @@ export default function DashboardAdmin() {
                           </div>
                           <div className="space-y-2">
                             <Label>Email</Label>
-                            <Input type="email" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} placeholder="email@example.com" disabled={!!editingUser} />
+                            <Input type="email" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} placeholder="email@example.com" />
+                            {editingUser && userEmail !== editingUser.email && (
+                              <p className="text-xs text-warning">Email akan diubah dari {editingUser.email}</p>
+                            )}
                           </div>
                           <div className="space-y-2">
                             <Label>{editingUser ? 'Password Baru (opsional)' : 'Password'}</Label>
