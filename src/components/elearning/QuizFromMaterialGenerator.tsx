@@ -56,6 +56,7 @@ export function QuizFromMaterialGenerator({
   const [selectedSections, setSelectedSections] = useState<Map<string, Set<string>>>(new Map());
   const [questionType, setQuestionType] = useState('multiple_choice');
   const [questionCount, setQuestionCount] = useState('5');
+  const [totalPoints, setTotalPoints] = useState('100');
   const [languageMode, setLanguageMode] = useState<LanguageMode>('indonesian');
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -226,8 +227,21 @@ export function QuizFromMaterialGenerator({
             questions = JSON.parse(content);
           }
           
-          onGenerated(questions);
-          toast({ title: 'Sukses', description: `${questions.length} soal berhasil di-generate!` });
+          // Calculate points per question
+          const totalPointsNum = parseInt(totalPoints) || 100;
+          const questionCountNum = questions.length;
+          const pointsPerQuestion = questionCountNum > 0 
+            ? Math.round((totalPointsNum / questionCountNum) * 100) / 100 
+            : 10;
+          
+          // Assign points to each question
+          const questionsWithPoints = questions.map((q: any) => ({
+            ...q,
+            points: pointsPerQuestion,
+          }));
+          
+          onGenerated(questionsWithPoints);
+          toast({ title: 'Sukses', description: `${questions.length} soal berhasil di-generate! (${pointsPerQuestion} poin per soal)` });
         } catch (parseError) {
           console.error('Failed to parse quiz questions:', parseError);
           toast({
@@ -372,16 +386,33 @@ export function QuizFromMaterialGenerator({
         </div>
 
         {/* Question Count */}
-        <div className="space-y-2">
-          <Label>Jumlah Soal</Label>
-          <Input
-            type="number"
-            min={1}
-            max={50}
-            value={questionCount}
-            onChange={(e) => setQuestionCount(e.target.value)}
-            placeholder="Masukkan jumlah soal"
-          />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Jumlah Soal</Label>
+            <Input
+              type="number"
+              min={1}
+              max={50}
+              value={questionCount}
+              onChange={(e) => setQuestionCount(e.target.value)}
+              placeholder="Masukkan jumlah soal"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Total Poin</Label>
+            <Input
+              type="number"
+              min={1}
+              value={totalPoints}
+              onChange={(e) => setTotalPoints(e.target.value)}
+              placeholder="Masukkan total poin"
+            />
+            {parseInt(questionCount) > 0 && parseInt(totalPoints) > 0 && (
+              <p className="text-xs text-muted-foreground">
+                ≈ {Math.round((parseInt(totalPoints) / parseInt(questionCount)) * 100) / 100} poin per soal
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Language Mode */}

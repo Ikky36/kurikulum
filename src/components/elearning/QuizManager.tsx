@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuizQuestions, useBatchCreateQuestions, useDeleteQuizQuestion, useUpdateQuizQuestion, useCourseLLOs } from '@/hooks/useElearningMaterials';
+import { useQuizQuestions, useBatchCreateQuestions, useDeleteQuizQuestion, useUpdateQuizQuestion, useCourseLLOs, useBatchUpdateQuestionPoints } from '@/hooks/useElearningMaterials';
 import { useQuestionBank, useAddToQuestionBank, useBatchAddToQuestionBank, QuestionBankItem } from '@/hooks/useQuestionBank';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import { SEBConfigGenerator } from './SEBConfigGenerator';
 import { AIContentGenerator } from './AIContentGenerator';
 import { QuizFromMaterialGenerator } from './QuizFromMaterialGenerator';
 import { QuestionBankDialog } from './QuestionBankDialog';
+import { PointsDistributor } from './PointsDistributor';
 import { QuizPreview } from '@/components/quiz/QuizPreview';
 import { MatchingQuestionEditor } from '@/components/quiz/MatchingQuestionEditor';
 import { BulkSelectProvider, useBulkSelect, BulkSelectCheckbox, BulkSelectAllCheckbox } from '@/components/ui/bulk-select-table';
@@ -360,11 +361,13 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
   const batchCreate = useBatchCreateQuestions();
   const deleteQuestion = useDeleteQuizQuestion();
   const updateQuestion = useUpdateQuizQuestion();
+  const batchUpdatePoints = useBatchUpdateQuestionPoints();
   const addToBank = useAddToQuestionBank();
   const batchAddToBank = useBatchAddToQuestionBank();
 
   const [aiQuestionType, setAiQuestionType] = useState('multiple_choice');
   const [aiQuestionCount, setAiQuestionCount] = useState('5');
+  const [aiTotalPoints, setAiTotalPoints] = useState('100');
   const [selectedLloId, setSelectedLloId] = useState('');
   const [showImport, setShowImport] = useState(false);
   const [showSebConfig, setShowSebConfig] = useState(false);
@@ -462,6 +465,10 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
         }
 
         const questionCode = `Q${(startNum + idx).toString().padStart(3, '0')}`;
+        
+        // Calculate points per question based on total points
+        const totalPointsNum = parseInt(aiTotalPoints) || 100;
+        const pointsPerQuestion = Math.round((totalPointsNum / parsedQuestions.length) * 100) / 100;
 
         return {
           assignment_id: assignmentId,
@@ -471,7 +478,7 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
           options: normalizedOptions ? JSON.stringify(normalizedOptions) : null,
           correct_answer: JSON.stringify(q.correct_answer),
           feedback: q.feedback || q.explanation || null,
-          points: q.points || 10,
+          points: pointsPerQuestion,
           order_index: (questions?.length || 0) + idx + 1,
         };
       });
@@ -927,16 +934,34 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <Label>Jumlah Soal yang Ingin Di-generate</Label>
-                <Input 
-                  type="number" 
-                  min="1" 
-                  max="20" 
-                  value={aiQuestionCount} 
-                  onChange={(e) => setAiQuestionCount(e.target.value)}
-                  className="h-11 max-w-[150px]"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Jumlah Soal yang Ingin Di-generate</Label>
+                  <Input 
+                    type="number" 
+                    min="1" 
+                    max="20" 
+                    value={aiQuestionCount} 
+                    onChange={(e) => setAiQuestionCount(e.target.value)}
+                    className="h-11"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Total Poin</Label>
+                  <Input 
+                    type="number" 
+                    min="1" 
+                    value={aiTotalPoints} 
+                    onChange={(e) => setAiTotalPoints(e.target.value)}
+                    className="h-11"
+                    placeholder="100"
+                  />
+                  {parseInt(aiQuestionCount) > 0 && parseInt(aiTotalPoints) > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      ≈ {Math.round((parseInt(aiTotalPoints) / parseInt(aiQuestionCount)) * 100) / 100} poin per soal
+                    </p>
+                  )}
+                </div>
               </div>
 
               <AIContentGenerator
@@ -946,6 +971,7 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
                 indicators={selectedLlo?.indikator || []}
                 questionType={aiQuestionType}
                 questionCount={parseInt(aiQuestionCount)}
+                totalPoints={parseInt(aiTotalPoints)}
               />
             </CardContent>
           </Card>
@@ -1008,7 +1034,20 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
         />
       </BulkSelectProvider>
 
-      {/* Question Bank Dialog */}
+      {/* Points Distributor */}
+      {questions && questions.length > 0 && (
+        <PointsDistributor
+          questionCount={questions.length}
+          onDistribute={async (pointsPerQuestion) => {
+            const questionIds = questions.map((q: any) => q.id);
+            await batchUpdatePoints.mutateAsync({
+              questionIds,
+              points: pointsPerQuestion,
+            });
+          }}
+          isLoading={batchUpdatePoints.isPending}
+        />
+      )}
       <QuestionBankDialog
         open={showQuestionBank}
         onOpenChange={setShowQuestionBank}
