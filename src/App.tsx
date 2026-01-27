@@ -17,6 +17,7 @@ import DashboardMahasiswa from "./pages/dashboard/DashboardMahasiswa";
 import DashboardDosen from "./pages/dashboard/DashboardDosen";
 import DashboardAdmin from "./pages/dashboard/DashboardAdmin";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
 import Kurikulum from "./pages/Kurikulum";
 import ELearning from "./pages/ELearning";
 import QuizTaking from "./pages/QuizTaking";
@@ -51,6 +52,7 @@ function AppContent() {
           <Route path="/dashboard/dosen" element={<DashboardDosen />} />
           <Route path="/dashboard/admin" element={<DashboardAdmin />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/profile" element={<Profile />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
