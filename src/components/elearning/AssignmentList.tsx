@@ -240,7 +240,8 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
                   <div className="pt-2 border-t">
                     <AssignmentLeaderboard 
                       assignmentId={assignment.id} 
-                      assignmentTitle={assignment.title} 
+                      assignmentTitle={assignment.title}
+                      classId={classId}
                     />
                   </div>
                 )}
