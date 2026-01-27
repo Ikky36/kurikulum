@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
@@ -373,17 +374,14 @@ export function QuizFromMaterialGenerator({
         {/* Question Count */}
         <div className="space-y-2">
           <Label>Jumlah Soal</Label>
-          <Select value={questionCount} onValueChange={setQuestionCount}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="3">3 soal</SelectItem>
-              <SelectItem value="5">5 soal</SelectItem>
-              <SelectItem value="10">10 soal</SelectItem>
-              <SelectItem value="15">15 soal</SelectItem>
-            </SelectContent>
-          </Select>
+          <Input
+            type="number"
+            min={1}
+            max={50}
+            value={questionCount}
+            onChange={(e) => setQuestionCount(e.target.value)}
+            placeholder="Masukkan jumlah soal"
+          />
         </div>
 
         {/* Language Mode */}
