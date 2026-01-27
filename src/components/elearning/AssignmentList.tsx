@@ -14,6 +14,7 @@ import { ClipboardCheck, FileUp, HelpCircle, Trash2, Pencil, Play, Plus, Clock, 
 import { AssignmentEditor } from './AssignmentEditor';
 import { QuizManager } from './QuizManager';
 import { QuizResultViewer } from './QuizResultViewer';
+import { AssignmentLeaderboard } from './AssignmentLeaderboard';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 
@@ -233,6 +234,16 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
                     </span>
                   )}
                 </div>
+
+                {/* Leaderboard Button */}
+                {assignment.assignment_type === 'quiz' && assignment.is_published && (
+                  <div className="pt-2 border-t">
+                    <AssignmentLeaderboard 
+                      assignmentId={assignment.id} 
+                      assignmentTitle={assignment.title} 
+                    />
+                  </div>
+                )}
 
                 {/* Actions */}
                 <div className="flex items-center justify-between gap-2 pt-3 border-t">
