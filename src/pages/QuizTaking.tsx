@@ -681,46 +681,55 @@ export default function QuizTaking() {
           </Card>
         )}
 
-        {/* Navigation */}
-        <div className="flex items-center justify-between">
+        {/* Question Number Navigation */}
+        <Card className="mb-4">
+          <CardContent className="py-3">
+            <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
+              {questions?.map((q, idx) => (
+                <Button
+                  key={idx}
+                  variant={currentQuestionIndex === idx ? 'default' : answers[q.id] ? 'secondary' : 'outline'}
+                  size="sm"
+                  className="w-full h-9 text-sm font-medium"
+                  onClick={() => setCurrentQuestionIndex(idx)}
+                >
+                  {idx + 1}
+                </Button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Navigation Buttons */}
+        <div className="flex items-center justify-between gap-3">
           <Button
             variant="outline"
             onClick={() => setCurrentQuestionIndex(prev => Math.max(0, prev - 1))}
             disabled={currentQuestionIndex === 0}
+            className="flex-1 sm:flex-none"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
-            Sebelumnya
+            <span className="hidden sm:inline">Sebelumnya</span>
+            <span className="sm:hidden">Prev</span>
           </Button>
-
-          <div className="flex gap-2 flex-wrap justify-center">
-            {questions?.map((_, idx) => (
-              <Button
-                key={idx}
-                variant={currentQuestionIndex === idx ? 'default' : answers[questions[idx].id] ? 'secondary' : 'outline'}
-                size="sm"
-                className="w-10 h-10"
-                onClick={() => setCurrentQuestionIndex(idx)}
-              >
-                {idx + 1}
-              </Button>
-            ))}
-          </div>
 
           {currentQuestionIndex < (questions?.length || 0) - 1 ? (
             <Button
               onClick={() => setCurrentQuestionIndex(prev => Math.min((questions?.length || 0) - 1, prev + 1))}
+              className="flex-1 sm:flex-none"
             >
-              Selanjutnya
+              <span className="hidden sm:inline">Selanjutnya</span>
+              <span className="sm:hidden">Next</span>
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={isSubmitting} className="gap-2">
+            <Button onClick={handleSubmit} disabled={isSubmitting} className="flex-1 sm:flex-none gap-2">
               {isSubmitting ? (
                 <>Submitting...</>
               ) : (
                 <>
                   <Send className="h-4 w-4" />
-                  Submit Quiz
+                  Submit
                 </>
               )}
             </Button>
