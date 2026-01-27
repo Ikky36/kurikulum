@@ -16,9 +16,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Wand2, ChevronDown, Lock, BookOpen, ClipboardCheck, Sparkles, FileText, Box, Play } from 'lucide-react';
+import { Loader2, Wand2, ChevronDown, Lock, BookOpen, ClipboardCheck, Sparkles, FileText, Box, Play, Layers } from 'lucide-react';
 import { AdvancedRichEditor } from './AdvancedRichEditor';
 import { AIContentGenerator } from './AIContentGenerator';
+import { MaterialSectionEditor, type MaterialSection } from './MaterialSectionEditor';
+import { AIMultiSectionGenerator } from './AIMultiSectionGenerator';
 import { H5PViewer } from './H5PViewer';
 import { containsArabic } from '@/components/ui/arabic-text';
 
@@ -40,6 +42,7 @@ type LLOWithCLO = {
 type MaterialWithPrereqs = ElearningMaterial & {
   prerequisite_material_id?: string | null;
   prerequisite_assignment_id?: string | null;
+  sections?: MaterialSection[] | null;
 };
 
 export function MaterialEditor({ classId, courseId, material, onSuccess }: MaterialEditorProps) {
@@ -52,11 +55,23 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
 
   const extendedMaterial = material as MaterialWithPrereqs | null;
 
+  // Parse existing sections
+  const parseExistingSections = (): MaterialSection[] => {
+    if (extendedMaterial?.sections && Array.isArray(extendedMaterial.sections) && extendedMaterial.sections.length > 0) {
+      return extendedMaterial.sections;
+    }
+    return [];
+  };
+
   const [title, setTitle] = useState(material?.title || '');
   const [contentType, setContentType] = useState<'text' | 'h5p'>(
     material?.content_type === 'h5p' ? 'h5p' : 'text'
   );
+  const [contentMode, setContentMode] = useState<'single' | 'sections'>(
+    parseExistingSections().length > 0 ? 'sections' : 'single'
+  );
   const [content, setContent] = useState(material?.content || '');
+  const [sections, setSections] = useState<MaterialSection[]>(parseExistingSections());
   const [h5pUrl, setH5pUrl] = useState(material?.file_url || '');
   const [selectedLloId, setSelectedLloId] = useState(material?.llo_id || '');
   const [isPublished, setIsPublished] = useState(material?.is_published || false);
@@ -64,6 +79,7 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
   const [prerequisiteAssignmentId, setPrerequisiteAssignmentId] = useState(extendedMaterial?.prerequisite_assignment_id || '');
   const [embeddedQuizId, setEmbeddedQuizId] = useState('');
   const [showAI, setShowAI] = useState(false);
+  const [showMultiSectionAI, setShowMultiSectionAI] = useState(false);
   const [showPrerequisites, setShowPrerequisites] = useState(false);
 
   const typedLlos = (llos || []) as LLOWithCLO[];
@@ -84,15 +100,30 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
     setShowAI(false);
   };
 
+  const handleMultiSectionGenerated = (generatedSections: MaterialSection[]) => {
+    setSections(generatedSections);
+    setContentMode('sections');
+    if (!title && selectedLlo) {
+      setTitle(`Materi ${selectedLlo.code}`);
+    }
+    setShowMultiSectionAI(false);
+  };
+
   const handleSubmit = async () => {
     if (!title.trim()) {
       toast({ title: 'Error', description: 'Judul materi harus diisi', variant: 'destructive' });
       return;
     }
 
-    if (contentType === 'text' && !content.trim()) {
-      toast({ title: 'Error', description: 'Konten materi harus diisi', variant: 'destructive' });
-      return;
+    if (contentType === 'text') {
+      if (contentMode === 'single' && !content.trim()) {
+        toast({ title: 'Error', description: 'Konten materi harus diisi', variant: 'destructive' });
+        return;
+      }
+      if (contentMode === 'sections' && sections.length === 0) {
+        toast({ title: 'Error', description: 'Minimal tambahkan satu section', variant: 'destructive' });
+        return;
+      }
     }
 
     if (contentType === 'h5p' && !h5pUrl.trim()) {
@@ -101,16 +132,31 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
     }
 
     try {
-      // If there's an embedded quiz, append a marker to content
+      // Combine sections into content if using sections mode
       let finalContent = content;
+      let finalSections: MaterialSection[] = [];
+      
+      if (contentType === 'text' && contentMode === 'sections') {
+        // Save sections as JSON and also generate combined content for display
+        finalSections = sections;
+        finalContent = sections.map(s => 
+          `<div class="material-section" data-section-id="${s.id}">
+            <h2 class="section-title">${s.title}</h2>
+            <div class="section-content">${s.content}</div>
+          </div>`
+        ).join('\n');
+      }
+
+      // If there's an embedded quiz, append a marker to content
       if (embeddedQuizId && contentType === 'text') {
-        finalContent = content + `\n<!-- EMBEDDED_QUIZ:${embeddedQuizId} -->`;
+        finalContent = finalContent + `\n<!-- EMBEDDED_QUIZ:${embeddedQuizId} -->`;
       }
 
       const data: any = {
         title,
         content_type: contentType,
         content: contentType === 'text' ? finalContent : null,
+        sections: contentMode === 'sections' ? finalSections : [],
         file_url: contentType === 'h5p' ? h5pUrl : null,
         llo_id: selectedLloId || null,
         is_published: isPublished,
@@ -260,35 +306,88 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
         </CollapsibleContent>
       </Collapsible>
 
-      {/* AI Content Generation */}
-      <Collapsible open={showAI} onOpenChange={setShowAI}>
-        <CollapsibleTrigger asChild>
-          <Button variant="outline" className="w-full justify-between h-12 border-primary/30 hover:border-primary">
-            <span className="flex items-center gap-2 text-primary">
-              <Sparkles className="h-4 w-4" />
-              Generate Materi dengan AI
-            </span>
-            <ChevronDown className={`h-4 w-4 transition-transform ${showAI ? 'rotate-180' : ''}`} />
-          </Button>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="pt-4">
-          <AIContentGenerator
-            type="material"
-            onGenerated={handleAIGenerated}
-            defaultTopic={selectedLlo ? `${selectedLlo.code}: ${selectedLlo.description}` : ''}
-            indicators={selectedLlo?.indikator || []}
-          />
-        </CollapsibleContent>
-      </Collapsible>
-
       {/* Content based on type */}
       {contentType === 'text' ? (
         <>
-          {/* Advanced Rich Content Editor */}
+          {/* Content Mode Selection */}
           <div className="space-y-2">
-            <Label className="text-base font-medium">Konten Materi</Label>
-            <AdvancedRichEditor value={content} onChange={setContent} />
+            <Label className="text-base font-medium">Mode Konten</Label>
+            <Tabs value={contentMode} onValueChange={(v) => setContentMode(v as 'single' | 'sections')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="single" className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Konten Tunggal
+                </TabsTrigger>
+                <TabsTrigger value="sections" className="gap-2">
+                  <Layers className="h-4 w-4" />
+                  Multi Section
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
+
+          {contentMode === 'single' ? (
+            <>
+              {/* AI Content Generation for single */}
+              <Collapsible open={showAI} onOpenChange={setShowAI}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between h-12 border-primary/30 hover:border-primary">
+                    <span className="flex items-center gap-2 text-primary">
+                      <Sparkles className="h-4 w-4" />
+                      Generate Materi dengan AI
+                    </span>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${showAI ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-4">
+                  <AIContentGenerator
+                    type="material"
+                    onGenerated={handleAIGenerated}
+                    defaultTopic={selectedLlo ? `${selectedLlo.code}: ${selectedLlo.description}` : ''}
+                    indicators={selectedLlo?.indikator || []}
+                    lloData={selectedLlo ? { code: selectedLlo.code, description: selectedLlo.description, indikator: selectedLlo.indikator || [] } : undefined}
+                  />
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Advanced Rich Content Editor */}
+              <div className="space-y-2">
+                <Label className="text-base font-medium">Konten Materi</Label>
+                <AdvancedRichEditor value={content} onChange={setContent} />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* AI Multi-Section Generation */}
+              <Collapsible open={showMultiSectionAI} onOpenChange={setShowMultiSectionAI}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="outline" className="w-full justify-between h-12 border-primary/30 hover:border-primary">
+                    <span className="flex items-center gap-2 text-primary">
+                      <Sparkles className="h-4 w-4" />
+                      Generate Multi-Section dengan AI
+                    </span>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${showMultiSectionAI ? 'rotate-180' : ''}`} />
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-4">
+                  <AIMultiSectionGenerator
+                    onGenerated={handleMultiSectionGenerated}
+                    courseTitle={title}
+                    lloData={selectedLlo ? { code: selectedLlo.code, description: selectedLlo.description, indikator: selectedLlo.indikator || [] } : undefined}
+                    indicators={selectedLlo?.indikator || []}
+                  />
+                </CollapsibleContent>
+              </Collapsible>
+
+              {/* Section Editor */}
+              <MaterialSectionEditor
+                sections={sections}
+                onChange={setSections}
+                courseId={courseId}
+                lloData={selectedLlo ? { code: selectedLlo.code, description: selectedLlo.description, indikator: selectedLlo.indikator || [] } : undefined}
+              />
+            </>
+          )}
 
           {/* Embedded Quiz Selection */}
           {quizAssignments.length > 0 && (
@@ -335,8 +434,8 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
         </div>
       )}
 
-      {/* Preview */}
-      {content && (
+      {/* Preview for single content */}
+      {contentMode === 'single' && content && (
         <Collapsible>
           <CollapsibleTrigger asChild>
             <Button variant="ghost" className="w-full justify-between">
@@ -357,59 +456,6 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
                   } : undefined}
                   dangerouslySetInnerHTML={{ __html: content }}
                 />
-                <style>{`
-                  .material-preview .video-embed {
-                    position: relative;
-                    padding-bottom: 56.25%;
-                    height: 0;
-                    margin: 1rem 0;
-                    background: hsl(var(--muted));
-                    border-radius: 0.5rem;
-                    overflow: hidden;
-                  }
-                  .material-preview .video-embed iframe {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    border: none;
-                    border-radius: 0.5rem;
-                  }
-                  .material-preview .audio-embed {
-                    margin: 1rem 0;
-                    border-radius: 0.75rem;
-                    overflow: hidden;
-                  }
-                  .material-preview .audio-embed iframe {
-                    display: block;
-                    border: none;
-                  }
-                  .material-preview .media-container {
-                    margin: 1rem 0;
-                  }
-                  .material-preview video {
-                    max-width: 100%;
-                    border-radius: 0.5rem;
-                  }
-                  .material-preview audio {
-                    width: 100%;
-                  }
-                  .material-preview img {
-                    max-width: 100%;
-                    height: auto;
-                    border-radius: 0.5rem;
-                  }
-                  .material-preview table {
-                    width: 100%;
-                    border-collapse: collapse;
-                  }
-                  .material-preview th,
-                  .material-preview td {
-                    border: 1px solid hsl(var(--border));
-                    padding: 0.5rem;
-                  }
-                `}</style>
               </CardContent>
             </Card>
           </CollapsibleContent>

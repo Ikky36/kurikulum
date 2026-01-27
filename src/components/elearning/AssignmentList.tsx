@@ -362,6 +362,7 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
           {managingQuiz && (
             <QuizManager
               assignmentId={managingQuiz.id}
+              classId={classId}
               courseId={courseId}
               assignmentTitle={managingQuiz.title}
               isSafeExamMode={managingQuiz.is_safe_exam_mode}
