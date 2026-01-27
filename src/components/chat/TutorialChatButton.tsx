@@ -145,7 +145,7 @@ export function TutorialChatButton() {
     return (
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full shadow-lg hover:scale-105 transition-transform bg-primary hover:bg-primary/90"
+        className="fixed bottom-20 right-6 z-50 h-14 w-14 rounded-full shadow-lg hover:scale-105 transition-transform bg-primary hover:bg-primary/90"
         size="icon"
       >
         <MessageCircle className="h-6 w-6" />
@@ -156,7 +156,7 @@ export function TutorialChatButton() {
   return (
     <div 
       className={cn(
-        "fixed bottom-6 right-6 z-50 bg-background border rounded-lg shadow-2xl transition-all duration-300",
+        "fixed bottom-20 right-6 z-50 bg-background border rounded-lg shadow-2xl transition-all duration-300",
         isMinimized ? "w-72 h-14" : "w-96 h-[500px] max-h-[80vh]"
       )}
     >
