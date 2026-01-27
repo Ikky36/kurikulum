@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Trophy, Medal, Award, Crown, TrendingUp, Users, MinusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -196,7 +197,7 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
           <span className="hidden sm:inline">Leaderboard</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md sm:max-w-lg">
+      <DialogContent className="max-w-md sm:max-w-lg lg:max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-yellow-500" />
@@ -225,114 +226,197 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
             <p className="text-muted-foreground">Tidak ada anggota kelas</p>
           </div>
         ) : (
-          <ScrollArea className="max-h-[60vh]">
-            <div className="space-y-2 pr-4">
-              {/* Top 3 Podium for larger screens */}
-              {topThree.length >= 3 && (
-                <div className="hidden sm:flex justify-center items-end gap-2 mb-6 pt-4">
-                  {/* 2nd Place */}
-                  <div className="flex flex-col items-center">
-                    <Avatar className="h-12 w-12 border-2 border-gray-300">
-                      <AvatarImage src={topThree[1]?.photo_url || ''} />
-                      <AvatarFallback className="bg-gray-100 text-gray-600 text-sm">
-                        {getInitials(topThree[1]?.full_name || '')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="mt-2 w-16 h-16 bg-gradient-to-t from-gray-200 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-t-lg flex items-center justify-center">
-                      <Medal className="h-6 w-6 text-gray-400" />
-                    </div>
-                    <p className="text-xs font-medium mt-1 text-center truncate w-20">{topThree[1]?.full_name.split(' ')[0]}</p>
-                    <Badge variant="secondary" className="text-xs mt-1">{topThree[1]?.best_score?.toFixed(0) ?? 0}%</Badge>
-                  </div>
-                  
-                  {/* 1st Place */}
-                  <div className="flex flex-col items-center -mt-4">
-                    <Crown className="h-6 w-6 text-yellow-500 mb-1" />
-                    <Avatar className="h-14 w-14 border-2 border-yellow-400">
-                      <AvatarImage src={topThree[0]?.photo_url || ''} />
-                      <AvatarFallback className="bg-yellow-100 text-yellow-700 text-sm">
-                        {getInitials(topThree[0]?.full_name || '')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="mt-2 w-16 h-20 bg-gradient-to-t from-yellow-300 to-yellow-200 dark:from-yellow-600 dark:to-yellow-500 rounded-t-lg flex items-center justify-center">
-                      <span className="text-2xl font-bold text-yellow-700 dark:text-yellow-100">1</span>
-                    </div>
-                    <p className="text-xs font-medium mt-1 text-center max-w-28 leading-tight">{topThree[0]?.full_name}</p>
-                    <Badge className="bg-yellow-100 text-yellow-700 text-xs mt-1">{topThree[0]?.best_score?.toFixed(0) ?? 0}%</Badge>
-                  </div>
-                  
-                  {/* 3rd Place */}
-                  <div className="flex flex-col items-center">
-                    <Avatar className="h-12 w-12 border-2 border-amber-400">
-                      <AvatarImage src={topThree[2]?.photo_url || ''} />
-                      <AvatarFallback className="bg-amber-100 text-amber-700 text-sm">
-                        {getInitials(topThree[2]?.full_name || '')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="mt-2 w-16 h-12 bg-gradient-to-t from-amber-200 to-amber-100 dark:from-amber-700 dark:to-amber-600 rounded-t-lg flex items-center justify-center">
-                      <Award className="h-5 w-5 text-amber-600 dark:text-amber-300" />
-                    </div>
-                    <p className="text-xs font-medium mt-1 text-center truncate w-20">{topThree[2]?.full_name.split(' ')[0]}</p>
-                    <Badge variant="secondary" className="text-xs mt-1">{topThree[2]?.best_score?.toFixed(0) ?? 0}%</Badge>
-                  </div>
-                </div>
-              )}
-
-              {/* Full Leaderboard List */}
-              {leaderboard.map((entry) => (
-                <div
-                  key={entry.student_profile_id}
-                  className={cn(
-                    'flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 rounded-lg border transition-all',
-                    getRankBgClass(entry.rank, entry.has_submitted)
-                  )}
-                >
-                  {/* Top row on mobile: Rank, Avatar, Name & NIM */}
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    {/* Rank */}
-                    <div className="w-6 sm:w-8 flex justify-center shrink-0">
-                      {getRankIcon(entry.rank, entry.has_submitted)}
-                    </div>
-
-                    {/* Avatar */}
-                    <Avatar className="h-9 w-9 sm:h-10 sm:w-10 shrink-0">
-                      <AvatarImage src={entry.photo_url || ''} />
-                      <AvatarFallback className="text-xs">
-                        {getInitials(entry.full_name)}
-                      </AvatarFallback>
-                    </Avatar>
-
-                    {/* Name & NIM */}
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm truncate">{entry.full_name}</p>
-                      {entry.nim && (
-                        <p className="text-xs text-muted-foreground">{entry.nim}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Score & Attempts - second row on mobile */}
-                  <div className="flex items-center justify-between sm:justify-end gap-2 pl-9 sm:pl-0 shrink-0">
-                    {entry.has_submitted ? (
-                      <>
-                        <span className="text-xs text-muted-foreground flex items-center gap-1 sm:order-1">
-                          <TrendingUp className="h-3 w-3" />
-                          {entry.attempts}x percobaan
-                        </span>
-                        <span className={cn('font-bold text-base sm:text-lg sm:order-2 sm:ml-2', getScoreColor(entry.best_score))}>
-                          {entry.best_score?.toFixed(0) ?? 0}%
-                        </span>
-                      </>
-                    ) : (
-                      <Badge variant="outline" className="text-xs text-muted-foreground">
-                        Belum mengerjakan
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              ))}
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden lg:block">
+              <ScrollArea className="max-h-[60vh]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-16 text-center">Rank</TableHead>
+                      <TableHead>Mahasiswa</TableHead>
+                      <TableHead>NIM</TableHead>
+                      <TableHead className="text-center">Percobaan</TableHead>
+                      <TableHead className="text-right">Skor</TableHead>
+                      <TableHead className="text-center">Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {leaderboard.map((entry) => (
+                      <TableRow 
+                        key={entry.student_profile_id}
+                        className={cn(
+                          !entry.has_submitted && 'opacity-60'
+                        )}
+                      >
+                        <TableCell className="text-center">
+                          <div className="flex justify-center">
+                            {getRankIcon(entry.rank, entry.has_submitted)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-9 w-9">
+                              <AvatarImage src={entry.photo_url || ''} />
+                              <AvatarFallback className="text-xs">
+                                {getInitials(entry.full_name)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span className="font-medium">{entry.full_name}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {entry.nim || '-'}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {entry.has_submitted ? (
+                            <span className="text-muted-foreground flex items-center justify-center gap-1">
+                              <TrendingUp className="h-3 w-3" />
+                              {entry.attempts}x
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {entry.has_submitted ? (
+                            <span className={cn('font-bold text-lg', getScoreColor(entry.best_score))}>
+                              {entry.best_score?.toFixed(0) ?? 0}%
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {entry.has_submitted ? (
+                            <Badge variant="default" className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                              Selesai
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground">
+                              Belum mengerjakan
+                            </Badge>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
             </div>
-          </ScrollArea>
+
+            {/* Mobile/Tablet Card View */}
+            <div className="lg:hidden">
+              <ScrollArea className="max-h-[60vh]">
+                <div className="space-y-2 pr-4">
+                  {/* Top 3 Podium for tablet */}
+                  {topThree.length >= 3 && (
+                    <div className="hidden sm:flex lg:hidden justify-center items-end gap-2 mb-6 pt-4">
+                      {/* 2nd Place */}
+                      <div className="flex flex-col items-center">
+                        <Avatar className="h-12 w-12 border-2 border-gray-300">
+                          <AvatarImage src={topThree[1]?.photo_url || ''} />
+                          <AvatarFallback className="bg-gray-100 text-gray-600 text-sm">
+                            {getInitials(topThree[1]?.full_name || '')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="mt-2 w-16 h-16 bg-gradient-to-t from-gray-200 to-gray-100 dark:from-gray-700 dark:to-gray-600 rounded-t-lg flex items-center justify-center">
+                          <Medal className="h-6 w-6 text-gray-400" />
+                        </div>
+                        <p className="text-xs font-medium mt-1 text-center truncate w-20">{topThree[1]?.full_name.split(' ')[0]}</p>
+                        <Badge variant="secondary" className="text-xs mt-1">{topThree[1]?.best_score?.toFixed(0) ?? 0}%</Badge>
+                      </div>
+                      
+                      {/* 1st Place */}
+                      <div className="flex flex-col items-center -mt-4">
+                        <Crown className="h-6 w-6 text-yellow-500 mb-1" />
+                        <Avatar className="h-14 w-14 border-2 border-yellow-400">
+                          <AvatarImage src={topThree[0]?.photo_url || ''} />
+                          <AvatarFallback className="bg-yellow-100 text-yellow-700 text-sm">
+                            {getInitials(topThree[0]?.full_name || '')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="mt-2 w-16 h-20 bg-gradient-to-t from-yellow-300 to-yellow-200 dark:from-yellow-600 dark:to-yellow-500 rounded-t-lg flex items-center justify-center">
+                          <span className="text-2xl font-bold text-yellow-700 dark:text-yellow-100">1</span>
+                        </div>
+                        <p className="text-xs font-medium mt-1 text-center max-w-28 leading-tight">{topThree[0]?.full_name}</p>
+                        <Badge className="bg-yellow-100 text-yellow-700 text-xs mt-1">{topThree[0]?.best_score?.toFixed(0) ?? 0}%</Badge>
+                      </div>
+                      
+                      {/* 3rd Place */}
+                      <div className="flex flex-col items-center">
+                        <Avatar className="h-12 w-12 border-2 border-amber-400">
+                          <AvatarImage src={topThree[2]?.photo_url || ''} />
+                          <AvatarFallback className="bg-amber-100 text-amber-700 text-sm">
+                            {getInitials(topThree[2]?.full_name || '')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="mt-2 w-16 h-12 bg-gradient-to-t from-amber-200 to-amber-100 dark:from-amber-700 dark:to-amber-600 rounded-t-lg flex items-center justify-center">
+                          <Award className="h-5 w-5 text-amber-600 dark:text-amber-300" />
+                        </div>
+                        <p className="text-xs font-medium mt-1 text-center truncate w-20">{topThree[2]?.full_name.split(' ')[0]}</p>
+                        <Badge variant="secondary" className="text-xs mt-1">{topThree[2]?.best_score?.toFixed(0) ?? 0}%</Badge>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Full Leaderboard List */}
+                  {leaderboard.map((entry) => (
+                    <div
+                      key={entry.student_profile_id}
+                      className={cn(
+                        'flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 rounded-lg border transition-all',
+                        getRankBgClass(entry.rank, entry.has_submitted)
+                      )}
+                    >
+                      {/* Top row on mobile: Rank, Avatar, Name & NIM */}
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        {/* Rank */}
+                        <div className="w-6 sm:w-8 flex justify-center shrink-0">
+                          {getRankIcon(entry.rank, entry.has_submitted)}
+                        </div>
+
+                        {/* Avatar */}
+                        <Avatar className="h-9 w-9 sm:h-10 sm:w-10 shrink-0">
+                          <AvatarImage src={entry.photo_url || ''} />
+                          <AvatarFallback className="text-xs">
+                            {getInitials(entry.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+
+                        {/* Name & NIM */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{entry.full_name}</p>
+                          {entry.nim && (
+                            <p className="text-xs text-muted-foreground">{entry.nim}</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Score & Attempts - second row on mobile */}
+                      <div className="flex items-center justify-between sm:justify-end gap-2 pl-9 sm:pl-0 shrink-0">
+                        {entry.has_submitted ? (
+                          <>
+                            <span className="text-xs text-muted-foreground flex items-center gap-1 sm:order-1">
+                              <TrendingUp className="h-3 w-3" />
+                              {entry.attempts}x percobaan
+                            </span>
+                            <span className={cn('font-bold text-base sm:text-lg sm:order-2 sm:ml-2', getScoreColor(entry.best_score))}>
+                              {entry.best_score?.toFixed(0) ?? 0}%
+                            </span>
+                          </>
+                        ) : (
+                          <Badge variant="outline" className="text-xs text-muted-foreground">
+                            Belum mengerjakan
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            </div>
+          </>
         )}
       </DialogContent>
     </Dialog>
