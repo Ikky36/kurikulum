@@ -826,6 +826,7 @@ export type Database = {
           order_index: number
           prerequisite_assignment_id: string | null
           prerequisite_material_id: string | null
+          sections: Json | null
           title: string
           updated_at: string
         }
@@ -841,6 +842,7 @@ export type Database = {
           order_index?: number
           prerequisite_assignment_id?: string | null
           prerequisite_material_id?: string | null
+          sections?: Json | null
           title: string
           updated_at?: string
         }
@@ -856,6 +858,7 @@ export type Database = {
           order_index?: number
           prerequisite_assignment_id?: string | null
           prerequisite_material_id?: string | null
+          sections?: Json | null
           title?: string
           updated_at?: string
         }

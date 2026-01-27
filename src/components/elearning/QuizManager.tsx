@@ -13,10 +13,11 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Wand2, Trash2, HelpCircle, ChevronDown, Upload, Shield, Sparkles, FileText, CheckCircle, Pencil, Eye, EyeOff, Save, X, Database, Plus, BookmarkPlus, Play, List, CheckSquare } from 'lucide-react';
+import { Loader2, Wand2, Trash2, HelpCircle, ChevronDown, Upload, Shield, Sparkles, FileText, CheckCircle, Pencil, Eye, EyeOff, Save, X, Database, Plus, BookmarkPlus, Play, List, CheckSquare, BookOpen } from 'lucide-react';
 import { QuizTemplateImport, type ParsedQuestion } from './QuizTemplateImport';
 import { SEBConfigGenerator } from './SEBConfigGenerator';
 import { AIContentGenerator } from './AIContentGenerator';
+import { QuizFromMaterialGenerator } from './QuizFromMaterialGenerator';
 import { QuestionBankDialog } from './QuestionBankDialog';
 import { QuizPreview } from '@/components/quiz/QuizPreview';
 import { MatchingQuestionEditor } from '@/components/quiz/MatchingQuestionEditor';
@@ -24,6 +25,7 @@ import { BulkSelectProvider, useBulkSelect, BulkSelectCheckbox, BulkSelectAllChe
 
 interface QuizManagerProps {
   assignmentId: string;
+  classId: string;
   courseId: string;
   assignmentTitle?: string;
   isSafeExamMode?: boolean;
@@ -349,7 +351,7 @@ function QuestionsListWithBulk({
   );
 }
 
-export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', isSafeExamMode, sebPassword, sebQuitPassword }: QuizManagerProps) {
+export function QuizManager({ assignmentId, classId, courseId, assignmentTitle = 'Quiz', isSafeExamMode, sebPassword, sebQuitPassword }: QuizManagerProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const { data: questions, isLoading } = useQuizQuestions(assignmentId);
@@ -367,6 +369,7 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
   const [showImport, setShowImport] = useState(false);
   const [showSebConfig, setShowSebConfig] = useState(false);
   const [showAI, setShowAI] = useState(false);
+  const [showMaterialGenerator, setShowMaterialGenerator] = useState(false);
   const [showAnswers, setShowAnswers] = useState(true);
   const [showQuestionBank, setShowQuestionBank] = useState(false);
   const [showManualAdd, setShowManualAdd] = useState(false);
@@ -476,6 +479,49 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
       await batchCreate.mutateAsync(questionsToInsert);
       toast({ title: 'Sukses', description: `${parsedQuestions.length} soal berhasil di-generate` });
       setShowAI(false);
+      setShowMaterialGenerator(false);
+    } catch (error: any) {
+      console.error('Generate error:', error);
+      toast({ title: 'Error', description: error?.message || 'Gagal generate soal', variant: 'destructive' });
+    }
+  };
+
+  // Handler for questions generated from material sections (already parsed)
+  const handleMaterialGenerated = async (parsedQuestions: any[]) => {
+    try {
+      const startCode = generateNextCode();
+      const startNum = parseInt(startCode.match(/\d+/)?.[0] || '1');
+
+      const questionsToInsert = parsedQuestions.map((q, idx) => {
+        let normalizedOptions = null;
+        if (q.options) {
+          if (Array.isArray(q.options) && q.options.length > 0) {
+            if (typeof q.options[0] === 'object' && q.options[0].text) {
+              normalizedOptions = q.options.map((opt: any) => typeof opt === 'object' ? opt.text : opt);
+            } else {
+              normalizedOptions = q.options;
+            }
+          }
+        }
+
+        const questionCode = `Q${(startNum + idx).toString().padStart(3, '0')}`;
+
+        return {
+          assignment_id: assignmentId,
+          question_code: questionCode,
+          question_type: q.question_type || 'multiple_choice',
+          question_text: q.question_text,
+          options: normalizedOptions ? JSON.stringify(normalizedOptions) : null,
+          correct_answer: JSON.stringify(q.correct_answer),
+          feedback: q.feedback || null,
+          points: q.points || 10,
+          order_index: (questions?.length || 0) + idx + 1,
+        };
+      });
+
+      await batchCreate.mutateAsync(questionsToInsert);
+      toast({ title: 'Sukses', description: `${parsedQuestions.length} soal berhasil di-generate dari materi` });
+      setShowMaterialGenerator(false);
     } catch (error: any) {
       console.error('Generate error:', error);
       toast({ title: 'Error', description: error?.message || 'Gagal generate soal', variant: 'destructive' });
@@ -814,7 +860,7 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
       )}
 
       {/* Action Buttons Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <Button variant="outline" className="h-12" onClick={() => setShowManualAdd(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Tambah Manual
@@ -827,9 +873,13 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
           <Upload className="h-4 w-4 mr-2" />
           Import Excel
         </Button>
-        <Button variant="outline" className="h-12 border-primary/30 text-primary" onClick={() => setShowAI(!showAI)}>
+        <Button variant="outline" className="h-12 border-primary/30 text-primary" onClick={() => { setShowAI(!showAI); setShowMaterialGenerator(false); }}>
           <Sparkles className="h-4 w-4 mr-2" />
           Generate AI
+        </Button>
+        <Button variant="outline" className="h-12 border-secondary/50 text-secondary-foreground" onClick={() => { setShowMaterialGenerator(!showMaterialGenerator); setShowAI(false); }}>
+          <BookOpen className="h-4 w-4 mr-2" />
+          Dari Materi
         </Button>
       </div>
 
@@ -899,6 +949,17 @@ export function QuizManager({ assignmentId, courseId, assignmentTitle = 'Quiz', 
               />
             </CardContent>
           </Card>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Generate from Material Sections */}
+      <Collapsible open={showMaterialGenerator} onOpenChange={setShowMaterialGenerator}>
+        <CollapsibleContent>
+          <QuizFromMaterialGenerator
+            classId={classId}
+            courseId={courseId}
+            onGenerated={handleMaterialGenerated}
+          />
         </CollapsibleContent>
       </Collapsible>
 
