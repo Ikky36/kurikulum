@@ -377,35 +377,44 @@ export function PLOAchievementChart() {
 
             <div className="space-y-3">
               {ploAchievements.map((pa) => (
-                <div key={pa.plo.id} className="flex items-center gap-4 p-3 rounded-lg bg-muted/30 border">
-                  <Badge variant="secondary" className="font-mono shrink-0">{pa.plo.code}</Badge>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm truncate">{pa.plo.description}</p>
-                    {pa.linkedCourses.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {pa.linkedCourses.map((lc) => (
-                          <Badge key={lc.course.id} variant="outline" className="text-xs">
-                            {lc.course.code}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
+                <div key={pa.plo.id} className="p-3 rounded-lg bg-muted/30 border">
+                  {/* Header: Code + Progress */}
+                  <div className="flex items-center gap-3 mb-2">
+                    <Badge variant="secondary" className="font-mono shrink-0">{pa.plo.code}</Badge>
+                    <div className="flex items-center gap-2 flex-1">
+                      <Progress 
+                        value={pa.achievementPercentage} 
+                        className={cn(
+                          "h-2 flex-1",
+                          pa.achievementPercentage >= 60 ? "[&>div]:bg-success" : "[&>div]:bg-destructive"
+                        )}
+                      />
+                      <span className={cn(
+                        "font-bold text-sm shrink-0",
+                        pa.achievementPercentage >= 60 ? "text-success" : "text-destructive"
+                      )}>
+                        {pa.achievementPercentage.toFixed(1)}%
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0 w-32">
-                    <Progress 
-                      value={pa.achievementPercentage} 
-                      className={cn(
-                        "h-2 flex-1",
-                        pa.achievementPercentage >= 60 ? "[&>div]:bg-success" : "[&>div]:bg-destructive"
-                      )}
-                    />
-                    <span className={cn(
-                      "font-bold text-sm w-12 text-right",
-                      pa.achievementPercentage >= 60 ? "text-success" : "text-destructive"
-                    )}>
-                      {pa.achievementPercentage.toFixed(1)}%
-                    </span>
-                  </div>
+                  
+                  {/* Description - Full text visible */}
+                  <p className="text-sm text-muted-foreground mb-2 leading-relaxed">{pa.plo.description}</p>
+                  
+                  {/* Course codes - Compact grid layout */}
+                  {pa.linkedCourses.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {pa.linkedCourses.map((lc) => (
+                        <Badge 
+                          key={lc.course.id} 
+                          variant="outline" 
+                          className="text-xs px-1.5 py-0 h-5 font-mono"
+                        >
+                          {lc.course.code}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
