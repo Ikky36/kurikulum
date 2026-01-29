@@ -298,9 +298,16 @@ export function useBatchUpdateQuestionPoints() {
 
   return useMutation({
     mutationFn: async ({ questionIds, points }: { questionIds: string[]; points: number }) => {
+      // Ensure points is a valid integer
+      const pointsInt = Math.round(points);
+      
+      if (questionIds.length === 0) {
+        throw new Error('Tidak ada soal untuk diupdate');
+      }
+      
       const { data: result, error } = await supabase
         .from('elearning_quiz_questions')
-        .update({ points })
+        .update({ points: pointsInt })
         .in('id', questionIds)
         .select();
 
