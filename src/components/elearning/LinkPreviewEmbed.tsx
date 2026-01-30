@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ExternalLink, FileText, Video, Music, Presentation, Eye, AlertCircle, Play, Image as ImageIcon } from 'lucide-react';
+import { ExternalLink, FileText, Video, Music, Presentation, Eye, AlertCircle, Play, Image as ImageIcon, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -483,16 +483,17 @@ export function LinkPreviewEmbed({
   );
 }
 
-// Inline preview component (for grading view)
-export function LinkPreviewInline({ url }: { url: string }) {
+// Inline preview component (for grading view) with fullscreen support
+export function LinkPreviewInline({ url, showFullscreen = false }: { url: string; showFullscreen?: boolean }) {
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const linkInfo = useMemo(() => parseLinkInfo(url), [url]);
 
   if (!linkInfo.canEmbed || !linkInfo.embedUrl) {
     return (
-      <div className="border rounded-lg p-8 bg-muted/30">
+      <div className="border rounded-lg p-6 sm:p-8 bg-muted/30">
         <div className="flex flex-col items-center justify-center text-muted-foreground">
-          <AlertCircle className="h-12 w-12 mb-4" />
-          <p className="text-center mb-4">Preview tidak tersedia. Buka link secara manual.</p>
+          <AlertCircle className="h-10 w-10 sm:h-12 sm:w-12 mb-3 sm:mb-4" />
+          <p className="text-center mb-3 sm:mb-4 text-sm sm:text-base">Preview tidak tersedia. Buka link secara manual.</p>
           <Button variant="outline" className="gap-2" asChild>
             <a href={url} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4" />
@@ -504,9 +505,137 @@ export function LinkPreviewInline({ url }: { url: string }) {
     );
   }
 
+  // Get responsive height based on content type
+  const getResponsiveHeight = () => {
+    switch (linkInfo.category) {
+      case 'video':
+        return '200px'; // Video uses aspect ratio, not fixed height for embedded
+      case 'audio':
+        return '152px'; // Audio embeds are typically short
+      case 'image':
+        return '300px'; 
+      case 'document':
+      default:
+        return '300px'; // Mobile-friendly default for documents
+    }
+  };
+
+  // Get title based on category
+  const getPreviewTitle = () => {
+    switch (linkInfo.category) {
+      case 'video': return 'Preview Video';
+      case 'audio': return 'Preview Audio';
+      case 'image': return 'Preview Gambar';
+      case 'document': return 'Preview Dokumen';
+      default: return 'Preview';
+    }
+  };
+
   return (
-    <div className="rounded-lg overflow-hidden border">
-      {renderEmbedContent(linkInfo, url, '500px')}
+    <div className="space-y-3">
+      {/* Fullscreen button for documents and images */}
+      {showFullscreen && (linkInfo.category === 'document' || linkInfo.category === 'image') && (
+        <div className="flex justify-end">
+          <Dialog open={isFullscreen} onOpenChange={setIsFullscreen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Maximize2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Lihat Fullscreen</span>
+                <span className="sm:hidden">Fullscreen</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-7xl w-[98vw] h-[95vh] max-h-[95vh] p-3 sm:p-6 flex flex-col">
+              <DialogHeader className="pb-2 shrink-0">
+                <DialogTitle className="flex items-center gap-2">
+                  {linkInfo.icon}
+                  {getPreviewTitle()} - Fullscreen
+                </DialogTitle>
+              </DialogHeader>
+              <div className="flex-1 overflow-hidden rounded-lg">
+                {linkInfo.category === 'image' ? (
+                  <div className="h-full flex items-center justify-center bg-muted/30">
+                    <img 
+                      src={linkInfo.embedUrl} 
+                      alt="Preview" 
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <iframe
+                    src={linkInfo.embedUrl}
+                    className="w-full h-full border-0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      )}
+
+      {/* Responsive preview container */}
+      <div className="rounded-lg overflow-hidden border bg-muted/10">
+        {linkInfo.category === 'video' ? (
+          // Video uses 16:9 aspect ratio for responsive sizing
+          linkInfo.type === 'video' ? (
+            <video controls className="w-full max-h-[350px] sm:max-h-[450px] bg-black">
+              <source src={linkInfo.embedUrl} />
+              Browser Anda tidak mendukung video tag.
+            </video>
+          ) : (
+            <div className="relative w-full pt-[56.25%] bg-black">
+              <iframe
+                src={linkInfo.embedUrl}
+                className="absolute inset-0 w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          )
+        ) : linkInfo.category === 'audio' ? (
+          linkInfo.type === 'audio' ? (
+            <div className="flex flex-col items-center py-6 sm:py-8 px-4 bg-gradient-to-br from-primary/5 to-primary/10">
+              <div className="relative mb-4 sm:mb-6">
+                <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Music className="h-8 w-8 sm:h-12 sm:w-12 text-primary" />
+                </div>
+                <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-primary flex items-center justify-center">
+                  <Play className="h-3 w-3 sm:h-4 sm:w-4 text-primary-foreground" />
+                </div>
+              </div>
+              <audio controls className="w-full max-w-md">
+                <source src={linkInfo.embedUrl} />
+                Browser Anda tidak mendukung audio tag.
+              </audio>
+            </div>
+          ) : (
+            <iframe
+              src={linkInfo.embedUrl}
+              className="w-full h-[152px] border-0"
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+            />
+          )
+        ) : linkInfo.category === 'image' ? (
+          <div className="flex justify-center p-4 bg-muted/30">
+            <img 
+              src={linkInfo.embedUrl} 
+              alt="Preview" 
+              className="max-w-full max-h-[250px] sm:max-h-[350px] object-contain rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => showFullscreen && setIsFullscreen(true)}
+            />
+          </div>
+        ) : (
+          // Documents - responsive height
+          <iframe
+            src={linkInfo.embedUrl}
+            className="w-full border-0"
+            style={{ height: getResponsiveHeight() }}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        )}
+      </div>
     </div>
   );
 }
