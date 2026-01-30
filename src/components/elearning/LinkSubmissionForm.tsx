@@ -125,44 +125,44 @@ export function LinkSubmissionForm({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Link2 className="h-5 w-5" />
+      <CardHeader className="pb-3 sm:pb-6">
+        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <Link2 className="h-4 w-4 sm:h-5 sm:w-5" />
           Kumpulkan Tugas Link
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs sm:text-sm">
           Masukkan link dokumen/file yang ingin dikumpulkan. Mendukung Google Docs, Drive, YouTube, dan lainnya.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="link-url">URL Link *</Label>
-          <div className="flex gap-2">
+          <Label htmlFor="link-url" className="text-sm">URL Link *</Label>
+          <div className="flex flex-col sm:flex-row gap-2">
             <Input
               id="link-url"
               type="url"
-              placeholder="https://docs.google.com/document/d/..."
+              placeholder="https://..."
               value={linkUrl}
               onChange={(e) => {
                 setLinkUrl(e.target.value);
                 setShowPreview(false);
               }}
-              className="flex-1"
+              className="flex-1 text-sm"
             />
             {isValidUrl(linkUrl) && (
               <Button 
                 type="button" 
                 variant="outline" 
                 onClick={() => setShowPreview(!showPreview)}
-                className="gap-1.5 shrink-0"
+                className="gap-1.5 shrink-0 w-full sm:w-auto"
               >
                 <Eye className="h-4 w-4" />
                 {showPreview ? 'Sembunyikan' : 'Preview'}
               </Button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Pastikan link dapat diakses oleh dosen (share settings: "Anyone with the link")
+          <p className="text-[10px] sm:text-xs text-muted-foreground">
+            Pastikan link dapat diakses oleh dosen (share: "Anyone with the link")
           </p>
         </div>
 
@@ -171,13 +171,14 @@ export function LinkSubmissionForm({
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="notes">Catatan (Opsional)</Label>
+          <Label htmlFor="notes" className="text-sm">Catatan (Opsional)</Label>
           <Textarea
             id="notes"
-            placeholder="Tambahkan catatan atau keterangan untuk dosen..."
+            placeholder="Tambahkan catatan untuk dosen..."
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            rows={3}
+            rows={2}
+            className="text-sm resize-none"
           />
         </div>
 
@@ -185,14 +186,15 @@ export function LinkSubmissionForm({
           <Button 
             onClick={handleSubmit} 
             disabled={!linkUrl.trim() || !isValidUrl(linkUrl) || createSubmission.isPending}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
+            size="default"
           >
             {createSubmission.isPending ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Send className="h-4 w-4" />
             )}
-            {existingSubmission ? 'Perbarui Submission' : 'Kumpulkan Tugas'}
+            {existingSubmission ? 'Perbarui' : 'Kumpulkan Tugas'}
           </Button>
         </div>
       </CardContent>
