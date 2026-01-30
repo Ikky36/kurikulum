@@ -10,11 +10,13 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ClipboardCheck, FileUp, HelpCircle, Trash2, Pencil, Play, Plus, Clock, Users, Shield, Lock, CheckCircle, AlertCircle } from 'lucide-react';
+import { ClipboardCheck, FileUp, HelpCircle, Trash2, Pencil, Play, Plus, Clock, Users, Shield, Lock, CheckCircle, AlertCircle, Link2, Eye, Upload } from 'lucide-react';
 import { AssignmentEditor } from './AssignmentEditor';
 import { QuizManager } from './QuizManager';
 import { QuizResultViewer } from './QuizResultViewer';
 import { AssignmentLeaderboard } from './AssignmentLeaderboard';
+import { LinkSubmissionForm } from './LinkSubmissionForm';
+import { SubmissionGrader } from './SubmissionGrader';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 
@@ -44,17 +46,19 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
   const [showEditor, setShowEditor] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<AssignmentWithRelations | null>(null);
   const [managingQuiz, setManagingQuiz] = useState<AssignmentWithRelations | null>(null);
+  const [submittingLink, setSubmittingLink] = useState<AssignmentWithRelations | null>(null);
+  const [gradingAssignment, setGradingAssignment] = useState<AssignmentWithRelations | null>(null);
 
   const typedAssignments = (assignments || []) as AssignmentWithRelations[];
   const isMahasiswa = profile?.role === 'mahasiswa';
 
-  // Fetch student's submissions to check which quizzes they've completed
-  const { data: mySubmissions } = useQuery({
-    queryKey: ['my-quiz-submissions', profile?.id],
+  // Fetch student's submissions to check which assignments they've completed
+  const { data: mySubmissions, refetch: refetchMySubmissions } = useQuery({
+    queryKey: ['my-submissions', profile?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('elearning_submissions')
-        .select('assignment_id, score, attempt_number')
+        .select('id, assignment_id, score, attempt_number, submission_url, submission_content, submitted_at, feedback')
         .eq('student_profile_id', profile!.id);
       if (error) throw error;
       return data;
@@ -248,7 +252,7 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
 
                 {/* Actions */}
                 <div className="flex items-center justify-between gap-2 pt-3 border-t">
-                  {/* Student Actions */}
+                  {/* Student Actions - Quiz */}
                   {isMahasiswa && assignment.assignment_type === 'quiz' && assignment.is_published && (
                     <div className="flex items-center gap-2 flex-1">
                       {getSubmissionForAssignment(assignment.id) ? (
@@ -288,9 +292,77 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
                     </div>
                   )}
 
+                  {/* Student Actions - Link/Tugas */}
+                  {isMahasiswa && assignment.assignment_type === 'tugas' && assignment.is_published && (
+                    <div className="flex items-center gap-2 flex-1">
+                      {(() => {
+                        const submission = getSubmissionForAssignment(assignment.id);
+                        if (submission?.score !== null && submission?.score !== undefined) {
+                          return (
+                            <>
+                              <Badge className="gap-1 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                <CheckCircle className="h-3 w-3" />
+                                Nilai: {submission.score}
+                              </Badge>
+                              <Button 
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSubmittingLink(assignment)}
+                                className="gap-1"
+                              >
+                                <Eye className="h-4 w-4" />
+                                Lihat
+                              </Button>
+                            </>
+                          );
+                        }
+                        if (submission) {
+                          return (
+                            <>
+                              <Badge variant="secondary" className="gap-1">
+                                <Clock className="h-3 w-3" />
+                                Menunggu Nilai
+                              </Badge>
+                              <Button 
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSubmittingLink(assignment)}
+                                className="gap-1"
+                              >
+                                <Eye className="h-4 w-4" />
+                                Lihat
+                              </Button>
+                            </>
+                          );
+                        }
+                        return (
+                          <Button 
+                            onClick={() => setSubmittingLink(assignment)} 
+                            className="gap-2 flex-1"
+                          >
+                            <Link2 className="h-4 w-4" />
+                            Kumpulkan Tugas
+                          </Button>
+                        );
+                      })()}
+                    </div>
+                  )}
+
                   {/* Instructor Actions */}
                   {canEdit && (
                     <div className="flex items-center gap-2 flex-1 justify-end">
+                      {/* Grading button for non-quiz assignments */}
+                      {assignment.assignment_type === 'tugas' && (
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => setGradingAssignment(assignment)}
+                          className="gap-1"
+                        >
+                          <Users className="h-4 w-4" />
+                          Periksa
+                        </Button>
+                      )}
                       {assignment.assignment_type === 'quiz' && (
                         <Button 
                           variant="outline" 
@@ -380,6 +452,48 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
               isSafeExamMode={managingQuiz.is_safe_exam_mode}
               sebPassword={managingQuiz.seb_password}
               sebQuitPassword={managingQuiz.seb_quit_password}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Link Submission Dialog - For Students */}
+      <Dialog open={!!submittingLink} onOpenChange={() => setSubmittingLink(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <Link2 className="h-5 w-5" />
+              {submittingLink?.title}
+            </DialogTitle>
+          </DialogHeader>
+          {submittingLink && (
+            <LinkSubmissionForm
+              assignmentId={submittingLink.id}
+              assignmentTitle={submittingLink.title}
+              existingSubmission={mySubmissions?.find(s => s.assignment_id === submittingLink.id) || null}
+              onSuccess={() => {
+                setSubmittingLink(null);
+                refetchMySubmissions();
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Submission Grader Dialog - For Instructors */}
+      <Dialog open={!!gradingAssignment} onOpenChange={() => setGradingAssignment(null)}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Periksa Submission: {gradingAssignment?.title}
+            </DialogTitle>
+          </DialogHeader>
+          {gradingAssignment && (
+            <SubmissionGrader
+              assignmentId={gradingAssignment.id}
+              assignmentTitle={gradingAssignment.title}
+              classId={classId}
             />
           )}
         </DialogContent>
