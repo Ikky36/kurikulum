@@ -71,19 +71,33 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
     }
 
     try {
+      // Determine submission_type based on assignment_type
+      const getSubmissionType = (type: string) => {
+        switch (type) {
+          case 'file_upload':
+            return 'file';
+          case 'link':
+            return 'url';
+          case 'quiz':
+          default:
+            return null;
+        }
+      };
+
       const data: any = {
         title,
         description: description || null,
         assignment_type: assignmentType,
+        submission_type: getSubmissionType(assignmentType),
         due_date: dueDate ? new Date(dueDate).toISOString() : null,
         max_attempts: maxAttempts ? parseInt(maxAttempts) : null,
         time_limit_minutes: timeLimit ? parseInt(timeLimit) : null,
         llo_id: selectedLloId || null,
         is_published: isPublished,
-        is_safe_exam_mode: isSafeExamMode,
+        is_safe_exam_mode: assignmentType === 'quiz' ? isSafeExamMode : false,
         show_answer_mode: assignmentType === 'quiz' ? showAnswerMode : null,
-        seb_password: isSafeExamMode ? sebPassword : null,
-        seb_quit_password: isSafeExamMode ? sebQuitPassword : null,
+        seb_password: assignmentType === 'quiz' && isSafeExamMode ? sebPassword : null,
+        seb_quit_password: assignmentType === 'quiz' && isSafeExamMode ? sebQuitPassword : null,
         elearning_class_id: classId,
         prerequisite_material_id: prerequisiteMaterialId || null,
         prerequisite_assignment_id: prerequisiteAssignmentId || null,
