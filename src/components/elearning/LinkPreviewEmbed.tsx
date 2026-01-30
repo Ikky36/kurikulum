@@ -416,58 +416,65 @@ export function LinkPreviewEmbed({
   return (
     <div className={className}>
       <Card className="overflow-hidden">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-3">
+        <CardContent className="p-3 sm:p-4">
+          {/* Mobile-first responsive layout */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            {/* Link info section */}
             <div className="flex items-center gap-3 min-w-0 flex-1">
               <div className={`p-2 rounded-lg shrink-0 ${
-                linkInfo.category === 'video' ? 'bg-red-500/10 text-red-500' :
-                linkInfo.category === 'audio' ? 'bg-green-500/10 text-green-500' :
-                linkInfo.category === 'image' ? 'bg-blue-500/10 text-blue-500' :
+                linkInfo.category === 'video' ? 'bg-destructive/10 text-destructive' :
+                linkInfo.category === 'audio' ? 'bg-secondary text-secondary-foreground' :
+                linkInfo.category === 'image' ? 'bg-accent text-accent-foreground' :
                 'bg-primary/10 text-primary'
               }`}>
                 {linkInfo.icon}
               </div>
               <div className="min-w-0 flex-1">
-                {title && <p className="font-medium truncate">{title}</p>}
-                <p className="text-sm text-muted-foreground truncate">{url}</p>
+                {title && <p className="font-medium text-sm sm:text-base truncate">{title}</p>}
+                <p className="text-xs sm:text-sm text-muted-foreground break-all line-clamp-2 sm:truncate">{url}</p>
               </div>
-              <Badge variant={getCategoryColor(linkInfo.category)} className="shrink-0">
+            </div>
+
+            {/* Actions - mobile friendly */}
+            <div className="flex items-center justify-between sm:justify-end gap-2 pt-2 sm:pt-0 border-t sm:border-t-0">
+              <Badge variant={getCategoryColor(linkInfo.category)} className="shrink-0 text-xs">
                 {linkInfo.label}
               </Badge>
-            </div>
-            
-            <div className="flex items-center gap-2 shrink-0">
-              {showPreviewButton && linkInfo.canEmbed && (
-                <Dialog open={showDialog} onOpenChange={setShowDialog}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-1.5">
-                      <Eye className="h-4 w-4" />
-                      Preview
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-5xl w-[95vw] max-h-[90vh]">
-                    <DialogHeader>
-                      <DialogTitle className="flex items-center gap-2">
-                        {linkInfo.icon}
-                        {title || `Preview ${linkInfo.label}`}
-                      </DialogTitle>
-                    </DialogHeader>
-                    {renderEmbedContent(linkInfo, url, '70vh')}
-                  </DialogContent>
-                </Dialog>
-              )}
-              <Button variant="ghost" size="sm" className="gap-1.5" asChild>
-                <a href={url} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              </Button>
+              <div className="flex items-center gap-1.5">
+                {showPreviewButton && linkInfo.canEmbed && (
+                  <Dialog open={showDialog} onOpenChange={setShowDialog}>
+                    <DialogTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs sm:text-sm">
+                        <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        <span className="hidden xs:inline">Preview</span>
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-5xl w-[98vw] sm:w-[95vw] max-h-[95vh] sm:max-h-[90vh] p-3 sm:p-6">
+                      <DialogHeader className="pb-2">
+                        <DialogTitle className="flex items-center gap-2 text-sm sm:text-base">
+                          {linkInfo.icon}
+                          <span className="truncate">{title || `Preview ${linkInfo.label}`}</span>
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="overflow-auto max-h-[calc(95vh-80px)] sm:max-h-[calc(90vh-100px)]">
+                        {renderEmbedContent(linkInfo, url, '60vh')}
+                      </div>
+                    </DialogContent>
+                  </Dialog>
+                )}
+                <Button variant="ghost" size="sm" className="gap-1.5 h-8 px-2" asChild>
+                  <a href={url} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  </a>
+                </Button>
+              </div>
             </div>
           </div>
 
-          {/* Inline preview */}
+          {/* Inline preview - responsive height */}
           {showInlinePreview && linkInfo.canEmbed && (
-            <div className="mt-4 border-t pt-4">
-              {renderEmbedContent(linkInfo, url, '400px')}
+            <div className="mt-3 sm:mt-4 border-t pt-3 sm:pt-4">
+              {renderEmbedContent(linkInfo, url, '250px')}
             </div>
           )}
         </CardContent>
