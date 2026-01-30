@@ -574,17 +574,17 @@ export function LinkPreviewInline({ url, showFullscreen = false }: { url: string
         </div>
       )}
 
-      {/* Responsive preview container - full aspect ratio, scrollable parent handles overflow */}
+      {/* Compact preview container - sized for inline grading view */}
       <div className="rounded-lg overflow-hidden border bg-muted/10">
         {linkInfo.category === 'video' ? (
-          // Video uses 16:9 aspect ratio for proper display
+          // Video - compact size for inline grading, scrollable parent handles overflow
           linkInfo.type === 'video' ? (
-            <video controls className="w-full max-h-[350px] sm:max-h-[450px] bg-black">
+            <video controls className="w-full max-h-[180px] sm:max-h-[220px] bg-black">
               <source src={linkInfo.embedUrl} />
               Browser Anda tidak mendukung video tag.
             </video>
           ) : (
-            <div className="relative w-full pt-[56.25%] bg-black">
+            <div className="relative w-full h-[160px] sm:h-[200px] bg-black">
               <iframe
                 src={linkInfo.embedUrl}
                 className="absolute inset-0 w-full h-full border-0"
