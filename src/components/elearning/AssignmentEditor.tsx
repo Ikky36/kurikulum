@@ -71,33 +71,43 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
     }
 
     try {
-      // Determine submission_type based on assignment_type
+      // Map UI assignment type to database values
+      // Database expects: assignment_type = 'quiz' | 'tugas'
+      // submission_type = 'file_upload' | 'link_document' | null (for quiz)
+      const getDbAssignmentType = (type: string) => {
+        if (type === 'quiz') return 'quiz';
+        return 'tugas'; // file_upload and link are both 'tugas'
+      };
+
       const getSubmissionType = (type: string) => {
         switch (type) {
           case 'file_upload':
-            return 'file';
+            return 'file_upload';
           case 'link':
-            return 'url';
+            return 'link_document';
           case 'quiz':
           default:
             return null;
         }
       };
 
+      const dbAssignmentType = getDbAssignmentType(assignmentType);
+      const isQuiz = assignmentType === 'quiz';
+
       const data: any = {
         title,
         description: description || null,
-        assignment_type: assignmentType,
+        assignment_type: dbAssignmentType,
         submission_type: getSubmissionType(assignmentType),
         due_date: dueDate ? new Date(dueDate).toISOString() : null,
         max_attempts: maxAttempts ? parseInt(maxAttempts) : null,
         time_limit_minutes: timeLimit ? parseInt(timeLimit) : null,
         llo_id: selectedLloId || null,
         is_published: isPublished,
-        is_safe_exam_mode: assignmentType === 'quiz' ? isSafeExamMode : false,
-        show_answer_mode: assignmentType === 'quiz' ? showAnswerMode : null,
-        seb_password: assignmentType === 'quiz' && isSafeExamMode ? sebPassword : null,
-        seb_quit_password: assignmentType === 'quiz' && isSafeExamMode ? sebQuitPassword : null,
+        is_safe_exam_mode: isQuiz ? isSafeExamMode : false,
+        show_answer_mode: isQuiz ? showAnswerMode : null,
+        seb_password: isQuiz && isSafeExamMode ? sebPassword : null,
+        seb_quit_password: isQuiz && isSafeExamMode ? sebQuitPassword : null,
         elearning_class_id: classId,
         prerequisite_material_id: prerequisiteMaterialId || null,
         prerequisite_assignment_id: prerequisiteAssignmentId || null,
