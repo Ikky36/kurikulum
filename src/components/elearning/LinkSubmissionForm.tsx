@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { Link2, Send, Eye, Loader2, CheckCircle } from 'lucide-react';
-import { LinkPreviewEmbed } from './LinkPreviewEmbed';
+import { LinkPreviewEmbed, parseLinkInfo } from './LinkPreviewEmbed';
 
 interface LinkSubmissionFormProps {
   assignmentId: string;
@@ -44,6 +44,19 @@ export function LinkSubmissionForm({
       return true;
     } catch {
       return false;
+    }
+  };
+
+  // Get dynamic preview title based on link type
+  const getPreviewTitle = (url: string) => {
+    if (!isValidUrl(url)) return 'Preview';
+    const linkInfo = parseLinkInfo(url);
+    switch (linkInfo.category) {
+      case 'video': return 'Preview Video';
+      case 'audio': return 'Preview Audio';
+      case 'image': return 'Preview Gambar';
+      case 'document': return 'Preview Dokumen';
+      default: return 'Preview Link';
     }
   };
 
@@ -154,7 +167,7 @@ export function LinkSubmissionForm({
         </div>
 
         {showPreview && isValidUrl(linkUrl) && (
-          <LinkPreviewEmbed url={linkUrl} title="Preview Dokumen" />
+          <LinkPreviewEmbed url={linkUrl} title={getPreviewTitle(linkUrl)} showInlinePreview />
         )}
 
         <div className="space-y-2">
