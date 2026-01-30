@@ -329,25 +329,24 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
                   </Label>
                   
                   {selectedSubmission.submission_url ? (
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
-                        <Link2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <a 
-                          href={selectedSubmission.submission_url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-sm text-primary hover:underline truncate flex-1"
-                        >
-                          {selectedSubmission.submission_url}
+                    <div className="space-y-4">
+                      {/* Link as Button */}
+                      <Button 
+                        variant="outline" 
+                        className="gap-2 w-full sm:w-auto justify-start" 
+                        asChild
+                      >
+                        <a href={selectedSubmission.submission_url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-4 w-4" />
+                          Buka Link Tugas
                         </a>
-                        <Button variant="ghost" size="sm" asChild>
-                          <a href={selectedSubmission.submission_url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      </div>
+                      </Button>
                       
-                      <LinkPreviewInline url={selectedSubmission.submission_url} />
+                      {/* Responsive Preview with Fullscreen */}
+                      <LinkPreviewInline 
+                        url={selectedSubmission.submission_url} 
+                        showFullscreen 
+                      />
                     </div>
                   ) : (
                     <p className="text-muted-foreground italic">Tidak ada link</p>
