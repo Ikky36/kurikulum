@@ -574,17 +574,17 @@ export function LinkPreviewInline({ url, showFullscreen = false }: { url: string
         </div>
       )}
 
-      {/* Responsive preview container - compact for inline grading view */}
+      {/* Responsive preview container - full aspect ratio, scrollable parent handles overflow */}
       <div className="rounded-lg overflow-hidden border bg-muted/10">
         {linkInfo.category === 'video' ? (
-          // Video - use fixed max-height instead of aspect ratio padding for compact display
+          // Video uses 16:9 aspect ratio for proper display
           linkInfo.type === 'video' ? (
-            <video controls className="w-full max-h-[200px] sm:max-h-[280px] bg-black">
+            <video controls className="w-full max-h-[350px] sm:max-h-[450px] bg-black">
               <source src={linkInfo.embedUrl} />
               Browser Anda tidak mendukung video tag.
             </video>
           ) : (
-            <div className="relative w-full h-[180px] sm:h-[250px] bg-black">
+            <div className="relative w-full pt-[56.25%] bg-black">
               <iframe
                 src={linkInfo.embedUrl}
                 className="absolute inset-0 w-full h-full border-0"
@@ -621,7 +621,7 @@ export function LinkPreviewInline({ url, showFullscreen = false }: { url: string
             <img 
               src={linkInfo.embedUrl} 
               alt="Preview" 
-              className="max-w-full max-h-[200px] sm:max-h-[280px] object-contain rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+              className="max-w-full max-h-[250px] sm:max-h-[350px] object-contain rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
               onClick={() => showFullscreen && setIsFullscreen(true)}
             />
           </div>
