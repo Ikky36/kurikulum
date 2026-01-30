@@ -300,131 +300,133 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
           </DialogHeader>
           
           {selectedSubmission && (
-            <ScrollArea className="flex-1 pr-4">
-              <div className="space-y-6">
-                {/* Student Info */}
-                <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={selectedSubmission.student.photo_url || undefined} />
-                    <AvatarFallback>{getInitials(selectedSubmission.student.full_name)}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-semibold">{selectedSubmission.student.full_name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {selectedSubmission.student.nim || selectedSubmission.student.email}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Submitted: {format(new Date(selectedSubmission.submitted_at), 'dd MMMM yyyy, HH:mm', { locale: idLocale })}
-                    </p>
-                  </div>
-                </div>
-
-                <Separator />
-
-                {/* Submission Content - Link Preview */}
-                <div className="space-y-3">
-                  <Label className="text-base font-semibold flex items-center gap-2">
-                    <Link2 className="h-4 w-4" />
-                    Link yang Dikumpulkan
-                  </Label>
-                  
-                  {selectedSubmission.submission_url ? (
-                    <div className="space-y-4">
-                      {/* Link as Button */}
-                      <Button 
-                        variant="outline" 
-                        className="gap-2 w-full sm:w-auto justify-start" 
-                        asChild
-                      >
-                        <a href={selectedSubmission.submission_url} target="_blank" rel="noopener noreferrer">
-                          <ExternalLink className="h-4 w-4" />
-                          Buka Link Tugas
-                        </a>
-                      </Button>
-                      
-                      {/* Responsive Preview with Fullscreen */}
-                      <LinkPreviewInline 
-                        url={selectedSubmission.submission_url} 
-                        showFullscreen 
-                      />
+            <>
+              <ScrollArea className="flex-1 pr-4">
+                <div className="space-y-6 pb-4">
+                  {/* Student Info */}
+                  <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={selectedSubmission.student.photo_url || undefined} />
+                      <AvatarFallback>{getInitials(selectedSubmission.student.full_name)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-semibold">{selectedSubmission.student.full_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedSubmission.student.nim || selectedSubmission.student.email}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Submitted: {format(new Date(selectedSubmission.submitted_at), 'dd MMMM yyyy, HH:mm', { locale: idLocale })}
+                      </p>
                     </div>
-                  ) : (
-                    <p className="text-muted-foreground italic">Tidak ada link</p>
-                  )}
-                </div>
+                  </div>
 
-                {/* Student Notes */}
-                {selectedSubmission.submission_content && (
-                  <>
-                    <Separator />
-                    <div className="space-y-2">
-                      <Label className="text-base font-semibold flex items-center gap-2">
-                        <MessageSquare className="h-4 w-4" />
-                        Catatan Mahasiswa
-                      </Label>
-                      <div className="p-4 rounded-lg bg-muted/50">
-                        <p className="text-sm whitespace-pre-wrap">{selectedSubmission.submission_content}</p>
+                  <Separator />
+
+                  {/* Submission Content - Link Preview */}
+                  <div className="space-y-3">
+                    <Label className="text-base font-semibold flex items-center gap-2">
+                      <Link2 className="h-4 w-4" />
+                      Link yang Dikumpulkan
+                    </Label>
+                    
+                    {selectedSubmission.submission_url ? (
+                      <div className="space-y-4">
+                        {/* Link as Button */}
+                        <Button 
+                          variant="outline" 
+                          className="gap-2 w-full sm:w-auto justify-start" 
+                          asChild
+                        >
+                          <a href={selectedSubmission.submission_url} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4" />
+                            Buka Link Tugas
+                          </a>
+                        </Button>
+                        
+                        {/* Responsive Preview with Fullscreen */}
+                        <LinkPreviewInline 
+                          url={selectedSubmission.submission_url} 
+                          showFullscreen 
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-muted-foreground italic">Tidak ada link</p>
+                    )}
+                  </div>
+
+                  {/* Student Notes */}
+                  {selectedSubmission.submission_content && (
+                    <>
+                      <Separator />
+                      <div className="space-y-2">
+                        <Label className="text-base font-semibold flex items-center gap-2">
+                          <MessageSquare className="h-4 w-4" />
+                          Catatan Mahasiswa
+                        </Label>
+                        <div className="p-4 rounded-lg bg-muted/50">
+                          <p className="text-sm whitespace-pre-wrap">{selectedSubmission.submission_content}</p>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <Separator />
+
+                  {/* Grading Form */}
+                  <div className="space-y-4">
+                    <Label className="text-base font-semibold flex items-center gap-2">
+                      <Star className="h-4 w-4" />
+                      Penilaian
+                    </Label>
+                    
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="grade-value">Nilai (0-100) *</Label>
+                        <Input
+                          id="grade-value"
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder="Masukkan nilai..."
+                          value={gradeValue}
+                          onChange={(e) => setGradeValue(e.target.value)}
+                        />
                       </div>
                     </div>
-                  </>
-                )}
-
-                <Separator />
-
-                {/* Grading Form */}
-                <div className="space-y-4">
-                  <Label className="text-base font-semibold flex items-center gap-2">
-                    <Star className="h-4 w-4" />
-                    Penilaian
-                  </Label>
-                  
-                  <div className="grid gap-4 sm:grid-cols-2">
+                    
                     <div className="space-y-2">
-                      <Label htmlFor="grade-value">Nilai (0-100) *</Label>
-                      <Input
-                        id="grade-value"
-                        type="number"
-                        min={0}
-                        max={100}
-                        placeholder="Masukkan nilai..."
-                        value={gradeValue}
-                        onChange={(e) => setGradeValue(e.target.value)}
+                      <Label htmlFor="feedback-value">Feedback untuk Mahasiswa (Opsional)</Label>
+                      <Textarea
+                        id="feedback-value"
+                        placeholder="Berikan feedback atau catatan perbaikan..."
+                        value={feedbackValue}
+                        onChange={(e) => setFeedbackValue(e.target.value)}
+                        rows={4}
                       />
                     </div>
                   </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="feedback-value">Feedback untuk Mahasiswa (Opsional)</Label>
-                    <Textarea
-                      id="feedback-value"
-                      placeholder="Berikan feedback atau catatan perbaikan..."
-                      value={feedbackValue}
-                      onChange={(e) => setFeedbackValue(e.target.value)}
-                      rows={4}
-                    />
-                  </div>
                 </div>
+              </ScrollArea>
 
-                {/* Save Button */}
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button variant="outline" onClick={() => setDialogOpen(false)}>
-                    Batal
-                  </Button>
-                  <Button 
-                    onClick={handleSaveGrade}
-                    disabled={!gradeValue || gradeSubmission.isPending}
-                    className="gap-2"
-                  >
-                    {gradeSubmission.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="h-4 w-4" />
-                    )}
-                    Simpan Nilai
-                  </Button>
-                </div>
+              {/* Fixed Save Button - Always Visible at Bottom */}
+              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t bg-background shrink-0">
+                <Button variant="outline" onClick={() => setDialogOpen(false)} className="w-full sm:w-auto">
+                  Batal
+                </Button>
+                <Button 
+                  onClick={handleSaveGrade}
+                  disabled={!gradeValue || gradeSubmission.isPending}
+                  className="gap-2 w-full sm:w-auto"
+                >
+                  {gradeSubmission.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  Simpan Nilai
+                </Button>
               </div>
-            </ScrollArea>
+            </>
           )}
         </DialogContent>
       </Dialog>
