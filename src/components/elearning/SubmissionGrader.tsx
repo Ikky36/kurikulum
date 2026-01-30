@@ -289,23 +289,23 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
         </CardContent>
       </Card>
 
-      {/* Grading Dialog */}
+      {/* Grading Dialog - Scrollable content with compact video */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Eye className="h-5 w-5" />
-              Review & Penilaian Submission
-            </DialogTitle>
-          </DialogHeader>
-          
-          {selectedSubmission && (
-            <>
-              <ScrollArea className="flex-1 pr-4">
-                <div className="space-y-6 pb-4">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden p-0">
+          <ScrollArea className="max-h-[90vh]">
+            <div className="p-6 space-y-5">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <Eye className="h-5 w-5" />
+                  Review & Penilaian Submission
+                </DialogTitle>
+              </DialogHeader>
+              
+              {selectedSubmission && (
+                <div className="space-y-5">
                   {/* Student Info */}
-                  <div className="flex items-center gap-4 p-4 rounded-lg bg-muted/50">
-                    <Avatar className="h-12 w-12">
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                    <Avatar className="h-10 w-10">
                       <AvatarImage src={selectedSubmission.student.photo_url || undefined} />
                       <AvatarFallback>{getInitials(selectedSubmission.student.full_name)}</AvatarFallback>
                     </Avatar>
@@ -330,11 +330,11 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
                     </Label>
                     
                     {selectedSubmission.submission_url ? (
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {/* Link as Button */}
                         <Button 
                           variant="outline" 
-                          className="gap-2 w-full sm:w-auto justify-start" 
+                          className="gap-2 w-full justify-start" 
                           asChild
                         >
                           <a href={selectedSubmission.submission_url} target="_blank" rel="noopener noreferrer">
@@ -343,7 +343,7 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
                           </a>
                         </Button>
                         
-                        {/* Responsive Preview with Fullscreen */}
+                        {/* Compact Preview */}
                         <LinkPreviewInline 
                           url={selectedSubmission.submission_url} 
                           showFullscreen 
@@ -363,70 +363,71 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
                           <MessageSquare className="h-4 w-4" />
                           Catatan Mahasiswa
                         </Label>
-                        <div className="p-4 rounded-lg bg-muted/50">
+                        <div className="p-3 rounded-lg bg-muted/50">
                           <p className="text-sm whitespace-pre-wrap">{selectedSubmission.submission_content}</p>
                         </div>
                       </div>
                     </>
                   )}
 
-                </div>
-              </ScrollArea>
+                  <Separator />
 
-              {/* Grading Form - Fixed Section Below Scroll */}
-              <div className="space-y-4 pt-4 border-t shrink-0">
-                <Label className="text-base font-semibold flex items-center gap-2">
-                  <Star className="h-4 w-4" />
-                  Penilaian
-                </Label>
-                
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="grade-value">Nilai (0-100) *</Label>
-                    <Input
-                      id="grade-value"
-                      type="number"
-                      min={0}
-                      max={100}
-                      placeholder="Masukkan nilai..."
-                      value={gradeValue}
-                      onChange={(e) => setGradeValue(e.target.value)}
-                    />
+                  {/* Grading Form */}
+                  <div className="space-y-4">
+                    <Label className="text-base font-semibold flex items-center gap-2">
+                      <Star className="h-4 w-4" />
+                      Penilaian
+                    </Label>
+                    
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="grade-value">Nilai (0-100) *</Label>
+                        <Input
+                          id="grade-value"
+                          type="number"
+                          min={0}
+                          max={100}
+                          placeholder="Masukkan nilai..."
+                          value={gradeValue}
+                          onChange={(e) => setGradeValue(e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="feedback-value">Feedback (Opsional)</Label>
+                        <Textarea
+                          id="feedback-value"
+                          placeholder="Berikan feedback atau catatan perbaikan..."
+                          value={feedbackValue}
+                          onChange={(e) => setFeedbackValue(e.target.value)}
+                          rows={3}
+                          className="resize-none"
+                        />
+                      </div>
+                    </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="feedback-value">Feedback (Opsional)</Label>
-                    <Textarea
-                      id="feedback-value"
-                      placeholder="Berikan feedback atau catatan perbaikan..."
-                      value={feedbackValue}
-                      onChange={(e) => setFeedbackValue(e.target.value)}
-                      rows={3}
-                      className="resize-none"
-                    />
+
+                  {/* Save Buttons */}
+                  <div className="flex flex-col gap-2 pt-2">
+                    <Button variant="outline" onClick={() => setDialogOpen(false)} className="w-full">
+                      Batal
+                    </Button>
+                    <Button 
+                      onClick={handleSaveGrade}
+                      disabled={!gradeValue || gradeSubmission.isPending}
+                      className="gap-2 w-full"
+                    >
+                      {gradeSubmission.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4" />
+                      )}
+                      Simpan Nilai
+                    </Button>
                   </div>
                 </div>
-              </div>
-
-              {/* Fixed Save Button - Always Visible at Bottom */}
-              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t bg-background shrink-0">
-                <Button variant="outline" onClick={() => setDialogOpen(false)} className="w-full sm:w-auto">
-                  Batal
-                </Button>
-                <Button 
-                  onClick={handleSaveGrade}
-                  disabled={!gradeValue || gradeSubmission.isPending}
-                  className="gap-2 w-full sm:w-auto"
-                >
-                  {gradeSubmission.isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  Simpan Nilai
-                </Button>
-              </div>
-            </>
-          )}
+              )}
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>
