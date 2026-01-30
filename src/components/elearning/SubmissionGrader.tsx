@@ -370,43 +370,42 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
                     </>
                   )}
 
-                  <Separator />
-
-                  {/* Grading Form */}
-                  <div className="space-y-4">
-                    <Label className="text-base font-semibold flex items-center gap-2">
-                      <Star className="h-4 w-4" />
-                      Penilaian
-                    </Label>
-                    
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <Label htmlFor="grade-value">Nilai (0-100) *</Label>
-                        <Input
-                          id="grade-value"
-                          type="number"
-                          min={0}
-                          max={100}
-                          placeholder="Masukkan nilai..."
-                          value={gradeValue}
-                          onChange={(e) => setGradeValue(e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="feedback-value">Feedback untuk Mahasiswa (Opsional)</Label>
-                      <Textarea
-                        id="feedback-value"
-                        placeholder="Berikan feedback atau catatan perbaikan..."
-                        value={feedbackValue}
-                        onChange={(e) => setFeedbackValue(e.target.value)}
-                        rows={4}
-                      />
-                    </div>
-                  </div>
                 </div>
               </ScrollArea>
+
+              {/* Grading Form - Fixed Section Below Scroll */}
+              <div className="space-y-4 pt-4 border-t shrink-0">
+                <Label className="text-base font-semibold flex items-center gap-2">
+                  <Star className="h-4 w-4" />
+                  Penilaian
+                </Label>
+                
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="grade-value">Nilai (0-100) *</Label>
+                    <Input
+                      id="grade-value"
+                      type="number"
+                      min={0}
+                      max={100}
+                      placeholder="Masukkan nilai..."
+                      value={gradeValue}
+                      onChange={(e) => setGradeValue(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="feedback-value">Feedback (Opsional)</Label>
+                    <Textarea
+                      id="feedback-value"
+                      placeholder="Berikan feedback atau catatan perbaikan..."
+                      value={feedbackValue}
+                      onChange={(e) => setFeedbackValue(e.target.value)}
+                      rows={3}
+                      className="resize-none"
+                    />
+                  </div>
+                </div>
+              </div>
 
               {/* Fixed Save Button - Always Visible at Bottom */}
               <div className="flex flex-col sm:flex-row justify-end gap-2 pt-4 border-t bg-background shrink-0">
