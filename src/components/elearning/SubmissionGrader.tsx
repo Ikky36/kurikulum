@@ -107,9 +107,22 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
     },
   });
 
-  const gradedCount = submissions?.filter(s => s.score !== null).length || 0;
-  const pendingCount = submissions?.filter(s => s.score === null).length || 0;
-  const totalSubmissions = submissions?.length || 0;
+  // Filter to show only the latest submission per student
+  const latestSubmissionsPerStudent = submissions?.reduce((acc, submission) => {
+    const existing = acc.get(submission.student_profile_id);
+    if (!existing || new Date(submission.submitted_at) > new Date(existing.submitted_at)) {
+      acc.set(submission.student_profile_id, submission);
+    }
+    return acc;
+  }, new Map<string, SubmissionWithStudent>());
+
+  const uniqueSubmissions = latestSubmissionsPerStudent 
+    ? Array.from(latestSubmissionsPerStudent.values())
+    : [];
+
+  const gradedCount = uniqueSubmissions.filter(s => s.score !== null).length;
+  const pendingCount = uniqueSubmissions.filter(s => s.score === null).length;
+  const totalSubmissions = uniqueSubmissions.length;
   const totalStudents = classData?.studentCount || 0;
 
   const handleOpenGrading = (submission: SubmissionWithStudent) => {
@@ -222,14 +235,14 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : !submissions?.length ? (
+          ) : !uniqueSubmissions.length ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <AlertCircle className="h-12 w-12 mb-4" />
               <p>Belum ada submission</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {submissions.map((submission) => (
+              {uniqueSubmissions.map((submission) => (
                 <Card
                   key={submission.id}
                   className="cursor-pointer hover:bg-muted/50 transition-colors"
