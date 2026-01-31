@@ -204,15 +204,30 @@ export function AnnotatedPreview({
               </div>
             ) : (
               <div className="space-y-1">
-                <div className="relative w-full h-[200px] sm:h-[280px] lg:h-[420px] xl:h-[480px] bg-black">
-                  <iframe
-                    ref={iframeRef}
-                    src={linkInfo.embedUrl}
-                    className="absolute inset-0 w-full h-full border-0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  />
-                </div>
+                {/* Portrait video (TikTok, Instagram Reels, etc.) */}
+                {linkInfo.isPortrait ? (
+                  <div className="flex justify-center bg-black">
+                    <div className="relative w-full max-w-[400px] h-[50vh] sm:h-[60vh] lg:h-[70vh]">
+                      <iframe
+                        ref={iframeRef}
+                        src={linkInfo.embedUrl}
+                        className="absolute inset-0 w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="relative w-full h-[200px] sm:h-[280px] lg:h-[420px] xl:h-[480px] bg-black">
+                    <iframe
+                      ref={iframeRef}
+                      src={linkInfo.embedUrl}
+                      className="absolute inset-0 w-full h-full border-0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                )}
                 {/* Note: For embedded videos like YouTube, we can't get exact duration/time */}
                 {canCommentVideo && (
                   <div className="px-2 pb-2">

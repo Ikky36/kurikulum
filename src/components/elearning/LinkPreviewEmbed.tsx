@@ -43,6 +43,7 @@ interface LinkInfo {
   label: string;
   category: 'document' | 'video' | 'audio' | 'image' | 'external';
   canEmbed: boolean;
+  isPortrait?: boolean;
 }
 
 // Parse and transform URLs for embedding
@@ -183,6 +184,7 @@ function parseLinkInfo(url: string): LinkInfo {
         label: 'TikTok',
         category: 'video',
         canEmbed: !!videoId,
+        isPortrait: true,
       };
     }
 
@@ -190,6 +192,7 @@ function parseLinkInfo(url: string): LinkInfo {
     if (hostname.includes('instagram.com')) {
       // Instagram URLs: instagram.com/p/CODE, instagram.com/reel/CODE, instagram.com/tv/CODE
       const postCode = originalPathname.match(/\/(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/)?.[2];
+      const isReel = pathname.includes('/reel') || pathname.includes('/reels');
       return {
         type: 'instagram',
         embedUrl: postCode ? `https://www.instagram.com/p/${postCode}/embed` : null,
@@ -197,6 +200,7 @@ function parseLinkInfo(url: string): LinkInfo {
         label: 'Instagram',
         category: 'video',
         canEmbed: !!postCode,
+        isPortrait: isReel,
       };
     }
 
@@ -424,7 +428,24 @@ function renderEmbedContent(linkInfo: LinkInfo, url: string, height: string = '7
           </video>
         );
       }
-      // Embedded video (YouTube, Vimeo, etc.)
+      
+      // Portrait video (TikTok, Instagram Reels, etc.) - 9:16 aspect ratio, centered
+      if (linkInfo.isPortrait) {
+        return (
+          <div className="flex justify-center bg-black rounded-lg overflow-hidden">
+            <div className="relative w-full max-w-[400px] h-[70vh] sm:h-[75vh] lg:h-[80vh]">
+              <iframe
+                src={linkInfo.embedUrl}
+                className="absolute inset-0 w-full h-full border-0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        );
+      }
+      
+      // Landscape video (YouTube, Vimeo, etc.) - 16:9 aspect ratio
       return (
         <div className="relative w-full pt-[56.25%] bg-black rounded-lg overflow-hidden">
           <iframe
