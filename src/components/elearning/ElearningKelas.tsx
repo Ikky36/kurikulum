@@ -196,11 +196,12 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
   }, [classes]);
 
   // Auto-generate title when course and class are selected
+  // Format: "{course.code} {course.name} - {classGroup.name}" to match dashboard display
   const generateTitle = (courseId: string, classGroupId: string): string => {
     const course = courses?.find(c => c.id === courseId);
     const classGroup = classGroups?.find(g => g.id === classGroupId);
     if (course && classGroup) {
-      return `${course.name} - ${classGroup.name}`;
+      return `${course.code} ${course.name} - ${classGroup.name}`;
     }
     return '';
   };
