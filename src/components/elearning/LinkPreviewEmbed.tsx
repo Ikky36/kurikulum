@@ -22,6 +22,11 @@ type LinkType =
   | 'youtube' 
   | 'vimeo'
   | 'dailymotion'
+  | 'tiktok'
+  | 'instagram'
+  | 'facebook-video'
+  | 'twitter'
+  | 'twitch'
   | 'spotify'
   | 'soundcloud'
   | 'pdf' 
@@ -164,6 +169,88 @@ function parseLinkInfo(url: string): LinkInfo {
         label: 'Dailymotion',
         category: 'video',
         canEmbed: !!dmId,
+      };
+    }
+
+    // TikTok
+    if (hostname.includes('tiktok.com')) {
+      // TikTok URLs: tiktok.com/@username/video/VIDEO_ID or vm.tiktok.com/ID
+      const videoId = originalPathname.match(/\/video\/(\d+)/)?.[1];
+      return {
+        type: 'tiktok',
+        embedUrl: videoId ? `https://www.tiktok.com/embed/v2/${videoId}` : null,
+        icon: <Video className="h-4 w-4" />,
+        label: 'TikTok',
+        category: 'video',
+        canEmbed: !!videoId,
+      };
+    }
+
+    // Instagram (Reels, Posts, Videos)
+    if (hostname.includes('instagram.com')) {
+      // Instagram URLs: instagram.com/p/CODE, instagram.com/reel/CODE, instagram.com/tv/CODE
+      const postCode = originalPathname.match(/\/(p|reel|reels|tv)\/([A-Za-z0-9_-]+)/)?.[2];
+      return {
+        type: 'instagram',
+        embedUrl: postCode ? `https://www.instagram.com/p/${postCode}/embed` : null,
+        icon: <Video className="h-4 w-4" />,
+        label: 'Instagram',
+        category: 'video',
+        canEmbed: !!postCode,
+      };
+    }
+
+    // Facebook Video
+    if (hostname.includes('facebook.com') || hostname.includes('fb.watch')) {
+      // Facebook video URLs: facebook.com/watch?v=ID, facebook.com/username/videos/ID, fb.watch/ID
+      const isVideo = pathname.includes('/videos/') || pathname.includes('/watch') || hostname.includes('fb.watch');
+      return {
+        type: 'facebook-video',
+        embedUrl: isVideo ? `https://www.facebook.com/plugins/video.php?href=${encodeURIComponent(url)}&show_text=false` : null,
+        icon: <Video className="h-4 w-4" />,
+        label: 'Facebook',
+        category: 'video',
+        canEmbed: isVideo,
+      };
+    }
+
+    // Twitter/X Video
+    if (hostname.includes('twitter.com') || hostname.includes('x.com')) {
+      // Twitter/X URLs: twitter.com/username/status/ID or x.com/username/status/ID
+      const tweetId = originalPathname.match(/\/status\/(\d+)/)?.[1];
+      return {
+        type: 'twitter',
+        embedUrl: tweetId ? `https://platform.twitter.com/embed/Tweet.html?id=${tweetId}` : null,
+        icon: <Video className="h-4 w-4" />,
+        label: 'Twitter/X',
+        category: 'video',
+        canEmbed: !!tweetId,
+      };
+    }
+
+    // Twitch
+    if (hostname.includes('twitch.tv')) {
+      // Twitch URLs: twitch.tv/videos/ID or twitch.tv/username/clip/CLIP_ID
+      const videoId = originalPathname.match(/\/videos\/(\d+)/)?.[1];
+      const clipId = originalPathname.match(/\/clip\/([A-Za-z0-9_-]+)/)?.[1];
+      const channelName = !videoId && !clipId ? originalPathname.split('/')[1] : null;
+      
+      let embedUrl: string | null = null;
+      if (videoId) {
+        embedUrl = `https://player.twitch.tv/?video=${videoId}&parent=${window.location.hostname}&autoplay=false`;
+      } else if (clipId) {
+        embedUrl = `https://clips.twitch.tv/embed?clip=${clipId}&parent=${window.location.hostname}&autoplay=false`;
+      } else if (channelName && channelName !== '') {
+        embedUrl = `https://player.twitch.tv/?channel=${channelName}&parent=${window.location.hostname}&autoplay=false`;
+      }
+      
+      return {
+        type: 'twitch',
+        embedUrl,
+        icon: <Video className="h-4 w-4" />,
+        label: 'Twitch',
+        category: 'video',
+        canEmbed: !!embedUrl,
       };
     }
 
