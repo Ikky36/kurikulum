@@ -112,22 +112,17 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
         };
       });
 
-      // Sort: submitted students first (by score desc), then non-submitted (alphabetically)
-      const sorted = entries.sort((a, b) => {
-        if (a.has_submitted && !b.has_submitted) return -1;
-        if (!a.has_submitted && b.has_submitted) return 1;
-        if (a.has_submitted && b.has_submitted) {
-          return (b.best_score ?? 0) - (a.best_score ?? 0);
-        }
-        return a.full_name.localeCompare(b.full_name);
+      // Filter only students who have submitted
+      const submittedEntries = entries.filter(entry => entry.has_submitted);
+
+      // Sort by score descending
+      const sorted = submittedEntries.sort((a, b) => {
+        return (b.best_score ?? 0) - (a.best_score ?? 0);
       });
 
-      // Assign ranks only to those who submitted
-      let rank = 1;
-      sorted.forEach((entry) => {
-        if (entry.has_submitted) {
-          entry.rank = rank++;
-        }
+      // Assign ranks
+      sorted.forEach((entry, index) => {
+        entry.rank = index + 1;
       });
 
       return sorted;
@@ -135,8 +130,7 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
     enabled: open,
   });
 
-  const submittedCount = leaderboard?.filter(e => e.has_submitted).length || 0;
-  const totalCount = leaderboard?.length || 0;
+  const submittedCount = leaderboard?.length || 0;
 
   const getRankIcon = (rank: number, hasSubmitted: boolean) => {
     if (!hasSubmitted) {
@@ -210,7 +204,7 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="gap-1">
             <Users className="h-3 w-3" />
-            {submittedCount}/{totalCount} sudah mengerjakan
+            {submittedCount} mahasiswa sudah mengerjakan
           </Badge>
         </div>
 
@@ -223,7 +217,7 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
             <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
               <Users className="h-8 w-8 text-muted-foreground" />
             </div>
-            <p className="text-muted-foreground">Tidak ada anggota kelas</p>
+            <p className="text-muted-foreground">Belum ada mahasiswa yang mengerjakan quiz</p>
           </div>
         ) : (
           <>
