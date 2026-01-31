@@ -391,9 +391,9 @@ function renderEmbedContent(linkInfo: LinkInfo, url: string, height: string = '7
 
     case 'document':
     default:
-      // Full width responsive document preview with aspect ratio
+      // Full width responsive document preview - taller on mobile to avoid controls overlap
       return (
-        <div className="relative w-full pb-[75%] sm:pb-[60%] lg:pb-[50%]">
+        <div className="relative w-full pb-[120%] sm:pb-[80%] lg:pb-[60%]">
           <iframe
             src={linkInfo.embedUrl}
             className="absolute inset-0 w-full h-full border-0 rounded-lg"
@@ -614,8 +614,8 @@ export function LinkPreviewInline({ url, showFullscreen = false }: { url: string
             />
           </div>
         ) : (
-          // Documents - full width responsive aspect ratio
-          <div className="relative w-full pb-[75%] sm:pb-[60%] lg:pb-[50%]">
+          // Documents - full width responsive, taller on mobile
+          <div className="relative w-full pb-[120%] sm:pb-[80%] lg:pb-[60%]">
             <iframe
               src={linkInfo.embedUrl}
               className="absolute inset-0 w-full h-full border-0"
