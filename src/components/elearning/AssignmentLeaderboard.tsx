@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Trophy, Medal, Award, Crown, TrendingUp, Users, MinusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -229,7 +228,7 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
           <>
             {/* Desktop Table View */}
             <div className="hidden lg:block">
-              <ScrollArea className="max-h-[60vh]">
+              <div className="max-h-[60vh] overflow-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -302,12 +301,15 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
                     ))}
                   </TableBody>
                 </Table>
-              </ScrollArea>
+              </div>
+              {totalCount > 10 && (
+                <p className="mt-2 text-xs text-muted-foreground">Scroll untuk melihat semua mahasiswa.</p>
+              )}
             </div>
 
             {/* Mobile/Tablet Card View */}
             <div className="lg:hidden">
-              <ScrollArea className="max-h-[60vh]">
+              <div className="max-h-[60vh] overflow-auto">
                 <div className="space-y-2 pr-4">
                   {/* Top 3 Podium for tablet */}
                   {topThree.length >= 3 && (
@@ -414,7 +416,10 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
                     </div>
                   ))}
                 </div>
-              </ScrollArea>
+              </div>
+              {totalCount > 10 && (
+                <p className="mt-2 text-xs text-muted-foreground">Scroll untuk melihat semua mahasiswa.</p>
+              )}
             </div>
           </>
         )}
