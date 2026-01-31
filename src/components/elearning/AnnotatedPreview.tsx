@@ -204,7 +204,7 @@ export function AnnotatedPreview({
               </div>
             ) : (
               <div className="space-y-1">
-                <div className="relative w-full h-[200px] sm:h-[280px] lg:h-[320px] bg-black">
+                <div className="relative w-full h-[200px] sm:h-[280px] lg:h-[420px] xl:h-[480px] bg-black">
                   <iframe
                     ref={iframeRef}
                     src={linkInfo.embedUrl}
