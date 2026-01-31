@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Wand2, Upload, FileText, Loader2, Sparkles, X, Languages } from 'lucide-react';
-import { useAIGeneration } from '@/hooks/useElearningMaterials';
+import { Wand2, Upload, FileText, Loader2, Sparkles, X, Languages, Image } from 'lucide-react';
+import { useAIGeneration, useAIImageGeneration } from '@/hooks/useElearningMaterials';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface AIContentGeneratorProps {
@@ -40,6 +41,7 @@ export function AIContentGenerator({
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const generateAI = useAIGeneration();
+  const generateImage = useAIImageGeneration();
 
   const [prompt, setPrompt] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -48,7 +50,9 @@ export function AIContentGenerator({
   const [generationType, setGenerationType] = useState<'from_scratch' | 'from_file' | 'enhance'>('from_scratch');
   const [contentLength, setContentLength] = useState<'short' | 'medium' | 'long'>('medium');
   const [languageMode, setLanguageMode] = useState<LanguageMode>('indonesian');
+  const [generateInfographic, setGenerateInfographic] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState('');
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -99,65 +103,20 @@ export function AIContentGenerator({
 
     setIsGenerating(true);
     setProgress(0);
+    setCurrentStep('Generating konten...');
 
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      setProgress(prev => Math.min(prev + 10, 90));
-    }, 500);
+    // Calculate total steps
+    const totalSteps = (type === 'material' && generateInfographic) ? 2 : 1;
+    let currentStepNum = 0;
 
     try {
-      let fullPrompt = '';
-
-      if (type === 'material') {
-        fullPrompt = `Generate materi pembelajaran dalam format HTML yang menarik dan terstruktur.
-
-Konteks:
-- Mata Kuliah: ${courseTitle || 'Umum'}
-${lloData ? `- Sub-CPMK: ${lloData.code} - ${lloData.description}` : ''}
-${lloData?.indikator?.length ? `- Indikator: ${lloData.indikator.join(', ')}` : ''}
-
-Instruksi: ${prompt || 'Buat materi pembelajaran yang komprehensif'}
-
-${fileContent ? `\nReferensi dari file:\n${fileContent.substring(0, 3000)}` : ''}
-
-Format output:
-- Gunakan heading (h2, h3) untuk struktur
-- Gunakan paragraf yang jelas
-- Sertakan bullet points jika perlu
-- Tambahkan contoh praktis
-- Panjang: ${contentLength === 'short' ? '500-800 kata' : contentLength === 'medium' ? '1000-1500 kata' : '2000-3000 kata'}
-
-Output hanya HTML tanpa tag <html>, <head>, atau <body>.`;
-      } else {
-        fullPrompt = `Generate soal quiz dalam format JSON array.
-
-Konteks:
-- Mata Kuliah: ${courseTitle || 'Umum'}
-${lloData ? `- Sub-CPMK: ${lloData.code} - ${lloData.description}` : ''}
-${lloData?.indikator?.length ? `- Indikator: ${lloData.indikator.join(', ')}` : ''}
-
-Instruksi: ${prompt || 'Buat soal quiz yang menguji pemahaman materi'}
-
-${fileContent ? `\nReferensi dari file:\n${fileContent.substring(0, 3000)}` : ''}
-
-Format output JSON:
-[
-  {
-    "question_type": "multiple_choice",
-    "question_text": "Pertanyaan...",
-    "options": ["A", "B", "C", "D"],
-    "correct_answer": "A",
-    "feedback": "Penjelasan jawaban yang benar"
-  }
-]
-
-Buat ${questionCount} soal dengan variasi tipe (multiple_choice, true_false, short_answer).`;
-      }
-
       // Build context with file content if available
       const contextWithFile = fileContent 
         ? `${prompt ? prompt + '\n\n' : ''}KONTEN FILE REFERENSI:\n${fileContent}` 
         : undefined;
+      
+      currentStepNum = 1;
+      setProgress(Math.round((currentStepNum / totalSteps) * 50));
       
       const result = await generateAI.mutateAsync({
         type: type === 'material' ? 'generate_material' : 'generate_quiz',
@@ -167,9 +126,8 @@ Buat ${questionCount} soal dengan variasi tipe (multiple_choice, true_false, sho
         questionType: questionType,
         questionCount: questionCount,
         languageMode: languageMode,
+        contentLength: contentLength,
       });
-
-      setProgress(100);
 
       if (result?.error) {
         toast({
@@ -180,8 +138,43 @@ Buat ${questionCount} soal dengan variasi tipe (multiple_choice, true_false, sho
         return;
       }
 
-      if (result.content) {
-        onGenerated(result.content);
+      let finalContent = result.content || '';
+      
+      // Generate infographic if enabled and type is material
+      if (type === 'material' && generateInfographic && finalContent) {
+        setCurrentStep('Generating infografis...');
+        setProgress(75);
+        
+        try {
+          const imagePrompt = `Buat infografis edukatif untuk materi pembelajaran.
+Topik: ${prompt || defaultTopic}
+Gaya: clean, modern, educational infographic dengan ikon-ikon relevan, diagram, dan layout yang jelas.
+Gunakan warna yang kontras dan teks yang mudah dibaca.
+Ultra high resolution.`;
+          
+          const imageResult = await generateImage.mutateAsync({
+            prompt: imagePrompt,
+            topic: prompt || defaultTopic,
+          });
+          
+          if (imageResult?.imageUrl) {
+            // Prepend the infographic image to content
+            finalContent = `<div class="infographic-container mb-6 text-center">
+<img src="${imageResult.imageUrl}" alt="Infografis Materi" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 500px;" />
+<p class="text-sm text-muted-foreground mt-2 italic">Infografis Materi</p>
+</div>
+${finalContent}`;
+          }
+        } catch (imgError) {
+          console.error('Failed to generate infographic:', imgError);
+          // Continue without image
+        }
+      }
+
+      setProgress(100);
+
+      if (finalContent) {
+        onGenerated(finalContent);
         toast({ title: 'Sukses', description: 'Konten berhasil di-generate!' });
       } else {
         toast({
@@ -197,9 +190,9 @@ Buat ${questionCount} soal dengan variasi tipe (multiple_choice, true_false, sho
         variant: 'destructive',
       });
     } finally {
-      clearInterval(progressInterval);
       setIsGenerating(false);
       setProgress(0);
+      setCurrentStep('');
     }
   };
 
@@ -352,11 +345,31 @@ Buat ${questionCount} soal dengan variasi tipe (multiple_choice, true_false, sho
           </div>
         )}
 
+        {/* Generate Infographic Option - Only show for material type */}
+        {type === 'material' && (
+          <div className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg">
+            <Checkbox 
+              id="generate-infographic-single" 
+              checked={generateInfographic}
+              onCheckedChange={(checked) => setGenerateInfographic(checked === true)}
+            />
+            <div className="flex-1">
+              <Label htmlFor="generate-infographic-single" className="flex items-center gap-2 cursor-pointer">
+                <Image className="h-4 w-4 text-primary" />
+                Generate Gambar Infografis
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                AI akan membuat gambar infografis yang sesuai dengan materi
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Progress */}
         {isGenerating && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span>Generating...</span>
+              <span>{currentStep || 'Generating...'}</span>
               <span>{progress}%</span>
             </div>
             <Progress value={progress} className="h-2" />
@@ -372,7 +385,7 @@ Buat ${questionCount} soal dengan variasi tipe (multiple_choice, true_false, sho
           {isGenerating ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Generating...
+              {currentStep || 'Generating...'}
             </>
           ) : (
             <>

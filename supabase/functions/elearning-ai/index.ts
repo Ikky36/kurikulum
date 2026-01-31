@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 interface AIRequest {
-  type: "generate_material" | "generate_quiz" | "grade_answer" | "generate_feedback";
+  type: "generate_material" | "generate_quiz" | "grade_answer" | "generate_feedback" | "generate_image";
   context?: string;
   topic?: string;
   indicators?: string[];
@@ -18,6 +18,7 @@ interface AIRequest {
   correctAnswer?: string;
   questionText?: string;
   languageMode?: 'arabic' | 'indonesian' | 'mixed';
+  contentLength?: 'short' | 'medium' | 'long';
 }
 
 serve(async (req) => {
@@ -86,7 +87,58 @@ serve(async (req) => {
     }
 
     const body: AIRequest = await req.json();
-    const { type, context, topic, indicators, questionType, questionCount, studentAnswer, correctAnswer, questionText, languageMode } = body;
+    const { type, context, topic, indicators, questionType, questionCount, studentAnswer, correctAnswer, questionText, languageMode, contentLength } = body;
+
+    // Handle image generation separately
+    if (type === "generate_image") {
+      const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
+      if (!lovableApiKey) {
+        throw new Error("LOVABLE_API_KEY tidak tersedia untuk generate gambar.");
+      }
+
+      const imagePrompt = context || topic || "Educational infographic";
+      
+      const imageResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${lovableApiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image",
+          messages: [
+            {
+              role: "user",
+              content: imagePrompt,
+            },
+          ],
+          modalities: ["image", "text"],
+        }),
+      });
+
+      if (!imageResponse.ok) {
+        if (imageResponse.status === 429) {
+          return new Response(
+            JSON.stringify({
+              error: "Terlalu banyak permintaan. Silakan tunggu sebentar.",
+              code: 429,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        const errorText = await imageResponse.text();
+        console.error("Image generation error:", imageResponse.status, errorText);
+        throw new Error("Gagal generate gambar.");
+      }
+
+      const imageData = await imageResponse.json();
+      const imageUrl = imageData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+
+      return new Response(
+        JSON.stringify({ imageUrl, type: "generate_image" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Language instructions based on mode
     let languageInstruction = '';
@@ -121,6 +173,7 @@ serve(async (req) => {
 
     switch (type) {
       case "generate_material":
+        const lengthGuide = contentLength === 'short' ? '500-800 kata' : contentLength === 'long' ? '2000-3000 kata' : '1000-1500 kata';
         systemPrompt = `Anda adalah ahli pendidikan yang membantu dosen membuat materi pembelajaran yang berkualitas. 
 ${languageInstruction}
 Format output dalam HTML sederhana dengan tag <h2>, <h3>, <p>, <ul>, <li>, <strong>, <em>.
@@ -129,6 +182,8 @@ ${languageMode === 'arabic' || languageMode === 'mixed' ? 'Untuk teks Arab, guna
         userPrompt = `Buatkan materi pembelajaran dengan topik: "${topic}"
 ${indicators?.length ? `\nIndikator pembelajaran yang harus dicapai:\n${indicators.map((i, idx) => `${idx + 1}. ${i}`).join("\n")}` : ""}
 ${context ? `\n\n=== REFERENSI/KONTEKS ===\n${context}\n=== AKHIR REFERENSI ===\n\nGunakan referensi di atas sebagai sumber utama untuk membuat materi. Pastikan materi yang dihasilkan BERDASARKAN konten referensi tersebut.` : ""}
+
+Panjang konten: ${lengthGuide}
 
 Buatkan materi yang lengkap, terstruktur, dan mudah dipahami oleh mahasiswa.`;
         break;

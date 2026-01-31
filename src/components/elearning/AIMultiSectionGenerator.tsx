@@ -7,9 +7,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Wand2, Upload, FileText, Loader2, Sparkles, X, Languages, Plus, Trash2 } from 'lucide-react';
-import { useAIGeneration } from '@/hooks/useElearningMaterials';
+import { Wand2, Upload, FileText, Loader2, Sparkles, X, Languages, Plus, Trash2, Image } from 'lucide-react';
+import { useAIGeneration, useAIImageGeneration } from '@/hooks/useElearningMaterials';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import type { MaterialSection } from './MaterialSectionEditor';
 
@@ -22,6 +23,7 @@ interface AIMultiSectionGeneratorProps {
 }
 
 type LanguageMode = 'arabic' | 'indonesian' | 'mixed';
+type ContentLength = 'short' | 'medium' | 'long';
 
 export function AIMultiSectionGenerator({ 
   onGenerated, 
@@ -33,6 +35,7 @@ export function AIMultiSectionGenerator({
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const generateAI = useAIGeneration();
+  const generateImage = useAIImageGeneration();
 
   const [sectionTitles, setSectionTitles] = useState<string[]>(['Pendahuluan', 'Pembahasan', 'Kesimpulan']);
   const [prompt, setPrompt] = useState('');
@@ -40,8 +43,11 @@ export function AIMultiSectionGenerator({
   const [fileContent, setFileContent] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [languageMode, setLanguageMode] = useState<LanguageMode>('indonesian');
+  const [contentLength, setContentLength] = useState<ContentLength>('medium');
+  const [generateInfographic, setGenerateInfographic] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentSection, setCurrentSection] = useState(0);
+  const [currentStep, setCurrentStep] = useState('');
 
   const addSectionTitle = () => {
     setSectionTitles([...sectionTitles, `Section ${sectionTitles.length + 1}`]);
@@ -106,10 +112,15 @@ export function AIMultiSectionGenerator({
 
     const generatedSections: MaterialSection[] = [];
 
+    const lengthGuide = contentLength === 'short' ? '300-500 kata' : contentLength === 'medium' ? '600-1000 kata' : '1200-2000 kata';
+    const totalSteps = generateInfographic ? sectionTitles.length * 2 : sectionTitles.length;
+
     try {
       for (let i = 0; i < sectionTitles.length; i++) {
+        const stepIndex = generateInfographic ? i * 2 : i;
         setCurrentSection(i + 1);
-        setProgress(Math.round(((i) / sectionTitles.length) * 100));
+        setCurrentStep('Generating teks...');
+        setProgress(Math.round((stepIndex / totalSteps) * 100));
 
         const sectionTitle = sectionTitles[i];
         const sectionPrompt = `Buat konten untuk section "${sectionTitle}" (section ${i + 1} dari ${sectionTitles.length}).
@@ -122,6 +133,8 @@ Konteks section dalam materi:
 
 ${fileContent ? `\nReferensi dari file:\n${fileContent.substring(0, 2000)}` : ''}
 
+Panjang konten: ${lengthGuide}
+
 Pastikan konten section ini relevan dengan judulnya dan terhubung dengan section lainnya.`;
 
         const result = await generateAI.mutateAsync({
@@ -130,6 +143,7 @@ Pastikan konten section ini relevan dengan judulnya dan terhubung dengan section
           context: fileContent || undefined,
           indicators: indicators.length > 0 ? indicators : (lloData?.indikator || []),
           languageMode: languageMode,
+          contentLength: contentLength,
         });
 
         if (result?.error) {
@@ -141,11 +155,43 @@ Pastikan konten section ini relevan dengan judulnya dan terhubung dengan section
           break;
         }
 
-        if (result.content) {
+        let sectionContent = result.content || '';
+        
+        // Generate infographic if enabled
+        if (generateInfographic && sectionContent) {
+          setCurrentStep('Generating infografis...');
+          setProgress(Math.round(((stepIndex + 1) / totalSteps) * 100));
+          
+          try {
+            const imagePrompt = `Buat infografis edukatif untuk materi pembelajaran dengan judul "${sectionTitle}". 
+Topik: ${prompt || defaultTopic}. 
+Gaya: clean, modern, educational infographic dengan ikon-ikon relevan dan layout yang jelas.
+Gunakan warna yang kontras dan teks yang mudah dibaca.`;
+            
+            const imageResult = await generateImage.mutateAsync({
+              prompt: imagePrompt,
+              topic: sectionTitle,
+            });
+            
+            if (imageResult?.imageUrl) {
+              // Prepend the infographic image to section content
+              sectionContent = `<div class="infographic-container mb-6 text-center">
+<img src="${imageResult.imageUrl}" alt="Infografis: ${sectionTitle}" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 400px;" />
+<p class="text-sm text-muted-foreground mt-2 italic">Infografis: ${sectionTitle}</p>
+</div>
+${sectionContent}`;
+            }
+          } catch (imgError) {
+            console.error('Failed to generate infographic:', imgError);
+            // Continue without image
+          }
+        }
+
+        if (sectionContent) {
           generatedSections.push({
             id: generateId(),
             title: sectionTitle,
-            content: result.content,
+            content: sectionContent,
           });
         }
       }
@@ -166,6 +212,7 @@ Pastikan konten section ini relevan dengan judulnya dan terhubung dengan section
       setIsGenerating(false);
       setProgress(0);
       setCurrentSection(0);
+      setCurrentStep('');
     }
   };
 
@@ -286,11 +333,44 @@ Pastikan konten section ini relevan dengan judulnya dan terhubung dengan section
           </ToggleGroup>
         </div>
 
+        {/* Content Length */}
+        <div className="space-y-2">
+          <Label>Panjang Konten per Section</Label>
+          <Select value={contentLength} onValueChange={(v: ContentLength) => setContentLength(v)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="short">Pendek (300-500 kata)</SelectItem>
+              <SelectItem value="medium">Sedang (600-1000 kata)</SelectItem>
+              <SelectItem value="long">Panjang (1200-2000 kata)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Generate Infographic Option */}
+        <div className="flex items-center space-x-3 p-3 bg-muted/50 rounded-lg">
+          <Checkbox 
+            id="generate-infographic" 
+            checked={generateInfographic}
+            onCheckedChange={(checked) => setGenerateInfographic(checked === true)}
+          />
+          <div className="flex-1">
+            <Label htmlFor="generate-infographic" className="flex items-center gap-2 cursor-pointer">
+              <Image className="h-4 w-4 text-primary" />
+              Generate Gambar Infografis
+            </Label>
+            <p className="text-xs text-muted-foreground mt-1">
+              AI akan membuat gambar infografis yang sesuai untuk setiap section
+            </p>
+          </div>
+        </div>
+
         {/* Progress */}
         {isGenerating && (
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
-              <span>Generating section {currentSection} dari {sectionTitles.length}...</span>
+              <span>Section {currentSection}/{sectionTitles.length} - {currentStep}</span>
               <span>{progress}%</span>
             </div>
             <Progress value={progress} className="h-2" />
