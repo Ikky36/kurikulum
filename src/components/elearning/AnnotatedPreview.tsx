@@ -85,7 +85,8 @@ export function AnnotatedPreview({
   const isVideo = linkInfo.category === 'video';
   const isDocument = linkInfo.category === 'document' || linkInfo.category === 'image';
   const canAnnotate = isDocument && enableAnnotations;
-  const canCommentVideo = isVideo && enableVideoComments;
+  // Video annotations/comments disabled
+  const canCommentVideo = false;
 
   return (
     <div className="space-y-3">
