@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { LinkPreviewInline } from './LinkPreviewEmbed';
+import { AnnotatedPreview } from './AnnotatedPreview';
 
 interface SubmissionGraderProps {
   assignmentId: string;
@@ -291,7 +291,7 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
 
       {/* Grading Dialog - Scrollable content with compact video */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg lg:max-w-3xl max-h-[90vh] overflow-hidden p-0">
+        <DialogContent className="max-w-lg lg:max-w-5xl max-h-[90vh] overflow-hidden p-0">
           <ScrollArea className="max-h-[90vh]">
             <div className="p-6 space-y-5">
               <DialogHeader>
@@ -343,10 +343,13 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
                           </a>
                         </Button>
                         
-                        {/* Compact Preview */}
-                        <LinkPreviewInline 
+                        {/* Preview with annotation & video comments */}
+                        <AnnotatedPreview 
                           url={selectedSubmission.submission_url} 
+                          submissionId={selectedSubmission.id}
                           showFullscreen 
+                          enableAnnotations
+                          enableVideoComments
                         />
                       </div>
                     ) : (

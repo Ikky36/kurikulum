@@ -548,6 +548,76 @@ export type Database = {
         }
         Relationships: []
       }
+      document_annotations: {
+        Row: {
+          annotation_type: string
+          author_profile_id: string
+          comment_text: string | null
+          created_at: string
+          height_percent: number
+          highlight_color: string | null
+          id: string
+          material_id: string | null
+          submission_id: string | null
+          updated_at: string
+          width_percent: number
+          x_percent: number
+          y_percent: number
+        }
+        Insert: {
+          annotation_type?: string
+          author_profile_id: string
+          comment_text?: string | null
+          created_at?: string
+          height_percent?: number
+          highlight_color?: string | null
+          id?: string
+          material_id?: string | null
+          submission_id?: string | null
+          updated_at?: string
+          width_percent?: number
+          x_percent: number
+          y_percent: number
+        }
+        Update: {
+          annotation_type?: string
+          author_profile_id?: string
+          comment_text?: string | null
+          created_at?: string
+          height_percent?: number
+          highlight_color?: string | null
+          id?: string
+          material_id?: string | null
+          submission_id?: string | null
+          updated_at?: string
+          width_percent?: number
+          x_percent?: number
+          y_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_annotations_author_profile_id_fkey"
+            columns: ["author_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_annotations_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_annotations_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       elearning_assignments: {
         Row: {
           assessment_id: string | null
@@ -1801,6 +1871,61 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      video_comments: {
+        Row: {
+          author_profile_id: string
+          comment_text: string
+          created_at: string
+          id: string
+          material_id: string | null
+          submission_id: string | null
+          timestamp_seconds: number
+          updated_at: string
+        }
+        Insert: {
+          author_profile_id: string
+          comment_text: string
+          created_at?: string
+          id?: string
+          material_id?: string | null
+          submission_id?: string | null
+          timestamp_seconds: number
+          updated_at?: string
+        }
+        Update: {
+          author_profile_id?: string
+          comment_text?: string
+          created_at?: string
+          id?: string
+          material_id?: string | null
+          submission_id?: string | null
+          timestamp_seconds?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_comments_author_profile_id_fkey"
+            columns: ["author_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_comments_material_id_fkey"
+            columns: ["material_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_materials"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_comments_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "elearning_submissions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vmts_ps_misi: {
         Row: {
