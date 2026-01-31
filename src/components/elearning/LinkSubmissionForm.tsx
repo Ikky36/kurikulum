@@ -182,7 +182,7 @@ export function LinkSubmissionForm({
           />
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-center gap-2 pt-2">
           <Button 
             onClick={handleSubmit} 
             disabled={!linkUrl.trim() || !isValidUrl(linkUrl) || createSubmission.isPending}
