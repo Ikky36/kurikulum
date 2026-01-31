@@ -9,10 +9,16 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Wand2, Upload, FileText, Loader2, Sparkles, X, Languages, Plus, Trash2, Image } from 'lucide-react';
+import { Wand2, Upload, FileText, Loader2, Sparkles, X, Languages, Plus, Trash2, Image, Paperclip, File } from 'lucide-react';
 import { useAIGeneration, useAIImageGeneration } from '@/hooks/useElearningMaterials';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
-import type { MaterialSection } from './MaterialSectionEditor';
+import type { MaterialSection, SectionFile } from './MaterialSectionEditor';
+import { supabase } from '@/integrations/supabase/client';
+
+interface SectionWithFiles {
+  title: string;
+  files: SectionFile[];
+}
 
 interface AIMultiSectionGeneratorProps {
   onGenerated: (sections: MaterialSection[]) => void;
@@ -34,10 +40,15 @@ export function AIMultiSectionGenerator({
 }: AIMultiSectionGeneratorProps) {
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sectionFileInputRefs = useRef<Map<number, HTMLInputElement>>(new Map());
   const generateAI = useAIGeneration();
   const generateImage = useAIImageGeneration();
 
-  const [sectionTitles, setSectionTitles] = useState<string[]>(['Pendahuluan', 'Pembahasan', 'Kesimpulan']);
+  const [sections, setSections] = useState<SectionWithFiles[]>([
+    { title: 'Pendahuluan', files: [] },
+    { title: 'Pembahasan', files: [] },
+    { title: 'Kesimpulan', files: [] },
+  ]);
   const [prompt, setPrompt] = useState('');
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [fileContent, setFileContent] = useState('');
@@ -48,19 +59,89 @@ export function AIMultiSectionGenerator({
   const [progress, setProgress] = useState(0);
   const [currentSection, setCurrentSection] = useState(0);
   const [currentStep, setCurrentStep] = useState('');
+  const [uploadingSection, setUploadingSection] = useState<number | null>(null);
 
-  const addSectionTitle = () => {
-    setSectionTitles([...sectionTitles, `Section ${sectionTitles.length + 1}`]);
+  const addSection = () => {
+    setSections([...sections, { title: `Section ${sections.length + 1}`, files: [] }]);
   };
 
   const updateSectionTitle = (index: number, value: string) => {
-    const newTitles = [...sectionTitles];
-    newTitles[index] = value;
-    setSectionTitles(newTitles);
+    const newSections = [...sections];
+    newSections[index].title = value;
+    setSections(newSections);
   };
 
-  const removeSectionTitle = (index: number) => {
-    setSectionTitles(sectionTitles.filter((_, i) => i !== index));
+  const removeSection = (index: number) => {
+    setSections(sections.filter((_, i) => i !== index));
+  };
+
+  const handleSectionFileUpload = async (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = event.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
+
+    setUploadingSection(index);
+
+    try {
+      const newFiles: SectionFile[] = [];
+      
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `ai-gen/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error } = await supabase.storage
+          .from('material-files')
+          .upload(fileName, file);
+
+        if (error) throw error;
+
+        const { data: urlData } = supabase.storage
+          .from('material-files')
+          .getPublicUrl(fileName);
+
+        newFiles.push({
+          id: `file_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+          name: file.name,
+          url: urlData.publicUrl,
+          type: file.type,
+          size: file.size,
+        });
+      }
+
+      const newSections = [...sections];
+      newSections[index].files = [...newSections[index].files, ...newFiles];
+      setSections(newSections);
+
+      toast({ title: 'Sukses', description: `${newFiles.length} file berhasil diupload` });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Gagal mengupload file', variant: 'destructive' });
+    } finally {
+      setUploadingSection(null);
+      const inputRef = sectionFileInputRefs.current.get(index);
+      if (inputRef) inputRef.value = '';
+    }
+  };
+
+  const removeSectionFile = (sectionIndex: number, fileId: string) => {
+    const newSections = [...sections];
+    newSections[sectionIndex].files = newSections[sectionIndex].files.filter(f => f.id !== fileId);
+    setSections(newSections);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const readFileContent = async (file: SectionFile): Promise<string> => {
+    try {
+      const response = await fetch(file.url);
+      const text = await response.text();
+      return text.substring(0, 3000);
+    } catch {
+      return `[Konten dari file: ${file.name}]`;
+    }
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,12 +177,14 @@ export function AIMultiSectionGenerator({
   const generateId = () => `section_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   const handleGenerate = async () => {
-    if (sectionTitles.length === 0) {
+    if (sections.length === 0) {
       toast({ title: 'Error', description: 'Tambahkan minimal satu section', variant: 'destructive' });
       return;
     }
 
-    if (!prompt && !fileContent) {
+    // Check if at least prompt or any section has files
+    const hasAnyFiles = sections.some(s => s.files.length > 0);
+    if (!prompt && !fileContent && !hasAnyFiles) {
       toast({ title: 'Error', description: 'Masukkan prompt atau upload file', variant: 'destructive' });
       return;
     }
@@ -113,34 +196,53 @@ export function AIMultiSectionGenerator({
     const generatedSections: MaterialSection[] = [];
 
     const lengthGuide = contentLength === 'short' ? '300-500 kata' : contentLength === 'medium' ? '600-1000 kata' : '1200-2000 kata';
-    const totalSteps = generateInfographic ? sectionTitles.length * 2 : sectionTitles.length;
+    const totalSteps = generateInfographic ? sections.length * 2 : sections.length;
 
     try {
-      for (let i = 0; i < sectionTitles.length; i++) {
+      for (let i = 0; i < sections.length; i++) {
         const stepIndex = generateInfographic ? i * 2 : i;
         setCurrentSection(i + 1);
-        setCurrentStep('Generating teks...');
+        setCurrentStep('Memproses file sumber...');
         setProgress(Math.round((stepIndex / totalSteps) * 100));
 
-        const sectionTitle = sectionTitles[i];
-        const sectionPrompt = `Buat konten untuk section "${sectionTitle}" (section ${i + 1} dari ${sectionTitles.length}).
+        const section = sections[i];
+        
+        // Read content from section-specific files
+        let sectionFileContent = '';
+        if (section.files.length > 0) {
+          setCurrentStep('Membaca file sumber section...');
+          for (const file of section.files) {
+            if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+              const content = await readFileContent(file);
+              sectionFileContent += `\n\n--- Dari file: ${file.name} ---\n${content}`;
+            } else {
+              sectionFileContent += `\n\n[Referensi file: ${file.name}]`;
+            }
+          }
+        }
+
+        setCurrentStep('Generating teks...');
+
+        const sectionPrompt = `Buat konten untuk section "${section.title}" (section ${i + 1} dari ${sections.length}).
 
 Topik utama: ${prompt || defaultTopic || 'Materi pembelajaran'}
 
 Konteks section dalam materi:
-- Section sebelumnya: ${i > 0 ? sectionTitles.slice(0, i).join(', ') : 'Tidak ada (ini section pertama)'}
-- Section sesudahnya: ${i < sectionTitles.length - 1 ? sectionTitles.slice(i + 1).join(', ') : 'Tidak ada (ini section terakhir)'}
+- Section sebelumnya: ${i > 0 ? sections.slice(0, i).map(s => s.title).join(', ') : 'Tidak ada (ini section pertama)'}
+- Section sesudahnya: ${i < sections.length - 1 ? sections.slice(i + 1).map(s => s.title).join(', ') : 'Tidak ada (ini section terakhir)'}
 
-${fileContent ? `\nReferensi dari file:\n${fileContent.substring(0, 2000)}` : ''}
+${fileContent ? `\nReferensi umum dari file:\n${fileContent.substring(0, 2000)}` : ''}
+${sectionFileContent ? `\nReferensi khusus untuk section ini:${sectionFileContent}` : ''}
 
 Panjang konten: ${lengthGuide}
 
+PENTING: Konten HARUS berdasarkan file sumber yang diberikan. Jangan mengarang informasi di luar konteks file.
 Pastikan konten section ini relevan dengan judulnya dan terhubung dengan section lainnya.`;
 
         const result = await generateAI.mutateAsync({
           type: 'generate_material',
           topic: sectionPrompt,
-          context: fileContent || undefined,
+          context: fileContent || sectionFileContent || undefined,
           indicators: indicators.length > 0 ? indicators : (lloData?.indikator || []),
           languageMode: languageMode,
           contentLength: contentLength,
@@ -163,21 +265,21 @@ Pastikan konten section ini relevan dengan judulnya dan terhubung dengan section
           setProgress(Math.round(((stepIndex + 1) / totalSteps) * 100));
           
           try {
-            const imagePrompt = `Buat infografis edukatif untuk materi pembelajaran dengan judul "${sectionTitle}". 
+        const imagePrompt = `Buat infografis edukatif untuk materi pembelajaran dengan judul "${section.title}". 
 Topik: ${prompt || defaultTopic}. 
 Gaya: clean, modern, educational infographic dengan ikon-ikon relevan dan layout yang jelas.
 Gunakan warna yang kontras dan teks yang mudah dibaca.`;
             
             const imageResult = await generateImage.mutateAsync({
               prompt: imagePrompt,
-              topic: sectionTitle,
+              topic: section.title,
             });
             
             if (imageResult?.imageUrl) {
               // Prepend the infographic image to section content
               sectionContent = `<div class="infographic-container mb-6 text-center">
-<img src="${imageResult.imageUrl}" alt="Infografis: ${sectionTitle}" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 400px;" />
-<p class="text-sm text-muted-foreground mt-2 italic">Infografis: ${sectionTitle}</p>
+<img src="${imageResult.imageUrl}" alt="Infografis: ${section.title}" class="max-w-full h-auto rounded-lg shadow-md mx-auto" style="max-height: 400px;" />
+<p class="text-sm text-muted-foreground mt-2 italic">Infografis: ${section.title}</p>
 </div>
 ${sectionContent}`;
             }
@@ -190,8 +292,9 @@ ${sectionContent}`;
         if (sectionContent) {
           generatedSections.push({
             id: generateId(),
-            title: sectionTitle,
+            title: section.title,
             content: sectionContent,
+            files: section.files, // Include the uploaded files
           });
         }
       }
@@ -228,38 +331,101 @@ ${sectionContent}`;
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Section Titles */}
+        {/* Section Titles with File Uploads */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <Label>Daftar Section ({sectionTitles.length})</Label>
-            <Button type="button" variant="outline" size="sm" onClick={addSectionTitle} className="gap-1">
+            <Label>Daftar Section & File Sumber ({sections.length})</Label>
+            <Button type="button" variant="outline" size="sm" onClick={addSection} className="gap-1">
               <Plus className="h-3 w-3" />
               Tambah
             </Button>
           </div>
-          <div className="space-y-2 max-h-48 overflow-y-auto">
-            {sectionTitles.map((title, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <Badge variant="secondary" className="shrink-0 w-6 h-6 flex items-center justify-center p-0">
-                  {index + 1}
-                </Badge>
-                <Input
-                  value={title}
-                  onChange={(e) => updateSectionTitle(index, e.target.value)}
-                  placeholder={`Section ${index + 1}`}
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-destructive hover:text-destructive"
-                  onClick={() => removeSectionTitle(index)}
-                  disabled={sectionTitles.length <= 1}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+          <div className="space-y-3 max-h-80 overflow-y-auto">
+            {sections.map((section, index) => (
+              <Card key={index} className="p-3">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="shrink-0 w-6 h-6 flex items-center justify-center p-0">
+                      {index + 1}
+                    </Badge>
+                    <Input
+                      value={section.title}
+                      onChange={(e) => updateSectionTitle(index, e.target.value)}
+                      placeholder={`Section ${index + 1}`}
+                      className="flex-1"
+                    />
+                    {section.files.length > 0 && (
+                      <Badge variant="outline" className="gap-1">
+                        <Paperclip className="h-3 w-3" />
+                        {section.files.length}
+                      </Badge>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => removeSection(index)}
+                      disabled={sections.length <= 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* File Upload for this Section */}
+                  <div className="ml-8 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <input
+                        ref={(el) => {
+                          if (el) sectionFileInputRefs.current.set(index, el);
+                        }}
+                        type="file"
+                        multiple
+                        onChange={(e) => handleSectionFileUpload(index, e)}
+                        className="hidden"
+                        accept=".txt,.md,.pdf,.doc,.docx"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => sectionFileInputRefs.current.get(index)?.click()}
+                        disabled={uploadingSection === index}
+                        className="gap-1 text-xs"
+                      >
+                        {uploadingSection === index ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Upload className="h-3 w-3" />
+                        )}
+                        Upload File Sumber
+                      </Button>
+                    </div>
+                    
+                    {/* File List */}
+                    {section.files.length > 0 && (
+                      <div className="space-y-1">
+                        {section.files.map((file) => (
+                          <div key={file.id} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1">
+                            <File className="h-3 w-3 text-muted-foreground" />
+                            <span className="truncate flex-1">{file.name}</span>
+                            <span className="text-muted-foreground">{formatFileSize(file.size)}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-5 w-5 text-destructive hover:text-destructive"
+                              onClick={() => removeSectionFile(index, file.id)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
             ))}
           </div>
         </div>
@@ -369,9 +535,9 @@ ${sectionContent}`;
         {/* Progress */}
         {isGenerating && (
           <div className="space-y-2">
-            <div className="flex items-center justify-between text-sm">
-              <span>Section {currentSection}/{sectionTitles.length} - {currentStep}</span>
-              <span>{progress}%</span>
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>Section {currentSection}/{sections.length} - {currentStep}</span>
+              <span>{Math.round(progress)}%</span>
             </div>
             <Progress value={progress} className="h-2" />
           </div>
@@ -381,18 +547,18 @@ ${sectionContent}`;
         <Button 
           type="button"
           onClick={handleGenerate} 
-          disabled={isGenerating || sectionTitles.length === 0 || (!prompt && !fileContent)}
+          disabled={isGenerating || sections.length === 0 || (!prompt && !fileContent && !sections.some(s => s.files.length > 0))}
           className="w-full gap-2"
         >
           {isGenerating ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Generating {currentSection}/{sectionTitles.length}...
+              Generating {currentSection}/{sections.length}...
             </>
           ) : (
             <>
               <Wand2 className="h-4 w-4" />
-              Generate {sectionTitles.length} Section
+              Generate {sections.length} Section
             </>
           )}
         </Button>

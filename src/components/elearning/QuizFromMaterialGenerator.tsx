@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,14 +9,24 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { Wand2, Loader2, Sparkles, BookOpen, ChevronDown, FileText, Languages } from 'lucide-react';
+import { Wand2, Loader2, Sparkles, BookOpen, ChevronDown, FileText, Languages, Upload, X, Paperclip, File } from 'lucide-react';
 import { useAIGeneration, useElearningMaterials } from '@/hooks/useElearningMaterials';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { supabase } from '@/integrations/supabase/client';
+
+interface SectionFile {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size: number;
+}
 
 interface MaterialSection {
   id: string;
   title: string;
   content: string;
+  files?: SectionFile[];
 }
 
 interface MaterialWithSections {
@@ -26,6 +36,15 @@ interface MaterialWithSections {
   sections: MaterialSection[];
   order_index: number;
   llo?: { code: string; description: string } | null;
+}
+
+interface UploadedFile {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size: number;
+  content?: string;
 }
 
 interface QuizFromMaterialGeneratorProps {
@@ -49,6 +68,7 @@ export function QuizFromMaterialGenerator({
   onGenerated,
 }: QuizFromMaterialGeneratorProps) {
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const generateAI = useAIGeneration();
   const { data: rawMaterials, isLoading: materialsLoading } = useElearningMaterials(classId);
 
@@ -61,6 +81,8 @@ export function QuizFromMaterialGenerator({
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [expandedMaterials, setExpandedMaterials] = useState<Set<string>>(new Set());
+  const [additionalFiles, setAdditionalFiles] = useState<UploadedFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Parse materials with sections
   const materials: MaterialWithSections[] = (rawMaterials || []).map((m: any) => ({
@@ -70,7 +92,10 @@ export function QuizFromMaterialGenerator({
 
   function parseSections(sectionsJson: any, fallbackContent: string | null): MaterialSection[] {
     if (sectionsJson && Array.isArray(sectionsJson) && sectionsJson.length > 0) {
-      return sectionsJson;
+      return sectionsJson.map((s: any) => ({
+        ...s,
+        files: s.files || [],
+      }));
     }
     // If no sections, treat the whole content as one section
     if (fallbackContent) {
@@ -78,10 +103,81 @@ export function QuizFromMaterialGenerator({
         id: 'main',
         title: 'Konten Utama',
         content: fallbackContent,
+        files: [],
       }];
     }
     return [];
   }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const readFileContent = async (url: string): Promise<string> => {
+    try {
+      const response = await fetch(url);
+      const text = await response.text();
+      return text.substring(0, 3000);
+    } catch {
+      return '';
+    }
+  };
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+
+    try {
+      const newFiles: UploadedFile[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `quiz-gen/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error } = await supabase.storage
+          .from('material-files')
+          .upload(fileName, file);
+
+        if (error) throw error;
+
+        const { data: urlData } = supabase.storage
+          .from('material-files')
+          .getPublicUrl(fileName);
+
+        let content = '';
+        if (file.type.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+          content = await file.text();
+          content = content.substring(0, 5000);
+        }
+
+        newFiles.push({
+          id: `file_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+          name: file.name,
+          url: urlData.publicUrl,
+          type: file.type,
+          size: file.size,
+          content,
+        });
+      }
+
+      setAdditionalFiles(prev => [...prev, ...newFiles]);
+      toast({ title: 'Sukses', description: `${newFiles.length} file berhasil diupload` });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Gagal mengupload file', variant: 'destructive' });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeAdditionalFile = (fileId: string) => {
+    setAdditionalFiles(prev => prev.filter(f => f.id !== fileId));
+  };
 
   const toggleMaterial = (materialId: string) => {
     const newSelected = new Set(selectedMaterials);
@@ -141,7 +237,7 @@ export function QuizFromMaterialGenerator({
     });
   };
 
-  const getSelectedContent = (): string => {
+  const getSelectedContent = async (): Promise<string> => {
     let content = '';
     
     for (const [materialId, sectionIds] of selectedSections) {
@@ -157,6 +253,32 @@ export function QuizFromMaterialGenerator({
           // Strip HTML tags for cleaner AI input
           const cleanContent = section.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
           content += cleanContent + '\n';
+          
+          // Include file content from section files
+          if (section.files && section.files.length > 0) {
+            for (const file of section.files) {
+              if (file.type?.includes('text') || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
+                const fileContent = await readFileContent(file.url);
+                if (fileContent) {
+                  content += `\n[Dari file ${file.name}]: ${fileContent}\n`;
+                }
+              } else {
+                content += `\n[Referensi file: ${file.name}]\n`;
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Add content from additional uploaded files
+    if (additionalFiles.length > 0) {
+      content += '\n\n=== FILE TAMBAHAN ===\n';
+      for (const file of additionalFiles) {
+        if (file.content) {
+          content += `\n--- Dari file: ${file.name} ---\n${file.content}\n`;
+        } else {
+          content += `\n[Referensi file: ${file.name}]\n`;
         }
       }
     }
@@ -172,8 +294,23 @@ export function QuizFromMaterialGenerator({
     return total;
   };
 
+  const getTotalFiles = (): number => {
+    let total = 0;
+    for (const [materialId, sectionIds] of selectedSections) {
+      const material = materials.find(m => m.id === materialId);
+      if (!material) continue;
+      for (const sectionId of sectionIds) {
+        const section = material.sections.find(s => s.id === sectionId);
+        if (section?.files) {
+          total += section.files.length;
+        }
+      }
+    }
+    return total + additionalFiles.length;
+  };
+
   const handleGenerate = async () => {
-    const selectedContent = getSelectedContent();
+    const selectedContent = await getSelectedContent();
     
     if (!selectedContent.trim()) {
       toast({ title: 'Error', description: 'Pilih minimal satu section materi', variant: 'destructive' });
@@ -196,7 +333,7 @@ export function QuizFromMaterialGenerator({
       const result = await generateAI.mutateAsync({
         type: 'generate_quiz',
         topic: `Soal berdasarkan materi: ${materialNames}`,
-        context: selectedContent.substring(0, 8000), // Limit context size
+        context: selectedContent.substring(0, 10000) + '\n\nPENTING: Soal HARUS berdasarkan konten materi dan file sumber yang diberikan. Jangan mengarang informasi di luar konteks.',
         questionType: questionType === 'mixed' ? 'multiple_choice' : questionType,
         questionCount: parseInt(questionCount),
         languageMode: languageMode,
@@ -311,6 +448,7 @@ export function QuizFromMaterialGenerator({
             {getTotalSelectedSections() > 0 && (
               <Badge variant="secondary">
                 {getTotalSelectedSections()} section dipilih
+                {getTotalFiles() > 0 && ` • ${getTotalFiles()} file`}
               </Badge>
             )}
           </div>
@@ -351,14 +489,34 @@ export function QuizFromMaterialGenerator({
                     {material.sections.map((section, sIdx) => (
                       <div 
                         key={section.id}
-                        className="flex items-center gap-2 p-2 hover:bg-muted/30 rounded"
+                        className="space-y-1"
                       >
-                        <Checkbox
-                          checked={selectedSections.get(material.id)?.has(section.id) || false}
-                          onCheckedChange={() => toggleSection(material.id, section.id)}
-                        />
-                        <FileText className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm">{section.title}</span>
+                        <div className="flex items-center gap-2 p-2 hover:bg-muted/30 rounded">
+                          <Checkbox
+                            checked={selectedSections.get(material.id)?.has(section.id) || false}
+                            onCheckedChange={() => toggleSection(material.id, section.id)}
+                          />
+                          <FileText className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-sm flex-1">{section.title}</span>
+                          {section.files && section.files.length > 0 && (
+                            <Badge variant="outline" className="gap-1 text-xs">
+                              <Paperclip className="h-2 w-2" />
+                              {section.files.length}
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {/* Show section files */}
+                        {section.files && section.files.length > 0 && selectedSections.get(material.id)?.has(section.id) && (
+                          <div className="ml-8 space-y-1">
+                            {section.files.map((file) => (
+                              <div key={file.id} className="flex items-center gap-2 text-xs text-muted-foreground bg-muted/30 rounded px-2 py-1">
+                                <File className="h-3 w-3" />
+                                <span className="truncate">{file.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -413,6 +571,67 @@ export function QuizFromMaterialGenerator({
               </p>
             )}
           </div>
+        </div>
+
+        {/* Additional File Upload */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <Upload className="h-4 w-4" />
+            Upload File Sumber Tambahan
+          </Label>
+          <div className="flex items-center gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept=".txt,.md,.pdf,.doc,.docx"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="gap-2"
+            >
+              {isUploading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Upload className="h-4 w-4" />
+              )}
+              Upload File
+            </Button>
+            {additionalFiles.length > 0 && (
+              <Badge variant="secondary" className="gap-1">
+                <Paperclip className="h-3 w-3" />
+                {additionalFiles.length} file
+              </Badge>
+            )}
+          </div>
+          
+          {/* Additional Files List */}
+          {additionalFiles.length > 0 && (
+            <div className="space-y-1 max-h-24 overflow-y-auto">
+              {additionalFiles.map((file) => (
+                <div key={file.id} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1">
+                  <File className="h-3 w-3 text-muted-foreground shrink-0" />
+                  <span className="truncate flex-1">{file.name}</span>
+                  <span className="text-muted-foreground">{formatFileSize(file.size)}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 shrink-0 text-destructive hover:text-destructive"
+                    onClick={() => removeAdditionalFile(file.id)}
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Language Mode */}
