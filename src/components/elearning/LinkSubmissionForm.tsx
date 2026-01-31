@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCreateSubmission } from '@/hooks/useElearningMaterials';
+import { useCreateSubmission, useUpdateSubmission } from '@/hooks/useElearningMaterials';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,6 +33,7 @@ export function LinkSubmissionForm({
   const { profile } = useAuth();
   const { toast } = useToast();
   const createSubmission = useCreateSubmission();
+  const updateSubmission = useUpdateSubmission();
   
   const [linkUrl, setLinkUrl] = useState(existingSubmission?.submission_url || '');
   const [notes, setNotes] = useState(existingSubmission?.submission_content || '');
@@ -77,15 +78,26 @@ export function LinkSubmissionForm({
     }
 
     try {
-      await createSubmission.mutateAsync({
-        assignment_id: assignmentId,
-        student_profile_id: profile.id,
-        submission_url: linkUrl.trim(),
-        submission_content: notes.trim() || null,
-        submitted_at: new Date().toISOString(),
-      });
+      if (existingSubmission?.id) {
+        // Update existing submission
+        await updateSubmission.mutateAsync({
+          id: existingSubmission.id,
+          submission_url: linkUrl.trim(),
+          submission_content: notes.trim() || null,
+          submitted_at: new Date().toISOString(),
+        });
+      } else {
+        // Create new submission
+        await createSubmission.mutateAsync({
+          assignment_id: assignmentId,
+          student_profile_id: profile.id,
+          submission_url: linkUrl.trim(),
+          submission_content: notes.trim() || null,
+          submitted_at: new Date().toISOString(),
+        });
+      }
 
-      toast({ title: 'Sukses', description: 'Tugas berhasil dikumpulkan' });
+      toast({ title: 'Sukses', description: existingSubmission ? 'Tugas berhasil diperbarui' : 'Tugas berhasil dikumpulkan' });
       onSuccess?.();
     } catch (error) {
       toast({ title: 'Error', description: 'Gagal mengirim tugas', variant: 'destructive' });
@@ -185,11 +197,11 @@ export function LinkSubmissionForm({
         <div className="flex justify-center gap-2 pt-2">
           <Button 
             onClick={handleSubmit} 
-            disabled={!linkUrl.trim() || !isValidUrl(linkUrl) || createSubmission.isPending}
+            disabled={!linkUrl.trim() || !isValidUrl(linkUrl) || createSubmission.isPending || updateSubmission.isPending}
             className="gap-2 w-full sm:w-auto"
             size="default"
           >
-            {createSubmission.isPending ? (
+            {(createSubmission.isPending || updateSubmission.isPending) ? (
               <Loader2 className="h-4 w-4 animate-spin" />
             ) : (
               <Send className="h-4 w-4" />

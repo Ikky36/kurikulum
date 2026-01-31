@@ -362,6 +362,28 @@ export function useCreateSubmission() {
   });
 }
 
+// Update submission (for students updating their link/content)
+export function useUpdateSubmission() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...data }: TablesUpdate<'elearning_submissions'> & { id: string }) => {
+      const { data: result, error } = await supabase
+        .from('elearning_submissions')
+        .update(data)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return result;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['assignment-submissions'] });
+    },
+  });
+}
+
 // Grade submission
 export function useGradeSubmission() {
   const queryClient = useQueryClient();
