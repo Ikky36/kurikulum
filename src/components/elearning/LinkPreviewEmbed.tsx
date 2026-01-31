@@ -391,14 +391,16 @@ function renderEmbedContent(linkInfo: LinkInfo, url: string, height: string = '7
 
     case 'document':
     default:
+      // Use aspect ratio for responsive document preview
       return (
-        <iframe
-          src={linkInfo.embedUrl}
-          className={`w-full h-[${height}] border-0 rounded-lg`}
-          style={{ height }}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          allowFullScreen
-        />
+        <div className="relative w-full" style={{ paddingTop: 'min(75%, 500px)' }}>
+          <iframe
+            src={linkInfo.embedUrl}
+            className="absolute inset-0 w-full h-full border-0 rounded-lg"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
       );
   }
 }
@@ -504,21 +506,7 @@ export function LinkPreviewInline({ url, showFullscreen = false }: { url: string
       </div>
     );
   }
-
-  // Get responsive height based on content type
-  const getResponsiveHeight = () => {
-    switch (linkInfo.category) {
-      case 'video':
-        return '200px'; // Video uses aspect ratio, not fixed height for embedded
-      case 'audio':
-        return '152px'; // Audio embeds are typically short
-      case 'image':
-        return '300px'; 
-      case 'document':
-      default:
-        return '300px'; // Mobile-friendly default for documents
-    }
-  };
+  // No longer needed - using aspect ratio based approach
 
   // Get title based on category
   const getPreviewTitle = () => {
@@ -626,14 +614,15 @@ export function LinkPreviewInline({ url, showFullscreen = false }: { url: string
             />
           </div>
         ) : (
-          // Documents - responsive height
-          <iframe
-            src={linkInfo.embedUrl}
-            className="w-full border-0"
-            style={{ height: getResponsiveHeight() }}
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
+          // Documents - responsive aspect ratio based on screen width
+          <div className="relative w-full" style={{ paddingTop: 'min(75%, 500px)' }}>
+            <iframe
+              src={linkInfo.embedUrl}
+              className="absolute inset-0 w-full h-full border-0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
         )}
       </div>
     </div>
