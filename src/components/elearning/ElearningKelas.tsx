@@ -381,7 +381,7 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <CardTitle className="text-xl font-bold line-clamp-2 group-hover:text-primary transition-colors">
-                      {cls.title}
+                      {cls.course?.name} - {cls.class_group?.name}
                     </CardTitle>
                     <CardDescription className="line-clamp-2 mt-2">
                       {cls.description || 'Tidak ada deskripsi'}
@@ -453,7 +453,7 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
                       className="flex-1 gap-2"
                       onClick={() => onEnterClass({
                         id: cls.id,
-                        title: cls.title,
+                        title: `${cls.course?.name || ''} - ${cls.class_group?.name || ''}`,
                         courseId: cls.course?.id || '',
                         courseName: cls.course ? `${cls.course.code} - ${cls.course.name}` : '',
                         classGroupName: cls.class_group?.name || ''
