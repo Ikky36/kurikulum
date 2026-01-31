@@ -34,49 +34,36 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
   const { data: leaderboard, isLoading } = useQuery({
     queryKey: ['assignment-leaderboard', assignmentId, classId],
     queryFn: async () => {
-      // First get the class_group_id from elearning_classes
-      const { data: classData, error: classError } = await supabase
-        .from('elearning_classes')
-        .select('class_group_id')
-        .eq('id', classId)
-        .maybeSingle();
-
-      if (classError) throw classError;
-      if (!classData?.class_group_id) return [];
-
-      // Get all students in the class
-      const { data: classStudents, error: studentsError } = await supabase
-        .from('class_students')
-        .select(`
-          student_profile_id,
-          student:profiles!class_students_student_profile_id_fkey (
-            id,
-            full_name,
-            nim,
-            photo_url
-          )
-        `)
-        .eq('class_group_id', classData.class_group_id);
-
-      if (studentsError) throw studentsError;
-
-      // Get all submissions for this assignment
+      // Get all submissions for this assignment with student profile data
       const { data: submissions, error: submissionsError } = await supabase
         .from('elearning_submissions')
         .select(`
           student_profile_id,
           score,
           attempt_number,
-          submitted_at
+          submitted_at,
+          student:profiles!elearning_submissions_student_profile_id_fkey (
+            id,
+            full_name,
+            nim,
+            photo_url
+          )
         `)
         .eq('assignment_id', assignmentId);
 
       if (submissionsError) throw submissionsError;
 
       // Create a map of student submissions with best scores
-      const submissionMap = new Map<string, { best_score: number; attempts: number; submitted_at: string }>();
+      const submissionMap = new Map<string, { 
+        best_score: number; 
+        attempts: number; 
+        submitted_at: string;
+        full_name: string;
+        nim: string | null;
+        photo_url: string | null;
+      }>();
       
-      (submissions || []).forEach((submission) => {
+      (submissions || []).forEach((submission: any) => {
         const studentId = submission.student_profile_id;
         const existing = submissionMap.get(studentId);
         const score = submission.score ?? 0;
@@ -86,6 +73,9 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
             best_score: score,
             attempts: 1,
             submitted_at: submission.submitted_at,
+            full_name: submission.student?.full_name || 'Unknown',
+            nim: submission.student?.nim || null,
+            photo_url: submission.student?.photo_url || null,
           });
         } else {
           existing.attempts += 1;
@@ -96,27 +86,21 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
         }
       });
 
-      // Combine class students with their submissions
-      const entries: LeaderboardEntry[] = (classStudents || []).map((cs: any) => {
-        const submission = submissionMap.get(cs.student_profile_id);
-        return {
-          rank: 0,
-          student_profile_id: cs.student_profile_id,
-          full_name: cs.student?.full_name || 'Unknown',
-          nim: cs.student?.nim || null,
-          photo_url: cs.student?.photo_url || null,
-          best_score: submission?.best_score ?? null,
-          attempts: submission?.attempts || 0,
-          submitted_at: submission?.submitted_at || null,
-          has_submitted: !!submission,
-        };
-      });
-
-      // Filter only students who have submitted
-      const submittedEntries = entries.filter(entry => entry.has_submitted);
+      // Convert map to array
+      const entries: LeaderboardEntry[] = Array.from(submissionMap.entries()).map(([studentId, data]) => ({
+        rank: 0,
+        student_profile_id: studentId,
+        full_name: data.full_name,
+        nim: data.nim,
+        photo_url: data.photo_url,
+        best_score: data.best_score,
+        attempts: data.attempts,
+        submitted_at: data.submitted_at,
+        has_submitted: true,
+      }));
 
       // Sort by score descending
-      const sorted = submittedEntries.sort((a, b) => {
+      const sorted = entries.sort((a, b) => {
         return (b.best_score ?? 0) - (a.best_score ?? 0);
       });
 
