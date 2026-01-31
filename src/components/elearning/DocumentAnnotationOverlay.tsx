@@ -250,13 +250,18 @@ export function DocumentAnnotationOverlay({
     };
   };
 
-  if (!enabled) return null;
+  // Always render annotations, but only enable drawing when enabled=true
+  const isEditMode = enabled && drawMode !== null;
 
   return (
     <div 
       ref={containerRef}
       className="absolute inset-0 z-10"
-      style={{ cursor: drawMode ? 'crosshair' : 'default' }}
+      style={{ 
+        cursor: isEditMode ? 'crosshair' : 'default',
+        // Only capture pointer events when in draw mode, otherwise let events pass through
+        pointerEvents: isEditMode ? 'auto' : 'none',
+      }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
@@ -267,49 +272,54 @@ export function DocumentAnnotationOverlay({
         }
       }}
     >
-      {/* Toolbar */}
-      <div className="absolute top-2 right-2 flex items-center gap-1 bg-background/90 backdrop-blur-sm rounded-lg p-1 shadow-lg border z-20">
-        <Toggle
-          pressed={drawMode === 'highlight'}
-          onPressedChange={(pressed) => setDrawMode(pressed ? 'highlight' : null)}
-          size="sm"
-          aria-label="Highlight mode"
+      {/* Toolbar - only show when enabled */}
+      {enabled && (
+        <div 
+          className="absolute top-2 right-2 flex items-center gap-1 bg-background/90 backdrop-blur-sm rounded-lg p-1 shadow-lg border z-20"
+          style={{ pointerEvents: 'auto' }}
         >
-          <Highlighter className="h-4 w-4" />
-        </Toggle>
-        <Toggle
-          pressed={drawMode === 'comment'}
-          onPressedChange={(pressed) => setDrawMode(pressed ? 'comment' : null)}
-          size="sm"
-          aria-label="Comment mode"
-        >
-          <MessageSquare className="h-4 w-4" />
-        </Toggle>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <div 
-                className="h-4 w-4 rounded-full border-2 border-foreground/20" 
-                style={{ backgroundColor: selectedColor }}
-              />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-2" side="bottom" align="end">
-            <div className="flex gap-1">
-              {HIGHLIGHT_COLORS.map(color => (
-                <button
-                  key={color}
-                  className={`h-6 w-6 rounded-full border-2 transition-transform hover:scale-110 ${
-                    selectedColor === color ? 'border-foreground' : 'border-transparent'
-                  }`}
-                  style={{ backgroundColor: color }}
-                  onClick={() => setSelectedColor(color)}
+          <Toggle
+            pressed={drawMode === 'highlight'}
+            onPressedChange={(pressed) => setDrawMode(pressed ? 'highlight' : null)}
+            size="sm"
+            aria-label="Highlight mode"
+          >
+            <Highlighter className="h-4 w-4" />
+          </Toggle>
+          <Toggle
+            pressed={drawMode === 'comment'}
+            onPressedChange={(pressed) => setDrawMode(pressed ? 'comment' : null)}
+            size="sm"
+            aria-label="Comment mode"
+          >
+            <MessageSquare className="h-4 w-4" />
+          </Toggle>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <div 
+                  className="h-4 w-4 rounded-full border-2 border-foreground/20" 
+                  style={{ backgroundColor: selectedColor }}
                 />
-              ))}
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-2" side="bottom" align="end">
+              <div className="flex gap-1">
+                {HIGHLIGHT_COLORS.map(color => (
+                  <button
+                    key={color}
+                    className={`h-6 w-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                      selectedColor === color ? 'border-foreground' : 'border-transparent'
+                    }`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => setSelectedColor(color)}
+                  />
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
 
       {/* Drawing preview */}
       {isDrawing && currentDraw && (
@@ -323,7 +333,7 @@ export function DocumentAnnotationOverlay({
         />
       )}
 
-      {/* Rendered annotations */}
+      {/* Rendered annotations - always visible, clickable when not in draw mode */}
       {annotations.map(annotation => (
         <Popover 
           key={annotation.id}
@@ -346,6 +356,8 @@ export function DocumentAnnotationOverlay({
                 border: annotation.annotation_type === 'comment' 
                   ? `2px solid ${annotation.highlight_color || '#ffff00'}` 
                   : 'none',
+                // Allow clicking annotations even when overlay is not in edit mode
+                pointerEvents: 'auto',
               }}
               onClick={(e) => {
                 e.stopPropagation();
@@ -367,6 +379,7 @@ export function DocumentAnnotationOverlay({
             side="right" 
             align="start"
             onClick={(e) => e.stopPropagation()}
+            style={{ pointerEvents: 'auto' }}
           >
             <div className="space-y-2">
               <div className="flex items-center justify-between">
@@ -378,7 +391,7 @@ export function DocumentAnnotationOverlay({
                     {new Date(annotation.created_at).toLocaleDateString('id-ID')}
                   </span>
                 </div>
-                {profile?.id === annotation.author_profile_id && (
+                {profile?.id === annotation.author_profile_id && enabled && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -448,8 +461,11 @@ export function DocumentAnnotationOverlay({
       )}
 
       {/* Mode indicator */}
-      {drawMode && (
-        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg border text-xs">
+      {enabled && drawMode && (
+        <div 
+          className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg border text-xs"
+          style={{ pointerEvents: 'auto' }}
+        >
           {drawMode === 'highlight' ? 'Mode Highlight: Drag untuk highlight' : 'Mode Komentar: Drag untuk area komentar'}
         </div>
       )}

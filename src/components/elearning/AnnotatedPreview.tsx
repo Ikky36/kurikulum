@@ -139,7 +139,8 @@ export function AnnotatedPreview({
                       alt="Preview" 
                       className="max-w-full max-h-full object-contain"
                     />
-                    {canAnnotate && showAnnotations && (
+                    {/* Always show overlay to display existing annotations */}
+                    {canAnnotate && (
                       <DocumentAnnotationOverlay
                         submissionId={submissionId}
                         materialId={materialId}
@@ -155,7 +156,8 @@ export function AnnotatedPreview({
                       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                       allowFullScreen
                     />
-                    {canAnnotate && showAnnotations && (
+                    {/* Always show overlay to display existing annotations */}
+                    {canAnnotate && (
                       <DocumentAnnotationOverlay
                         submissionId={submissionId}
                         materialId={materialId}
@@ -251,7 +253,8 @@ export function AnnotatedPreview({
                 className="max-w-full max-h-[250px] sm:max-h-[350px] object-contain rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => showFullscreen && setIsFullscreen(true)}
               />
-              {canAnnotate && showAnnotations && (
+              {/* Always show overlay to display existing annotations */}
+              {canAnnotate && (
                 <DocumentAnnotationOverlay
                   submissionId={submissionId}
                   materialId={materialId}
@@ -268,7 +271,8 @@ export function AnnotatedPreview({
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
-              {canAnnotate && showAnnotations && (
+              {/* Always show overlay to display existing annotations */}
+              {canAnnotate && (
                 <DocumentAnnotationOverlay
                   submissionId={submissionId}
                   materialId={materialId}
