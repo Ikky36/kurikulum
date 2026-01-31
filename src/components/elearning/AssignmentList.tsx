@@ -459,7 +459,7 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
 
       {/* Link Submission Dialog - For Students */}
       <Dialog open={!!submittingLink} onOpenChange={() => setSubmittingLink(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-full sm:w-[96vw] sm:max-w-[96vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl flex items-center gap-2">
               <Link2 className="h-5 w-5" />
