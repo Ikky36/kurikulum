@@ -291,7 +291,7 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
 
       {/* Grading Dialog - Scrollable content with compact video */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden p-0">
+        <DialogContent className="max-w-lg lg:max-w-3xl max-h-[90vh] overflow-hidden p-0">
           <ScrollArea className="max-h-[90vh]">
             <div className="p-6 space-y-5">
               <DialogHeader>
