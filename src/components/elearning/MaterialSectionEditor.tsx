@@ -10,6 +10,7 @@ import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, BookOpen, HelpCircle, X
 import { AdvancedRichEditor } from './AdvancedRichEditor';
 import { AIContentGenerator } from './AIContentGenerator';
 import { SectionFileUploader, type SectionFile } from './SectionFileUploader';
+export type { SectionFile } from './SectionFileUploader';
 import { useElearningAssignments } from '@/hooks/useElearningMaterials';
 
 export interface SectionQuiz {

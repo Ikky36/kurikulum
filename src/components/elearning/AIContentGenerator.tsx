@@ -9,9 +9,19 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { Wand2, Upload, FileText, Loader2, Sparkles, X, Languages, Image } from 'lucide-react';
+import { Wand2, Upload, FileText, Loader2, Sparkles, X, Languages, Image, File, Paperclip } from 'lucide-react';
 import { useAIGeneration, useAIImageGeneration } from '@/hooks/useElearningMaterials';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { supabase } from '@/integrations/supabase/client';
+
+interface UploadedFile {
+  id: string;
+  name: string;
+  url: string;
+  type: string;
+  size: number;
+  content?: string;
+}
 
 interface AIContentGeneratorProps {
   type: 'material' | 'quiz';
@@ -44,8 +54,8 @@ export function AIContentGenerator({
   const generateImage = useAIImageGeneration();
 
   const [prompt, setPrompt] = useState('');
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
-  const [fileContent, setFileContent] = useState('');
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationType, setGenerationType] = useState<'from_scratch' | 'from_file' | 'enhance'>('from_scratch');
   const [contentLength, setContentLength] = useState<'short' | 'medium' | 'long'>('medium');
@@ -54,48 +64,87 @@ export function AIContentGenerator({
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState('');
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
 
-    setUploadedFile(file);
-
-    // Read file content
+  const readFileContent = async (file: File): Promise<string> => {
     try {
       if (file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.md')) {
-        const text = await file.text();
-        setFileContent(text);
-      } else if (file.type === 'application/pdf') {
-        toast({ 
-          title: 'Info', 
-          description: 'File PDF akan diproses. Konten teks akan diekstrak.' 
-        });
-        // For PDF, we'd need a library like pdf.js, for now we just acknowledge
-        setFileContent(`[Konten dari file: ${file.name}]`);
-      } else if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
-        toast({ 
-          title: 'Info', 
-          description: 'File Word akan diproses. Konten teks akan diekstrak.' 
-        });
-        setFileContent(`[Konten dari file: ${file.name}]`);
-      } else {
-        const text = await file.text();
-        setFileContent(text);
+        return await file.text();
       }
-    } catch (error) {
-      toast({ title: 'Error', description: 'Gagal membaca file', variant: 'destructive' });
+      return `[Konten dari file: ${file.name}]`;
+    } catch {
+      return `[Konten dari file: ${file.name}]`;
     }
   };
 
-  const removeFile = () => {
-    setUploadedFile(null);
-    setFileContent('');
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+
+    try {
+      const newFiles: UploadedFile[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `ai-gen/${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+        const { error } = await supabase.storage
+          .from('material-files')
+          .upload(fileName, file);
+
+        if (error) throw error;
+
+        const { data: urlData } = supabase.storage
+          .from('material-files')
+          .getPublicUrl(fileName);
+
+        const content = await readFileContent(file);
+
+        newFiles.push({
+          id: `file_${Date.now()}_${Math.random().toString(36).substring(7)}`,
+          name: file.name,
+          url: urlData.publicUrl,
+          type: file.type,
+          size: file.size,
+          content: content.substring(0, 5000),
+        });
+      }
+
+      setUploadedFiles(prev => [...prev, ...newFiles]);
+      toast({ title: 'Sukses', description: `${newFiles.length} file berhasil diupload` });
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message || 'Gagal mengupload file', variant: 'destructive' });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeFile = (fileId: string) => {
+    setUploadedFiles(prev => prev.filter(f => f.id !== fileId));
+  };
+
+  const removeAllFiles = () => {
+    setUploadedFiles([]);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
+  const getAllFileContent = (): string => {
+    return uploadedFiles.map(f => `\n--- Dari file: ${f.name} ---\n${f.content || '[Konten tidak tersedia]'}`).join('\n');
+  };
+
   const handleGenerate = async () => {
+    const fileContent = getAllFileContent();
+    
     if (!prompt && !fileContent) {
       toast({ title: 'Error', description: 'Masukkan prompt atau upload file', variant: 'destructive' });
       return;
@@ -112,7 +161,7 @@ export function AIContentGenerator({
     try {
       // Build context with file content if available
       const contextWithFile = fileContent 
-        ? `${prompt ? prompt + '\n\n' : ''}KONTEN FILE REFERENSI:\n${fileContent}` 
+        ? `${prompt ? prompt + '\n\n' : ''}KONTEN FILE REFERENSI:${fileContent}\n\nPENTING: Konten HARUS berdasarkan file sumber yang diberikan. Jangan mengarang informasi di luar konteks file.` 
         : undefined;
       
       currentStepNum = 1;
@@ -247,26 +296,62 @@ ${finalContent}`;
         {/* File Upload */}
         {(generationType === 'from_file' || generationType === 'enhance') && (
           <div className="space-y-2">
-            <Label>Upload File Referensi</Label>
+            <Label>Upload File Referensi (Multiple)</Label>
             <div className="flex items-center gap-2">
-              <Input
+              <input
                 ref={fileInputRef}
                 type="file"
+                multiple
                 accept=".txt,.md,.pdf,.doc,.docx"
                 onChange={handleFileUpload}
-                className="flex-1"
+                className="hidden"
               />
-              {uploadedFile && (
-                <Button variant="ghost" size="icon" onClick={removeFile}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+                className="gap-2"
+              >
+                {isUploading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                Upload File Sumber
+              </Button>
+              {uploadedFiles.length > 0 && (
+                <Badge variant="secondary" className="gap-1">
+                  <Paperclip className="h-3 w-3" />
+                  {uploadedFiles.length} file
+                </Badge>
+              )}
+              {uploadedFiles.length > 0 && (
+                <Button type="button" variant="ghost" size="sm" onClick={removeAllFiles}>
                   <X className="h-4 w-4" />
                 </Button>
               )}
             </div>
-            {uploadedFile && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <FileText className="h-4 w-4" />
-                <span>{uploadedFile.name}</span>
-                <Badge variant="outline">{(uploadedFile.size / 1024).toFixed(1)} KB</Badge>
+            
+            {/* File List */}
+            {uploadedFiles.length > 0 && (
+              <div className="space-y-1 max-h-32 overflow-y-auto">
+                {uploadedFiles.map((file) => (
+                  <div key={file.id} className="flex items-center gap-2 text-sm bg-muted/50 rounded px-2 py-1">
+                    <File className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span className="truncate flex-1">{file.name}</span>
+                    <span className="text-muted-foreground text-xs">{formatFileSize(file.size)}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 shrink-0 text-destructive hover:text-destructive"
+                      onClick={() => removeFile(file.id)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -379,7 +464,7 @@ ${finalContent}`;
         {/* Generate Button */}
         <Button 
           onClick={handleGenerate} 
-          disabled={isGenerating || (!prompt && !fileContent)}
+          disabled={isGenerating || (!prompt && uploadedFiles.length === 0)}
           className="w-full gap-2"
         >
           {isGenerating ? (
