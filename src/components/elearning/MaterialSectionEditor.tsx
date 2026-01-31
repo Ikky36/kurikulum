@@ -6,9 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, BookOpen, HelpCircle, X } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, BookOpen, HelpCircle, X, Paperclip } from 'lucide-react';
 import { AdvancedRichEditor } from './AdvancedRichEditor';
 import { AIContentGenerator } from './AIContentGenerator';
+import { SectionFileUploader, type SectionFile } from './SectionFileUploader';
 import { useElearningAssignments } from '@/hooks/useElearningMaterials';
 
 export interface SectionQuiz {
@@ -20,6 +21,7 @@ export interface MaterialSection {
   id: string;
   title: string;
   content: string;
+  files?: SectionFile[];
   quizBefore?: SectionQuiz | null;
   quizAfter?: SectionQuiz | null;
 }
@@ -52,6 +54,7 @@ export function MaterialSectionEditor({
       id: generateId(),
       title: `Section ${sections.length + 1}`,
       content: '',
+      files: [],
       quizBefore: null,
       quizAfter: null,
     };
@@ -189,16 +192,22 @@ export function MaterialSectionEditor({
                       onClick={(e) => e.stopPropagation()}
                     />
 
-                    {/* Quiz indicators */}
+                    {/* Section indicators */}
                     <div className="flex items-center gap-1">
+                      {section.files && section.files.length > 0 && (
+                        <Badge variant="outline" className="gap-1 text-xs bg-accent text-accent-foreground border-border">
+                          <Paperclip className="h-3 w-3" />
+                          {section.files.length} file
+                        </Badge>
+                      )}
                       {section.quizBefore && (
-                        <Badge variant="outline" className="gap-1 text-xs bg-blue-50 text-blue-700 border-blue-200">
+                        <Badge variant="outline" className="gap-1 text-xs bg-primary/10 text-primary border-primary/20">
                           <HelpCircle className="h-3 w-3" />
                           Quiz Before
                         </Badge>
                       )}
                       {section.quizAfter && (
-                        <Badge variant="outline" className="gap-1 text-xs bg-green-50 text-green-700 border-green-200">
+                        <Badge variant="outline" className="gap-1 text-xs bg-secondary text-secondary-foreground border-border">
                           <HelpCircle className="h-3 w-3" />
                           Quiz After
                         </Badge>
@@ -228,8 +237,8 @@ export function MaterialSectionEditor({
                   <CardContent className="pt-4 space-y-4">
                     {/* Quiz Before Section */}
                     {classId && quizAssignments.length > 0 && (
-                      <div className="space-y-2 p-3 bg-blue-50/50 rounded-lg border border-blue-200/50">
-                        <Label className="text-sm flex items-center gap-2 text-blue-700">
+                      <div className="space-y-2 p-3 bg-primary/5 rounded-lg border border-primary/20">
+                        <Label className="text-sm flex items-center gap-2 text-primary">
                           <HelpCircle className="h-4 w-4" />
                           Quiz Sebelum Section
                         </Label>
@@ -295,10 +304,23 @@ export function MaterialSectionEditor({
                       onChange={(content) => updateSection(section.id, { content })} 
                     />
 
+                    {/* File Uploader for Section */}
+                    <div className="space-y-2 p-3 bg-muted/50 rounded-lg border border-border">
+                      <Label className="text-sm flex items-center gap-2">
+                        <Paperclip className="h-4 w-4" />
+                        File Sumber Materi
+                      </Label>
+                      <SectionFileUploader
+                        files={section.files || []}
+                        onChange={(files) => updateSection(section.id, { files })}
+                        sectionId={section.id}
+                      />
+                    </div>
+
                     {/* Quiz After Section */}
                     {classId && quizAssignments.length > 0 && (
-                      <div className="space-y-2 p-3 bg-green-50/50 rounded-lg border border-green-200/50">
-                        <Label className="text-sm flex items-center gap-2 text-green-700">
+                      <div className="space-y-2 p-3 bg-secondary/50 rounded-lg border border-border">
+                        <Label className="text-sm flex items-center gap-2 text-secondary-foreground">
                           <HelpCircle className="h-4 w-4" />
                           Quiz Setelah Section
                         </Label>

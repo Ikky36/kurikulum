@@ -18,12 +18,19 @@ import {
   ChevronLeft,
   Menu,
   CheckCircle2,
-  List
+  List,
+  Paperclip,
+  FileText,
+  Image,
+  File,
+  ExternalLink,
+  Download
 } from 'lucide-react';
 import { MaterialQuiz } from './MaterialQuiz';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { MaterialSection } from './MaterialSectionEditor';
+import type { SectionFile } from './SectionFileUploader';
 
 interface MaterialFullViewerProps {
   material: {
@@ -363,6 +370,64 @@ export function MaterialFullViewer({ material, onClose }: MaterialFullViewerProp
                   dir="auto"
                   dangerouslySetInnerHTML={{ __html: getActiveSection()?.content || '' }}
                 />
+                
+                {/* Section Files */}
+                {getActiveSection()?.files && getActiveSection()!.files!.length > 0 && (
+                  <div className="mt-6 pt-6 border-t">
+                    <div className="flex items-center gap-2 mb-4">
+                      <Paperclip className="h-5 w-5 text-muted-foreground" />
+                      <h3 className="font-semibold">File Sumber Materi</h3>
+                      <Badge variant="secondary">{getActiveSection()!.files!.length} file</Badge>
+                    </div>
+                    <div className="grid gap-2">
+                      {getActiveSection()!.files!.map((file: SectionFile) => {
+                        const getFileIcon = (type: string) => {
+                          if (type.startsWith('image/')) return <Image className="h-5 w-5 text-blue-500" />;
+                          if (type.includes('pdf')) return <FileText className="h-5 w-5 text-red-500" />;
+                          return <File className="h-5 w-5 text-muted-foreground" />;
+                        };
+                        
+                        const formatFileSize = (bytes: number) => {
+                          if (bytes < 1024) return `${bytes} B`;
+                          if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+                          return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+                        };
+                        
+                        return (
+                          <Card key={file.id} className="bg-muted/50">
+                            <CardContent className="p-3 flex items-center gap-3">
+                              {getFileIcon(file.type)}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium truncate">{file.name}</p>
+                                <p className="text-xs text-muted-foreground">{formatFileSize(file.size)}</p>
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={() => window.open(file.url, '_blank')}
+                                >
+                                  <ExternalLink className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  asChild
+                                >
+                                  <a href={file.url} download={file.name}>
+                                    <Download className="h-4 w-4" />
+                                  </a>
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             
