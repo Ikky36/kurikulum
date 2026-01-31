@@ -391,9 +391,9 @@ function renderEmbedContent(linkInfo: LinkInfo, url: string, height: string = '7
 
     case 'document':
     default:
-      // Use aspect ratio for responsive document preview
+      // Full width responsive document preview with aspect ratio
       return (
-        <div className="relative w-full" style={{ paddingTop: 'min(75%, 500px)' }}>
+        <div className="relative w-full pb-[75%] sm:pb-[60%] lg:pb-[50%]">
           <iframe
             src={linkInfo.embedUrl}
             className="absolute inset-0 w-full h-full border-0 rounded-lg"
@@ -614,8 +614,8 @@ export function LinkPreviewInline({ url, showFullscreen = false }: { url: string
             />
           </div>
         ) : (
-          // Documents - responsive aspect ratio based on screen width
-          <div className="relative w-full" style={{ paddingTop: 'min(75%, 500px)' }}>
+          // Documents - full width responsive aspect ratio
+          <div className="relative w-full pb-[75%] sm:pb-[60%] lg:pb-[50%]">
             <iframe
               src={linkInfo.embedUrl}
               className="absolute inset-0 w-full h-full border-0"
