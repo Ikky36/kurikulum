@@ -469,6 +469,7 @@ export function useAIGeneration() {
       correctAnswer?: string;
       questionText?: string;
       languageMode?: 'arabic' | 'indonesian' | 'mixed';
+      contentLength?: 'short' | 'medium' | 'long';
     }): Promise<AIGenerationResult> => {
       const { data, error } = await supabase.functions.invoke('elearning-ai', {
         body: params,
@@ -501,6 +502,56 @@ export function useAIGeneration() {
 
       // Function may still return a JSON error payload
       const result = (data || {}) as AIGenerationResult;
+      return result;
+    },
+  });
+}
+
+// AI Image Generation hook
+export type AIImageResult = {
+  imageUrl?: string;
+  error?: string;
+  code?: number;
+};
+
+export function useAIImageGeneration() {
+  return useMutation({
+    mutationFn: async (params: {
+      prompt: string;
+      topic?: string;
+    }): Promise<AIImageResult> => {
+      const { data, error } = await supabase.functions.invoke('elearning-ai', {
+        body: {
+          type: 'generate_image',
+          topic: params.topic || params.prompt,
+          context: params.prompt,
+        },
+      });
+
+      if (error) {
+        const status = (error as any)?.context?.status as number | undefined;
+
+        if (status === 429) {
+          return {
+            error: 'Terlalu banyak permintaan AI. Silakan tunggu sebentar lalu coba lagi.',
+            code: 429,
+          };
+        }
+
+        if (status === 402) {
+          return {
+            error: 'Kuota/limit AI sudah habis. Silakan tambah kuota penggunaan lalu coba lagi.',
+            code: 402,
+          };
+        }
+
+        return {
+          error: (error as any)?.message || 'Gagal generate gambar.',
+          code: status || 500,
+        };
+      }
+
+      const result = (data || {}) as AIImageResult;
       return result;
     },
   });
