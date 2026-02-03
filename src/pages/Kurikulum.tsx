@@ -1305,11 +1305,11 @@ function KurikulumContent() {
       const selectedPloIds = (formData.ploIds as unknown as string[]) || [];
       return (
         <Dialog open onOpenChange={() => setEditDialog(null)}>
-          <DialogContent className="max-w-lg">
-            <DialogHeader>
+          <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>{isNew ? 'Tambah' : 'Edit'} Mata Kuliah</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4">
+            <div className="space-y-4 overflow-y-auto flex-1 pr-2">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium">Kode</label>
@@ -1418,7 +1418,7 @@ function KurikulumContent() {
                 </div>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="flex-shrink-0 pt-4">
               <Button variant="outline" onClick={() => setEditDialog(null)}>
                 Batal
               </Button>
