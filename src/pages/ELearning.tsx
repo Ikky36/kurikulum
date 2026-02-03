@@ -8,6 +8,7 @@ import { ElearningKelas } from '@/components/elearning/ElearningKelas';
 import { ElearningPresensi } from '@/components/elearning/ElearningPresensi';
 import { ElearningMateri } from '@/components/elearning/ElearningMateri';
 import { OnlineStudents } from '@/components/elearning/OnlineStudents';
+import { useClassPresence } from '@/hooks/useClassPresence';
 import { Button } from '@/components/ui/button';
 
 interface SelectedClassInfo {
@@ -23,6 +24,9 @@ export default function ELearning() {
   const { user, loading, profile } = useAuth();
   const navigate = useNavigate();
   const [selectedClass, setSelectedClass] = useState<SelectedClassInfo | null>(null);
+
+  // Track presence for ALL users (including students) when in a class
+  const { onlineStudents } = useClassPresence(selectedClass?.id);
 
   const canViewRecap = profile?.role === 'admin' || profile?.role === 'sub_admin' || profile?.role === 'dosen';
   const canViewPresensi = profile?.role === 'admin' || profile?.role === 'sub_admin' || profile?.role === 'dosen';
@@ -99,7 +103,8 @@ export default function ELearning() {
         {selectedClass && canViewPresensi && (
           <OnlineStudents 
             classId={selectedClass.id} 
-            classGroupId={selectedClass.classGroupId} 
+            classGroupId={selectedClass.classGroupId}
+            onlineStudents={onlineStudents}
           />
         )}
 

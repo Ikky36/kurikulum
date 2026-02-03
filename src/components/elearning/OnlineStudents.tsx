@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Users, Circle, ChevronDown, ChevronUp, Wifi } from 'lucide-react';
+import { Circle, ChevronDown, ChevronUp, Wifi } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface OnlineUser {
@@ -13,17 +13,18 @@ interface OnlineUser {
   full_name: string;
   nim: string | null;
   photo_url: string | null;
+  role: string;
   online_at: string;
 }
 
 interface OnlineStudentsProps {
   classId: string;
   classGroupId: string;
+  onlineStudents: OnlineUser[];
 }
 
-export function OnlineStudents({ classId, classGroupId }: OnlineStudentsProps) {
+export function OnlineStudents({ classId, classGroupId, onlineStudents }: OnlineStudentsProps) {
   const { profile } = useAuth();
-  const [onlineUsers, setOnlineUsers] = useState<OnlineUser[]>([]);
   const [isOpen, setIsOpen] = useState(true);
   const [allStudents, setAllStudents] = useState<{id: string; full_name: string; nim: string | null; photo_url: string | null}[]>([]);
 
@@ -58,67 +59,13 @@ export function OnlineStudents({ classId, classGroupId }: OnlineStudentsProps) {
     fetchStudents();
   }, [classGroupId]);
 
-  // Setup Realtime Presence
-  useEffect(() => {
-    if (!profile?.id || !classId) return;
-
-    const channelName = `class-presence:${classId}`;
-    
-    const channel = supabase.channel(channelName, {
-      config: {
-        presence: {
-          key: profile.id,
-        },
-      },
-    });
-
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const presenceState = channel.presenceState();
-        const users: OnlineUser[] = [];
-        
-        Object.values(presenceState).forEach((presences: any) => {
-          presences.forEach((presence: any) => {
-            if (presence.role === 'mahasiswa') {
-              users.push({
-                id: presence.user_id,
-                full_name: presence.full_name,
-                nim: presence.nim,
-                photo_url: presence.photo_url,
-                online_at: presence.online_at,
-              });
-            }
-          });
-        });
-
-        setOnlineUsers(users);
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          // Track current user's presence
-          await channel.track({
-            user_id: profile.id,
-            full_name: profile.full_name,
-            nim: profile.nim,
-            photo_url: profile.photo_url,
-            role: profile.role,
-            online_at: new Date().toISOString(),
-          });
-        }
-      });
-
-    return () => {
-      channel.unsubscribe();
-    };
-  }, [profile?.id, profile?.full_name, profile?.nim, profile?.photo_url, profile?.role, classId]);
-
   if (!canView) return null;
 
-  const onlineCount = onlineUsers.length;
+  const onlineCount = onlineStudents.length;
   const totalStudents = allStudents.length;
   
   // Get online student IDs for quick lookup
-  const onlineIds = new Set(onlineUsers.map(u => u.id));
+  const onlineIds = new Set(onlineStudents.map(u => u.id));
   
   // Sort: online students first, then offline
   const sortedStudents = [...allStudents].sort((a, b) => {
