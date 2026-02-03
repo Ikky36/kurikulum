@@ -7,6 +7,7 @@ import { BookOpen, ClipboardList, FileText, BarChart3, Scale, ArrowLeft, LogIn }
 import { ElearningKelas } from '@/components/elearning/ElearningKelas';
 import { ElearningPresensi } from '@/components/elearning/ElearningPresensi';
 import { ElearningMateri } from '@/components/elearning/ElearningMateri';
+import { OnlineStudents } from '@/components/elearning/OnlineStudents';
 import { Button } from '@/components/ui/button';
 
 interface SelectedClassInfo {
@@ -15,6 +16,7 @@ interface SelectedClassInfo {
   courseId: string;
   courseName: string;
   classGroupName: string;
+  classGroupId: string;
 }
 
 export default function ELearning() {
@@ -92,6 +94,14 @@ export default function ELearning() {
             </Button>
           )}
         </div>
+
+        {/* Online Students Panel - Only visible for admin/sub_admin/dosen */}
+        {selectedClass && canViewPresensi && (
+          <OnlineStudents 
+            classId={selectedClass.id} 
+            classGroupId={selectedClass.classGroupId} 
+          />
+        )}
 
         {/* Content */}
         {selectedClass ? (

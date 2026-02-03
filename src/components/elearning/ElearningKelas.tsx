@@ -65,6 +65,7 @@ interface SelectedClassInfo {
   courseId: string;
   courseName: string;
   classGroupName: string;
+  classGroupId: string;
 }
 
 interface ElearningKelasProps {
@@ -456,7 +457,8 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
                         title: `${cls.course?.name || ''} - ${cls.class_group?.name || ''}`,
                         courseId: cls.course?.id || '',
                         courseName: cls.course ? `${cls.course.code} - ${cls.course.name}` : '',
-                        classGroupName: cls.class_group?.name || ''
+                        classGroupName: cls.class_group?.name || '',
+                        classGroupId: cls.class_group?.id || ''
                       })}
                     >
                       <LogIn className="h-4 w-4" />
