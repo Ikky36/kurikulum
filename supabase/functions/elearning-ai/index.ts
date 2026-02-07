@@ -19,6 +19,7 @@ interface AIRequest {
   questionText?: string;
   languageMode?: 'arabic' | 'indonesian' | 'mixed';
   contentLength?: 'short' | 'medium' | 'long';
+  customPrompt?: string;
 }
 
 serve(async (req) => {
@@ -87,7 +88,7 @@ serve(async (req) => {
     }
 
     const body: AIRequest = await req.json();
-    const { type, context, topic, indicators, questionType, questionCount, studentAnswer, correctAnswer, questionText, languageMode, contentLength } = body;
+    const { type, context, topic, indicators, questionType, questionCount, studentAnswer, correctAnswer, questionText, languageMode, contentLength, customPrompt } = body;
 
     // Handle image generation separately
     if (type === "generate_image") {
@@ -239,6 +240,7 @@ PENTING:
 - Semua soal harus bertipe "${qType}"
 - Setiap soal WAJIB memiliki feedback yang menjelaskan jawaban
 ${context ? '- Semua soal HARUS berdasarkan konten dari file referensi yang diberikan' : ''}
+${customPrompt ? `\nINSTRUKSI TAMBAHAN DARI DOSEN:\n${customPrompt}\n\nPastikan instruksi tambahan di atas diikuti dalam pembuatan soal.` : ''}
 - Output HANYA JSON array tanpa teks lain atau markdown
 
 Contoh output yang valid:
