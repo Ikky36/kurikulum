@@ -9,7 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { Wand2, Loader2, Sparkles, BookOpen, ChevronDown, FileText, Languages, Upload, X, Paperclip, File } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Wand2, Loader2, Sparkles, BookOpen, ChevronDown, FileText, Languages, Upload, X, Paperclip, File, MessageSquare } from 'lucide-react';
 import { useAIGeneration, useElearningMaterials } from '@/hooks/useElearningMaterials';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { supabase } from '@/integrations/supabase/client';
@@ -78,6 +79,7 @@ export function QuizFromMaterialGenerator({
   const [questionCount, setQuestionCount] = useState('5');
   const [totalPoints, setTotalPoints] = useState('100');
   const [languageMode, setLanguageMode] = useState<LanguageMode>('indonesian');
+  const [customPrompt, setCustomPrompt] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
   const [expandedMaterials, setExpandedMaterials] = useState<Set<string>>(new Set());
@@ -337,6 +339,7 @@ export function QuizFromMaterialGenerator({
         questionType: questionType === 'mixed' ? 'multiple_choice' : questionType,
         questionCount: parseInt(questionCount),
         languageMode: languageMode,
+        customPrompt: customPrompt.trim() || undefined,
       });
 
       setProgress(100);
@@ -632,6 +635,23 @@ export function QuizFromMaterialGenerator({
               ))}
             </div>
           )}
+        </div>
+
+        {/* Custom Prompt / Instruksi Tambahan */}
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Instruksi Tambahan untuk AI (Opsional)
+          </Label>
+          <Textarea
+            value={customPrompt}
+            onChange={(e) => setCustomPrompt(e.target.value)}
+            placeholder="Contoh: Fokuskan soal pada bab tentang hukum tajwid nun mati dan tanwin, buat soal dengan tingkat kesulitan tinggi, sertakan contoh ayat Al-Quran..."
+            className="min-h-[80px]"
+          />
+          <p className="text-xs text-muted-foreground">
+            Berikan instruksi spesifik untuk mengarahkan AI dalam membuat soal dari materi yang dipilih
+          </p>
         </div>
 
         {/* Language Mode */}
