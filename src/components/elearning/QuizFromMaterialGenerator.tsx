@@ -357,14 +357,33 @@ export function QuizFromMaterialGenerator({
         try {
           // Parse JSON response
           let questions = [];
-          const content = result.content.trim();
+          let content = result.content.trim();
+          
+          // Remove markdown code blocks if present
+          content = content.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/i, '');
           
           // Try to extract JSON from response
           const jsonMatch = content.match(/\[[\s\S]*\]/);
           if (jsonMatch) {
-            questions = JSON.parse(jsonMatch[0]);
+            try {
+              questions = JSON.parse(jsonMatch[0]);
+            } catch {
+              // Try to repair truncated JSON array
+              const lastBrace = jsonMatch[0].lastIndexOf("}");
+              if (lastBrace > 0) {
+                const repaired = jsonMatch[0].substring(0, lastBrace + 1) + "]";
+                questions = JSON.parse(repaired);
+                console.log(`Recovered ${questions.length} questions from truncated response`);
+              } else {
+                throw new Error("Cannot parse quiz response");
+              }
+            }
           } else {
             questions = JSON.parse(content);
+          }
+          
+          if (!Array.isArray(questions) || questions.length === 0) {
+            throw new Error("No questions generated");
           }
           
           // Calculate points per question
@@ -383,10 +402,10 @@ export function QuizFromMaterialGenerator({
           onGenerated(questionsWithPoints);
           toast({ title: 'Sukses', description: `${questions.length} soal berhasil di-generate! (${pointsPerQuestion} poin per soal)` });
         } catch (parseError) {
-          console.error('Failed to parse quiz questions:', parseError);
+          console.error('Failed to parse quiz questions:', parseError, 'Raw:', result.content?.substring(0, 200));
           toast({
             title: 'Error',
-            description: 'Gagal memproses hasil AI. Silakan coba lagi.',
+            description: 'Gagal memproses hasil AI. Coba kurangi jumlah soal atau coba lagi.',
             variant: 'destructive',
           });
         }
