@@ -320,13 +320,12 @@ Berikan feedback yang:
         body: JSON.stringify({
           model,
           messages,
+          max_tokens: 8192,
         }),
       });
 
       if (!response.ok) {
         if (response.status === 429) {
-          // Return 200 so clients can handle gracefully (without causing a hard runtime crash),
-          // while still surfacing rate-limit info via `code`.
           return new Response(
             JSON.stringify({
               error: "Terlalu banyak permintaan ke layanan AI. Silakan tunggu 30-60 detik lalu coba lagi.",
@@ -336,13 +335,49 @@ Berikan feedback yang:
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
+        if (response.status === 402) {
+          return new Response(
+            JSON.stringify({
+              error: "Kredit AI habis. Silakan tambah kredit terlebih dahulu.",
+              code: 402,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
         const errorText = await response.text();
         console.error("AI API error:", response.status, errorText);
         throw new Error(`Gagal terhubung ke ${aiProvider.toUpperCase()} API. Periksa API Key Anda.`);
       }
 
-      const data = await response.json();
+      // Safely parse response - handle empty or truncated responses
+      const responseText = await response.text();
+      if (!responseText || responseText.trim() === "") {
+        throw new Error("AI mengembalikan response kosong. Silakan coba lagi.");
+      }
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (parseErr) {
+        console.error("Failed to parse AI response:", responseText.substring(0, 500));
+        throw new Error("Gagal memproses response dari AI. Silakan coba lagi.");
+      }
+
       content = data.choices?.[0]?.message?.content || "";
+      
+      // Check if response was truncated
+      const finishReason = data.choices?.[0]?.finish_reason;
+      if (finishReason === "length" && type === "generate_quiz") {
+        console.warn("Quiz response was truncated due to token limit");
+        // Try to repair truncated JSON array
+        if (content && !content.trim().endsWith("]")) {
+          const lastBrace = content.lastIndexOf("}");
+          if (lastBrace > 0) {
+            content = content.substring(0, lastBrace + 1) + "]";
+            console.log("Repaired truncated quiz JSON response");
+          }
+        }
+      }
     }
 
     return new Response(
