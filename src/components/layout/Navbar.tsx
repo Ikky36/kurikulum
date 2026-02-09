@@ -14,6 +14,7 @@ import {
 import { GraduationCap, BookOpen, LayoutDashboard, LogOut, User, Menu, X, FileText, MonitorPlay, KeyRound } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
+import { NotificationBell } from './NotificationBell';
 
 export function Navbar() {
   const { user, profile, signOut } = useAuth();
@@ -79,6 +80,7 @@ export function Navbar() {
         </nav>
 
         <div className="flex items-center gap-3">
+          {user && <NotificationBell />}
           {user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
