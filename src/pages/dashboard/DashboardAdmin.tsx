@@ -387,16 +387,28 @@ export default function DashboardAdmin() {
       
       // Handle edge function errors - can come in different formats
       if (error) {
-        // Try to parse error response body if it's a FunctionsHttpError
+        let errorMessage = 'Gagal membuat akun';
         try {
-          const errorBody = await error.context?.json?.();
-          if (errorBody?.error) {
-            throw new Error(errorBody.error);
+          // FunctionsHttpError stores response in context
+          if (error.context && typeof error.context.json === 'function') {
+            const errorBody = await error.context.json();
+            if (errorBody?.error) {
+              errorMessage = errorBody.error;
+            }
           }
         } catch {
-          // If parsing fails, use the original error message
+          // Try parsing error message directly
+          if (error.message) {
+            // Edge function errors sometimes embed JSON in the message
+            const jsonMatch = error.message.match(/\{.*"error"\s*:\s*"(.+?)"\s*.*\}/);
+            if (jsonMatch?.[1]) {
+              errorMessage = jsonMatch[1];
+            } else {
+              errorMessage = error.message;
+            }
+          }
         }
-        throw new Error(error.message || 'Gagal membuat akun');
+        throw new Error(errorMessage);
       }
       if (data?.error) {
         throw new Error(data.error);
