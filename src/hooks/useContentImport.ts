@@ -2,20 +2,17 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 // Fetch classes for the same course (for import source selection)
+// Uses a SECURITY DEFINER RPC function so lecturers can see source classes
+// for import without having general browse access to other classes
 export function useSameCourseClasses(courseId: string, excludeClassId: string) {
   return useQuery({
     queryKey: ['same-course-classes', courseId, excludeClassId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('elearning_classes')
-        .select(`
-          *,
-          class_group:class_groups(id, name),
-          instructor:profiles!elearning_classes_instructor_profile_id_fkey(id, full_name)
-        `)
-        .eq('course_id', courseId)
-        .neq('id', excludeClassId)
-        .order('created_at', { ascending: false });
+        .rpc('get_import_source_classes', {
+          p_course_id: courseId,
+          p_exclude_class_id: excludeClassId,
+        });
 
       if (error) throw error;
       return data;
