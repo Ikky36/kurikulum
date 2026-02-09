@@ -2240,6 +2240,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_class_instructor_of_course: {
+        Args: { _course_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_course_instructor: {
         Args: { _course_id: string; _user_id: string }
         Returns: boolean
