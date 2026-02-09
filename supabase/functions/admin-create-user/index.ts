@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -61,9 +61,11 @@ serve(async (req) => {
       });
     }
 
+    // Parse request body
+    const { email, password, full_name, role, roles, nim, nip, program, class_group, enrollment_year, gender } = await req.json();
+
     // Sub-admin cannot create admin or sub_admin accounts
-    const body = await req.clone().json();
-    const requestedRoles: string[] = Array.isArray(body.roles) ? body.roles : (body.role ? [body.role] : []);
+    const requestedRoles: string[] = Array.isArray(roles) ? roles : (role ? [role] : []);
     
     if (adminProfile?.role === "sub_admin") {
       if (requestedRoles.includes("admin") || requestedRoles.includes("sub_admin")) {
@@ -73,9 +75,6 @@ serve(async (req) => {
         });
       }
     }
-
-    // Parse request body
-    const { email, password, full_name, role, roles, nim, nip, program, class_group, enrollment_year, gender } = await req.json();
 
     // Support both single role and multiple roles
     const userRoles: string[] = Array.isArray(roles) ? roles : (role ? [role] : ['mahasiswa']);
@@ -145,16 +144,17 @@ serve(async (req) => {
       console.error("Profile update error:", updateError);
     }
 
-    // Insert all roles into user_roles table
+    // Insert additional roles into user_roles table (trigger already inserts primary role)
     if (userRoles.length > 0) {
       const rolesToInsert = userRoles.map((r: string) => ({ 
         user_id: newUser.user.id, 
         role: r 
       }));
       
+      // Use upsert to avoid duplicate key errors (handle_new_user trigger may have already inserted primary role)
       const { error: rolesError } = await supabaseAdmin
         .from("user_roles")
-        .insert(rolesToInsert);
+        .upsert(rolesToInsert, { onConflict: 'user_id,role', ignoreDuplicates: true });
       
       if (rolesError) {
         console.error("User roles insert error:", rolesError);
