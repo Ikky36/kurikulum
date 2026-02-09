@@ -2261,6 +2261,10 @@ export type Database = {
         Args: { _course_id: string; _user_id: string }
         Returns: boolean
       }
+      is_dosen_of_same_course_as_class: {
+        Args: { _class_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "mahasiswa" | "dosen" | "admin" | "sub_admin"
