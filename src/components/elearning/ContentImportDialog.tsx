@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import { useSameCourseClasses, useSourceMaterials, useSourceAssignments, useImportMaterials, useImportAssignments } from '@/hooks/useContentImport';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,12 +16,37 @@ import { Download, BookOpen, ClipboardCheck, HelpCircle, FileUp, Loader2 } from 
 interface ContentImportDialogProps {
   courseId: string;
   targetClassId: string;
+  defaultTab?: 'materials' | 'assignments';
   onSuccess?: () => void;
 }
 
-export function ContentImportDialog({ courseId, targetClassId, onSuccess }: ContentImportDialogProps) {
+// Hook to fetch question counts for quiz assignments
+function useQuizQuestionCounts(assignmentIds: string[]) {
+  return useQuery({
+    queryKey: ['quiz-question-counts', assignmentIds],
+    queryFn: async () => {
+      if (assignmentIds.length === 0) return {};
+      const { data, error } = await supabase
+        .from('elearning_quiz_questions')
+        .select('assignment_id')
+        .in('assignment_id', assignmentIds);
+
+      if (error) throw error;
+
+      const counts: Record<string, number> = {};
+      data?.forEach(q => {
+        counts[q.assignment_id] = (counts[q.assignment_id] || 0) + 1;
+      });
+      return counts;
+    },
+    enabled: assignmentIds.length > 0,
+  });
+}
+
+export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'materials', onSuccess }: ContentImportDialogProps) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState(defaultTab);
   const [sourceClassId, setSourceClassId] = useState<string>('');
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
   const [selectedAssignments, setSelectedAssignments] = useState<string[]>([]);
@@ -29,10 +56,23 @@ export function ContentImportDialog({ courseId, targetClassId, onSuccess }: Cont
   const { data: sourceMaterials, isLoading: materialsLoading } = useSourceMaterials(sourceClassId);
   const { data: sourceAssignments, isLoading: assignmentsLoading } = useSourceAssignments(sourceClassId);
 
+  // Get quiz assignment IDs to fetch question counts
+  const quizAssignmentIds = (sourceAssignments || [])
+    .filter(a => a.assignment_type === 'quiz')
+    .map(a => a.id);
+  const { data: questionCounts } = useQuizQuestionCounts(quizAssignmentIds);
+
   const importMaterials = useImportMaterials();
   const importAssignments = useImportAssignments();
 
   const isImporting = importMaterials.isPending || importAssignments.isPending;
+
+  // Reset active tab when dialog opens
+  useEffect(() => {
+    if (open) {
+      setActiveTab(defaultTab);
+    }
+  }, [open, defaultTab]);
 
   const handleSourceClassChange = (classId: string) => {
     setSourceClassId(classId);
@@ -94,7 +134,7 @@ export function ContentImportDialog({ courseId, targetClassId, onSuccess }: Cont
 
       toast({
         title: 'Import Berhasil',
-        description: `${importedMaterials} materi dan ${importedAssignments} tugas/quiz berhasil diimport.`,
+        description: `${importedMaterials > 0 ? `${importedMaterials} materi` : ''}${importedMaterials > 0 && importedAssignments > 0 ? ' dan ' : ''}${importedAssignments > 0 ? `${importedAssignments} tugas/quiz` : ''} berhasil diimport.`,
       });
 
       setOpen(false);
@@ -117,6 +157,13 @@ export function ContentImportDialog({ courseId, targetClassId, onSuccess }: Cont
       case 'file_upload': return <FileUp className="h-4 w-4" />;
       default: return <ClipboardCheck className="h-4 w-4" />;
     }
+  };
+
+  const getAssignmentTypeLabel = (assignment: any) => {
+    if (assignment.assignment_type === 'quiz') return 'Quiz';
+    if (assignment.submission_type === 'file_upload') return 'Upload File';
+    if (assignment.submission_type === 'link_document') return 'Link';
+    return 'Tugas';
   };
 
   return (
@@ -151,6 +198,7 @@ export function ContentImportDialog({ courseId, targetClassId, onSuccess }: Cont
                   otherClasses?.map((cls) => (
                     <SelectItem key={cls.id} value={cls.id}>
                       {cls.title} - {(cls as any).class_group?.name}
+                      {(cls as any).instructor?.full_name ? ` (${(cls as any).instructor.full_name})` : ''}
                     </SelectItem>
                   ))
                 )}
@@ -160,7 +208,7 @@ export function ContentImportDialog({ courseId, targetClassId, onSuccess }: Cont
 
           {/* Content Selection */}
           {sourceClassId && (
-            <Tabs defaultValue="materials" className="w-full">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'materials' | 'assignments')} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="materials" className="gap-2">
                   <BookOpen className="h-4 w-4" />
@@ -248,28 +296,38 @@ export function ContentImportDialog({ courseId, targetClassId, onSuccess }: Cont
                       <Badge variant="secondary">{selectedAssignments.length} dipilih</Badge>
                     </div>
                     <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                      {sourceAssignments?.map((assignment) => (
-                        <Card 
-                          key={assignment.id} 
-                          className={`cursor-pointer transition-colors ${selectedAssignments.includes(assignment.id) ? 'border-primary bg-primary/5' : ''}`}
-                          onClick={() => toggleAssignment(assignment.id)}
-                        >
-                          <CardContent className="py-3 flex items-center gap-3">
-                            <Checkbox
-                              checked={selectedAssignments.includes(assignment.id)}
-                              onCheckedChange={() => toggleAssignment(assignment.id)}
-                            />
-                            {getAssignmentIcon(assignment.assignment_type)}
-                            <div className="flex-1">
-                              <div className="font-medium">{assignment.title}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {assignment.assignment_type === 'quiz' ? 'Quiz' : 
-                                 assignment.assignment_type === 'file_upload' ? 'Upload File' : 'Link'}
+                      {sourceAssignments?.map((assignment) => {
+                        const qCount = questionCounts?.[assignment.id] || 0;
+                        return (
+                          <Card 
+                            key={assignment.id} 
+                            className={`cursor-pointer transition-colors ${selectedAssignments.includes(assignment.id) ? 'border-primary bg-primary/5' : ''}`}
+                            onClick={() => toggleAssignment(assignment.id)}
+                          >
+                            <CardContent className="py-3 flex items-center gap-3">
+                              <Checkbox
+                                checked={selectedAssignments.includes(assignment.id)}
+                                onCheckedChange={() => toggleAssignment(assignment.id)}
+                              />
+                              {getAssignmentIcon(assignment.assignment_type)}
+                              <div className="flex-1">
+                                <div className="font-medium">{assignment.title}</div>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <span>{getAssignmentTypeLabel(assignment)}</span>
+                                  {assignment.assignment_type === 'quiz' && qCount > 0 && (
+                                    <Badge variant="outline" className="text-xs px-1.5 py-0">
+                                      {qCount} soal
+                                    </Badge>
+                                  )}
+                                  {assignment.time_limit_minutes && (
+                                    <span>• {assignment.time_limit_minutes} menit</span>
+                                  )}
+                                </div>
                               </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
+                            </CardContent>
+                          </Card>
+                        );
+                      })}
                     </div>
                   </>
                 )}
