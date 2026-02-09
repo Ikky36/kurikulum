@@ -2206,6 +2206,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_import_source_classes: {
+        Args: { p_course_id: string; p_exclude_class_id: string }
+        Returns: {
+          class_group_id: string
+          class_group_name: string
+          course_id: string
+          created_at: string
+          id: string
+          instructor_name: string
+          instructor_profile_id: string
+          title: string
+        }[]
+      }
       get_quiz_questions_for_student: {
         Args: { p_assignment_id: string }
         Returns: {

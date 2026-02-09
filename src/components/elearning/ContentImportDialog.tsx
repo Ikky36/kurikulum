@@ -195,10 +195,10 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
                     Tidak ada kelas lain dengan mata kuliah yang sama
                   </div>
                 ) : (
-                  otherClasses?.map((cls) => (
+                  otherClasses?.map((cls: any) => (
                     <SelectItem key={cls.id} value={cls.id}>
-                      {cls.title} - {(cls as any).class_group?.name}
-                      {(cls as any).instructor?.full_name ? ` (${(cls as any).instructor.full_name})` : ''}
+                      {cls.title} - {cls.class_group_name || ''}
+                      {cls.instructor_name ? ` (${cls.instructor_name})` : ''}
                     </SelectItem>
                   ))
                 )}
