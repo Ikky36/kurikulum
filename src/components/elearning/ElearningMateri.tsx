@@ -88,11 +88,12 @@ export function ElearningMateri({ selectedClassId, courseId, tabView }: Elearnin
 
   return (
     <div className="space-y-6">
-      {canEdit && tabView === 'materials' && (
+      {canEdit && (tabView === 'materials' || tabView === 'assignments') && (
         <div className="flex justify-end">
           <ContentImportDialog 
             courseId={courseId} 
-            targetClassId={selectedClassId} 
+            targetClassId={selectedClassId}
+            defaultTab={tabView === 'assignments' ? 'assignments' : 'materials'}
           />
         </div>
       )}
