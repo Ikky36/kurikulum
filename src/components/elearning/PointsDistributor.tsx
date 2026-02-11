@@ -23,9 +23,9 @@ export function PointsDistributor({
   const [isDistributing, setIsDistributing] = useState(false);
 
   const totalPointsNum = parseInt(totalPoints) || 0;
-  const pointsPerQuestion = questionCount > 0 ? Math.round((totalPointsNum / questionCount) * 100) / 100 : 0;
-  const actualTotal = Math.round(pointsPerQuestion * questionCount * 100) / 100;
-  const remainder = Math.round((totalPointsNum - actualTotal) * 100) / 100;
+  const pointsPerQuestion = questionCount > 0 ? Math.max(1, Math.round(totalPointsNum / questionCount)) : 0;
+  const actualTotal = pointsPerQuestion * questionCount;
+  const remainder = totalPointsNum - actualTotal;
 
   const handleDistribute = async () => {
     if (questionCount === 0) {

@@ -390,7 +390,7 @@ export function QuizFromMaterialGenerator({
           const totalPointsNum = parseInt(totalPoints) || 100;
           const questionCountNum = questions.length;
           const pointsPerQuestion = questionCountNum > 0 
-            ? Math.round((totalPointsNum / questionCountNum) * 100) / 100 
+            ? Math.max(1, Math.round(totalPointsNum / questionCountNum)) 
             : 10;
           
           // Assign points to each question
@@ -589,7 +589,7 @@ export function QuizFromMaterialGenerator({
             />
             {parseInt(questionCount) > 0 && parseInt(totalPoints) > 0 && (
               <p className="text-xs text-muted-foreground">
-                ≈ {Math.round((parseInt(totalPoints) / parseInt(questionCount)) * 100) / 100} poin per soal
+                ≈ {Math.max(1, Math.round(parseInt(totalPoints) / parseInt(questionCount)))} poin per soal
               </p>
             )}
           </div>

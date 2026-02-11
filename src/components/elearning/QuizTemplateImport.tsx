@@ -157,7 +157,7 @@ export function QuizTemplateImport({ onImport, totalPoints = 100, onTotalPointsC
       let finalQuestions = questions;
       if (useDistribution && questions.length > 0) {
         const totalPts = parseInt(localTotalPoints) || 100;
-        const pointsPerQuestion = Math.round((totalPts / questions.length) * 100) / 100;
+        const pointsPerQuestion = Math.max(1, Math.round(totalPts / questions.length));
         finalQuestions = questions.map(q => ({
           ...q,
           points: pointsPerQuestion,
