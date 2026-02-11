@@ -468,7 +468,7 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
         
         // Calculate points per question based on total points
         const totalPointsNum = parseInt(aiTotalPoints) || 100;
-        const pointsPerQuestion = Math.round((totalPointsNum / parsedQuestions.length) * 100) / 100;
+        const pointsPerQuestion = Math.max(1, Math.round(totalPointsNum / parsedQuestions.length));
 
         return {
           assignment_id: assignmentId,
@@ -521,7 +521,7 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
           options: normalizedOptions ? JSON.stringify(normalizedOptions) : null,
           correct_answer: JSON.stringify(q.correct_answer),
           feedback: q.feedback || null,
-          points: q.points || 10,
+          points: Math.max(1, Math.round(q.points || 10)),
           order_index: (questions?.length || 0) + idx + 1,
         };
       });
@@ -956,9 +956,9 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
                     className="h-11"
                     placeholder="100"
                   />
-                  {parseInt(aiQuestionCount) > 0 && parseInt(aiTotalPoints) > 0 && (
+                    {parseInt(aiQuestionCount) > 0 && parseInt(aiTotalPoints) > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      ≈ {Math.round((parseInt(aiTotalPoints) / parseInt(aiQuestionCount)) * 100) / 100} poin per soal
+                      ≈ {Math.max(1, Math.round(parseInt(aiTotalPoints) / parseInt(aiQuestionCount)))} poin per soal
                     </p>
                   )}
                 </div>
