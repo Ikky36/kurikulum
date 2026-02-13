@@ -28,6 +28,14 @@ interface SubmissionGraderProps {
   classId: string;
 }
 
+interface StudentInfo {
+  id: string;
+  full_name: string;
+  email: string;
+  nim: string | null;
+  photo_url: string | null;
+}
+
 interface SubmissionWithStudent {
   id: string;
   student_profile_id: string;
@@ -38,13 +46,12 @@ interface SubmissionWithStudent {
   feedback: string | null;
   graded_at: string | null;
   attempt_number: number;
-  student: {
-    id: string;
-    full_name: string;
-    email: string;
-    nim: string | null;
-    photo_url: string | null;
-  };
+  student: StudentInfo;
+}
+
+interface StudentWithSubmission {
+  student: StudentInfo;
+  submission: SubmissionWithStudent | null;
 }
 
 export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: SubmissionGraderProps) {
@@ -58,7 +65,7 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Fetch all submissions for this assignment
-  const { data: submissions, isLoading, refetch } = useQuery({
+  const { data: submissions, isLoading: submissionsLoading, refetch } = useQuery({
     queryKey: ['assignment-submissions', assignmentId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -85,9 +92,9 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
     },
   });
 
-  // Fetch class students count for comparison
-  const { data: classData } = useQuery({
-    queryKey: ['elearning-class-students', classId],
+  // Fetch all class students
+  const { data: allStudents, isLoading: studentsLoading } = useQuery({
+    queryKey: ['class-all-students', classId],
     queryFn: async () => {
       const { data: eClass, error: classError } = await supabase
         .from('elearning_classes')
@@ -97,15 +104,22 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
 
       if (classError) throw classError;
 
-      const { count, error: countError } = await supabase
+      const { data, error } = await supabase
         .from('class_students')
-        .select('*', { count: 'exact', head: true })
+        .select(`
+          student_profile_id,
+          student:profiles!class_students_student_profile_id_fkey(
+            id, full_name, email, nim, photo_url
+          )
+        `)
         .eq('class_group_id', eClass.class_group_id);
 
-      if (countError) throw countError;
-      return { studentCount: count || 0 };
+      if (error) throw error;
+      return data as unknown as Array<{ student_profile_id: string; student: StudentInfo }>;
     },
   });
+
+  const isLoading = submissionsLoading || studentsLoading;
 
   // Filter to show only the latest submission per student
   const latestSubmissionsPerStudent = submissions?.reduce((acc, submission) => {
@@ -116,14 +130,33 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
     return acc;
   }, new Map<string, SubmissionWithStudent>());
 
-  const uniqueSubmissions = latestSubmissionsPerStudent 
-    ? Array.from(latestSubmissionsPerStudent.values())
-    : [];
+  // Merge all students with their submissions
+  const allStudentsWithSubmissions: StudentWithSubmission[] = (allStudents || []).map(cs => ({
+    student: cs.student,
+    submission: latestSubmissionsPerStudent?.get(cs.student_profile_id) || null,
+  }));
 
-  const gradedCount = uniqueSubmissions.filter(s => s.score !== null).length;
-  const pendingCount = uniqueSubmissions.filter(s => s.score === null).length;
-  const totalSubmissions = uniqueSubmissions.length;
-  const totalStudents = classData?.studentCount || 0;
+  // Sort: submitted & graded first, then submitted & pending, then not submitted (alphabetically)
+  allStudentsWithSubmissions.sort((a, b) => {
+    const aHas = a.submission ? 1 : 0;
+    const bHas = b.submission ? 1 : 0;
+    if (aHas !== bHas) return bHas - aHas; // submitted first
+    if (a.submission && b.submission) {
+      // Both submitted: graded first, then by date
+      const aGraded = a.submission.score !== null ? 1 : 0;
+      const bGraded = b.submission.score !== null ? 1 : 0;
+      if (aGraded !== bGraded) return bGraded - aGraded;
+      return new Date(b.submission.submitted_at).getTime() - new Date(a.submission.submitted_at).getTime();
+    }
+    // Both not submitted: alphabetical
+    return a.student.full_name.localeCompare(b.student.full_name);
+  });
+
+  const totalStudents = allStudents?.length || 0;
+  const totalSubmissions = latestSubmissionsPerStudent?.size || 0;
+  const gradedCount = allStudentsWithSubmissions.filter(s => s.submission?.score !== null && s.submission).length;
+  const pendingCount = allStudentsWithSubmissions.filter(s => s.submission && s.submission.score === null).length;
+  const notSubmittedCount = totalStudents - totalSubmissions;
 
   const handleOpenGrading = (submission: SubmissionWithStudent) => {
     setSelectedSubmission(submission);
@@ -164,7 +197,7 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
   return (
     <div className="space-y-6">
       {/* Summary Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-4">
             <div className="flex items-center gap-3">
@@ -217,17 +250,30 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
             </div>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                <AlertCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{notSubmittedCount}</p>
+                <p className="text-xs text-muted-foreground">Belum Submit</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Submissions List */}
+      {/* Students & Submissions List */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Daftar Submission
+            <Users className="h-5 w-5" />
+            Daftar Mahasiswa ({totalSubmissions}/{totalStudents} sudah submit)
           </CardTitle>
           <CardDescription>
-            Klik pada submission untuk melihat detail dan memberikan nilai
+            Klik pada mahasiswa yang sudah submit untuk melihat detail dan memberikan nilai
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -235,63 +281,72 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : !uniqueSubmissions.length ? (
+          ) : !allStudentsWithSubmissions.length ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
               <AlertCircle className="h-12 w-12 mb-4" />
-              <p>Belum ada submission</p>
+              <p>Belum ada mahasiswa di kelas ini</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {uniqueSubmissions.map((submission) => (
+              {allStudentsWithSubmissions.map(({ student, submission }) => (
                 <Card
-                  key={submission.id}
-                  className="cursor-pointer hover:bg-muted/50 transition-colors"
-                  onClick={() => handleOpenGrading(submission)}
+                  key={student.id}
+                  className={`transition-colors ${submission ? 'cursor-pointer hover:bg-muted/50' : 'opacity-60'}`}
+                  onClick={() => submission && handleOpenGrading(submission)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <Avatar className="h-10 w-10 shrink-0">
-                          <AvatarImage src={submission.student.photo_url || undefined} />
-                          <AvatarFallback>{getInitials(submission.student.full_name)}</AvatarFallback>
+                          <AvatarImage src={student.photo_url || undefined} />
+                          <AvatarFallback>{getInitials(student.full_name)}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">{submission.student.full_name}</p>
+                          <p className="font-medium truncate">{student.full_name}</p>
                           <p className="text-sm text-muted-foreground truncate">
-                            {submission.student.nim || submission.student.email}
+                            {student.nim || student.email}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-3 shrink-0">
-                        <div className="text-right hidden sm:block">
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(submission.submitted_at), 'dd MMM yyyy, HH:mm', { locale: idLocale })}
-                          </p>
-                          {submission.submission_url && (
-                            <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
-                              <Link2 className="h-3 w-3" />
-                              Link Document
-                            </p>
-                          )}
-                        </div>
+                        {submission ? (
+                          <>
+                            <div className="text-right hidden sm:block">
+                              <p className="text-sm text-muted-foreground">
+                                {format(new Date(submission.submitted_at), 'dd MMM yyyy, HH:mm', { locale: idLocale })}
+                              </p>
+                              {submission.submission_url && (
+                                <p className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
+                                  <Link2 className="h-3 w-3" />
+                                  Link Document
+                                </p>
+                              )}
+                            </div>
 
-                        {submission.score !== null ? (
-                          <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 gap-1">
-                            <Star className="h-3 w-3" />
-                            {submission.score}
-                          </Badge>
+                            {submission.score !== null ? (
+                              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 gap-1">
+                                <Star className="h-3 w-3" />
+                                {submission.score}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-orange-600 border-orange-300 gap-1">
+                                <Clock className="h-3 w-3" />
+                                Pending
+                              </Badge>
+                            )}
+
+                            <Button variant="ghost" size="sm" className="gap-1">
+                              <Eye className="h-4 w-4" />
+                              <span className="hidden sm:inline">Lihat</span>
+                            </Button>
+                          </>
                         ) : (
-                          <Badge variant="outline" className="text-orange-600 border-orange-300 gap-1">
-                            <Clock className="h-3 w-3" />
-                            Pending
+                          <Badge variant="outline" className="text-red-600 border-red-300 gap-1">
+                            <AlertCircle className="h-3 w-3" />
+                            Belum Submit
                           </Badge>
                         )}
-
-                        <Button variant="ghost" size="sm" className="gap-1">
-                          <Eye className="h-4 w-4" />
-                          <span className="hidden sm:inline">Lihat</span>
-                        </Button>
                       </div>
                     </div>
                   </CardContent>
