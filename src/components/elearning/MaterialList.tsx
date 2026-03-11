@@ -145,9 +145,13 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
+                      <p className="text-sm text-muted-foreground line-clamp-2" dir="auto">
                         {material.content_type === 'text' 
-                          ? material.content?.replace(/<[^>]*>/g, '').substring(0, 150) + '...'
+                          ? (() => {
+                              const tmp = document.createElement('div');
+                              tmp.innerHTML = material.content || '';
+                              return (tmp.textContent || tmp.innerText || '').trim().substring(0, 150) + '...';
+                            })()
                           : material.file_url}
                       </p>
                       {material.llo && (
