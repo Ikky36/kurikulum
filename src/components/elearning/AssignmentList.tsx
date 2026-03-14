@@ -364,17 +364,24 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
                           Periksa
                         </Button>
                       )}
-                      {assignment.assignment_type === 'quiz' && (
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          onClick={() => setManagingQuiz(assignment)}
-                          className="gap-1"
-                        >
-                          <HelpCircle className="h-4 w-4" />
-                          Kelola Soal
-                        </Button>
-                      )}
+                       {assignment.assignment_type === 'quiz' && (
+                        <>
+                          <QuizResultsManager
+                            assignmentId={assignment.id}
+                            assignmentTitle={assignment.title}
+                            classId={classId}
+                          />
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setManagingQuiz(assignment)}
+                            className="gap-1"
+                          >
+                            <HelpCircle className="h-4 w-4" />
+                            Kelola Soal
+                          </Button>
+                        </>
+                       )}
                       <Button 
                         variant="ghost" 
                         size="sm" 
