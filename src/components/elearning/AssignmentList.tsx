@@ -14,6 +14,7 @@ import { ClipboardCheck, FileUp, HelpCircle, Trash2, Pencil, Play, Plus, Clock, 
 import { AssignmentEditor } from './AssignmentEditor';
 import { QuizManager } from './QuizManager';
 import { QuizResultViewer } from './QuizResultViewer';
+import { QuizResultsManager } from './QuizResultsManager';
 import { AssignmentLeaderboard } from './AssignmentLeaderboard';
 import { LinkSubmissionForm } from './LinkSubmissionForm';
 import { SubmissionGrader } from './SubmissionGrader';
