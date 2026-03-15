@@ -289,45 +289,16 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
   };
 
   const checkAnswer = (userAnswer: any, correctAnswer: any, questionType: string, options?: any): boolean => {
-    if (userAnswer === null || userAnswer === undefined) {
-      return false;
-    }
+    if (userAnswer === null || userAnswer === undefined) return false;
 
     // Essay and long_answer are manually graded
-    if (questionType === 'essay' || questionType === 'long_answer') {
-      return false; // Will be graded manually
-    }
+    if (questionType === 'essay' || questionType === 'long_answer') return false;
 
-    if (questionType === 'multiple_choice' || questionType === 'select_missing_word') {
+    if (questionType === 'multiple_choice' || questionType === 'select_missing_word' || questionType === 'true_false') {
       if (correctAnswer === null || correctAnswer === undefined) return false;
-      
-      // Parse options if needed
-      const parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
-      
-      // Get correct option text if correctAnswer is an index
-      let correctText = correctAnswer;
-      if (typeof correctAnswer === 'number' && Array.isArray(parsedOptions)) {
-        correctText = parsedOptions[correctAnswer];
-      }
-      
-      // Compare user answer with correct option (case-insensitive)
-      return String(userAnswer).toLowerCase().trim() === String(correctText).toLowerCase().trim();
-    }
-
-    if (questionType === 'true_false') {
-      if (correctAnswer === null || correctAnswer === undefined) return false;
-      
-      // Parse options if needed
-      const parsedOptions = typeof options === 'string' ? JSON.parse(options) : (options || ['Benar', 'Salah']);
-      
-      // Get correct option text if correctAnswer is an index
-      let correctText = correctAnswer;
-      if (typeof correctAnswer === 'number' && Array.isArray(parsedOptions)) {
-        correctText = parsedOptions[correctAnswer];
-      }
-      
-      // Compare user answer with correct option (case-insensitive)
-      return String(userAnswer).toLowerCase().trim() === String(correctText).toLowerCase().trim();
+      const userNorms = getChoiceCandidates(userAnswer, options).map(s => s.toLowerCase().trim());
+      const correctNorms = getChoiceCandidates(correctAnswer, options).map(s => s.toLowerCase().trim());
+      return userNorms.some(u => correctNorms.includes(u));
     }
 
     if (questionType === 'multiple_answer') {
@@ -343,31 +314,23 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
     }
 
     if (questionType === 'matching') {
-      // Build expected mapping from options (the correct pairs)
       if (typeof userAnswer !== 'object' || !options) return false;
+      const parsedOptions = parseOptionsArray(options);
+      if (!parsedOptions) return false;
 
-      const parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
-      if (!Array.isArray(parsedOptions)) return false;
-
-      // Build expected mapping: {left: right, ...}
       const expectedMapping: Record<string, string> = {};
       parsedOptions.forEach((pair: { left: string; right: string }) => {
-        if (pair.left && pair.right) {
-          expectedMapping[pair.left] = pair.right;
-        }
+        if (pair.left && pair.right) expectedMapping[pair.left] = pair.right;
       });
 
       const expectedKeys = Object.keys(expectedMapping);
       if (expectedKeys.length === 0) return false;
 
-      // Ensure the answer covers all pairs
       const userKeys = Object.keys(userAnswer);
       if (userKeys.length !== expectedKeys.length) return false;
 
       for (const key of expectedKeys) {
-        if (userAnswer[key] !== expectedMapping[key]) {
-          return false;
-        }
+        if (userAnswer[key] !== expectedMapping[key]) return false;
       }
 
       return true;

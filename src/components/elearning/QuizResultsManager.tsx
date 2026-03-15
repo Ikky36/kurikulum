@@ -337,13 +337,13 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                           className={`p-2 rounded bidi-content ${isCorrect ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'}`}
                           dir="auto"
                         >
-                          {getAnswerDisplay(userAnswer, question.question_type, question.options)}
+                          {userAnswerText}
                         </p>
                       </div>
                       <div className="space-y-1">
                         <span className="text-muted-foreground font-medium">Jawaban Benar:</span>
                         <p className="p-2 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 bidi-content" dir="auto">
-                          {getCorrectAnswerDisplay(question)}
+                          {correctAnswerText}
                         </p>
                       </div>
                     </div>
