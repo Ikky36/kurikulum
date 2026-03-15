@@ -146,6 +146,18 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
     ? (submissionsByStudent[selectedStudent.id] || [])
     : [];
 
+  const resolveOptionText = (value: any, options: any): string => {
+    if (value === null || value === undefined) return String(value ?? '-');
+    const parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
+    if (!Array.isArray(parsedOptions)) return String(value);
+    const idx = typeof value === 'number' ? value : (typeof value === 'string' && /^\d+$/.test(value) ? parseInt(value, 10) : null);
+    if (idx !== null && idx >= 0 && idx < parsedOptions.length) {
+      return String(parsedOptions[idx]);
+    }
+    // value is already text, return as-is
+    return String(value);
+  };
+
   const getAnswerDisplay = (answer: any, questionType: string, options?: any): string => {
     if (answer === null || answer === undefined) return '-';
     if (questionType === 'matching') {
@@ -153,20 +165,9 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
         return Object.entries(answer).map(([left, right]) => `${left} → ${right}`).join(', ');
       }
     }
-    
-    // For multiple choice/true-false/select missing word, convert index to text
     if ((questionType === 'multiple_choice' || questionType === 'true_false' || questionType === 'select_missing_word') && options) {
-      const parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
-      if (Array.isArray(parsedOptions)) {
-        // If answer is a number (index), get the text
-        if (typeof answer === 'number' && parsedOptions[answer]) {
-          return parsedOptions[answer];
-        }
-        // If answer is already text, return it
-        return String(answer);
-      }
+      return resolveOptionText(answer, options);
     }
-    
     if (Array.isArray(answer)) return answer.join(', ');
     return String(answer);
   };
@@ -178,16 +179,18 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
         return parsedOptions.map((pair: { left: string; right: string }) => `${pair.left} → ${pair.right}`).join(', ');
       }
     }
-    
-    // For multiple choice/true-false/select missing word, always show text
     if ((question.question_type === 'multiple_choice' || question.question_type === 'true_false' || question.question_type === 'select_missing_word') && question.options) {
-      const parsedOptions = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
-      if (Array.isArray(parsedOptions) && typeof question.correct_answer === 'number') {
-        return parsedOptions[question.correct_answer] || String(question.correct_answer);
-      }
+      return resolveOptionText(question.correct_answer, question.options);
     }
-    
     return getAnswerDisplay(question.correct_answer, question.question_type, question.options);
+  };
+
+  const normalizeAnswer = (value: any, options: any): string => {
+    // Always resolve to option text for consistent comparison
+    const parsedOptions = typeof options === 'string' ? JSON.parse(options) : (options || []);
+    if (!Array.isArray(parsedOptions)) return String(value ?? '').toLowerCase().trim();
+    const text = resolveOptionText(value, parsedOptions);
+    return text.toLowerCase().trim();
   };
 
   const checkAnswer = (userAnswer: any, correctAnswer: any, questionType: string, options?: any): boolean => {
@@ -196,12 +199,7 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
 
     if (questionType === 'multiple_choice' || questionType === 'select_missing_word' || questionType === 'true_false') {
       if (correctAnswer === null || correctAnswer === undefined) return false;
-      const parsedOptions = typeof options === 'string' ? JSON.parse(options) : (options || []);
-      let correctText = correctAnswer;
-      if (typeof correctAnswer === 'number' && Array.isArray(parsedOptions)) {
-        correctText = parsedOptions[correctAnswer];
-      }
-      return String(userAnswer).toLowerCase().trim() === String(correctText).toLowerCase().trim();
+      return normalizeAnswer(userAnswer, options) === normalizeAnswer(correctAnswer, options);
     }
 
     if (questionType === 'multiple_answer') {
