@@ -207,6 +207,8 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
         {questions.map((question: any, idx: number) => {
           const userAnswer = userAnswers[question.id];
           const isCorrect = checkAnswer(userAnswer, question.correct_answer, question.question_type, question.options);
+          const userAnswerText = getAnswerDisplay(userAnswer, question.question_type, question.options);
+          const correctAnswerText = getCorrectAnswerDisplay(question, userAnswer);
 
           return (
             <Card key={question.id} className={isCorrect ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/10' : 'border-red-500/50 bg-red-50/30 dark:bg-red-950/10'}>
@@ -242,29 +244,29 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
                       <div className="space-y-1">
                         <span className="text-muted-foreground font-medium">Jawaban Anda:</span>
                         <p 
-                          className={`p-2 rounded bidi-content ${isCorrect ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'} ${containsArabic(getAnswerDisplay(userAnswer, question.question_type, question.options)) ? 'font-arabic' : ''}`}
+                          className={`p-2 rounded bidi-content ${isCorrect ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'} ${containsArabic(userAnswerText) ? 'font-arabic' : ''}`}
                           dir="auto"
-                          style={containsArabic(getAnswerDisplay(userAnswer, question.question_type, question.options)) ? {
+                          style={containsArabic(userAnswerText) ? {
                             fontFamily: "'Scheherazade New', 'Amiri', serif",
                             fontSize: '1.2em',
                             lineHeight: 1.8,
                           } : undefined}
                         >
-                          {getAnswerDisplay(userAnswer, question.question_type, question.options)}
+                          {userAnswerText}
                         </p>
                       </div>
                       <div className="space-y-1">
                         <span className="text-muted-foreground font-medium">Jawaban Benar:</span>
                         <p 
-                          className={`p-2 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 bidi-content ${containsArabic(getCorrectAnswerDisplay(question)) ? 'font-arabic' : ''}`}
+                          className={`p-2 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 bidi-content ${containsArabic(correctAnswerText) ? 'font-arabic' : ''}`}
                           dir="auto"
-                          style={containsArabic(getCorrectAnswerDisplay(question)) ? {
+                          style={containsArabic(correctAnswerText) ? {
                             fontFamily: "'Scheherazade New', 'Amiri', serif",
                             fontSize: '1.2em',
                             lineHeight: 1.8,
                           } : undefined}
                         >
-                          {getCorrectAnswerDisplay(question)}
+                          {correctAnswerText}
                         </p>
                       </div>
                     </div>
