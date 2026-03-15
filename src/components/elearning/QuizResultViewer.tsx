@@ -82,43 +82,106 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
     (current.score || 0) > (best?.score || 0) ? current : best
   , submissions[0]);
 
+  const parseOptionsArray = (options: any): any[] | null => {
+    try {
+      const parsed = typeof options === 'string' ? JSON.parse(options) : options;
+      return Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const optionItemToText = (opt: any): string => {
+    if (opt === null || opt === undefined) return '';
+    if (typeof opt === 'object') {
+      if ('text' in opt) return String((opt as any).text ?? '');
+      if ('label' in opt) return String((opt as any).label ?? '');
+      if ('value' in opt) return String((opt as any).value ?? '');
+    }
+    return String(opt);
+  };
+
+  const getChoiceCandidates = (value: any, options: any): string[] => {
+    const candidates: string[] = [];
+    const add = (v: any) => {
+      const t = String(v ?? '').trim();
+      if (!t) return;
+      if (!candidates.includes(t)) candidates.push(t);
+    };
+
+    const arr = parseOptionsArray(options);
+    const idx = typeof value === 'number'
+      ? value
+      : (typeof value === 'string' && /^\d+$/.test(value) ? parseInt(value, 10) : null);
+
+    if (arr && idx !== null) {
+      if (idx >= 0 && idx < arr.length) add(optionItemToText(arr[idx]));
+      if (idx - 1 >= 0 && idx - 1 < arr.length) add(optionItemToText(arr[idx - 1]));
+    }
+
+    if (typeof value === 'string' && !/^\d+$/.test(value)) add(value);
+    if (!candidates.length && value !== null && value !== undefined) add(value);
+    return candidates;
+  };
+
+  const resolveOptionText = (value: any, options: any): string => {
+    if (value === null || value === undefined) return '-';
+    const cands = getChoiceCandidates(value, options);
+    return cands[0] ?? String(value);
+  };
+
   const getAnswerDisplay = (answer: any, questionType: string, options?: any): string => {
     if (answer === null || answer === undefined) return '-';
-    
+
     if (questionType === 'matching') {
       if (typeof answer === 'object' && !Array.isArray(answer)) {
         return Object.entries(answer)
           .map(([left, right]) => `${left} → ${right}`)
           .join(', ');
       }
-      // If answer is array like [[0,0],[1,1]], we need to show from options
       if (Array.isArray(answer) && options) {
-        const parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
-        if (Array.isArray(parsedOptions)) {
+        const parsedOptions = parseOptionsArray(options);
+        if (parsedOptions) {
           return parsedOptions
             .map((pair: { left: string; right: string }) => `${pair.left} → ${pair.right}`)
             .join(', ');
         }
       }
     }
-    
-    if (Array.isArray(answer)) {
-      return answer.join(', ');
+
+    if (questionType === 'multiple_answer' && Array.isArray(answer) && options) {
+      return answer.map(a => resolveOptionText(a, options)).join(', ');
     }
-    
+
+    if ((questionType === 'multiple_choice' || questionType === 'true_false' || questionType === 'select_missing_word') && options) {
+      return resolveOptionText(answer, options);
+    }
+
+    if (Array.isArray(answer)) return answer.join(', ');
     return String(answer);
   };
 
-  const getCorrectAnswerDisplay = (question: any): string => {
+  const getCorrectAnswerDisplay = (question: any, userAnswer?: any): string => {
     if (question.question_type === 'matching' && question.options) {
-      const parsedOptions = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
-      if (Array.isArray(parsedOptions)) {
+      const parsedOptions = parseOptionsArray(question.options);
+      if (parsedOptions) {
         return parsedOptions
           .map((pair: { left: string; right: string }) => `${pair.left} → ${pair.right}`)
           .join(', ');
       }
     }
-    return getAnswerDisplay(question.correct_answer, question.question_type);
+
+    if ((question.question_type === 'multiple_choice' || question.question_type === 'true_false' || question.question_type === 'select_missing_word') && question.options) {
+      const correctCandidates = getChoiceCandidates(question.correct_answer, question.options);
+      if (userAnswer !== undefined) {
+        const userNorms = getChoiceCandidates(userAnswer, question.options).map(s => s.toLowerCase().trim());
+        const matched = correctCandidates.find(c => userNorms.includes(c.toLowerCase().trim()));
+        if (matched) return matched;
+      }
+      return correctCandidates[0] ?? resolveOptionText(question.correct_answer, question.options);
+    }
+
+    return getAnswerDisplay(question.correct_answer, question.question_type, question.options);
   };
 
   const renderSubmissionDetails = (submission: Submission) => {
