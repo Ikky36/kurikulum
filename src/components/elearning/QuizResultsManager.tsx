@@ -297,6 +297,8 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
         {questions.map((question: any, idx: number) => {
           const userAnswer = userAnswers[question.id];
           const isCorrect = checkAnswer(userAnswer, question.correct_answer, question.question_type, question.options);
+          const userAnswerText = getAnswerDisplay(userAnswer, question.question_type, question.options);
+          const correctAnswerText = getCorrectAnswerDisplay(question, userAnswer);
 
           return (
             <Card key={question.id} className={isCorrect ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/10' : 'border-red-500/50 bg-red-50/30 dark:bg-red-950/10'}>
