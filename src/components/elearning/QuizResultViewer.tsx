@@ -82,43 +82,106 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
     (current.score || 0) > (best?.score || 0) ? current : best
   , submissions[0]);
 
+  const parseOptionsArray = (options: any): any[] | null => {
+    try {
+      const parsed = typeof options === 'string' ? JSON.parse(options) : options;
+      return Array.isArray(parsed) ? parsed : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const optionItemToText = (opt: any): string => {
+    if (opt === null || opt === undefined) return '';
+    if (typeof opt === 'object') {
+      if ('text' in opt) return String((opt as any).text ?? '');
+      if ('label' in opt) return String((opt as any).label ?? '');
+      if ('value' in opt) return String((opt as any).value ?? '');
+    }
+    return String(opt);
+  };
+
+  const getChoiceCandidates = (value: any, options: any): string[] => {
+    const candidates: string[] = [];
+    const add = (v: any) => {
+      const t = String(v ?? '').trim();
+      if (!t) return;
+      if (!candidates.includes(t)) candidates.push(t);
+    };
+
+    const arr = parseOptionsArray(options);
+    const idx = typeof value === 'number'
+      ? value
+      : (typeof value === 'string' && /^\d+$/.test(value) ? parseInt(value, 10) : null);
+
+    if (arr && idx !== null) {
+      if (idx >= 0 && idx < arr.length) add(optionItemToText(arr[idx]));
+      if (idx - 1 >= 0 && idx - 1 < arr.length) add(optionItemToText(arr[idx - 1]));
+    }
+
+    if (typeof value === 'string' && !/^\d+$/.test(value)) add(value);
+    if (!candidates.length && value !== null && value !== undefined) add(value);
+    return candidates;
+  };
+
+  const resolveOptionText = (value: any, options: any): string => {
+    if (value === null || value === undefined) return '-';
+    const cands = getChoiceCandidates(value, options);
+    return cands[0] ?? String(value);
+  };
+
   const getAnswerDisplay = (answer: any, questionType: string, options?: any): string => {
     if (answer === null || answer === undefined) return '-';
-    
+
     if (questionType === 'matching') {
       if (typeof answer === 'object' && !Array.isArray(answer)) {
         return Object.entries(answer)
           .map(([left, right]) => `${left} → ${right}`)
           .join(', ');
       }
-      // If answer is array like [[0,0],[1,1]], we need to show from options
       if (Array.isArray(answer) && options) {
-        const parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
-        if (Array.isArray(parsedOptions)) {
+        const parsedOptions = parseOptionsArray(options);
+        if (parsedOptions) {
           return parsedOptions
             .map((pair: { left: string; right: string }) => `${pair.left} → ${pair.right}`)
             .join(', ');
         }
       }
     }
-    
-    if (Array.isArray(answer)) {
-      return answer.join(', ');
+
+    if (questionType === 'multiple_answer' && Array.isArray(answer) && options) {
+      return answer.map(a => resolveOptionText(a, options)).join(', ');
     }
-    
+
+    if ((questionType === 'multiple_choice' || questionType === 'true_false' || questionType === 'select_missing_word') && options) {
+      return resolveOptionText(answer, options);
+    }
+
+    if (Array.isArray(answer)) return answer.join(', ');
     return String(answer);
   };
 
-  const getCorrectAnswerDisplay = (question: any): string => {
+  const getCorrectAnswerDisplay = (question: any, userAnswer?: any): string => {
     if (question.question_type === 'matching' && question.options) {
-      const parsedOptions = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
-      if (Array.isArray(parsedOptions)) {
+      const parsedOptions = parseOptionsArray(question.options);
+      if (parsedOptions) {
         return parsedOptions
           .map((pair: { left: string; right: string }) => `${pair.left} → ${pair.right}`)
           .join(', ');
       }
     }
-    return getAnswerDisplay(question.correct_answer, question.question_type);
+
+    if ((question.question_type === 'multiple_choice' || question.question_type === 'true_false' || question.question_type === 'select_missing_word') && question.options) {
+      const correctCandidates = getChoiceCandidates(question.correct_answer, question.options);
+      if (userAnswer !== undefined) {
+        const userNorms = getChoiceCandidates(userAnswer, question.options).map(s => s.toLowerCase().trim());
+        const matched = correctCandidates.find(c => userNorms.includes(c.toLowerCase().trim()));
+        if (matched) return matched;
+      }
+      return correctCandidates[0] ?? resolveOptionText(question.correct_answer, question.options);
+    }
+
+    return getAnswerDisplay(question.correct_answer, question.question_type, question.options);
   };
 
   const renderSubmissionDetails = (submission: Submission) => {
@@ -144,6 +207,8 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
         {questions.map((question: any, idx: number) => {
           const userAnswer = userAnswers[question.id];
           const isCorrect = checkAnswer(userAnswer, question.correct_answer, question.question_type, question.options);
+          const userAnswerText = getAnswerDisplay(userAnswer, question.question_type, question.options);
+          const correctAnswerText = getCorrectAnswerDisplay(question, userAnswer);
 
           return (
             <Card key={question.id} className={isCorrect ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/10' : 'border-red-500/50 bg-red-50/30 dark:bg-red-950/10'}>
@@ -179,29 +244,29 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
                       <div className="space-y-1">
                         <span className="text-muted-foreground font-medium">Jawaban Anda:</span>
                         <p 
-                          className={`p-2 rounded bidi-content ${isCorrect ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'} ${containsArabic(getAnswerDisplay(userAnswer, question.question_type, question.options)) ? 'font-arabic' : ''}`}
+                          className={`p-2 rounded bidi-content ${isCorrect ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400'} ${containsArabic(userAnswerText) ? 'font-arabic' : ''}`}
                           dir="auto"
-                          style={containsArabic(getAnswerDisplay(userAnswer, question.question_type, question.options)) ? {
+                          style={containsArabic(userAnswerText) ? {
                             fontFamily: "'Scheherazade New', 'Amiri', serif",
                             fontSize: '1.2em',
                             lineHeight: 1.8,
                           } : undefined}
                         >
-                          {getAnswerDisplay(userAnswer, question.question_type, question.options)}
+                          {userAnswerText}
                         </p>
                       </div>
                       <div className="space-y-1">
                         <span className="text-muted-foreground font-medium">Jawaban Benar:</span>
                         <p 
-                          className={`p-2 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 bidi-content ${containsArabic(getCorrectAnswerDisplay(question)) ? 'font-arabic' : ''}`}
+                          className={`p-2 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 bidi-content ${containsArabic(correctAnswerText) ? 'font-arabic' : ''}`}
                           dir="auto"
-                          style={containsArabic(getCorrectAnswerDisplay(question)) ? {
+                          style={containsArabic(correctAnswerText) ? {
                             fontFamily: "'Scheherazade New', 'Amiri', serif",
                             fontSize: '1.2em',
                             lineHeight: 1.8,
                           } : undefined}
                         >
-                          {getCorrectAnswerDisplay(question)}
+                          {correctAnswerText}
                         </p>
                       </div>
                     </div>
@@ -224,45 +289,16 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
   };
 
   const checkAnswer = (userAnswer: any, correctAnswer: any, questionType: string, options?: any): boolean => {
-    if (userAnswer === null || userAnswer === undefined) {
-      return false;
-    }
+    if (userAnswer === null || userAnswer === undefined) return false;
 
     // Essay and long_answer are manually graded
-    if (questionType === 'essay' || questionType === 'long_answer') {
-      return false; // Will be graded manually
-    }
+    if (questionType === 'essay' || questionType === 'long_answer') return false;
 
-    if (questionType === 'multiple_choice' || questionType === 'select_missing_word') {
+    if (questionType === 'multiple_choice' || questionType === 'select_missing_word' || questionType === 'true_false') {
       if (correctAnswer === null || correctAnswer === undefined) return false;
-      
-      // Parse options if needed
-      const parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
-      
-      // Get correct option text if correctAnswer is an index
-      let correctText = correctAnswer;
-      if (typeof correctAnswer === 'number' && Array.isArray(parsedOptions)) {
-        correctText = parsedOptions[correctAnswer];
-      }
-      
-      // Compare user answer with correct option (case-insensitive)
-      return String(userAnswer).toLowerCase().trim() === String(correctText).toLowerCase().trim();
-    }
-
-    if (questionType === 'true_false') {
-      if (correctAnswer === null || correctAnswer === undefined) return false;
-      
-      // Parse options if needed
-      const parsedOptions = typeof options === 'string' ? JSON.parse(options) : (options || ['Benar', 'Salah']);
-      
-      // Get correct option text if correctAnswer is an index
-      let correctText = correctAnswer;
-      if (typeof correctAnswer === 'number' && Array.isArray(parsedOptions)) {
-        correctText = parsedOptions[correctAnswer];
-      }
-      
-      // Compare user answer with correct option (case-insensitive)
-      return String(userAnswer).toLowerCase().trim() === String(correctText).toLowerCase().trim();
+      const userNorms = getChoiceCandidates(userAnswer, options).map(s => s.toLowerCase().trim());
+      const correctNorms = getChoiceCandidates(correctAnswer, options).map(s => s.toLowerCase().trim());
+      return userNorms.some(u => correctNorms.includes(u));
     }
 
     if (questionType === 'multiple_answer') {
@@ -278,31 +314,23 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
     }
 
     if (questionType === 'matching') {
-      // Build expected mapping from options (the correct pairs)
       if (typeof userAnswer !== 'object' || !options) return false;
+      const parsedOptions = parseOptionsArray(options);
+      if (!parsedOptions) return false;
 
-      const parsedOptions = typeof options === 'string' ? JSON.parse(options) : options;
-      if (!Array.isArray(parsedOptions)) return false;
-
-      // Build expected mapping: {left: right, ...}
       const expectedMapping: Record<string, string> = {};
       parsedOptions.forEach((pair: { left: string; right: string }) => {
-        if (pair.left && pair.right) {
-          expectedMapping[pair.left] = pair.right;
-        }
+        if (pair.left && pair.right) expectedMapping[pair.left] = pair.right;
       });
 
       const expectedKeys = Object.keys(expectedMapping);
       if (expectedKeys.length === 0) return false;
 
-      // Ensure the answer covers all pairs
       const userKeys = Object.keys(userAnswer);
       if (userKeys.length !== expectedKeys.length) return false;
 
       for (const key of expectedKeys) {
-        if (userAnswer[key] !== expectedMapping[key]) {
-          return false;
-        }
+        if (userAnswer[key] !== expectedMapping[key]) return false;
       }
 
       return true;
