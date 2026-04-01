@@ -52,6 +52,7 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
   const [selectedLloId, setSelectedLloId] = useState(assignment?.llo_id || '');
   const [isPublished, setIsPublished] = useState(assignment?.is_published || false);
   const [isSafeExamMode, setIsSafeExamMode] = useState(assignment?.is_safe_exam_mode || false);
+  const [isFocusMode, setIsFocusMode] = useState((assignment as any)?.is_focus_mode || false);
   const [showAnswerMode, setShowAnswerMode] = useState(extendedAssignment?.show_answer_mode || 'after_quiz');
   const [sebPassword, setSebPassword] = useState(extendedAssignment?.seb_password || '');
   const [sebQuitPassword, setSebQuitPassword] = useState(extendedAssignment?.seb_quit_password || '');
