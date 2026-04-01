@@ -41,7 +41,7 @@ interface Assignment {
   max_attempts: number | null;
   is_safe_exam_mode: boolean;
   show_answer_mode: string | null;
-  seb_password: string | null;
+  seb_password?: never; // removed: verified server-side only
   elearning_class_id: string;
 }
 
@@ -85,7 +85,7 @@ export default function QuizTaking() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('elearning_assignments')
-        .select('*')
+        .select('id, title, description, time_limit_minutes, max_attempts, is_safe_exam_mode, show_answer_mode, elearning_class_id')
         .eq('id', assignmentId)
         .single();
       if (error) throw error;
@@ -222,12 +222,20 @@ export default function QuizTaking() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handlePasswordSubmit = () => {
-    if (sebPassword === assignment?.seb_password) {
-      setIsAuthenticated(true);
-      toast.success('Password benar! Quiz dimulai.');
-    } else {
-      toast.error('Password salah!');
+  const handlePasswordSubmit = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-seb-password', {
+        body: { assignment_id: assignmentId, password: sebPassword },
+      });
+      if (error) throw error;
+      if (data?.valid) {
+        setIsAuthenticated(true);
+        toast.success('Password benar! Quiz dimulai.');
+      } else {
+        toast.error('Password salah!');
+      }
+    } catch {
+      toast.error('Gagal memverifikasi password.');
     }
   };
 

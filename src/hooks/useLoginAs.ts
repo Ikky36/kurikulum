@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 const ADMIN_SESSION_KEY = 'lovable_admin_session';
+const storage = sessionStorage;
 
 interface AdminSession {
   access_token: string;
@@ -22,14 +23,14 @@ export function useLoginAs() {
 
   // Check if there's a saved admin session on mount
   useEffect(() => {
-    const savedSession = localStorage.getItem(ADMIN_SESSION_KEY);
+    const savedSession = storage.getItem(ADMIN_SESSION_KEY);
     if (savedSession) {
       try {
         const parsed = JSON.parse(savedSession) as AdminSession;
         setAdminSession(parsed);
         setIsImpersonating(true);
       } catch {
-        localStorage.removeItem(ADMIN_SESSION_KEY);
+        storage.removeItem(ADMIN_SESSION_KEY);
       }
     }
   }, []);
@@ -54,7 +55,7 @@ export function useLoginAs() {
         impersonated_at: new Date().toISOString(),
       };
       
-      localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(adminSessionData));
+      storage.setItem(ADMIN_SESSION_KEY, JSON.stringify(adminSessionData));
       return true;
     }
     return false;
@@ -62,7 +63,7 @@ export function useLoginAs() {
 
   // Restore admin session
   const restoreAdminSession = useCallback(async () => {
-    const savedSession = localStorage.getItem(ADMIN_SESSION_KEY);
+    const savedSession = storage.getItem(ADMIN_SESSION_KEY);
     if (!savedSession) {
       toast({
         title: 'Gagal',
@@ -91,7 +92,7 @@ export function useLoginAs() {
       }
 
       // Clear the saved session
-      localStorage.removeItem(ADMIN_SESSION_KEY);
+      storage.removeItem(ADMIN_SESSION_KEY);
       setAdminSession(null);
       setIsImpersonating(false);
 
@@ -107,7 +108,7 @@ export function useLoginAs() {
       console.error('Failed to restore admin session:', error);
       
       // If restore fails, clear the saved session and redirect to login
-      localStorage.removeItem(ADMIN_SESSION_KEY);
+      storage.removeItem(ADMIN_SESSION_KEY);
       setAdminSession(null);
       setIsImpersonating(false);
       
@@ -126,7 +127,7 @@ export function useLoginAs() {
 
   // Clear impersonation state (for when admin logs out normally)
   const clearImpersonation = useCallback(() => {
-    localStorage.removeItem(ADMIN_SESSION_KEY);
+    storage.removeItem(ADMIN_SESSION_KEY);
     setAdminSession(null);
     setIsImpersonating(false);
   }, []);
