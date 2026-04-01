@@ -17,7 +17,7 @@ interface AIRequest {
   studentAnswer?: string;
   correctAnswer?: string;
   questionText?: string;
-  languageMode?: 'arabic' | 'indonesian' | 'mixed';
+  languageMode?: 'arabic' | 'indonesian' | 'mixed' | 'english' | 'english_indonesian';
   contentLength?: 'short' | 'medium' | 'long';
   customPrompt?: string;
 }
@@ -160,6 +160,19 @@ serve(async (req) => {
 - Format: Teks Arab (dengan harakat) → Terjemahan Indonesia
 - Contoh: "اَلْعِلْمُ نُوْرٌ" → "Ilmu adalah cahaya"
 - Semua teks Arab WAJIB menggunakan harakat lengkap (fathah, kasrah, dhammah, sukun, tanwin, tasydid)`;
+        break;
+      case 'english':
+        languageInstruction = `IMPORTANT - OUTPUT LANGUAGE:
+- Use English ENTIRELY for all content
+- Write in clear, academic English
+- If there are Arabic terms, include them with full harakat and English translation`;
+        break;
+      case 'english_indonesian':
+        languageInstruction = `IMPORTANT - OUTPUT LANGUAGE:
+- Use TWO languages: English and Indonesian
+- For each section, write in English first
+- Then provide the Indonesian translation below it
+- Format: English text → Indonesian translation`;
         break;
       case 'indonesian':
       default:

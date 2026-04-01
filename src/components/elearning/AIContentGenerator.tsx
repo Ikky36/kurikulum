@@ -35,7 +35,7 @@ interface AIContentGeneratorProps {
   totalPoints?: number;
 }
 
-type LanguageMode = 'arabic' | 'indonesian' | 'mixed';
+type LanguageMode = 'arabic' | 'indonesian' | 'mixed' | 'english' | 'english_indonesian';
 
 export function AIContentGenerator({ 
   type, 
@@ -405,11 +405,25 @@ ${finalContent}`;
               <span className="mx-1">+</span>
               <span>ID</span>
             </ToggleGroupItem>
+            <ToggleGroupItem 
+              value="english" 
+              className="flex-1 min-w-[100px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              🇬🇧 English
+            </ToggleGroupItem>
+            <ToggleGroupItem 
+              value="english_indonesian" 
+              className="flex-1 min-w-[100px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+            >
+              🇬🇧 EN + 🇮🇩 ID
+            </ToggleGroupItem>
           </ToggleGroup>
           <p className="text-xs text-muted-foreground">
             {languageMode === 'arabic' && 'Output akan sepenuhnya dalam bahasa Arab dengan harakat lengkap'}
             {languageMode === 'indonesian' && 'Output akan sepenuhnya dalam bahasa Indonesia'}
             {languageMode === 'mixed' && 'Output akan menggunakan bahasa Arab (dengan harakat) dan terjemahan Indonesia'}
+            {languageMode === 'english' && 'Output will be entirely in English'}
+            {languageMode === 'english_indonesian' && 'Output akan menggunakan bahasa Inggris dan terjemahan Indonesia'}
           </p>
         </div>
 
