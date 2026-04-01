@@ -28,7 +28,7 @@ interface AIMultiSectionGeneratorProps {
   indicators?: string[];
 }
 
-type LanguageMode = 'arabic' | 'indonesian' | 'mixed';
+type LanguageMode = 'arabic' | 'indonesian' | 'mixed' | 'english' | 'english_indonesian';
 type ContentLength = 'short' | 'medium' | 'long';
 
 export function AIMultiSectionGenerator({ 
