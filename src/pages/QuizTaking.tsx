@@ -433,7 +433,43 @@ export default function QuizTaking() {
     );
   }
 
-  if (showResults && submissionResult) {
+  // Focus Mode: show entry screen to request fullscreen
+  if (assignment?.is_focus_mode && !focusModeActive && !showResults && !quizStartedRef.current) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <Maximize className="h-12 w-12 mx-auto mb-2 text-primary" />
+            <CardTitle>Mode Fokus</CardTitle>
+            <CardDescription>
+              Quiz ini menggunakan Mode Fokus. Browser Anda akan masuk ke layar penuh (fullscreen).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Browser akan masuk mode fullscreen</li>
+                  <li>Jangan keluar dari fullscreen</li>
+                  <li>Jangan berpindah tab atau aplikasi lain</li>
+                  <li><strong>Jika melanggar, quiz akan otomatis dikumpulkan</strong></li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+            <Button onClick={enterFocusMode} className="w-full gap-2">
+              <Maximize className="h-4 w-4" />
+              Mulai Quiz (Masuk Fullscreen)
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/e-learning')} className="w-full">
+              Kembali
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
     return (
       <div className="min-h-screen bg-background p-4 md:p-8">
         <div className="max-w-3xl mx-auto space-y-6">
