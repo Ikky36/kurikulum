@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -172,7 +173,7 @@ export function MaterialFullViewer({ material, onClose }: MaterialFullViewerProp
             <div 
               className="prose prose-sm sm:prose-base max-w-none dark:prose-invert bidi-content"
               dir="auto"
-              dangerouslySetInnerHTML={{ __html: material.content || '' }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(material.content || '') }}
             />
           </div>
         </div>
@@ -368,7 +369,7 @@ export function MaterialFullViewer({ material, onClose }: MaterialFullViewerProp
                 <div 
                   className="prose prose-sm sm:prose-base max-w-none dark:prose-invert bidi-content prose-img:rounded-lg prose-img:max-w-full"
                   dir="auto"
-                  dangerouslySetInnerHTML={{ __html: getActiveSection()?.content || '' }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(getActiveSection()?.content || '') }}
                 />
                 
                 {/* Section Files */}

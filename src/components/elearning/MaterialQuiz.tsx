@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuizQuestions, useCreateSubmission, useAssignmentSubmissions, useGradeQuiz } from '@/hooks/useElearningMaterials';
 import { Button } from '@/components/ui/button';
@@ -224,7 +225,7 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
             fontSize: '1.3em',
             lineHeight: 2,
           } : undefined}
-          dangerouslySetInnerHTML={{ __html: currentQuestion.question_text }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(currentQuestion.question_text) }}
         />
 
         {/* Multiple Choice */}
