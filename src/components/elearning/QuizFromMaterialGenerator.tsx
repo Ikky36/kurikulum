@@ -694,6 +694,12 @@ export function QuizFromMaterialGenerator({
             <ToggleGroupItem value="mixed" className="flex-1 min-w-[80px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
               <span className="font-arabic">عربي</span>+ID
             </ToggleGroupItem>
+            <ToggleGroupItem value="english" className="flex-1 min-w-[80px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+              🇬🇧 English
+            </ToggleGroupItem>
+            <ToggleGroupItem value="english_indonesian" className="flex-1 min-w-[80px] data-[state=on]:bg-primary data-[state=on]:text-primary-foreground">
+              🇬🇧 EN + 🇮🇩 ID
+            </ToggleGroupItem>
           </ToggleGroup>
         </div>
 
