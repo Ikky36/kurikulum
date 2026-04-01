@@ -41,7 +41,7 @@ interface Assignment {
   max_attempts: number | null;
   is_safe_exam_mode: boolean;
   show_answer_mode: string | null;
-  seb_password: string | null;
+  seb_password?: never; // removed: verified server-side only
   elearning_class_id: string;
 }
 
