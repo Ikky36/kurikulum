@@ -35,7 +35,7 @@ interface AIContentGeneratorProps {
   totalPoints?: number;
 }
 
-type LanguageMode = 'arabic' | 'indonesian' | 'mixed';
+type LanguageMode = 'arabic' | 'indonesian' | 'mixed' | 'english' | 'english_indonesian';
 
 export function AIContentGenerator({ 
   type, 
