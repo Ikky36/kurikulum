@@ -225,7 +225,7 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
             fontSize: '1.3em',
             lineHeight: 2,
           } : undefined}
-          dangerouslySetInnerHTML={{ __html: currentQuestion.question_text }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(currentQuestion.question_text) }}
         />
 
         {/* Multiple Choice */}

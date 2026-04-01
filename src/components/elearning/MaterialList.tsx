@@ -315,7 +315,7 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
                       <div 
                         className="prose prose-sm max-w-none dark:prose-invert p-4 bg-muted/30 rounded-lg bidi-content"
                         dir="auto"
-                        dangerouslySetInnerHTML={{ __html: viewingMaterial.content?.replace(/<!-- EMBEDDED_QUIZ:.+? -->/g, '') || '' }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(viewingMaterial.content?.replace(/<!-- EMBEDDED_QUIZ:.+? -->/g, '') || '') }}
                       />
                       {/* Embedded Quiz */}
                       {getEmbeddedQuizId(viewingMaterial.content) && (

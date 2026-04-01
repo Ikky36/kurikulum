@@ -71,7 +71,7 @@ export const ArabicHtmlContent: React.FC<ArabicHtmlContentProps> = ({
         className
       )}
       dir="auto"
-      dangerouslySetInnerHTML={{ __html: html }}
+      dangerouslySetInnerHTML={{ __html: sanitizeHtml(html) }}
     />
   );
 };

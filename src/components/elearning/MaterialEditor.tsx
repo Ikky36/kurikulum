@@ -456,7 +456,7 @@ export function MaterialEditor({ classId, courseId, material, onSuccess }: Mater
                     fontSize: '1.3em',
                     lineHeight: 2,
                   } : undefined}
-                  dangerouslySetInnerHTML={{ __html: content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
                 />
               </CardContent>
             </Card>
