@@ -166,18 +166,32 @@ export default function QuizTaking() {
         handleAutoSubmit();
       }
     }
-  }, [assignment?.is_safe_exam_mode, tabBlurCount]);
+
+    // Focus Mode: any tab switch triggers warning → auto-submit
+    if (document.hidden && assignment?.is_focus_mode && focusModeActive && !focusViolationRef.current && !showResults) {
+      focusViolationRef.current = true;
+      setShowFocusWarning(true);
+    }
+  }, [assignment?.is_safe_exam_mode, assignment?.is_focus_mode, tabBlurCount, focusModeActive, showResults]);
+
+  // Focus Mode: fullscreen change detection
+  const handleFullscreenChange = useCallback(() => {
+    if (!document.fullscreenElement && assignment?.is_focus_mode && focusModeActive && !focusViolationRef.current && !showResults) {
+      focusViolationRef.current = true;
+      setShowFocusWarning(true);
+    }
+  }, [assignment?.is_focus_mode, focusModeActive, showResults]);
 
   // Prevent context menu and keyboard shortcuts
   const handleContextMenu = useCallback((e: MouseEvent) => {
-    if (assignment?.is_safe_exam_mode) {
+    if (assignment?.is_safe_exam_mode || (assignment?.is_focus_mode && focusModeActive)) {
       e.preventDefault();
     }
-  }, [assignment?.is_safe_exam_mode]);
+  }, [assignment?.is_safe_exam_mode, assignment?.is_focus_mode, focusModeActive]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (assignment?.is_safe_exam_mode) {
-      // Prevent common shortcuts
+    const isLocked = assignment?.is_safe_exam_mode || (assignment?.is_focus_mode && focusModeActive);
+    if (isLocked) {
       if (
         (e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 'p' || e.key === 'a')) ||
         (e.key === 'F12') ||
@@ -187,20 +201,53 @@ export default function QuizTaking() {
         e.preventDefault();
         toast.warning('Fitur ini dinonaktifkan dalam mode ujian');
       }
+      // Prevent Escape to exit fullscreen in focus mode
+      if (e.key === 'Escape' && assignment?.is_focus_mode && focusModeActive) {
+        e.preventDefault();
+      }
     }
-  }, [assignment?.is_safe_exam_mode]);
+  }, [assignment?.is_safe_exam_mode, assignment?.is_focus_mode, focusModeActive]);
 
   useEffect(() => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
-  }, [handleVisibilityChange, handleContextMenu, handleKeyDown]);
+  }, [handleVisibilityChange, handleContextMenu, handleKeyDown, handleFullscreenChange]);
+
+  // Focus Mode: enter fullscreen when quiz starts
+  const enterFocusMode = useCallback(async () => {
+    try {
+      await document.documentElement.requestFullscreen();
+      setFocusModeActive(true);
+      quizStartedRef.current = true;
+      toast.success('Mode Fokus aktif. Jangan keluar fullscreen atau berpindah tab.');
+    } catch {
+      toast.error('Gagal mengaktifkan mode fullscreen. Pastikan browser mendukung fitur ini.');
+    }
+  }, []);
+
+  // Focus Mode: exit fullscreen when quiz ends
+  useEffect(() => {
+    if (showResults && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+      setFocusModeActive(false);
+    }
+  }, [showResults]);
+
+  // Focus Mode: auto-submit on violation confirmation
+  const handleFocusViolationSubmit = useCallback(async () => {
+    setShowFocusWarning(false);
+    toast.error('Quiz otomatis dikumpulkan karena Anda meninggalkan mode fokus.');
+    await handleSubmit();
+  }, []);
 
   // Timer
   useEffect(() => {
