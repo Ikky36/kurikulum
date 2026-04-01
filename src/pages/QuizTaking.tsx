@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,10 +13,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { 
   AlertTriangle, Clock, ChevronLeft, ChevronRight, CheckCircle, 
-  Send, Shield, Eye, EyeOff, Lock
+  Send, Shield, Eye, EyeOff, Lock, Maximize
 } from 'lucide-react';
 import { MatchingQuestion } from '@/components/quiz/MatchingQuestion';
 import { containsArabic } from '@/components/ui/arabic-text';
@@ -40,8 +49,9 @@ interface Assignment {
   time_limit_minutes: number | null;
   max_attempts: number | null;
   is_safe_exam_mode: boolean;
+  is_focus_mode: boolean;
   show_answer_mode: string | null;
-  seb_password?: never; // removed: verified server-side only
+  seb_password?: never;
   elearning_class_id: string;
 }
 
@@ -78,6 +88,10 @@ export default function QuizTaking() {
   const [sebPassword, setSebPassword] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [tabBlurCount, setTabBlurCount] = useState(0);
+  const [focusModeActive, setFocusModeActive] = useState(false);
+  const [showFocusWarning, setShowFocusWarning] = useState(false);
+  const focusViolationRef = useRef(false);
+  const quizStartedRef = useRef(false);
 
   // Fetch assignment details
   const { data: assignment, isLoading: loadingAssignment } = useQuery({
@@ -85,7 +99,7 @@ export default function QuizTaking() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('elearning_assignments')
-        .select('id, title, description, time_limit_minutes, max_attempts, is_safe_exam_mode, show_answer_mode, elearning_class_id')
+        .select('id, title, description, time_limit_minutes, max_attempts, is_safe_exam_mode, is_focus_mode, show_answer_mode, elearning_class_id')
         .eq('id', assignmentId)
         .single();
       if (error) throw error;
@@ -152,18 +166,32 @@ export default function QuizTaking() {
         handleAutoSubmit();
       }
     }
-  }, [assignment?.is_safe_exam_mode, tabBlurCount]);
+
+    // Focus Mode: any tab switch triggers warning → auto-submit
+    if (document.hidden && assignment?.is_focus_mode && focusModeActive && !focusViolationRef.current && !showResults) {
+      focusViolationRef.current = true;
+      setShowFocusWarning(true);
+    }
+  }, [assignment?.is_safe_exam_mode, assignment?.is_focus_mode, tabBlurCount, focusModeActive, showResults]);
+
+  // Focus Mode: fullscreen change detection
+  const handleFullscreenChange = useCallback(() => {
+    if (!document.fullscreenElement && assignment?.is_focus_mode && focusModeActive && !focusViolationRef.current && !showResults) {
+      focusViolationRef.current = true;
+      setShowFocusWarning(true);
+    }
+  }, [assignment?.is_focus_mode, focusModeActive, showResults]);
 
   // Prevent context menu and keyboard shortcuts
   const handleContextMenu = useCallback((e: MouseEvent) => {
-    if (assignment?.is_safe_exam_mode) {
+    if (assignment?.is_safe_exam_mode || (assignment?.is_focus_mode && focusModeActive)) {
       e.preventDefault();
     }
-  }, [assignment?.is_safe_exam_mode]);
+  }, [assignment?.is_safe_exam_mode, assignment?.is_focus_mode, focusModeActive]);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (assignment?.is_safe_exam_mode) {
-      // Prevent common shortcuts
+    const isLocked = assignment?.is_safe_exam_mode || (assignment?.is_focus_mode && focusModeActive);
+    if (isLocked) {
       if (
         (e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 'p' || e.key === 'a')) ||
         (e.key === 'F12') ||
@@ -173,20 +201,53 @@ export default function QuizTaking() {
         e.preventDefault();
         toast.warning('Fitur ini dinonaktifkan dalam mode ujian');
       }
+      // Prevent Escape to exit fullscreen in focus mode
+      if (e.key === 'Escape' && assignment?.is_focus_mode && focusModeActive) {
+        e.preventDefault();
+      }
     }
-  }, [assignment?.is_safe_exam_mode]);
+  }, [assignment?.is_safe_exam_mode, assignment?.is_focus_mode, focusModeActive]);
 
   useEffect(() => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
 
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
-  }, [handleVisibilityChange, handleContextMenu, handleKeyDown]);
+  }, [handleVisibilityChange, handleContextMenu, handleKeyDown, handleFullscreenChange]);
+
+  // Focus Mode: enter fullscreen when quiz starts
+  const enterFocusMode = useCallback(async () => {
+    try {
+      await document.documentElement.requestFullscreen();
+      setFocusModeActive(true);
+      quizStartedRef.current = true;
+      toast.success('Mode Fokus aktif. Jangan keluar fullscreen atau berpindah tab.');
+    } catch {
+      toast.error('Gagal mengaktifkan mode fullscreen. Pastikan browser mendukung fitur ini.');
+    }
+  }, []);
+
+  // Focus Mode: exit fullscreen when quiz ends
+  useEffect(() => {
+    if (showResults && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+      setFocusModeActive(false);
+    }
+  }, [showResults]);
+
+  // Focus Mode: auto-submit on violation confirmation
+  const handleFocusViolationSubmit = useCallback(async () => {
+    setShowFocusWarning(false);
+    toast.error('Quiz otomatis dikumpulkan karena Anda meninggalkan mode fokus.');
+    await handleSubmit();
+  }, []);
 
   // Timer
   useEffect(() => {
@@ -372,6 +433,43 @@ export default function QuizTaking() {
     );
   }
 
+  // Focus Mode: show entry screen to request fullscreen
+  if (assignment?.is_focus_mode && !focusModeActive && !showResults && !quizStartedRef.current) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <Maximize className="h-12 w-12 mx-auto mb-2 text-primary" />
+            <CardTitle>Mode Fokus</CardTitle>
+            <CardDescription>
+              Quiz ini menggunakan Mode Fokus. Browser Anda akan masuk ke layar penuh (fullscreen).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  <li>Browser akan masuk mode fullscreen</li>
+                  <li>Jangan keluar dari fullscreen</li>
+                  <li>Jangan berpindah tab atau aplikasi lain</li>
+                  <li><strong>Jika melanggar, quiz akan otomatis dikumpulkan</strong></li>
+                </ul>
+              </AlertDescription>
+            </Alert>
+            <Button onClick={enterFocusMode} className="w-full gap-2">
+              <Maximize className="h-4 w-4" />
+              Mulai Quiz (Masuk Fullscreen)
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/e-learning')} className="w-full">
+              Kembali
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (showResults && submissionResult) {
     return (
       <div className="min-h-screen bg-background p-4 md:p-8">
@@ -496,6 +594,12 @@ export default function QuizTaking() {
               </p>
             </div>
             <div className="flex items-center gap-4">
+              {assignment?.is_focus_mode && focusModeActive && (
+                <Badge variant="secondary" className="gap-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                  <Maximize className="h-3 w-3" />
+                  Mode Fokus
+                </Badge>
+              )}
               {assignment?.is_safe_exam_mode && (
                 <Badge variant="secondary" className="gap-1">
                   <Shield className="h-3 w-3" />
@@ -759,6 +863,27 @@ export default function QuizTaking() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Focus Mode Violation Warning Dialog */}
+      <AlertDialog open={showFocusWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Pelanggaran Mode Fokus
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda telah keluar dari mode fullscreen atau berpindah tab/aplikasi. 
+              Sesuai aturan, quiz Anda akan otomatis dikumpulkan dengan jawaban yang sudah diisi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={handleFocusViolationSubmit}>
+              Kumpulkan Quiz
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

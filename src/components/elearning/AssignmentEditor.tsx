@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, BookOpen, ClipboardCheck, ChevronDown, Shield, Eye } from 'lucide-react';
+import { Loader2, Lock, BookOpen, ClipboardCheck, ChevronDown, Shield, Eye, Maximize } from 'lucide-react';
 
 interface AssignmentEditorProps {
   classId: string;
@@ -52,6 +52,7 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
   const [selectedLloId, setSelectedLloId] = useState(assignment?.llo_id || '');
   const [isPublished, setIsPublished] = useState(assignment?.is_published || false);
   const [isSafeExamMode, setIsSafeExamMode] = useState(assignment?.is_safe_exam_mode || false);
+  const [isFocusMode, setIsFocusMode] = useState((assignment as any)?.is_focus_mode || false);
   const [showAnswerMode, setShowAnswerMode] = useState(extendedAssignment?.show_answer_mode || 'after_quiz');
   const [sebPassword, setSebPassword] = useState(extendedAssignment?.seb_password || '');
   const [sebQuitPassword, setSebQuitPassword] = useState(extendedAssignment?.seb_quit_password || '');
@@ -105,6 +106,7 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
         llo_id: selectedLloId || null,
         is_published: isPublished,
         is_safe_exam_mode: isQuiz ? isSafeExamMode : false,
+        is_focus_mode: isQuiz ? isFocusMode : false,
         show_answer_mode: isQuiz ? showAnswerMode : null,
         seb_password: isQuiz && isSafeExamMode ? sebPassword : null,
         seb_quit_password: isQuiz && isSafeExamMode ? sebQuitPassword : null,
@@ -316,6 +318,26 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
           </div>
         </CardContent>
       </Card>
+
+      {/* Focus Mode - Quiz only */}
+      {assignmentType === 'quiz' && (
+        <Card className="border-blue-500/30 bg-blue-500/5">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Maximize className="h-5 w-5 text-blue-600" />
+                <div>
+                  <Label className="text-base font-medium">Mode Fokus (Fullscreen)</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Browser mahasiswa akan fullscreen saat mengerjakan quiz. Jika keluar fullscreen atau berpindah tab/aplikasi, quiz otomatis dikumpulkan.
+                  </p>
+                </div>
+              </div>
+              <Switch checked={isFocusMode} onCheckedChange={setIsFocusMode} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Safe Exam Browser - Quiz only */}
       {assignmentType === 'quiz' && (

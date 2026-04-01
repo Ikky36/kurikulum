@@ -627,6 +627,7 @@ export type Database = {
           due_date: string | null
           elearning_class_id: string
           id: string
+          is_focus_mode: boolean
           is_published: boolean
           is_safe_exam_mode: boolean
           llo_id: string | null
@@ -650,6 +651,7 @@ export type Database = {
           due_date?: string | null
           elearning_class_id: string
           id?: string
+          is_focus_mode?: boolean
           is_published?: boolean
           is_safe_exam_mode?: boolean
           llo_id?: string | null
@@ -673,6 +675,7 @@ export type Database = {
           due_date?: string | null
           elearning_class_id?: string
           id?: string
+          is_focus_mode?: boolean
           is_published?: boolean
           is_safe_exam_mode?: boolean
           llo_id?: string | null
