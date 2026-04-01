@@ -304,7 +304,7 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
                             <div 
                               className="prose prose-sm max-w-none dark:prose-invert bidi-content line-clamp-3"
                               dir="auto"
-                              dangerouslySetInnerHTML={{ __html: section.content?.substring(0, 200) + '...' || '' }}
+                              dangerouslySetInnerHTML={{ __html: sanitizeHtml(section.content?.substring(0, 200) + '...' || '') }}
                             />
                           </CardContent>
                         </Card>
