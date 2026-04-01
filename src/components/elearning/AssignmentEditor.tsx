@@ -319,6 +319,26 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
         </CardContent>
       </Card>
 
+      {/* Focus Mode - Quiz only */}
+      {assignmentType === 'quiz' && (
+        <Card className="border-blue-500/30 bg-blue-500/5">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Maximize className="h-5 w-5 text-blue-600" />
+                <div>
+                  <Label className="text-base font-medium">Mode Fokus (Fullscreen)</Label>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Browser mahasiswa akan fullscreen saat mengerjakan quiz. Jika keluar fullscreen atau berpindah tab/aplikasi, quiz otomatis dikumpulkan.
+                  </p>
+                </div>
+              </div>
+              <Switch checked={isFocusMode} onCheckedChange={setIsFocusMode} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Safe Exam Browser - Quiz only */}
       {assignmentType === 'quiz' && (
         <>
