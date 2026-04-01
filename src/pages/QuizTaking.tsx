@@ -470,6 +470,7 @@ export default function QuizTaking() {
     );
   }
 
+  if (showResults && submissionResult) {
     return (
       <div className="min-h-screen bg-background p-4 md:p-8">
         <div className="max-w-3xl mx-auto space-y-6">
