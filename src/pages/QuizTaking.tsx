@@ -863,6 +863,27 @@ export default function QuizTaking() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Focus Mode Violation Warning Dialog */}
+      <AlertDialog open={showFocusWarning}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Pelanggaran Mode Fokus
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Anda telah keluar dari mode fullscreen atau berpindah tab/aplikasi. 
+              Sesuai aturan, quiz Anda akan otomatis dikumpulkan dengan jawaban yang sudah diisi.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={handleFocusViolationSubmit}>
+              Kumpulkan Quiz
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
