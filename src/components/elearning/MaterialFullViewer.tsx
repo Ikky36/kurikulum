@@ -173,7 +173,7 @@ export function MaterialFullViewer({ material, onClose }: MaterialFullViewerProp
             <div 
               className="prose prose-sm sm:prose-base max-w-none dark:prose-invert bidi-content"
               dir="auto"
-              dangerouslySetInnerHTML={{ __html: material.content || '' }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(material.content || '') }}
             />
           </div>
         </div>
