@@ -17,7 +17,7 @@ interface AIRequest {
   studentAnswer?: string;
   correctAnswer?: string;
   questionText?: string;
-  languageMode?: 'arabic' | 'indonesian' | 'mixed';
+  languageMode?: 'arabic' | 'indonesian' | 'mixed' | 'english' | 'english_indonesian';
   contentLength?: 'short' | 'medium' | 'long';
   customPrompt?: string;
 }
