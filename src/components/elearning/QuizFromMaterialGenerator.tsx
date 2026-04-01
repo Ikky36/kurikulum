@@ -54,7 +54,7 @@ interface QuizFromMaterialGeneratorProps {
   onGenerated: (questions: any[]) => void;
 }
 
-type LanguageMode = 'arabic' | 'indonesian' | 'mixed';
+type LanguageMode = 'arabic' | 'indonesian' | 'mixed' | 'english' | 'english_indonesian';
 
 const QUESTION_TYPES = [
   { value: 'multiple_choice', label: 'Pilihan Ganda' },
