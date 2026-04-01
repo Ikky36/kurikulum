@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Lock, BookOpen, ClipboardCheck, ChevronDown, Shield, Eye } from 'lucide-react';
+import { Loader2, Lock, BookOpen, ClipboardCheck, ChevronDown, Shield, Eye, Maximize } from 'lucide-react';
 
 interface AssignmentEditorProps {
   classId: string;
