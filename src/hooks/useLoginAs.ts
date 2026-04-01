@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 const ADMIN_SESSION_KEY = 'lovable_admin_session';
+const storage = sessionStorage;
 
 interface AdminSession {
   access_token: string;

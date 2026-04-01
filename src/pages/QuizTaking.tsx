@@ -222,12 +222,20 @@ export default function QuizTaking() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handlePasswordSubmit = () => {
-    if (sebPassword === assignment?.seb_password) {
-      setIsAuthenticated(true);
-      toast.success('Password benar! Quiz dimulai.');
-    } else {
-      toast.error('Password salah!');
+  const handlePasswordSubmit = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-seb-password', {
+        body: { assignment_id: assignmentId, password: sebPassword },
+      });
+      if (error) throw error;
+      if (data?.valid) {
+        setIsAuthenticated(true);
+        toast.success('Password benar! Quiz dimulai.');
+      } else {
+        toast.error('Password salah!');
+      }
+    } catch {
+      toast.error('Gagal memverifikasi password.');
     }
   };
 
