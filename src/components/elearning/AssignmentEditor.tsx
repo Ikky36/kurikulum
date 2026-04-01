@@ -106,6 +106,7 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
         llo_id: selectedLloId || null,
         is_published: isPublished,
         is_safe_exam_mode: isQuiz ? isSafeExamMode : false,
+        is_focus_mode: isQuiz ? isFocusMode : false,
         show_answer_mode: isQuiz ? showAnswerMode : null,
         seb_password: isQuiz && isSafeExamMode ? sebPassword : null,
         seb_quit_password: isQuiz && isSafeExamMode ? sebQuitPassword : null,
