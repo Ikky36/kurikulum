@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,10 +13,19 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { 
   AlertTriangle, Clock, ChevronLeft, ChevronRight, CheckCircle, 
-  Send, Shield, Eye, EyeOff, Lock
+  Send, Shield, Eye, EyeOff, Lock, Maximize
 } from 'lucide-react';
 import { MatchingQuestion } from '@/components/quiz/MatchingQuestion';
 import { containsArabic } from '@/components/ui/arabic-text';
