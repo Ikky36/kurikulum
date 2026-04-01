@@ -95,7 +95,7 @@ export default function QuizTaking() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('elearning_assignments')
-        .select('id, title, description, time_limit_minutes, max_attempts, is_safe_exam_mode, show_answer_mode, elearning_class_id')
+        .select('id, title, description, time_limit_minutes, max_attempts, is_safe_exam_mode, is_focus_mode, show_answer_mode, elearning_class_id')
         .eq('id', assignmentId)
         .single();
       if (error) throw error;
