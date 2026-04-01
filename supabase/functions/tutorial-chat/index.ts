@@ -80,6 +80,8 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY tidak tersedia.");
     }
+
+    const body: ChatRequest = await req.json();
     const { message, history = [] } = body;
 
     // Build messages array
