@@ -594,6 +594,12 @@ export default function QuizTaking() {
               </p>
             </div>
             <div className="flex items-center gap-4">
+              {assignment?.is_focus_mode && focusModeActive && (
+                <Badge variant="secondary" className="gap-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                  <Maximize className="h-3 w-3" />
+                  Mode Fokus
+                </Badge>
+              )}
               {assignment?.is_safe_exam_mode && (
                 <Badge variant="secondary" className="gap-1">
                   <Shield className="h-3 w-3" />
