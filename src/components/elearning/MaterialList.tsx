@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { useElearningMaterials, useDeleteMaterial, type ElearningMaterial } from '@/hooks/useElearningMaterials';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';

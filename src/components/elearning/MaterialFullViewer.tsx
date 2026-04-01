@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';

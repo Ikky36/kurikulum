@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { 
   useCreateMaterial, 
   useUpdateMaterial, 

@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { sanitizeHtml } from '@/lib/sanitize';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuizQuestions, useCreateSubmission, useAssignmentSubmissions, useGradeQuiz } from '@/hooks/useElearningMaterials';
 import { Button } from '@/components/ui/button';
