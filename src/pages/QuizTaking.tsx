@@ -567,8 +567,8 @@ export default function QuizTaking() {
               )}
 
               <div className="flex justify-center mt-8">
-                <Button onClick={() => navigate('/e-learning')}>
-                  Kembali ke E-Learning
+                <Button onClick={() => navigateBackToClass()}>
+                  Kembali ke Kelas
                 </Button>
               </div>
             </CardContent>

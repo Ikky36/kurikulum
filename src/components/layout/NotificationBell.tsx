@@ -116,7 +116,7 @@ export function NotificationBell() {
             <p className="text-xs mt-1">Semua sudah dikerjakan! 🎉</p>
           </div>
         ) : (
-          <ScrollArea className="max-h-[400px]">
+          <ScrollArea className="h-[400px]">
             <div className="p-2">
               {sections.map((section) => (
                 <div key={section.title} className="mb-2 last:mb-0">
@@ -126,18 +126,13 @@ export function NotificationBell() {
                       {section.title} ({section.items.length})
                     </span>
                   </div>
-                  {section.items.slice(0, 5).map((item) => (
+                  {section.items.map((item) => (
                     <NotificationCard
                       key={item.id}
                       item={item}
                       onClick={() => handleNotificationClick(item)}
                     />
                   ))}
-                  {section.items.length > 5 && (
-                    <p className="text-xs text-muted-foreground text-center py-1.5">
-                      +{section.items.length - 5} lainnya
-                    </p>
-                  )}
                 </div>
               ))}
             </div>
