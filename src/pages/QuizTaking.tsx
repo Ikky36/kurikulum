@@ -93,13 +93,6 @@ export default function QuizTaking() {
   const focusViolationRef = useRef(false);
   const quizStartedRef = useRef(false);
 
-  const navigateBackToClass = useCallback(() => {
-    if (assignment?.elearning_class_id) {
-      navigate('/e-learning', { state: { classId: assignment.elearning_class_id, tab: 'tugas' } });
-    } else {
-      navigate('/e-learning');
-    }
-  }, [assignment?.elearning_class_id, navigate]);
 
   const { data: assignment, isLoading: loadingAssignment } = useQuery({
     queryKey: ['quiz-assignment', assignmentId],
