@@ -75,7 +75,7 @@ export default function Auth() {
         title: 'Selamat datang!',
         description: 'Anda berhasil masuk',
       });
-      navigate('/dashboard');
+      navigate('/');
     }
   };
 
