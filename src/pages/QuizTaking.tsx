@@ -461,7 +461,7 @@ export default function QuizTaking() {
               <Maximize className="h-4 w-4" />
               Mulai Quiz (Masuk Fullscreen)
             </Button>
-            <Button variant="outline" onClick={() => navigate('/e-learning')} className="w-full">
+            <Button variant="outline" onClick={() => navigateBackToClass()} className="w-full">
               Kembali
             </Button>
           </CardContent>
