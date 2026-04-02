@@ -93,7 +93,7 @@ export default function QuizTaking() {
   const focusViolationRef = useRef(false);
   const quizStartedRef = useRef(false);
 
-  // Fetch assignment details
+
   const { data: assignment, isLoading: loadingAssignment } = useQuery({
     queryKey: ['quiz-assignment', assignmentId],
     queryFn: async () => {
@@ -108,7 +108,15 @@ export default function QuizTaking() {
     enabled: !!assignmentId,
   });
 
-  // Fetch questions using secure RPC function (hides correct_answer for students)
+  const navigateBackToClass = useCallback(() => {
+    if (assignment?.elearning_class_id) {
+      navigate('/e-learning', { state: { classId: assignment.elearning_class_id, tab: 'tugas' } });
+    } else {
+      navigate('/e-learning');
+    }
+  }, [assignment?.elearning_class_id, navigate]);
+
+
   const { data: questions, isLoading: loadingQuestions } = useQuery({
     queryKey: ['quiz-questions', assignmentId],
     queryFn: async () => {
@@ -424,8 +432,8 @@ export default function QuizTaking() {
             <p className="text-muted-foreground mb-4">
               Anda telah mencapai batas maksimal percobaan ({assignment?.max_attempts}x).
             </p>
-            <Button variant="outline" onClick={() => navigate('/e-learning')}>
-              Kembali ke E-Learning
+            <Button variant="outline" onClick={() => navigateBackToClass()}>
+              Kembali ke Kelas
             </Button>
           </CardContent>
         </Card>
@@ -461,7 +469,7 @@ export default function QuizTaking() {
               <Maximize className="h-4 w-4" />
               Mulai Quiz (Masuk Fullscreen)
             </Button>
-            <Button variant="outline" onClick={() => navigate('/e-learning')} className="w-full">
+            <Button variant="outline" onClick={() => navigateBackToClass()} className="w-full">
               Kembali
             </Button>
           </CardContent>
@@ -567,8 +575,8 @@ export default function QuizTaking() {
               )}
 
               <div className="flex justify-center mt-8">
-                <Button onClick={() => navigate('/e-learning')}>
-                  Kembali ke E-Learning
+                <Button onClick={() => navigateBackToClass()}>
+                  Kembali ke Kelas
                 </Button>
               </div>
             </CardContent>

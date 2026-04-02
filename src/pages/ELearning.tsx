@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { BookOpen, ClipboardList, FileText, BarChart3, Scale, ArrowLeft, LogIn } from 'lucide-react';
 import { ElearningKelas } from '@/components/elearning/ElearningKelas';
 import { ElearningPresensi } from '@/components/elearning/ElearningPresensi';
 import { ElearningMateri } from '@/components/elearning/ElearningMateri';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SelectedClassInfo {
   id: string;
@@ -20,11 +21,43 @@ interface SelectedClassInfo {
 export default function ELearning() {
   const { user, loading, profile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedClass, setSelectedClass] = useState<SelectedClassInfo | null>(null);
-
+  const [activeTab, setActiveTab] = useState('materi');
 
   const canViewRecap = profile?.role === 'admin' || profile?.role === 'sub_admin' || profile?.role === 'dosen';
   const canViewPresensi = profile?.role === 'admin' || profile?.role === 'sub_admin' || profile?.role === 'dosen';
+
+  // Handle navigation state from quiz completion
+  useEffect(() => {
+    const state = location.state as { classId?: string; tab?: string } | null;
+    if (state?.classId) {
+      // Fetch class info and auto-select
+      const fetchClass = async () => {
+        const { data } = await supabase
+          .from('elearning_classes')
+          .select('id, title, course_id, courses(name), class_group_id, class_groups(name)')
+          .eq('id', state.classId)
+          .single();
+        if (data) {
+          setSelectedClass({
+            id: data.id,
+            title: data.title,
+            courseId: data.course_id,
+            courseName: (data.courses as any)?.name || '',
+            classGroupName: (data.class_groups as any)?.name || '',
+          });
+          if (state.tab) {
+            setActiveTab(state.tab);
+          }
+        }
+      };
+      fetchClass();
+      // Clear the state so refresh doesn't re-trigger
+      window.history.replaceState({}, '');
+    }
+  }, [location.state]);
+
 
   if (loading) {
     return (
@@ -42,10 +75,12 @@ export default function ELearning() {
 
   const handleEnterClass = (classInfo: SelectedClassInfo) => {
     setSelectedClass(classInfo);
+    setActiveTab('materi');
   };
 
   const handleBackToClassList = () => {
     setSelectedClass(null);
+    setActiveTab('materi');
   };
 
   return (
@@ -98,7 +133,7 @@ export default function ELearning() {
         {/* Content */}
         {selectedClass ? (
           // Class Detail View with Tabs
-          <Tabs defaultValue="materi" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className={`grid w-full max-w-lg h-12 ${canViewPresensi ? 'grid-cols-4' : 'grid-cols-3'}`}>
               {canViewPresensi && (
                 <TabsTrigger value="presensi" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
