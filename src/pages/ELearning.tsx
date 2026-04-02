@@ -75,10 +75,12 @@ export default function ELearning() {
 
   const handleEnterClass = (classInfo: SelectedClassInfo) => {
     setSelectedClass(classInfo);
+    setActiveTab('materi');
   };
 
   const handleBackToClassList = () => {
     setSelectedClass(null);
+    setActiveTab('materi');
   };
 
   return (
