@@ -25,9 +25,39 @@ export default function ELearning() {
   const [selectedClass, setSelectedClass] = useState<SelectedClassInfo | null>(null);
   const [activeTab, setActiveTab] = useState('materi');
 
-
   const canViewRecap = profile?.role === 'admin' || profile?.role === 'sub_admin' || profile?.role === 'dosen';
   const canViewPresensi = profile?.role === 'admin' || profile?.role === 'sub_admin' || profile?.role === 'dosen';
+
+  // Handle navigation state from quiz completion
+  useEffect(() => {
+    const state = location.state as { classId?: string; tab?: string } | null;
+    if (state?.classId) {
+      // Fetch class info and auto-select
+      const fetchClass = async () => {
+        const { data } = await supabase
+          .from('elearning_classes')
+          .select('id, title, course_id, courses(name), class_group_id, class_groups(name)')
+          .eq('id', state.classId)
+          .single();
+        if (data) {
+          setSelectedClass({
+            id: data.id,
+            title: data.title,
+            courseId: data.course_id,
+            courseName: (data.courses as any)?.name || '',
+            classGroupName: (data.class_groups as any)?.name || '',
+          });
+          if (state.tab) {
+            setActiveTab(state.tab);
+          }
+        }
+      };
+      fetchClass();
+      // Clear the state so refresh doesn't re-trigger
+      window.history.replaceState({}, '');
+    }
+  }, [location.state]);
+
 
   if (loading) {
     return (
