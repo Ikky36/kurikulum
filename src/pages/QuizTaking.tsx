@@ -424,8 +424,8 @@ export default function QuizTaking() {
             <p className="text-muted-foreground mb-4">
               Anda telah mencapai batas maksimal percobaan ({assignment?.max_attempts}x).
             </p>
-            <Button variant="outline" onClick={() => navigate('/e-learning')}>
-              Kembali ke E-Learning
+            <Button variant="outline" onClick={() => navigateBackToClass()}>
+              Kembali ke Kelas
             </Button>
           </CardContent>
         </Card>
