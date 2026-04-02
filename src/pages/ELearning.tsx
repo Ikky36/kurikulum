@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { BookOpen, ClipboardList, FileText, BarChart3, Scale, ArrowLeft, LogIn } from 'lucide-react';
 import { ElearningKelas } from '@/components/elearning/ElearningKelas';
 import { ElearningPresensi } from '@/components/elearning/ElearningPresensi';
 import { ElearningMateri } from '@/components/elearning/ElearningMateri';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SelectedClassInfo {
   id: string;
@@ -20,7 +21,9 @@ interface SelectedClassInfo {
 export default function ELearning() {
   const { user, loading, profile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [selectedClass, setSelectedClass] = useState<SelectedClassInfo | null>(null);
+  const [activeTab, setActiveTab] = useState('materi');
 
 
   const canViewRecap = profile?.role === 'admin' || profile?.role === 'sub_admin' || profile?.role === 'dosen';
