@@ -131,7 +131,7 @@ export default function ELearning() {
         {/* Content */}
         {selectedClass ? (
           // Class Detail View with Tabs
-          <Tabs defaultValue="materi" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className={`grid w-full max-w-lg h-12 ${canViewPresensi ? 'grid-cols-4' : 'grid-cols-3'}`}>
               {canViewPresensi && (
                 <TabsTrigger value="presensi" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
