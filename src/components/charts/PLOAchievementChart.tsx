@@ -25,12 +25,13 @@ export function PLOAchievementChart({ curriculumFilter = 'all' }: PLOAchievement
 
   // Fetch all PLOs
   const { data: plos } = useQuery({
-    queryKey: ['all-plos'],
+    queryKey: ['all-plos', curriculumFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('plos')
-        .select('*')
-        .order('code');
+      let query = supabase.from('plos').select('*').order('code');
+      if (curriculumFilter !== 'all') {
+        query = query.eq('curriculum_id', curriculumFilter);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as PLO[];
     },
