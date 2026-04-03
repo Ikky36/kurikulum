@@ -1263,13 +1263,13 @@ function KurikulumContent() {
               </Button>
               <Button 
                 onClick={async () => {
-                  const { id, code, description, profil_lulusan_ids } = formData;
+                  const { id, code, description, curriculum_id, profil_lulusan_ids } = formData;
                   const plIds = (profil_lulusan_ids as unknown as string[]) || [];
                   
                   if (isNew) {
                     const { data: newPlo, error: ploError } = await supabase
                       .from('plos')
-                      .insert({ code, description })
+                      .insert({ code, description, curriculum_id: curriculum_id || null })
                       .select()
                       .single();
                     
