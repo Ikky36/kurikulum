@@ -16,18 +16,22 @@ interface PLOAchievementData {
   linkedCourses: { course: Course; achievement: number }[];
 }
 
-export function PLOAchievementChart() {
-  const [curriculumFilter, setCurriculumFilter] = useState<string>('all');
+interface PLOAchievementChartProps {
+  curriculumFilter?: string;
+}
+
+export function PLOAchievementChart({ curriculumFilter = 'all' }: PLOAchievementChartProps) {
   const [yearFilter, setYearFilter] = useState<string>('all');
 
   // Fetch all PLOs
   const { data: plos } = useQuery({
-    queryKey: ['all-plos'],
+    queryKey: ['all-plos', curriculumFilter],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('plos')
-        .select('*')
-        .order('code');
+      let query = supabase.from('plos').select('*').order('code');
+      if (curriculumFilter !== 'all') {
+        query = query.eq('curriculum_id', curriculumFilter);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as PLO[];
     },
@@ -46,15 +50,6 @@ export function PLOAchievementChart() {
     },
   });
 
-  // Fetch curricula
-  const { data: curricula } = useQuery({
-    queryKey: ['curricula'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('curricula').select('*').order('name');
-      if (error) throw error;
-      return data as Curriculum[];
-    },
-  });
 
   // Fetch all course-PLO relationships
   const { data: coursePlos } = useQuery({
@@ -297,17 +292,6 @@ export function PLOAchievementChart() {
           </div>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={curriculumFilter} onValueChange={setCurriculumFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Kurikulum" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Kurikulum</SelectItem>
-                {curricula?.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select value={yearFilter} onValueChange={setYearFilter}>
               <SelectTrigger className="w-[130px]">
                 <SelectValue placeholder="Angkatan" />
