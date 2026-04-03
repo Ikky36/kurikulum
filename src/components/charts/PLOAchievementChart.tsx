@@ -50,15 +50,6 @@ export function PLOAchievementChart({ curriculumFilter = 'all' }: PLOAchievement
     },
   });
 
-  // Fetch curricula
-  const { data: curricula } = useQuery({
-    queryKey: ['curricula'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('curricula').select('*').order('name');
-      if (error) throw error;
-      return data as Curriculum[];
-    },
-  });
 
   // Fetch all course-PLO relationships
   const { data: coursePlos } = useQuery({
