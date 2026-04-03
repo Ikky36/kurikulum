@@ -323,8 +323,13 @@ function KurikulumContent() {
   };
 
   const openEdit = (type: string, data: any, isNew: boolean) => {
-    setFormData(data || {});
-    setEditDialog({ type, data, isNew });
+    // Auto-set curriculum_id from current filter when creating new items
+    const defaultData = data || {};
+    if (isNew && selectedCurriculumId !== 'all' && !defaultData.curriculum_id) {
+      defaultData.curriculum_id = selectedCurriculumId;
+    }
+    setFormData(defaultData);
+    setEditDialog({ type, data: defaultData, isNew });
   };
 
   const handleSave = () => {
