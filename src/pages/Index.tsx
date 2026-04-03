@@ -1,3 +1,4 @@
+import { useState, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { CourseScoreCard } from '@/components/charts/CourseScoreCard';
 import { PLOAchievementChart } from '@/components/charts/PLOAchievementChart';
@@ -8,11 +9,35 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { GraduationCap, BookOpen, Users, TrendingUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Index() {
   const { data: courses, isLoading, error } = useCoursesWithStats();
   const { data: settings } = useAppSettings();
   const { data: allStudents } = useAllStudents();
+  const [curriculumFilter, setCurriculumFilter] = useState<string>('all');
+
+  const { data: curricula } = useQuery({
+    queryKey: ['curricula-for-index'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('curricula')
+        .select('id, name, is_active')
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const filteredCourses = useMemo(() => {
+    if (!courses) return [];
+    if (curriculumFilter === 'all') return courses;
+    if (curriculumFilter === 'none') return courses.filter(c => !c.curriculum_id);
+    return courses.filter(c => c.curriculum_id === curriculumFilter);
+  }, [courses, curriculumFilter]);
 
   const appTitle = settings?.app_title || 'Student Achievement Tracker';
   const appTagline = settings?.app_tagline || 'Pantau dan kelola nilai mahasiswa Program Bahasa Arab dengan mudah. Visualisasi data yang jelas untuk hasil pembelajaran yang lebih baik.';
@@ -20,9 +45,8 @@ export default function Index() {
 
   const totalStudents = allStudents?.length || 0;
   
-  // Calculate total weighted average across all courses
-  const totalEnrollments = courses?.reduce((sum, c) => sum + c.total_students, 0) || 0;
-  const totalWeightedSum = courses?.reduce((sum, c) => sum + (c.average_score * c.total_students), 0) || 0;
+  const totalEnrollments = filteredCourses.reduce((sum, c) => sum + c.total_students, 0);
+  const totalWeightedSum = filteredCourses.reduce((sum, c) => sum + (c.average_score * c.total_students), 0);
   const averageAllCourses = totalEnrollments > 0 ? totalWeightedSum / totalEnrollments : 0;
 
   return (
@@ -56,7 +80,7 @@ export default function Index() {
           <div className="flex justify-center">
             <div className="grid gap-4 sm:grid-cols-3 max-w-3xl w-full">
               {[
-                { icon: BookOpen, label: 'Mata Kuliah', value: courses?.length || 0, color: 'text-primary', tooltip: 'Total mata kuliah yang tersedia' },
+                { icon: BookOpen, label: 'Mata Kuliah', value: filteredCourses.length, color: 'text-primary', tooltip: curriculumFilter === 'all' ? 'Total mata kuliah yang tersedia' : 'Total mata kuliah berdasarkan filter kurikulum' },
                 { icon: Users, label: 'Total Mahasiswa', value: totalStudents, color: 'text-secondary-foreground', tooltip: 'Total seluruh mahasiswa' },
                 { icon: TrendingUp, label: 'Rata-rata Nilai', value: averageAllCourses.toFixed(1), color: 'text-success', tooltip: 'Rata-rata nilai akhir dari semua mahasiswa' },
               ].map((stat, i) => (
@@ -90,13 +114,27 @@ export default function Index() {
 
         {/* Courses Grid */}
         <section className="container py-8 lg:py-12">
-          <div className="mb-8">
-            <h2 className="font-display text-2xl font-bold lg:text-3xl mb-2">
-              Performa Mata Kuliah
-            </h2>
-            <p className="text-muted-foreground">
-              Lihat performa setiap mata kuliah
-            </p>
+          <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h2 className="font-display text-2xl font-bold lg:text-3xl mb-2">
+                Performa Mata Kuliah
+              </h2>
+              <p className="text-muted-foreground">
+                Lihat performa setiap mata kuliah
+              </p>
+            </div>
+            <Select value={curriculumFilter} onValueChange={setCurriculumFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Semua Kurikulum" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Kurikulum</SelectItem>
+                {curricula?.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+                <SelectItem value="none">Tanpa Kurikulum</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {isLoading ? (
@@ -120,9 +158,13 @@ export default function Index() {
             <Card className="p-8 text-center">
               <p className="text-destructive">Gagal memuat data mata kuliah</p>
             </Card>
+          ) : filteredCourses.length === 0 ? (
+            <Card className="p-8 text-center">
+              <p className="text-muted-foreground">Tidak ada mata kuliah untuk filter yang dipilih</p>
+            </Card>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-              {courses?.map((course, i) => (
+              {filteredCourses.map((course, i) => (
                 <CourseScoreCard key={course.id} course={course} delay={i * 100} />
               ))}
             </div>
