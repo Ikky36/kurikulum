@@ -323,8 +323,13 @@ function KurikulumContent() {
   };
 
   const openEdit = (type: string, data: any, isNew: boolean) => {
-    setFormData(data || {});
-    setEditDialog({ type, data, isNew });
+    // Auto-set curriculum_id from current filter when creating new items
+    const defaultData = data || {};
+    if (isNew && selectedCurriculumId !== 'all' && !defaultData.curriculum_id) {
+      defaultData.curriculum_id = selectedCurriculumId;
+    }
+    setFormData(defaultData);
+    setEditDialog({ type, data: defaultData, isNew });
   };
 
   const handleSave = () => {
@@ -1197,6 +1202,22 @@ function KurikulumContent() {
             </DialogHeader>
             <div className="space-y-4">
               <div>
+                <label className="text-sm font-medium">Kurikulum</label>
+                <Select
+                  value={formData.curriculum_id || ''}
+                  onValueChange={(v) => setFormData({ ...formData, curriculum_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Kurikulum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeCurricula.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
                 <label className="text-sm font-medium">Kode CPL</label>
                 <Input
                   value={formData.code || ''}
@@ -1242,13 +1263,13 @@ function KurikulumContent() {
               </Button>
               <Button 
                 onClick={async () => {
-                  const { id, code, description, profil_lulusan_ids } = formData;
+                  const { id, code, description, curriculum_id, profil_lulusan_ids } = formData;
                   const plIds = (profil_lulusan_ids as unknown as string[]) || [];
                   
                   if (isNew) {
                     const { data: newPlo, error: ploError } = await supabase
                       .from('plos')
-                      .insert({ code, description })
+                      .insert({ code, description, curriculum_id: curriculum_id || null })
                       .select()
                       .single();
                     
@@ -1267,7 +1288,7 @@ function KurikulumContent() {
                   } else {
                     const { error: ploError } = await supabase
                       .from('plos')
-                      .update({ code, description })
+                      .update({ code, description, curriculum_id: curriculum_id || null })
                       .eq('id', id);
                     
                     if (ploError) {
@@ -1587,6 +1608,15 @@ function KurikulumContent() {
       );
     }
 
+    // Tables that have curriculum_id
+    const tablesWithCurriculum = [
+      'vmts_pt_misi', 'vmts_pt_tujuan', 'vmts_pt_strategi',
+      'vmts_ps_misi', 'vmts_ps_tujuan', 'vmts_ps_strategi',
+      'vmts_pt_visi', 'vmts_ps_visi',
+      'profil_lulusan', 'bahan_kajian_kelompok'
+    ];
+    const hasCurriculum = tablesWithCurriculum.includes(type);
+
     // Generic edit dialog for other types
     const fieldConfig: Record<string, { fields: { key: string; label: string; type: 'input' | 'textarea' }[] }> = {
       vmts_pt_visi: { fields: [{ key: 'visi', label: 'Visi PT', type: 'textarea' }] },
@@ -1622,6 +1652,24 @@ function KurikulumContent() {
             <DialogTitle>{isNew ? 'Tambah' : 'Edit'} Data</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {hasCurriculum && (
+              <div>
+                <label className="text-sm font-medium">Kurikulum</label>
+                <Select
+                  value={formData.curriculum_id || ''}
+                  onValueChange={(v) => setFormData({ ...formData, curriculum_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Kurikulum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeCurricula.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {config.fields.map((field) => (
               <div key={field.key}>
                 <label className="text-sm font-medium">{field.label}</label>

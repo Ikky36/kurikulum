@@ -75,8 +75,26 @@ export default function Index() {
           </div>
         </section>
 
+        {/* Curriculum Filter */}
+        <section className="container -mt-8 relative z-10 mb-4">
+          <div className="flex justify-end">
+            <Select value={curriculumFilter} onValueChange={setCurriculumFilter}>
+              <SelectTrigger className="w-[220px] bg-background shadow-sm">
+                <SelectValue placeholder="Semua Kurikulum" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Kurikulum</SelectItem>
+                {curricula?.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+                <SelectItem value="none">Tanpa Kurikulum</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </section>
+
         {/* Stats Section */}
-        <section className="container -mt-8 relative z-10">
+        <section className="container relative z-10">
           <div className="flex justify-center">
             <div className="grid gap-4 sm:grid-cols-3 max-w-3xl w-full">
               {[
@@ -123,18 +141,6 @@ export default function Index() {
                 Lihat performa setiap mata kuliah
               </p>
             </div>
-            <Select value={curriculumFilter} onValueChange={setCurriculumFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Semua Kurikulum" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Kurikulum</SelectItem>
-                {curricula?.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-                <SelectItem value="none">Tanpa Kurikulum</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {isLoading ? (
