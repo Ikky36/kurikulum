@@ -301,17 +301,6 @@ export function PLOAchievementChart({ curriculumFilter = 'all' }: PLOAchievement
           </div>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-muted-foreground" />
-            <Select value={curriculumFilter} onValueChange={setCurriculumFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Kurikulum" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Kurikulum</SelectItem>
-                {curricula?.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
             <Select value={yearFilter} onValueChange={setYearFilter}>
               <SelectTrigger className="w-[130px]">
                 <SelectValue placeholder="Angkatan" />
