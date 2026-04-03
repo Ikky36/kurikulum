@@ -1288,7 +1288,7 @@ function KurikulumContent() {
                   } else {
                     const { error: ploError } = await supabase
                       .from('plos')
-                      .update({ code, description })
+                      .update({ code, description, curriculum_id: curriculum_id || null })
                       .eq('id', id);
                     
                     if (ploError) {
