@@ -1631,6 +1631,24 @@ function KurikulumContent() {
             <DialogTitle>{isNew ? 'Tambah' : 'Edit'} Data</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {hasCurriculum && (
+              <div>
+                <label className="text-sm font-medium">Kurikulum</label>
+                <Select
+                  value={formData.curriculum_id || ''}
+                  onValueChange={(v) => setFormData({ ...formData, curriculum_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Kurikulum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activeCurricula.map((c: any) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             {config.fields.map((field) => (
               <div key={field.key}>
                 <label className="text-sm font-medium">{field.label}</label>
