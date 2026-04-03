@@ -141,18 +141,6 @@ export default function Index() {
                 Lihat performa setiap mata kuliah
               </p>
             </div>
-            <Select value={curriculumFilter} onValueChange={setCurriculumFilter}>
-              <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Semua Kurikulum" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Kurikulum</SelectItem>
-                {curricula?.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-                <SelectItem value="none">Tanpa Kurikulum</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           {isLoading ? (
