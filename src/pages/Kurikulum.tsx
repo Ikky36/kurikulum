@@ -1587,6 +1587,15 @@ function KurikulumContent() {
       );
     }
 
+    // Tables that have curriculum_id
+    const tablesWithCurriculum = [
+      'vmts_pt_misi', 'vmts_pt_tujuan', 'vmts_pt_strategi',
+      'vmts_ps_misi', 'vmts_ps_tujuan', 'vmts_ps_strategi',
+      'vmts_pt_visi', 'vmts_ps_visi',
+      'profil_lulusan', 'bahan_kajian_kelompok'
+    ];
+    const hasCurriculum = tablesWithCurriculum.includes(type);
+
     // Generic edit dialog for other types
     const fieldConfig: Record<string, { fields: { key: string; label: string; type: 'input' | 'textarea' }[] }> = {
       vmts_pt_visi: { fields: [{ key: 'visi', label: 'Visi PT', type: 'textarea' }] },
