@@ -16,8 +16,11 @@ interface PLOAchievementData {
   linkedCourses: { course: Course; achievement: number }[];
 }
 
-export function PLOAchievementChart() {
-  const [curriculumFilter, setCurriculumFilter] = useState<string>('all');
+interface PLOAchievementChartProps {
+  curriculumFilter?: string;
+}
+
+export function PLOAchievementChart({ curriculumFilter = 'all' }: PLOAchievementChartProps) {
   const [yearFilter, setYearFilter] = useState<string>('all');
 
   // Fetch all PLOs

@@ -109,7 +109,7 @@ export default function Index() {
 
         {/* PLO Achievement Chart */}
         <section className="container py-8">
-          <PLOAchievementChart />
+          <PLOAchievementChart curriculumFilter={curriculumFilter} />
         </section>
 
         {/* Courses Grid */}
