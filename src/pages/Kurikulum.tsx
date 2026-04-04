@@ -1849,8 +1849,9 @@ function KurikulumContent() {
         </div>
 
         <Tabs defaultValue="vmts-pt">
-          <TabsList className="grid grid-cols-2 lg:grid-cols-6 w-full mb-6">
+          <TabsList className={`grid grid-cols-2 ${showVmtsUpps ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} w-full mb-6`}>
             <TabsTrigger value="vmts-pt">VMTS PT</TabsTrigger>
+            {showVmtsUpps && <TabsTrigger value="vmts-upps">VMTS UPPS</TabsTrigger>}
             <TabsTrigger value="vmts-ps">VMTS PS</TabsTrigger>
             <TabsTrigger value="profil-lulusan">PL</TabsTrigger>
             <TabsTrigger value="cpl">CPL</TabsTrigger>
@@ -1859,12 +1860,23 @@ function KurikulumContent() {
           </TabsList>
 
           <TabsContent value="vmts-pt">
+            {renderVisiCard('Visi PT', filteredPtVisi, 'vmts_pt_visi')}
             {renderCodeTable('Misi PT', filteredPtMisi, 'vmts_pt_misi', 'misi', 'Misi Perguruan Tinggi', filterPtMisi, setFilterPtMisi, sortPtMisi, setSortPtMisi)}
             {renderCodeTable('Tujuan PT', filteredPtTujuan, 'vmts_pt_tujuan', 'tujuan', 'Tujuan Perguruan Tinggi', filterPtTujuan, setFilterPtTujuan, sortPtTujuan, setSortPtTujuan)}
             {renderCodeTable('Strategi PT', filteredPtStrategi, 'vmts_pt_strategi', 'strategi', 'Strategi Perguruan Tinggi', filterPtStrategi, setFilterPtStrategi, sortPtStrategi, setSortPtStrategi)}
           </TabsContent>
 
+          {showVmtsUpps && (
+            <TabsContent value="vmts-upps">
+              {renderVisiCard('Visi UPPS', filteredUppsVisi, 'vmts_upps_visi')}
+              {renderCodeTable('Misi UPPS', filteredUppsMisi, 'vmts_upps_misi', 'misi', 'Misi UPPS', filterUppsMisi, setFilterUppsMisi, sortUppsMisi, setSortUppsMisi)}
+              {renderCodeTable('Tujuan UPPS', filteredUppsTujuan, 'vmts_upps_tujuan', 'tujuan', 'Tujuan UPPS', filterUppsTujuan, setFilterUppsTujuan, sortUppsTujuan, setSortUppsTujuan)}
+              {renderCodeTable('Strategi UPPS', filteredUppsStrategi, 'vmts_upps_strategi', 'strategi', 'Strategi UPPS', filterUppsStrategi, setFilterUppsStrategi, sortUppsStrategi, setSortUppsStrategi)}
+            </TabsContent>
+          )}
+
           <TabsContent value="vmts-ps">
+            {renderVisiCard('Visi Keilmuan PS', filteredPsVisi, 'vmts_ps_visi')}
             {renderCodeTable('Misi PS', filteredPsMisi, 'vmts_ps_misi', 'misi', 'Misi Program Studi', filterPsMisi, setFilterPsMisi, sortPsMisi, setSortPsMisi)}
             {renderCodeTable('Tujuan PS', filteredPsTujuan, 'vmts_ps_tujuan', 'tujuan', 'Tujuan Program Studi', filterPsTujuan, setFilterPsTujuan, sortPsTujuan, setSortPsTujuan)}
             {renderCodeTable('Strategi PS', filteredPsStrategi, 'vmts_ps_strategi', 'strategi', 'Strategi Program Studi', filterPsStrategi, setFilterPsStrategi, sortPsStrategi, setSortPsStrategi)}
