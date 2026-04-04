@@ -124,11 +124,11 @@ function KurikulumContent() {
     },
   });
 
-  const { data: psVisi } = useQuery({
+  const { data: psVisiList = [] } = useQuery({
     queryKey: ['vmts_ps_visi'],
     queryFn: async () => {
-      const { data } = await supabase.from('vmts_ps_visi').select('*').limit(1);
-      return data?.[0] as VmtsPsVisi | undefined;
+      const { data } = await supabase.from('vmts_ps_visi').select('*');
+      return (data || []) as VmtsVisi[];
     },
   });
 
