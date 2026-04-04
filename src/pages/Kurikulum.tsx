@@ -1740,6 +1740,7 @@ function KurikulumContent() {
     const tablesWithCurriculum = [
       'vmts_pt_misi', 'vmts_pt_tujuan', 'vmts_pt_strategi',
       'vmts_ps_misi', 'vmts_ps_tujuan', 'vmts_ps_strategi',
+      'vmts_upps_visi', 'vmts_upps_misi', 'vmts_upps_tujuan', 'vmts_upps_strategi',
       'vmts_pt_visi', 'vmts_ps_visi',
       'profil_lulusan', 'bahan_kajian_kelompok'
     ];
@@ -1751,6 +1752,10 @@ function KurikulumContent() {
       vmts_pt_misi: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'misi', label: 'Misi PT', type: 'textarea' }] },
       vmts_pt_tujuan: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'tujuan', label: 'Tujuan PT', type: 'textarea' }] },
       vmts_pt_strategi: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'strategi', label: 'Strategi PT', type: 'textarea' }] },
+      vmts_upps_visi: { fields: [{ key: 'visi', label: 'Visi UPPS', type: 'textarea' }] },
+      vmts_upps_misi: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'misi', label: 'Misi UPPS', type: 'textarea' }] },
+      vmts_upps_tujuan: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'tujuan', label: 'Tujuan UPPS', type: 'textarea' }] },
+      vmts_upps_strategi: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'strategi', label: 'Strategi UPPS', type: 'textarea' }] },
       vmts_ps_visi: { fields: [{ key: 'visi', label: 'Visi Keilmuan PS', type: 'textarea' }] },
       vmts_ps_misi: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'misi', label: 'Misi PS', type: 'textarea' }] },
       vmts_ps_tujuan: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'tujuan', label: 'Tujuan PS', type: 'textarea' }] },
