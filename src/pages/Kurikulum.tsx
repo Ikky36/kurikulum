@@ -156,7 +156,49 @@ function KurikulumContent() {
     },
   });
 
-  const { data: profilLulusan = [] } = useQuery({
+  // VMTS UPPS data
+  const { data: uppsVisiList = [] } = useQuery({
+    queryKey: ['vmts_upps_visi'],
+    queryFn: async () => {
+      const { data } = await supabase.from('vmts_upps_visi' as any).select('*');
+      return (data || []) as VmtsVisi[];
+    },
+  });
+
+  const { data: uppsMisi = [] } = useQuery({
+    queryKey: ['vmts_upps_misi'],
+    queryFn: async () => {
+      const { data } = await supabase.from('vmts_upps_misi' as any).select('*').order('code');
+      return (data || []) as VmtsUppsMisi[];
+    },
+  });
+
+  const { data: uppsTujuan = [] } = useQuery({
+    queryKey: ['vmts_upps_tujuan'],
+    queryFn: async () => {
+      const { data } = await supabase.from('vmts_upps_tujuan' as any).select('*').order('code');
+      return (data || []) as VmtsUppsTujuan[];
+    },
+  });
+
+  const { data: uppsStrategi = [] } = useQuery({
+    queryKey: ['vmts_upps_strategi'],
+    queryFn: async () => {
+      const { data } = await supabase.from('vmts_upps_strategi' as any).select('*').order('code');
+      return (data || []) as VmtsUppsStrategi[];
+    },
+  });
+
+  // Setting: show VMTS UPPS tab
+  const { data: showVmtsUpps = true } = useQuery({
+    queryKey: ['app-settings', 'show_vmts_upps'],
+    queryFn: async () => {
+      const { data } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'show_vmts_upps').single();
+      return data?.setting_value !== 'false';
+    },
+  });
+
+
     queryKey: ['profil_lulusan'],
     queryFn: async () => {
       const { data } = await supabase.from('profil_lulusan').select('*').order('code');
