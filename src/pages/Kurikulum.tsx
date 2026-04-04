@@ -56,6 +56,9 @@ function KurikulumContent() {
   const [filterPsMisi, setFilterPsMisi] = useState('');
   const [filterPsTujuan, setFilterPsTujuan] = useState('');
   const [filterPsStrategi, setFilterPsStrategi] = useState('');
+  const [filterUppsMisi, setFilterUppsMisi] = useState('');
+  const [filterUppsTujuan, setFilterUppsTujuan] = useState('');
+  const [filterUppsStrategi, setFilterUppsStrategi] = useState('');
   const [filterProfilLulusan, setFilterProfilLulusan] = useState('');
   const [filterCpl, setFilterCpl] = useState('');
   const [filterBk, setFilterBk] = useState('');
@@ -68,6 +71,9 @@ function KurikulumContent() {
   const [sortPsMisi, setSortPsMisi] = useState<SortConfig | null>(null);
   const [sortPsTujuan, setSortPsTujuan] = useState<SortConfig | null>(null);
   const [sortPsStrategi, setSortPsStrategi] = useState<SortConfig | null>(null);
+  const [sortUppsMisi, setSortUppsMisi] = useState<SortConfig | null>(null);
+  const [sortUppsTujuan, setSortUppsTujuan] = useState<SortConfig | null>(null);
+  const [sortUppsStrategi, setSortUppsStrategi] = useState<SortConfig | null>(null);
   const [sortProfilLulusan, setSortProfilLulusan] = useState<SortConfig | null>(null);
   const [sortCpl, setSortCpl] = useState<SortConfig | null>(null);
   const [sortBk, setSortBk] = useState<SortConfig | null>(null);
