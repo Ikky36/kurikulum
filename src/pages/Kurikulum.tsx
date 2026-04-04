@@ -92,11 +92,11 @@ function KurikulumContent() {
   const [formData, setFormData] = useState<Record<string, string>>({});
 
   // Fetch all data
-  const { data: ptVisi } = useQuery({
+  const { data: ptVisiList = [] } = useQuery({
     queryKey: ['vmts_pt_visi'],
     queryFn: async () => {
-      const { data } = await supabase.from('vmts_pt_visi').select('*').limit(1);
-      return data?.[0] as VmtsPtVisi | undefined;
+      const { data } = await supabase.from('vmts_pt_visi').select('*');
+      return (data || []) as VmtsVisi[];
     },
   });
 
