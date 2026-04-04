@@ -460,7 +460,57 @@ function KurikulumContent() {
     },
   });
 
-  const renderCodeTable = (
+  // Render Visi card - single row, single column, no add button
+  const renderVisiCard = (
+    title: string,
+    visiData: VmtsVisi | undefined,
+    table: string
+  ) => {
+    return (
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">{title}</CardTitle>
+          {canEdit && !visiData && (
+            <Button size="sm" onClick={() => openEdit(table, { visi: '' }, true)}>
+              <Pencil className="h-4 w-4 mr-1" /> Isi Visi
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-primary hover:bg-primary">
+                <TableHead className="text-primary-foreground text-center">{title}</TableHead>
+                {canEdit && visiData && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visiData ? (
+                <TableRow>
+                  <TableCell>{visiData.visi}</TableCell>
+                  {canEdit && (
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(table, visiData, false)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={canEdit ? 2 : 1} className="text-center text-muted-foreground">
+                    Belum ada data visi
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    );
+  };
+
+
     title: string,
     data: { id: string; code: string; [key: string]: any }[],
     table: string,
