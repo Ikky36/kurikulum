@@ -26,14 +26,16 @@ import { KurikulumImportExport } from '@/components/kurikulum/KurikulumImportExp
 import { KurikulumFilter } from '@/components/kurikulum/KurikulumFilter';
 import { TableSortHeader, SortConfig, sortData } from '@/components/ui/table-sort-header';
 
-type VmtsPtVisi = { id: string; visi: string };
+type VmtsVisi = { id: string; visi: string; curriculum_id?: string | null };
 type VmtsPtMisi = { id: string; code: string; misi: string };
 type VmtsPtTujuan = { id: string; code: string; tujuan: string };
 type VmtsPtStrategi = { id: string; code: string; strategi: string };
-type VmtsPsVisi = { id: string; visi: string };
 type VmtsPsMisi = { id: string; code: string; misi: string };
 type VmtsPsTujuan = { id: string; code: string; tujuan: string };
 type VmtsPsStrategi = { id: string; code: string; strategi: string };
+type VmtsUppsMisi = { id: string; code: string; misi: string };
+type VmtsUppsTujuan = { id: string; code: string; tujuan: string };
+type VmtsUppsStrategi = { id: string; code: string; strategi: string };
 type ProfilLulusan = { id: string; code: string; profil: string; deskripsi: string | null };
 type BahanKajianKelompok = { id: string; kelompok: string; bahan_kajian: string };
 
