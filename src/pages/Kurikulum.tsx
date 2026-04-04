@@ -302,7 +302,35 @@ function KurikulumContent() {
     [psStrategi, filterCurriculumIds]
   );
 
-  // Filter Profil Lulusan by selected curriculum
+  // Filter VMTS UPPS data by selected curriculum
+  const filteredUppsVisi = useMemo(() =>
+    uppsVisiList.find((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [uppsVisiList, filterCurriculumIds]
+  );
+  const filteredUppsMisi = useMemo(() =>
+    uppsMisi.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [uppsMisi, filterCurriculumIds]
+  );
+  const filteredUppsTujuan = useMemo(() =>
+    uppsTujuan.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [uppsTujuan, filterCurriculumIds]
+  );
+  const filteredUppsStrategi = useMemo(() =>
+    uppsStrategi.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [uppsStrategi, filterCurriculumIds]
+  );
+
+  // Filter Visi PT/PS by selected curriculum
+  const filteredPtVisi = useMemo(() =>
+    ptVisiList.find((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [ptVisiList, filterCurriculumIds]
+  );
+  const filteredPsVisi = useMemo(() =>
+    psVisiList.find((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [psVisiList, filterCurriculumIds]
+  );
+
+
   const filteredProfilLulusanData = useMemo(() =>
     profilLulusan.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
     [profilLulusan, filterCurriculumIds]
