@@ -26,14 +26,16 @@ import { KurikulumImportExport } from '@/components/kurikulum/KurikulumImportExp
 import { KurikulumFilter } from '@/components/kurikulum/KurikulumFilter';
 import { TableSortHeader, SortConfig, sortData } from '@/components/ui/table-sort-header';
 
-type VmtsPtVisi = { id: string; visi: string };
+type VmtsVisi = { id: string; visi: string; curriculum_id?: string | null };
 type VmtsPtMisi = { id: string; code: string; misi: string };
 type VmtsPtTujuan = { id: string; code: string; tujuan: string };
 type VmtsPtStrategi = { id: string; code: string; strategi: string };
-type VmtsPsVisi = { id: string; visi: string };
 type VmtsPsMisi = { id: string; code: string; misi: string };
 type VmtsPsTujuan = { id: string; code: string; tujuan: string };
 type VmtsPsStrategi = { id: string; code: string; strategi: string };
+type VmtsUppsMisi = { id: string; code: string; misi: string };
+type VmtsUppsTujuan = { id: string; code: string; tujuan: string };
+type VmtsUppsStrategi = { id: string; code: string; strategi: string };
 type ProfilLulusan = { id: string; code: string; profil: string; deskripsi: string | null };
 type BahanKajianKelompok = { id: string; kelompok: string; bahan_kajian: string };
 
@@ -54,6 +56,9 @@ function KurikulumContent() {
   const [filterPsMisi, setFilterPsMisi] = useState('');
   const [filterPsTujuan, setFilterPsTujuan] = useState('');
   const [filterPsStrategi, setFilterPsStrategi] = useState('');
+  const [filterUppsMisi, setFilterUppsMisi] = useState('');
+  const [filterUppsTujuan, setFilterUppsTujuan] = useState('');
+  const [filterUppsStrategi, setFilterUppsStrategi] = useState('');
   const [filterProfilLulusan, setFilterProfilLulusan] = useState('');
   const [filterCpl, setFilterCpl] = useState('');
   const [filterBk, setFilterBk] = useState('');
@@ -66,6 +71,9 @@ function KurikulumContent() {
   const [sortPsMisi, setSortPsMisi] = useState<SortConfig | null>(null);
   const [sortPsTujuan, setSortPsTujuan] = useState<SortConfig | null>(null);
   const [sortPsStrategi, setSortPsStrategi] = useState<SortConfig | null>(null);
+  const [sortUppsMisi, setSortUppsMisi] = useState<SortConfig | null>(null);
+  const [sortUppsTujuan, setSortUppsTujuan] = useState<SortConfig | null>(null);
+  const [sortUppsStrategi, setSortUppsStrategi] = useState<SortConfig | null>(null);
   const [sortProfilLulusan, setSortProfilLulusan] = useState<SortConfig | null>(null);
   const [sortCpl, setSortCpl] = useState<SortConfig | null>(null);
   const [sortBk, setSortBk] = useState<SortConfig | null>(null);
@@ -84,11 +92,11 @@ function KurikulumContent() {
   const [formData, setFormData] = useState<Record<string, string>>({});
 
   // Fetch all data
-  const { data: ptVisi } = useQuery({
+  const { data: ptVisiList = [] } = useQuery({
     queryKey: ['vmts_pt_visi'],
     queryFn: async () => {
-      const { data } = await supabase.from('vmts_pt_visi').select('*').limit(1);
-      return data?.[0] as VmtsPtVisi | undefined;
+      const { data } = await supabase.from('vmts_pt_visi').select('*');
+      return (data || []) as VmtsVisi[];
     },
   });
 
@@ -116,11 +124,11 @@ function KurikulumContent() {
     },
   });
 
-  const { data: psVisi } = useQuery({
+  const { data: psVisiList = [] } = useQuery({
     queryKey: ['vmts_ps_visi'],
     queryFn: async () => {
-      const { data } = await supabase.from('vmts_ps_visi').select('*').limit(1);
-      return data?.[0] as VmtsPsVisi | undefined;
+      const { data } = await supabase.from('vmts_ps_visi').select('*');
+      return (data || []) as VmtsVisi[];
     },
   });
 
@@ -145,6 +153,48 @@ function KurikulumContent() {
     queryFn: async () => {
       const { data } = await supabase.from('vmts_ps_strategi').select('*').order('code');
       return data as VmtsPsStrategi[];
+    },
+  });
+
+  // VMTS UPPS data
+  const { data: uppsVisiList = [] } = useQuery({
+    queryKey: ['vmts_upps_visi'],
+    queryFn: async () => {
+      const { data } = await supabase.from('vmts_upps_visi' as any).select('*');
+      return (data || []) as unknown as VmtsVisi[];
+    },
+  });
+
+  const { data: uppsMisi = [] } = useQuery({
+    queryKey: ['vmts_upps_misi'],
+    queryFn: async () => {
+      const { data } = await supabase.from('vmts_upps_misi' as any).select('*').order('code');
+      return (data || []) as unknown as VmtsUppsMisi[];
+    },
+  });
+
+  const { data: uppsTujuan = [] } = useQuery({
+    queryKey: ['vmts_upps_tujuan'],
+    queryFn: async () => {
+      const { data } = await supabase.from('vmts_upps_tujuan' as any).select('*').order('code');
+      return (data || []) as unknown as VmtsUppsTujuan[];
+    },
+  });
+
+  const { data: uppsStrategi = [] } = useQuery({
+    queryKey: ['vmts_upps_strategi'],
+    queryFn: async () => {
+      const { data } = await supabase.from('vmts_upps_strategi' as any).select('*').order('code');
+      return (data || []) as unknown as VmtsUppsStrategi[];
+    },
+  });
+
+  // Setting: show VMTS UPPS tab
+  const { data: showVmtsUpps = true } = useQuery({
+    queryKey: ['app-settings', 'show_vmts_upps'],
+    queryFn: async () => {
+      const { data } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'show_vmts_upps').single();
+      return data?.setting_value !== 'false';
     },
   });
 
@@ -252,7 +302,35 @@ function KurikulumContent() {
     [psStrategi, filterCurriculumIds]
   );
 
-  // Filter Profil Lulusan by selected curriculum
+  // Filter VMTS UPPS data by selected curriculum
+  const filteredUppsVisi = useMemo(() =>
+    uppsVisiList.find((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [uppsVisiList, filterCurriculumIds]
+  );
+  const filteredUppsMisi = useMemo(() =>
+    uppsMisi.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [uppsMisi, filterCurriculumIds]
+  );
+  const filteredUppsTujuan = useMemo(() =>
+    uppsTujuan.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [uppsTujuan, filterCurriculumIds]
+  );
+  const filteredUppsStrategi = useMemo(() =>
+    uppsStrategi.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [uppsStrategi, filterCurriculumIds]
+  );
+
+  // Filter Visi PT/PS by selected curriculum
+  const filteredPtVisi = useMemo(() =>
+    ptVisiList.find((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [ptVisiList, filterCurriculumIds]
+  );
+  const filteredPsVisi = useMemo(() =>
+    psVisiList.find((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
+    [psVisiList, filterCurriculumIds]
+  );
+
+
   const filteredProfilLulusanData = useMemo(() =>
     profilLulusan.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
     [profilLulusan, filterCurriculumIds]
@@ -381,6 +459,56 @@ function KurikulumContent() {
       toast.error('Gagal mengupdate CPL/PLO: ' + error.message);
     },
   });
+
+  // Render Visi card - single row, single column, no add button
+  const renderVisiCard = (
+    title: string,
+    visiData: VmtsVisi | undefined,
+    table: string
+  ) => {
+    return (
+      <Card className="mb-6">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">{title}</CardTitle>
+          {canEdit && !visiData && (
+            <Button size="sm" onClick={() => openEdit(table, { visi: '' }, true)}>
+              <Pencil className="h-4 w-4 mr-1" /> Isi Visi
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-primary hover:bg-primary">
+                <TableHead className="text-primary-foreground text-center">{title}</TableHead>
+                {canEdit && visiData && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visiData ? (
+                <TableRow>
+                  <TableCell>{visiData.visi}</TableCell>
+                  {canEdit && (
+                    <TableCell>
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(table, visiData, false)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={canEdit ? 2 : 1} className="text-center text-muted-foreground">
+                    Belum ada data visi
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    );
+  };
 
   const renderCodeTable = (
     title: string,
@@ -1612,6 +1740,7 @@ function KurikulumContent() {
     const tablesWithCurriculum = [
       'vmts_pt_misi', 'vmts_pt_tujuan', 'vmts_pt_strategi',
       'vmts_ps_misi', 'vmts_ps_tujuan', 'vmts_ps_strategi',
+      'vmts_upps_visi', 'vmts_upps_misi', 'vmts_upps_tujuan', 'vmts_upps_strategi',
       'vmts_pt_visi', 'vmts_ps_visi',
       'profil_lulusan', 'bahan_kajian_kelompok'
     ];
@@ -1623,6 +1752,10 @@ function KurikulumContent() {
       vmts_pt_misi: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'misi', label: 'Misi PT', type: 'textarea' }] },
       vmts_pt_tujuan: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'tujuan', label: 'Tujuan PT', type: 'textarea' }] },
       vmts_pt_strategi: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'strategi', label: 'Strategi PT', type: 'textarea' }] },
+      vmts_upps_visi: { fields: [{ key: 'visi', label: 'Visi UPPS', type: 'textarea' }] },
+      vmts_upps_misi: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'misi', label: 'Misi UPPS', type: 'textarea' }] },
+      vmts_upps_tujuan: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'tujuan', label: 'Tujuan UPPS', type: 'textarea' }] },
+      vmts_upps_strategi: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'strategi', label: 'Strategi UPPS', type: 'textarea' }] },
       vmts_ps_visi: { fields: [{ key: 'visi', label: 'Visi Keilmuan PS', type: 'textarea' }] },
       vmts_ps_misi: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'misi', label: 'Misi PS', type: 'textarea' }] },
       vmts_ps_tujuan: { fields: [{ key: 'code', label: 'Kode', type: 'input' }, { key: 'tujuan', label: 'Tujuan PS', type: 'textarea' }] },
@@ -1721,8 +1854,9 @@ function KurikulumContent() {
         </div>
 
         <Tabs defaultValue="vmts-pt">
-          <TabsList className="grid grid-cols-2 lg:grid-cols-6 w-full mb-6">
+          <TabsList className={`grid grid-cols-2 ${showVmtsUpps ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} w-full mb-6`}>
             <TabsTrigger value="vmts-pt">VMTS PT</TabsTrigger>
+            {showVmtsUpps && <TabsTrigger value="vmts-upps">VMTS UPPS</TabsTrigger>}
             <TabsTrigger value="vmts-ps">VMTS PS</TabsTrigger>
             <TabsTrigger value="profil-lulusan">PL</TabsTrigger>
             <TabsTrigger value="cpl">CPL</TabsTrigger>
@@ -1731,12 +1865,23 @@ function KurikulumContent() {
           </TabsList>
 
           <TabsContent value="vmts-pt">
+            {renderVisiCard('Visi PT', filteredPtVisi, 'vmts_pt_visi')}
             {renderCodeTable('Misi PT', filteredPtMisi, 'vmts_pt_misi', 'misi', 'Misi Perguruan Tinggi', filterPtMisi, setFilterPtMisi, sortPtMisi, setSortPtMisi)}
             {renderCodeTable('Tujuan PT', filteredPtTujuan, 'vmts_pt_tujuan', 'tujuan', 'Tujuan Perguruan Tinggi', filterPtTujuan, setFilterPtTujuan, sortPtTujuan, setSortPtTujuan)}
             {renderCodeTable('Strategi PT', filteredPtStrategi, 'vmts_pt_strategi', 'strategi', 'Strategi Perguruan Tinggi', filterPtStrategi, setFilterPtStrategi, sortPtStrategi, setSortPtStrategi)}
           </TabsContent>
 
+          {showVmtsUpps && (
+            <TabsContent value="vmts-upps">
+              {renderVisiCard('Visi UPPS', filteredUppsVisi, 'vmts_upps_visi')}
+              {renderCodeTable('Misi UPPS', filteredUppsMisi, 'vmts_upps_misi', 'misi', 'Misi UPPS', filterUppsMisi, setFilterUppsMisi, sortUppsMisi, setSortUppsMisi)}
+              {renderCodeTable('Tujuan UPPS', filteredUppsTujuan, 'vmts_upps_tujuan', 'tujuan', 'Tujuan UPPS', filterUppsTujuan, setFilterUppsTujuan, sortUppsTujuan, setSortUppsTujuan)}
+              {renderCodeTable('Strategi UPPS', filteredUppsStrategi, 'vmts_upps_strategi', 'strategi', 'Strategi UPPS', filterUppsStrategi, setFilterUppsStrategi, sortUppsStrategi, setSortUppsStrategi)}
+            </TabsContent>
+          )}
+
           <TabsContent value="vmts-ps">
+            {renderVisiCard('Visi Keilmuan PS', filteredPsVisi, 'vmts_ps_visi')}
             {renderCodeTable('Misi PS', filteredPsMisi, 'vmts_ps_misi', 'misi', 'Misi Program Studi', filterPsMisi, setFilterPsMisi, sortPsMisi, setSortPsMisi)}
             {renderCodeTable('Tujuan PS', filteredPsTujuan, 'vmts_ps_tujuan', 'tujuan', 'Tujuan Program Studi', filterPsTujuan, setFilterPsTujuan, sortPsTujuan, setSortPsTujuan)}
             {renderCodeTable('Strategi PS', filteredPsStrategi, 'vmts_ps_strategi', 'strategi', 'Strategi Program Studi', filterPsStrategi, setFilterPsStrategi, sortPsStrategi, setSortPsStrategi)}

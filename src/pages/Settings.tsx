@@ -874,6 +874,27 @@ export default function Settings() {
                       )}
                     </TableBody>
                   </Table>
+                  {/* VMTS UPPS Toggle */}
+                  <Card className="mt-6">
+                    <CardHeader>
+                      <CardTitle>Pengaturan VMTS UPPS</CardTitle>
+                      <CardDescription>Atur visibilitas tab VMTS UPPS di halaman Kurikulum</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">Tampilkan Tab VMTS UPPS</p>
+                          <p className="text-sm text-muted-foreground">Aktifkan untuk menampilkan tab VMTS UPPS di halaman Kurikulum</p>
+                        </div>
+                        <Switch
+                          checked={settings?.['show_vmts_upps'] !== 'false'}
+                          onCheckedChange={(checked) => {
+                            updateSettingMutation.mutate({ key: 'show_vmts_upps', value: checked ? 'true' : 'false' });
+                          }}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
                 </CardContent>
               </Card>
             </TabsContent>

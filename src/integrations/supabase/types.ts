@@ -2204,6 +2204,143 @@ export type Database = {
           },
         ]
       }
+      vmts_upps_misi: {
+        Row: {
+          code: string
+          created_at: string
+          curriculum_id: string | null
+          id: string
+          misi: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          curriculum_id?: string | null
+          id?: string
+          misi: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          curriculum_id?: string | null
+          id?: string
+          misi?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vmts_upps_misi_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vmts_upps_strategi: {
+        Row: {
+          code: string
+          created_at: string
+          curriculum_id: string | null
+          id: string
+          strategi: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          curriculum_id?: string | null
+          id?: string
+          strategi: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          curriculum_id?: string | null
+          id?: string
+          strategi?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vmts_upps_strategi_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vmts_upps_tujuan: {
+        Row: {
+          code: string
+          created_at: string
+          curriculum_id: string | null
+          id: string
+          tujuan: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          curriculum_id?: string | null
+          id?: string
+          tujuan: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          curriculum_id?: string | null
+          id?: string
+          tujuan?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vmts_upps_tujuan_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vmts_upps_visi: {
+        Row: {
+          created_at: string
+          curriculum_id: string | null
+          id: string
+          updated_at: string
+          visi: string
+        }
+        Insert: {
+          created_at?: string
+          curriculum_id?: string | null
+          id?: string
+          updated_at?: string
+          visi: string
+        }
+        Update: {
+          created_at?: string
+          curriculum_id?: string | null
+          id?: string
+          updated_at?: string
+          visi?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vmts_upps_visi_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
