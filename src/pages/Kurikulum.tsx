@@ -198,7 +198,7 @@ function KurikulumContent() {
     },
   });
 
-
+  const { data: profilLulusan = [] } = useQuery({
     queryKey: ['profil_lulusan'],
     queryFn: async () => {
       const { data } = await supabase.from('profil_lulusan').select('*').order('code');
