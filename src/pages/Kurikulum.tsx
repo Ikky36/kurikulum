@@ -510,7 +510,7 @@ function KurikulumContent() {
     );
   };
 
-
+  const renderCodeTable = (
     title: string,
     data: { id: string; code: string; [key: string]: any }[],
     table: string,
