@@ -161,7 +161,7 @@ function KurikulumContent() {
     queryKey: ['vmts_upps_visi'],
     queryFn: async () => {
       const { data } = await supabase.from('vmts_upps_visi' as any).select('*');
-      return (data || []) as VmtsVisi[];
+      return (data || []) as unknown as VmtsVisi[];
     },
   });
 
@@ -169,7 +169,7 @@ function KurikulumContent() {
     queryKey: ['vmts_upps_misi'],
     queryFn: async () => {
       const { data } = await supabase.from('vmts_upps_misi' as any).select('*').order('code');
-      return (data || []) as VmtsUppsMisi[];
+      return (data || []) as unknown as VmtsUppsMisi[];
     },
   });
 
@@ -177,7 +177,7 @@ function KurikulumContent() {
     queryKey: ['vmts_upps_tujuan'],
     queryFn: async () => {
       const { data } = await supabase.from('vmts_upps_tujuan' as any).select('*').order('code');
-      return (data || []) as VmtsUppsTujuan[];
+      return (data || []) as unknown as VmtsUppsTujuan[];
     },
   });
 
@@ -185,7 +185,7 @@ function KurikulumContent() {
     queryKey: ['vmts_upps_strategi'],
     queryFn: async () => {
       const { data } = await supabase.from('vmts_upps_strategi' as any).select('*').order('code');
-      return (data || []) as VmtsUppsStrategi[];
+      return (data || []) as unknown as VmtsUppsStrategi[];
     },
   });
 
