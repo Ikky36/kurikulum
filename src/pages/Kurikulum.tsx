@@ -274,6 +274,14 @@ function KurikulumContent() {
     return items.find((item: any) => item.curriculum_id === selectedCurriculumId);
   };
 
+  const { data: courses = [] } = useQuery({
+    queryKey: ['courses_kurikulum'],
+    queryFn: async () => {
+      const { data } = await supabase.from('courses').select('*, curricula:curriculum_id(*), course_plos(plo_id, plos(*)), course_profil_lulusan(profil_lulusan_id, profil_lulusan:profil_lulusan_id(*))').order('code');
+      return data || [];
+    },
+  });
+
   // Filter courses by selected curriculum
   const filteredCourses = useMemo(() => filterByCurriculum(courses), [courses, selectedCurriculumId, activeCurriculumIds]);
 
