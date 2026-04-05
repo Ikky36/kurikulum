@@ -258,6 +258,22 @@ function KurikulumContent() {
     return [selectedCurriculumId];
   }, [selectedCurriculumId, activeCurriculumIds]);
 
+  // Helper: filter items by curriculum. When 'all', show items matching active curricula OR without curriculum_id.
+  // When specific curriculum selected, only show items with that curriculum_id.
+  const filterByCurriculum = (items: any[]) => {
+    if (selectedCurriculumId === 'all') {
+      return items.filter((item: any) => !item.curriculum_id || activeCurriculumIds.includes(item.curriculum_id));
+    }
+    return items.filter((item: any) => item.curriculum_id === selectedCurriculumId);
+  };
+
+  const findByCurriculum = (items: any[]) => {
+    if (selectedCurriculumId === 'all') {
+      return items.find((item: any) => !item.curriculum_id || activeCurriculumIds.includes(item.curriculum_id));
+    }
+    return items.find((item: any) => item.curriculum_id === selectedCurriculumId);
+  };
+
   const { data: courses = [] } = useQuery({
     queryKey: ['courses_kurikulum'],
     queryFn: async () => {
