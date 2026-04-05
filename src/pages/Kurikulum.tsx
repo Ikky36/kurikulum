@@ -274,95 +274,36 @@ function KurikulumContent() {
     return items.find((item: any) => item.curriculum_id === selectedCurriculumId);
   };
 
-  const { data: courses = [] } = useQuery({
-    queryKey: ['courses_kurikulum'],
-    queryFn: async () => {
-      const { data } = await supabase.from('courses').select('*, curricula:curriculum_id(*), course_plos(plo_id, plos(*)), course_profil_lulusan(profil_lulusan_id, profil_lulusan:profil_lulusan_id(*))').order('code');
-      return data || [];
-    },
-  });
-
   // Filter courses by selected curriculum
-  const filteredCourses = useMemo(() => 
-    courses.filter((course: any) => 
-      !course.curriculum_id || filterCurriculumIds.includes(course.curriculum_id)
-    ),
-    [courses, filterCurriculumIds]
-  );
+  const filteredCourses = useMemo(() => filterByCurriculum(courses), [courses, selectedCurriculumId, activeCurriculumIds]);
 
   // Filter VMTS PT data by selected curriculum
-  const filteredPtMisi = useMemo(() =>
-    ptMisi.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [ptMisi, filterCurriculumIds]
-  );
-  const filteredPtTujuan = useMemo(() =>
-    ptTujuan.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [ptTujuan, filterCurriculumIds]
-  );
-  const filteredPtStrategi = useMemo(() =>
-    ptStrategi.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [ptStrategi, filterCurriculumIds]
-  );
+  const filteredPtMisi = useMemo(() => filterByCurriculum(ptMisi), [ptMisi, selectedCurriculumId, activeCurriculumIds]);
+  const filteredPtTujuan = useMemo(() => filterByCurriculum(ptTujuan), [ptTujuan, selectedCurriculumId, activeCurriculumIds]);
+  const filteredPtStrategi = useMemo(() => filterByCurriculum(ptStrategi), [ptStrategi, selectedCurriculumId, activeCurriculumIds]);
 
   // Filter VMTS PS data by selected curriculum
-  const filteredPsMisi = useMemo(() =>
-    psMisi.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [psMisi, filterCurriculumIds]
-  );
-  const filteredPsTujuan = useMemo(() =>
-    psTujuan.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [psTujuan, filterCurriculumIds]
-  );
-  const filteredPsStrategi = useMemo(() =>
-    psStrategi.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [psStrategi, filterCurriculumIds]
-  );
+  const filteredPsMisi = useMemo(() => filterByCurriculum(psMisi), [psMisi, selectedCurriculumId, activeCurriculumIds]);
+  const filteredPsTujuan = useMemo(() => filterByCurriculum(psTujuan), [psTujuan, selectedCurriculumId, activeCurriculumIds]);
+  const filteredPsStrategi = useMemo(() => filterByCurriculum(psStrategi), [psStrategi, selectedCurriculumId, activeCurriculumIds]);
 
   // Filter VMTS UPPS data by selected curriculum
-  const filteredUppsVisi = useMemo(() =>
-    uppsVisiList.find((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [uppsVisiList, filterCurriculumIds]
-  );
-  const filteredUppsMisi = useMemo(() =>
-    uppsMisi.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [uppsMisi, filterCurriculumIds]
-  );
-  const filteredUppsTujuan = useMemo(() =>
-    uppsTujuan.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [uppsTujuan, filterCurriculumIds]
-  );
-  const filteredUppsStrategi = useMemo(() =>
-    uppsStrategi.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [uppsStrategi, filterCurriculumIds]
-  );
+  const filteredUppsVisi = useMemo(() => findByCurriculum(uppsVisiList), [uppsVisiList, selectedCurriculumId, activeCurriculumIds]);
+  const filteredUppsMisi = useMemo(() => filterByCurriculum(uppsMisi), [uppsMisi, selectedCurriculumId, activeCurriculumIds]);
+  const filteredUppsTujuan = useMemo(() => filterByCurriculum(uppsTujuan), [uppsTujuan, selectedCurriculumId, activeCurriculumIds]);
+  const filteredUppsStrategi = useMemo(() => filterByCurriculum(uppsStrategi), [uppsStrategi, selectedCurriculumId, activeCurriculumIds]);
 
   // Filter Visi PT/PS by selected curriculum
-  const filteredPtVisi = useMemo(() =>
-    ptVisiList.find((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [ptVisiList, filterCurriculumIds]
-  );
-  const filteredPsVisi = useMemo(() =>
-    psVisiList.find((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [psVisiList, filterCurriculumIds]
-  );
+  const filteredPtVisi = useMemo(() => findByCurriculum(ptVisiList), [ptVisiList, selectedCurriculumId, activeCurriculumIds]);
+  const filteredPsVisi = useMemo(() => findByCurriculum(psVisiList), [psVisiList, selectedCurriculumId, activeCurriculumIds]);
 
-
-  const filteredProfilLulusanData = useMemo(() =>
-    profilLulusan.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [profilLulusan, filterCurriculumIds]
-  );
+  const filteredProfilLulusanData = useMemo(() => filterByCurriculum(profilLulusan), [profilLulusan, selectedCurriculumId, activeCurriculumIds]);
 
   // Filter PLOs (CPL) by selected curriculum
-  const filteredPlosData = useMemo(() =>
-    plos.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [plos, filterCurriculumIds]
-  );
+  const filteredPlosData = useMemo(() => filterByCurriculum(plos), [plos, selectedCurriculumId, activeCurriculumIds]);
 
   // Filter Bahan Kajian by selected curriculum
-  const filteredBahanKajianData = useMemo(() =>
-    bahanKajianKelompok.filter((item: any) => !item.curriculum_id || filterCurriculumIds.includes(item.curriculum_id)),
-    [bahanKajianKelompok, filterCurriculumIds]
-  );
+  const filteredBahanKajianData = useMemo(() => filterByCurriculum(bahanKajianKelompok), [bahanKajianKelompok, selectedCurriculumId, activeCurriculumIds]);
 
   const { data: llos = [] } = useQuery({
     queryKey: ['llos_bahan_kajian'],
