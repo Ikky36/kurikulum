@@ -880,34 +880,40 @@ function KurikulumContent() {
     setSelectedBahanKajian([]);
     setBkKelompok('');
     setEditingBk(null);
+    setBkCurriculumId('');
   };
+
+  // BK curriculum state
+  const [bkCurriculumId, setBkCurriculumId] = useState<string>('');
 
   const handleSaveBk = () => {
     if (!bkKelompok || selectedBahanKajian.length === 0) return;
     
     const bahanKajianStr = selectedBahanKajian.join(', ');
+    const currId = bkCurriculumId || (selectedCurriculumId !== 'all' ? selectedCurriculumId : null);
     
     if (editingBk) {
       saveMutation.mutate({ 
         table: 'bahan_kajian_kelompok', 
-        data: { kelompok: bkKelompok, bahan_kajian: bahanKajianStr }, 
+        data: { kelompok: bkKelompok, bahan_kajian: bahanKajianStr, curriculum_id: currId || null }, 
         isNew: false, 
         id: editingBk.id 
       });
     } else {
       saveMutation.mutate({ 
         table: 'bahan_kajian_kelompok', 
-        data: { kelompok: bkKelompok, bahan_kajian: bahanKajianStr }, 
+        data: { kelompok: bkKelompok, bahan_kajian: bahanKajianStr, curriculum_id: currId || null }, 
         isNew: true 
       });
     }
     resetBkForm();
   };
 
-  const openEditBk = (item: BahanKajianKelompok) => {
+  const openEditBk = (item: any) => {
     setEditingBk(item);
     setBkKelompok(item.kelompok);
-    setSelectedBahanKajian(item.bahan_kajian.split(', ').map(s => s.trim()));
+    setSelectedBahanKajian(item.bahan_kajian.split(', ').map((s: string) => s.trim()));
+    setBkCurriculumId(item.curriculum_id || '');
     setBkDialog(true);
   };
 
@@ -1019,6 +1025,19 @@ function KurikulumContent() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
+                  <label className="text-sm font-medium">Kurikulum</label>
+                  <Select value={bkCurriculumId || (selectedCurriculumId !== 'all' ? selectedCurriculumId : '')} onValueChange={(v) => { setBkCurriculumId(v); setSelectedCourseForBk(''); }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih Kurikulum" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {activeCurricula.map((c: any) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
                   <label className="text-sm font-medium">Kelompok BK</label>
                   <Input 
                     value={bkKelompok} 
@@ -1033,7 +1052,10 @@ function KurikulumContent() {
                       <SelectValue placeholder="Pilih mata kuliah..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {courses.map((course: any) => (
+                      {courses.filter((course: any) => {
+                        const currId = bkCurriculumId || (selectedCurriculumId !== 'all' ? selectedCurriculumId : '');
+                        return currId ? course.curriculum_id === currId : true;
+                      }).map((course: any) => (
                         <SelectItem key={course.id} value={course.id}>
                           {course.code} - {course.name}
                         </SelectItem>
@@ -1330,7 +1352,10 @@ function KurikulumContent() {
               <div>
                 <label className="text-sm font-medium">Profil Lulusan (PL) - Multi-select</label>
                 <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-2 mt-1">
-                  {profilLulusan.map((pl) => {
+                  {profilLulusan.filter((pl: any) => {
+                    const currId = formData.curriculum_id;
+                    return currId ? (pl as any).curriculum_id === currId : true;
+                  }).map((pl) => {
                     return (
                       <label key={pl.id} className="flex items-center gap-2">
                         <input
@@ -1491,7 +1516,10 @@ function KurikulumContent() {
               <div>
                 <label className="text-sm font-medium">CPL/PLO Terkait</label>
                 <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-2">
-                  {plos.map((plo: any) => (
+                  {plos.filter((plo: any) => {
+                    const currId = formData.curriculum_id;
+                    return currId ? plo.curriculum_id === currId : true;
+                  }).map((plo: any) => (
                     <label key={plo.id} className="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -1511,7 +1539,10 @@ function KurikulumContent() {
               <div>
                 <label className="text-sm font-medium">PL - Profil Lulusan (Multi-select)</label>
                 <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-2">
-                  {profilLulusan.map((pl) => {
+                  {profilLulusan.filter((pl: any) => {
+                    const currId = formData.curriculum_id;
+                    return currId ? (pl as any).curriculum_id === currId : true;
+                  }).map((pl) => {
                     const selectedPlIds = (formData.plIds as unknown as string[]) || [];
                     return (
                       <label key={pl.id} className="flex items-center gap-2">
