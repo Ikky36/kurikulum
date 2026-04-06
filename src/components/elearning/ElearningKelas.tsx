@@ -100,7 +100,16 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
     course_id: '',
     class_group_id: '',
     visibility: 'class_only' as 'class_only' | 'instructors_only' | 'public',
+    academic_year_id: '',
   });
+
+  // Fetch academic years
+  const [academicYearsList, setAcademicYearsList] = useState<{id: string; name: string; is_active: boolean}[]>([]);
+  useEffect(() => {
+    supabase.from('academic_years').select('*').eq('is_active', true).order('name').then(({ data }) => {
+      setAcademicYearsList(data || []);
+    });
+  }, []);
 
   const isAdmin = profile?.role === 'admin';
   const isSubAdmin = profile?.role === 'sub_admin';
@@ -213,6 +222,7 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
       course_id: '',
       class_group_id: '',
       visibility: 'class_only',
+      academic_year_id: '',
     });
     setEditingClass(null);
   };
@@ -230,6 +240,7 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
       course_id: cls.course_id,
       class_group_id: cls.class_group_id,
       visibility: cls.visibility as 'class_only' | 'instructors_only' | 'public',
+      academic_year_id: (cls as any).academic_year_id || '',
     });
     setDialogOpen(true);
   };
@@ -252,6 +263,7 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
           course_id: formData.course_id,
           class_group_id: formData.class_group_id,
           visibility: formData.visibility,
+          academic_year_id: formData.academic_year_id || null,
         });
         toast.success('Kelas berhasil diperbarui');
       } else {
@@ -262,6 +274,7 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
           class_group_id: formData.class_group_id,
           instructor_profile_id: profile!.id,
           visibility: formData.visibility,
+          academic_year_id: formData.academic_year_id || null,
         });
         toast.success('Kelas berhasil dibuat');
       }
