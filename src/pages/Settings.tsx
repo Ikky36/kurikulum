@@ -15,8 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff, Scale, CheckCircle2, XCircle, Zap, Wifi, WifiOff, Cloud } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff, Scale, CheckCircle2, XCircle, Zap, Wifi, WifiOff, Cloud, Calendar, Hash } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Curriculum, Program, AppSetting, InstrumenPenilaian } from '@/lib/types';
 import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
 import { SistemKuliahManager } from '@/components/admin/SistemKuliahManager';
@@ -31,6 +32,18 @@ export default function Settings() {
   const [editingCurriculum, setEditingCurriculum] = useState<Curriculum | null>(null);
   const [curriculumName, setCurriculumName] = useState('');
   const [curriculumDescription, setCurriculumDescription] = useState('');
+  const [curriculumAcademicYearIds, setCurriculumAcademicYearIds] = useState<string[]>([]);
+
+  // Academic Year state
+  const [showAcademicYearDialog, setShowAcademicYearDialog] = useState(false);
+  const [editingAcademicYear, setEditingAcademicYear] = useState<any>(null);
+  const [academicYearName, setAcademicYearName] = useState('');
+
+  // Semester state
+  const [showSemesterDialog, setShowSemesterDialog] = useState(false);
+  const [editingSemester, setEditingSemester] = useState<any>(null);
+  const [semesterName, setSemesterName] = useState('');
+  const [semesterOrder, setSemesterOrder] = useState('');
 
   // Program state
   const [showProgramDialog, setShowProgramDialog] = useState(false);
@@ -86,6 +99,36 @@ export default function Settings() {
       const { data, error } = await supabase.from('programs').select('*').order('name');
       if (error) throw error;
       return data as Program[];
+    },
+  });
+
+  // Fetch academic years
+  const { data: academicYears } = useQuery({
+    queryKey: ['academic-years'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('academic_years').select('*').order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch semesters
+  const { data: semesters } = useQuery({
+    queryKey: ['semesters'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('semesters').select('*').order('order_index');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch curriculum-academic-year mappings
+  const { data: curriculumAcademicYears } = useQuery({
+    queryKey: ['curriculum-academic-years'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('curriculum_academic_years').select('*');
+      if (error) throw error;
+      return data;
     },
   });
 
@@ -368,8 +411,22 @@ export default function Settings() {
   const resetCurriculumForm = () => {
     setCurriculumName('');
     setCurriculumDescription('');
+    setCurriculumAcademicYearIds([]);
     setEditingCurriculum(null);
     setShowCurriculumDialog(false);
+  };
+
+  const resetAcademicYearForm = () => {
+    setAcademicYearName('');
+    setEditingAcademicYear(null);
+    setShowAcademicYearDialog(false);
+  };
+
+  const resetSemesterForm = () => {
+    setSemesterName('');
+    setSemesterOrder('');
+    setEditingSemester(null);
+    setShowSemesterDialog(false);
   };
 
   const resetProgramForm = () => {
@@ -420,6 +477,9 @@ export default function Settings() {
     setEditingCurriculum(curriculum);
     setCurriculumName(curriculum.name);
     setCurriculumDescription(curriculum.description || '');
+    // Load linked academic year IDs
+    const linkedIds = curriculumAcademicYears?.filter(ca => ca.curriculum_id === curriculum.id).map(ca => ca.academic_year_id) || [];
+    setCurriculumAcademicYearIds(linkedIds);
     setShowCurriculumDialog(true);
   };
 
@@ -431,12 +491,100 @@ export default function Settings() {
     setShowProgramDialog(true);
   };
 
-  const handleSaveCurriculum = () => {
+  const handleSaveCurriculum = async () => {
     if (editingCurriculum) {
-      updateCurriculumMutation.mutate({ id: editingCurriculum.id, name: curriculumName, description: curriculumDescription || undefined });
+      await updateCurriculumMutation.mutateAsync({ id: editingCurriculum.id, name: curriculumName, description: curriculumDescription || undefined });
+      // Update academic year links
+      await supabase.from('curriculum_academic_years').delete().eq('curriculum_id', editingCurriculum.id);
+      if (curriculumAcademicYearIds.length > 0) {
+        await supabase.from('curriculum_academic_years').insert(
+          curriculumAcademicYearIds.map(ayId => ({ curriculum_id: editingCurriculum.id, academic_year_id: ayId }))
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ['curriculum-academic-years'] });
     } else {
-      createCurriculumMutation.mutate({ name: curriculumName, description: curriculumDescription || undefined });
+      const { data: newCurr, error } = await supabase.from('curricula').insert([{ name: curriculumName, description: curriculumDescription || undefined }]).select().single();
+      if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+      if (newCurr && curriculumAcademicYearIds.length > 0) {
+        await supabase.from('curriculum_academic_years').insert(
+          curriculumAcademicYearIds.map(ayId => ({ curriculum_id: newCurr.id, academic_year_id: ayId }))
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ['curricula'] });
+      queryClient.invalidateQueries({ queryKey: ['curriculum-academic-years'] });
+      toast({ title: 'Berhasil', description: 'Kurikulum berhasil ditambahkan' });
     }
+    resetCurriculumForm();
+  };
+
+  // Academic Year handlers
+  const handleSaveAcademicYear = async () => {
+    if (editingAcademicYear) {
+      const { error } = await supabase.from('academic_years').update({ name: academicYearName }).eq('id', editingAcademicYear.id);
+      if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+      toast({ title: 'Berhasil', description: 'Tahun akademik berhasil diperbarui' });
+    } else {
+      const { error } = await supabase.from('academic_years').insert([{ name: academicYearName }]);
+      if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+      toast({ title: 'Berhasil', description: 'Tahun akademik berhasil ditambahkan' });
+    }
+    queryClient.invalidateQueries({ queryKey: ['academic-years'] });
+    resetAcademicYearForm();
+  };
+
+  const openEditAcademicYear = (ay: any) => {
+    setEditingAcademicYear(ay);
+    setAcademicYearName(ay.name);
+    setShowAcademicYearDialog(true);
+  };
+
+  const handleDeleteAcademicYear = async (id: string) => {
+    const { error } = await supabase.from('academic_years').delete().eq('id', id);
+    if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+    queryClient.invalidateQueries({ queryKey: ['academic-years'] });
+    toast({ title: 'Berhasil', description: 'Tahun akademik berhasil dihapus' });
+  };
+
+  const handleToggleAcademicYear = async (id: string, isActive: boolean) => {
+    const { error } = await supabase.from('academic_years').update({ is_active: isActive }).eq('id', id);
+    if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+    queryClient.invalidateQueries({ queryKey: ['academic-years'] });
+  };
+
+  // Semester handlers
+  const handleSaveSemester = async () => {
+    const orderIdx = parseInt(semesterOrder) || 0;
+    if (editingSemester) {
+      const { error } = await supabase.from('semesters').update({ name: semesterName, order_index: orderIdx }).eq('id', editingSemester.id);
+      if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+      toast({ title: 'Berhasil', description: 'Semester berhasil diperbarui' });
+    } else {
+      const { error } = await supabase.from('semesters').insert([{ name: semesterName, order_index: orderIdx }]);
+      if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+      toast({ title: 'Berhasil', description: 'Semester berhasil ditambahkan' });
+    }
+    queryClient.invalidateQueries({ queryKey: ['semesters'] });
+    resetSemesterForm();
+  };
+
+  const openEditSemester = (sem: any) => {
+    setEditingSemester(sem);
+    setSemesterName(sem.name);
+    setSemesterOrder(sem.order_index?.toString() || '0');
+    setShowSemesterDialog(true);
+  };
+
+  const handleDeleteSemester = async (id: string) => {
+    const { error } = await supabase.from('semesters').delete().eq('id', id);
+    if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+    queryClient.invalidateQueries({ queryKey: ['semesters'] });
+    toast({ title: 'Berhasil', description: 'Semester berhasil dihapus' });
+  };
+
+  const handleToggleSemester = async (id: string, isActive: boolean) => {
+    const { error } = await supabase.from('semesters').update({ is_active: isActive }).eq('id', id);
+    if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+    queryClient.invalidateQueries({ queryKey: ['semesters'] });
   };
 
   const handleSaveProgram = () => {
@@ -607,6 +755,15 @@ export default function Settings() {
             <TabsTrigger value="curriculum" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BookOpen className="h-4 w-4" />
               Kurikulum
+            </TabsTrigger>
+            <TabsTrigger value="academic-years" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Calendar className="h-4 w-4" />
+              <span className="hidden md:inline">Tahun Akademik</span>
+              <span className="md:hidden">TA</span>
+            </TabsTrigger>
+            <TabsTrigger value="semesters" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Hash className="h-4 w-4" />
+              Semester
             </TabsTrigger>
             <TabsTrigger value="programs" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <GraduationCap className="h-4 w-4" />
@@ -809,6 +966,29 @@ export default function Settings() {
                               rows={3}
                             />
                           </div>
+                          <div className="space-y-2">
+                            <Label>Tahun Akademik</Label>
+                            <div className="border rounded-lg p-3 max-h-32 overflow-y-auto space-y-2">
+                              {academicYears?.map(ay => (
+                                <label key={ay.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted p-1 rounded">
+                                  <Checkbox
+                                    checked={curriculumAcademicYearIds.includes(ay.id)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setCurriculumAcademicYearIds([...curriculumAcademicYearIds, ay.id]);
+                                      } else {
+                                        setCurriculumAcademicYearIds(curriculumAcademicYearIds.filter(id => id !== ay.id));
+                                      }
+                                    }}
+                                  />
+                                  <span className="text-sm">{ay.name}</span>
+                                </label>
+                              ))}
+                              {(!academicYears || academicYears.length === 0) && (
+                                <p className="text-xs text-muted-foreground">Belum ada tahun akademik. Buat di tab Tahun Akademik.</p>
+                              )}
+                            </div>
+                          </div>
                         </div>
                         <DialogFooter>
                           <Button onClick={handleSaveCurriculum} disabled={!curriculumName}>
@@ -825,49 +1005,61 @@ export default function Settings() {
                       <TableRow className="bg-primary hover:bg-primary">
                         <TableHead className="w-12 text-primary-foreground">No</TableHead>
                         <TableHead className="text-primary-foreground">Nama Kurikulum</TableHead>
+                        <TableHead className="text-primary-foreground">Tahun Akademik</TableHead>
                         <TableHead className="text-primary-foreground">Deskripsi</TableHead>
                         <TableHead className="w-20 text-primary-foreground text-center">Aktif</TableHead>
                         <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {curricula?.map((curriculum, index) => (
-                        <TableRow key={curriculum.id}>
-                          <TableCell className="text-center">{index + 1}</TableCell>
-                          <TableCell>
-                            <Badge variant={curriculum.is_active ? "secondary" : "outline"} className={!curriculum.is_active ? "opacity-50" : ""}>
-                              {curriculum.name}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">{curriculum.description || '-'}</TableCell>
-                          <TableCell className="text-center">
-                            <Switch 
-                              checked={curriculum.is_active}
-                              onCheckedChange={(checked) => {
-                                updateCurriculumMutation.mutate({ id: curriculum.id, is_active: checked });
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => openEditCurriculum(curriculum)}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => deleteCurriculumMutation.mutate(curriculum.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {curricula?.map((curriculum, index) => {
+                        const linkedAYs = curriculumAcademicYears?.filter(ca => ca.curriculum_id === curriculum.id) || [];
+                        const ayNames = linkedAYs.map(ca => academicYears?.find(ay => ay.id === ca.academic_year_id)?.name).filter(Boolean);
+                        return (
+                          <TableRow key={curriculum.id}>
+                            <TableCell className="text-center">{index + 1}</TableCell>
+                            <TableCell>
+                              <Badge variant={curriculum.is_active ? "secondary" : "outline"} className={!curriculum.is_active ? "opacity-50" : ""}>
+                                {curriculum.name}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {ayNames.length > 0 ? ayNames.map((name, i) => (
+                                  <Badge key={i} variant="outline" className="text-xs">{name}</Badge>
+                                )) : <span className="text-muted-foreground text-sm">-</span>}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{curriculum.description || '-'}</TableCell>
+                            <TableCell className="text-center">
+                              <Switch 
+                                checked={curriculum.is_active}
+                                onCheckedChange={(checked) => {
+                                  updateCurriculumMutation.mutate({ id: curriculum.id, is_active: checked });
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => openEditCurriculum(curriculum)}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => deleteCurriculumMutation.mutate(curriculum.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                       {(!curricula || curricula.length === 0) && (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                             Belum ada kurikulum. Klik "Tambah Kurikulum" untuk menambahkan.
                           </TableCell>
                         </TableRow>
@@ -895,6 +1087,195 @@ export default function Settings() {
                       </div>
                     </CardContent>
                   </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Academic Years Tab */}
+            <TabsContent value="academic-years" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Kelola Tahun Akademik</CardTitle>
+                      <CardDescription>Buat dan kelola tahun akademik</CardDescription>
+                    </div>
+                    <Dialog open={showAcademicYearDialog} onOpenChange={(open) => { if (!open) resetAcademicYearForm(); setShowAcademicYearDialog(open); }}>
+                      <DialogTrigger asChild>
+                        <Button size="sm">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Tambah Tahun Akademik
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>{editingAcademicYear ? 'Edit Tahun Akademik' : 'Tambah Tahun Akademik Baru'}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>Nama Tahun Akademik</Label>
+                            <Input 
+                              value={academicYearName} 
+                              onChange={(e) => setAcademicYearName(e.target.value)} 
+                              placeholder="Contoh: 2024/2025" 
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button onClick={handleSaveAcademicYear} disabled={!academicYearName}>
+                            {editingAcademicYear ? 'Simpan' : 'Tambah'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-primary hover:bg-primary">
+                        <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                        <TableHead className="text-primary-foreground">Nama Tahun Akademik</TableHead>
+                        <TableHead className="w-20 text-primary-foreground text-center">Aktif</TableHead>
+                        <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {academicYears?.map((ay, index) => (
+                        <TableRow key={ay.id}>
+                          <TableCell className="text-center">{index + 1}</TableCell>
+                          <TableCell>
+                            <Badge variant={ay.is_active ? "secondary" : "outline"} className={!ay.is_active ? "opacity-50" : ""}>
+                              {ay.name}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Switch 
+                              checked={ay.is_active}
+                              onCheckedChange={(checked) => handleToggleAcademicYear(ay.id, checked)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => openEditAcademicYear(ay)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteAcademicYear(ay.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {(!academicYears || academicYears.length === 0) && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            Belum ada tahun akademik. Klik "Tambah Tahun Akademik" untuk menambahkan.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Semesters Tab */}
+            <TabsContent value="semesters" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Kelola Semester</CardTitle>
+                      <CardDescription>Buat dan kelola semester. Semester yang aktif akan ditampilkan di halaman Mata Kuliah.</CardDescription>
+                    </div>
+                    <Dialog open={showSemesterDialog} onOpenChange={(open) => { if (!open) resetSemesterForm(); setShowSemesterDialog(open); }}>
+                      <DialogTrigger asChild>
+                        <Button size="sm">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Tambah Semester
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>{editingSemester ? 'Edit Semester' : 'Tambah Semester Baru'}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>Nama Semester</Label>
+                            <Input 
+                              value={semesterName} 
+                              onChange={(e) => setSemesterName(e.target.value)} 
+                              placeholder="Contoh: Semester 1" 
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Urutan</Label>
+                            <Input 
+                              type="number"
+                              value={semesterOrder} 
+                              onChange={(e) => setSemesterOrder(e.target.value)} 
+                              placeholder="0" 
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button onClick={handleSaveSemester} disabled={!semesterName}>
+                            {editingSemester ? 'Simpan' : 'Tambah'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-primary hover:bg-primary">
+                        <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                        <TableHead className="text-primary-foreground">Nama Semester</TableHead>
+                        <TableHead className="text-primary-foreground">Urutan</TableHead>
+                        <TableHead className="w-20 text-primary-foreground text-center">Aktif</TableHead>
+                        <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {semesters?.map((sem, index) => (
+                        <TableRow key={sem.id}>
+                          <TableCell className="text-center">{index + 1}</TableCell>
+                          <TableCell>
+                            <Badge variant={sem.is_active ? "secondary" : "outline"} className={!sem.is_active ? "opacity-50" : ""}>
+                              {sem.name}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{sem.order_index}</TableCell>
+                          <TableCell className="text-center">
+                            <Switch 
+                              checked={sem.is_active}
+                              onCheckedChange={(checked) => handleToggleSemester(sem.id, checked)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => openEditSemester(sem)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteSemester(sem.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {(!semesters || semesters.length === 0) && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            Belum ada semester. Klik "Tambah Semester" untuk menambahkan.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
             </TabsContent>
