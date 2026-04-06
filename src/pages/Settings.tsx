@@ -411,8 +411,22 @@ export default function Settings() {
   const resetCurriculumForm = () => {
     setCurriculumName('');
     setCurriculumDescription('');
+    setCurriculumAcademicYearIds([]);
     setEditingCurriculum(null);
     setShowCurriculumDialog(false);
+  };
+
+  const resetAcademicYearForm = () => {
+    setAcademicYearName('');
+    setEditingAcademicYear(null);
+    setShowAcademicYearDialog(false);
+  };
+
+  const resetSemesterForm = () => {
+    setSemesterName('');
+    setSemesterOrder('');
+    setEditingSemester(null);
+    setShowSemesterDialog(false);
   };
 
   const resetProgramForm = () => {
