@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      academic_years: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           created_at: string
@@ -361,6 +385,7 @@ export type Database = {
       }
       course_instructors: {
         Row: {
+          academic_year_id: string | null
           class_group_id: string | null
           course_id: string
           created_at: string
@@ -368,6 +393,7 @@ export type Database = {
           instructor_profile_id: string
         }
         Insert: {
+          academic_year_id?: string | null
           class_group_id?: string | null
           course_id: string
           created_at?: string
@@ -375,6 +401,7 @@ export type Database = {
           instructor_profile_id: string
         }
         Update: {
+          academic_year_id?: string | null
           class_group_id?: string | null
           course_id?: string
           created_at?: string
@@ -382,6 +409,13 @@ export type Database = {
           instructor_profile_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "course_instructors_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "course_instructors_class_group_id_fkey"
             columns: ["class_group_id"]
@@ -547,6 +581,42 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      curriculum_academic_years: {
+        Row: {
+          academic_year_id: string
+          created_at: string
+          curriculum_id: string
+          id: string
+        }
+        Insert: {
+          academic_year_id: string
+          created_at?: string
+          curriculum_id: string
+          id?: string
+        }
+        Update: {
+          academic_year_id?: string
+          created_at?: string
+          curriculum_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculum_academic_years_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "curriculum_academic_years_curriculum_id_fkey"
+            columns: ["curriculum_id"]
+            isOneToOne: false
+            referencedRelation: "curricula"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       document_annotations: {
         Row: {
@@ -779,6 +849,7 @@ export type Database = {
       }
       elearning_classes: {
         Row: {
+          academic_year_id: string | null
           class_group_id: string
           course_id: string
           cover_image_url: string | null
@@ -792,6 +863,7 @@ export type Database = {
           visibility: string
         }
         Insert: {
+          academic_year_id?: string | null
           class_group_id: string
           course_id: string
           cover_image_url?: string | null
@@ -805,6 +877,7 @@ export type Database = {
           visibility?: string
         }
         Update: {
+          academic_year_id?: string | null
           class_group_id?: string
           course_id?: string
           cover_image_url?: string | null
@@ -818,6 +891,13 @@ export type Database = {
           visibility?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "elearning_classes_academic_year_id_fkey"
+            columns: ["academic_year_id"]
+            isOneToOne: false
+            referencedRelation: "academic_years"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "elearning_classes_class_group_id_fkey"
             columns: ["class_group_id"]
@@ -1706,6 +1786,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      semesters: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          order_index: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          order_index?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          order_index?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       sistem_kuliah: {
         Row: {
