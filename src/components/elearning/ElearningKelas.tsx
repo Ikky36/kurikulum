@@ -622,7 +622,24 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="visibility">Visibilitas</Label>
+              <Label htmlFor="academic_year">Tahun Akademik</Label>
+              <Select
+                value={formData.academic_year_id || 'none'}
+                onValueChange={(value) => setFormData({ ...formData, academic_year_id: value === 'none' ? '' : value })}
+              >
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Pilih tahun akademik" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Tidak dipilih</SelectItem>
+                  {academicYearsList.map((ay) => (
+                    <SelectItem key={ay.id} value={ay.id}>{ay.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+
               <Select
                 value={formData.visibility}
                 onValueChange={(value: 'class_only' | 'instructors_only' | 'public') =>
