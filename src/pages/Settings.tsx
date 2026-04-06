@@ -756,6 +756,15 @@ export default function Settings() {
               <BookOpen className="h-4 w-4" />
               Kurikulum
             </TabsTrigger>
+            <TabsTrigger value="academic-years" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Calendar className="h-4 w-4" />
+              <span className="hidden md:inline">Tahun Akademik</span>
+              <span className="md:hidden">TA</span>
+            </TabsTrigger>
+            <TabsTrigger value="semesters" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Hash className="h-4 w-4" />
+              Semester
+            </TabsTrigger>
             <TabsTrigger value="programs" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <GraduationCap className="h-4 w-4" />
               <span className="hidden md:inline">Program Studi</span>
