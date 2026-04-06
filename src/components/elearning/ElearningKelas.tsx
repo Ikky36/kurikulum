@@ -641,6 +641,7 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
 
             <div className="space-y-2">
               <Label htmlFor="visibility">Visibilitas</Label>
+              <Select
                 value={formData.visibility}
                 onValueChange={(value: 'class_only' | 'instructors_only' | 'public') =>
                   setFormData({ ...formData, visibility: value })
