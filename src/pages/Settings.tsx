@@ -477,6 +477,9 @@ export default function Settings() {
     setEditingCurriculum(curriculum);
     setCurriculumName(curriculum.name);
     setCurriculumDescription(curriculum.description || '');
+    // Load linked academic year IDs
+    const linkedIds = curriculumAcademicYears?.filter(ca => ca.curriculum_id === curriculum.id).map(ca => ca.academic_year_id) || [];
+    setCurriculumAcademicYearIds(linkedIds);
     setShowCurriculumDialog(true);
   };
 
@@ -488,12 +491,100 @@ export default function Settings() {
     setShowProgramDialog(true);
   };
 
-  const handleSaveCurriculum = () => {
+  const handleSaveCurriculum = async () => {
     if (editingCurriculum) {
-      updateCurriculumMutation.mutate({ id: editingCurriculum.id, name: curriculumName, description: curriculumDescription || undefined });
+      await updateCurriculumMutation.mutateAsync({ id: editingCurriculum.id, name: curriculumName, description: curriculumDescription || undefined });
+      // Update academic year links
+      await supabase.from('curriculum_academic_years').delete().eq('curriculum_id', editingCurriculum.id);
+      if (curriculumAcademicYearIds.length > 0) {
+        await supabase.from('curriculum_academic_years').insert(
+          curriculumAcademicYearIds.map(ayId => ({ curriculum_id: editingCurriculum.id, academic_year_id: ayId }))
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ['curriculum-academic-years'] });
     } else {
-      createCurriculumMutation.mutate({ name: curriculumName, description: curriculumDescription || undefined });
+      const { data: newCurr, error } = await supabase.from('curricula').insert([{ name: curriculumName, description: curriculumDescription || undefined }]).select().single();
+      if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+      if (newCurr && curriculumAcademicYearIds.length > 0) {
+        await supabase.from('curriculum_academic_years').insert(
+          curriculumAcademicYearIds.map(ayId => ({ curriculum_id: newCurr.id, academic_year_id: ayId }))
+        );
+      }
+      queryClient.invalidateQueries({ queryKey: ['curricula'] });
+      queryClient.invalidateQueries({ queryKey: ['curriculum-academic-years'] });
+      toast({ title: 'Berhasil', description: 'Kurikulum berhasil ditambahkan' });
     }
+    resetCurriculumForm();
+  };
+
+  // Academic Year handlers
+  const handleSaveAcademicYear = async () => {
+    if (editingAcademicYear) {
+      const { error } = await supabase.from('academic_years').update({ name: academicYearName }).eq('id', editingAcademicYear.id);
+      if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+      toast({ title: 'Berhasil', description: 'Tahun akademik berhasil diperbarui' });
+    } else {
+      const { error } = await supabase.from('academic_years').insert([{ name: academicYearName }]);
+      if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+      toast({ title: 'Berhasil', description: 'Tahun akademik berhasil ditambahkan' });
+    }
+    queryClient.invalidateQueries({ queryKey: ['academic-years'] });
+    resetAcademicYearForm();
+  };
+
+  const openEditAcademicYear = (ay: any) => {
+    setEditingAcademicYear(ay);
+    setAcademicYearName(ay.name);
+    setShowAcademicYearDialog(true);
+  };
+
+  const handleDeleteAcademicYear = async (id: string) => {
+    const { error } = await supabase.from('academic_years').delete().eq('id', id);
+    if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+    queryClient.invalidateQueries({ queryKey: ['academic-years'] });
+    toast({ title: 'Berhasil', description: 'Tahun akademik berhasil dihapus' });
+  };
+
+  const handleToggleAcademicYear = async (id: string, isActive: boolean) => {
+    const { error } = await supabase.from('academic_years').update({ is_active: isActive }).eq('id', id);
+    if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+    queryClient.invalidateQueries({ queryKey: ['academic-years'] });
+  };
+
+  // Semester handlers
+  const handleSaveSemester = async () => {
+    const orderIdx = parseInt(semesterOrder) || 0;
+    if (editingSemester) {
+      const { error } = await supabase.from('semesters').update({ name: semesterName, order_index: orderIdx }).eq('id', editingSemester.id);
+      if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+      toast({ title: 'Berhasil', description: 'Semester berhasil diperbarui' });
+    } else {
+      const { error } = await supabase.from('semesters').insert([{ name: semesterName, order_index: orderIdx }]);
+      if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+      toast({ title: 'Berhasil', description: 'Semester berhasil ditambahkan' });
+    }
+    queryClient.invalidateQueries({ queryKey: ['semesters'] });
+    resetSemesterForm();
+  };
+
+  const openEditSemester = (sem: any) => {
+    setEditingSemester(sem);
+    setSemesterName(sem.name);
+    setSemesterOrder(sem.order_index?.toString() || '0');
+    setShowSemesterDialog(true);
+  };
+
+  const handleDeleteSemester = async (id: string) => {
+    const { error } = await supabase.from('semesters').delete().eq('id', id);
+    if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+    queryClient.invalidateQueries({ queryKey: ['semesters'] });
+    toast({ title: 'Berhasil', description: 'Semester berhasil dihapus' });
+  };
+
+  const handleToggleSemester = async (id: string, isActive: boolean) => {
+    const { error } = await supabase.from('semesters').update({ is_active: isActive }).eq('id', id);
+    if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
+    queryClient.invalidateQueries({ queryKey: ['semesters'] });
   };
 
   const handleSaveProgram = () => {
