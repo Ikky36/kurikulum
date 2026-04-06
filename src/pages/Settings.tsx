@@ -102,6 +102,36 @@ export default function Settings() {
     },
   });
 
+  // Fetch academic years
+  const { data: academicYears } = useQuery({
+    queryKey: ['academic-years'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('academic_years').select('*').order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch semesters
+  const { data: semesters } = useQuery({
+    queryKey: ['semesters'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('semesters').select('*').order('order_index');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch curriculum-academic-year mappings
+  const { data: curriculumAcademicYears } = useQuery({
+    queryKey: ['curriculum-academic-years'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('curriculum_academic_years').select('*');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Fetch instrumen penilaian
   const { data: instrumenList } = useQuery({
     queryKey: ['instrumen-penilaian'],
