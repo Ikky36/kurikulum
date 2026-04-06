@@ -15,8 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff, Scale, CheckCircle2, XCircle, Zap, Wifi, WifiOff, Cloud } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff, Scale, CheckCircle2, XCircle, Zap, Wifi, WifiOff, Cloud, Calendar, Hash } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Curriculum, Program, AppSetting, InstrumenPenilaian } from '@/lib/types';
 import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
 import { SistemKuliahManager } from '@/components/admin/SistemKuliahManager';
@@ -31,6 +32,18 @@ export default function Settings() {
   const [editingCurriculum, setEditingCurriculum] = useState<Curriculum | null>(null);
   const [curriculumName, setCurriculumName] = useState('');
   const [curriculumDescription, setCurriculumDescription] = useState('');
+  const [curriculumAcademicYearIds, setCurriculumAcademicYearIds] = useState<string[]>([]);
+
+  // Academic Year state
+  const [showAcademicYearDialog, setShowAcademicYearDialog] = useState(false);
+  const [editingAcademicYear, setEditingAcademicYear] = useState<any>(null);
+  const [academicYearName, setAcademicYearName] = useState('');
+
+  // Semester state
+  const [showSemesterDialog, setShowSemesterDialog] = useState(false);
+  const [editingSemester, setEditingSemester] = useState<any>(null);
+  const [semesterName, setSemesterName] = useState('');
+  const [semesterOrder, setSemesterOrder] = useState('');
 
   // Program state
   const [showProgramDialog, setShowProgramDialog] = useState(false);
