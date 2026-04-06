@@ -966,6 +966,29 @@ export default function Settings() {
                               rows={3}
                             />
                           </div>
+                          <div className="space-y-2">
+                            <Label>Tahun Akademik</Label>
+                            <div className="border rounded-lg p-3 max-h-32 overflow-y-auto space-y-2">
+                              {academicYears?.map(ay => (
+                                <label key={ay.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted p-1 rounded">
+                                  <Checkbox
+                                    checked={curriculumAcademicYearIds.includes(ay.id)}
+                                    onCheckedChange={(checked) => {
+                                      if (checked) {
+                                        setCurriculumAcademicYearIds([...curriculumAcademicYearIds, ay.id]);
+                                      } else {
+                                        setCurriculumAcademicYearIds(curriculumAcademicYearIds.filter(id => id !== ay.id));
+                                      }
+                                    }}
+                                  />
+                                  <span className="text-sm">{ay.name}</span>
+                                </label>
+                              ))}
+                              {(!academicYears || academicYears.length === 0) && (
+                                <p className="text-xs text-muted-foreground">Belum ada tahun akademik. Buat di tab Tahun Akademik.</p>
+                              )}
+                            </div>
+                          </div>
                         </div>
                         <DialogFooter>
                           <Button onClick={handleSaveCurriculum} disabled={!curriculumName}>
@@ -982,49 +1005,61 @@ export default function Settings() {
                       <TableRow className="bg-primary hover:bg-primary">
                         <TableHead className="w-12 text-primary-foreground">No</TableHead>
                         <TableHead className="text-primary-foreground">Nama Kurikulum</TableHead>
+                        <TableHead className="text-primary-foreground">Tahun Akademik</TableHead>
                         <TableHead className="text-primary-foreground">Deskripsi</TableHead>
                         <TableHead className="w-20 text-primary-foreground text-center">Aktif</TableHead>
                         <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {curricula?.map((curriculum, index) => (
-                        <TableRow key={curriculum.id}>
-                          <TableCell className="text-center">{index + 1}</TableCell>
-                          <TableCell>
-                            <Badge variant={curriculum.is_active ? "secondary" : "outline"} className={!curriculum.is_active ? "opacity-50" : ""}>
-                              {curriculum.name}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">{curriculum.description || '-'}</TableCell>
-                          <TableCell className="text-center">
-                            <Switch 
-                              checked={curriculum.is_active}
-                              onCheckedChange={(checked) => {
-                                updateCurriculumMutation.mutate({ id: curriculum.id, is_active: checked });
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => openEditCurriculum(curriculum)}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => deleteCurriculumMutation.mutate(curriculum.id)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
+                      {curricula?.map((curriculum, index) => {
+                        const linkedAYs = curriculumAcademicYears?.filter(ca => ca.curriculum_id === curriculum.id) || [];
+                        const ayNames = linkedAYs.map(ca => academicYears?.find(ay => ay.id === ca.academic_year_id)?.name).filter(Boolean);
+                        return (
+                          <TableRow key={curriculum.id}>
+                            <TableCell className="text-center">{index + 1}</TableCell>
+                            <TableCell>
+                              <Badge variant={curriculum.is_active ? "secondary" : "outline"} className={!curriculum.is_active ? "opacity-50" : ""}>
+                                {curriculum.name}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex flex-wrap gap-1">
+                                {ayNames.length > 0 ? ayNames.map((name, i) => (
+                                  <Badge key={i} variant="outline" className="text-xs">{name}</Badge>
+                                )) : <span className="text-muted-foreground text-sm">-</span>}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">{curriculum.description || '-'}</TableCell>
+                            <TableCell className="text-center">
+                              <Switch 
+                                checked={curriculum.is_active}
+                                onCheckedChange={(checked) => {
+                                  updateCurriculumMutation.mutate({ id: curriculum.id, is_active: checked });
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => openEditCurriculum(curriculum)}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => deleteCurriculumMutation.mutate(curriculum.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                       {(!curricula || curricula.length === 0) && (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                          <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                             Belum ada kurikulum. Klik "Tambah Kurikulum" untuk menambahkan.
                           </TableCell>
                         </TableRow>
@@ -1052,6 +1087,195 @@ export default function Settings() {
                       </div>
                     </CardContent>
                   </Card>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Academic Years Tab */}
+            <TabsContent value="academic-years" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Kelola Tahun Akademik</CardTitle>
+                      <CardDescription>Buat dan kelola tahun akademik</CardDescription>
+                    </div>
+                    <Dialog open={showAcademicYearDialog} onOpenChange={(open) => { if (!open) resetAcademicYearForm(); setShowAcademicYearDialog(open); }}>
+                      <DialogTrigger asChild>
+                        <Button size="sm">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Tambah Tahun Akademik
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>{editingAcademicYear ? 'Edit Tahun Akademik' : 'Tambah Tahun Akademik Baru'}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>Nama Tahun Akademik</Label>
+                            <Input 
+                              value={academicYearName} 
+                              onChange={(e) => setAcademicYearName(e.target.value)} 
+                              placeholder="Contoh: 2024/2025" 
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button onClick={handleSaveAcademicYear} disabled={!academicYearName}>
+                            {editingAcademicYear ? 'Simpan' : 'Tambah'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-primary hover:bg-primary">
+                        <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                        <TableHead className="text-primary-foreground">Nama Tahun Akademik</TableHead>
+                        <TableHead className="w-20 text-primary-foreground text-center">Aktif</TableHead>
+                        <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {academicYears?.map((ay, index) => (
+                        <TableRow key={ay.id}>
+                          <TableCell className="text-center">{index + 1}</TableCell>
+                          <TableCell>
+                            <Badge variant={ay.is_active ? "secondary" : "outline"} className={!ay.is_active ? "opacity-50" : ""}>
+                              {ay.name}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Switch 
+                              checked={ay.is_active}
+                              onCheckedChange={(checked) => handleToggleAcademicYear(ay.id, checked)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => openEditAcademicYear(ay)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteAcademicYear(ay.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {(!academicYears || academicYears.length === 0) && (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                            Belum ada tahun akademik. Klik "Tambah Tahun Akademik" untuk menambahkan.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Semesters Tab */}
+            <TabsContent value="semesters" className="mt-0">
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>Kelola Semester</CardTitle>
+                      <CardDescription>Buat dan kelola semester. Semester yang aktif akan ditampilkan di halaman Mata Kuliah.</CardDescription>
+                    </div>
+                    <Dialog open={showSemesterDialog} onOpenChange={(open) => { if (!open) resetSemesterForm(); setShowSemesterDialog(open); }}>
+                      <DialogTrigger asChild>
+                        <Button size="sm">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Tambah Semester
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>{editingSemester ? 'Edit Semester' : 'Tambah Semester Baru'}</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label>Nama Semester</Label>
+                            <Input 
+                              value={semesterName} 
+                              onChange={(e) => setSemesterName(e.target.value)} 
+                              placeholder="Contoh: Semester 1" 
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Urutan</Label>
+                            <Input 
+                              type="number"
+                              value={semesterOrder} 
+                              onChange={(e) => setSemesterOrder(e.target.value)} 
+                              placeholder="0" 
+                            />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button onClick={handleSaveSemester} disabled={!semesterName}>
+                            {editingSemester ? 'Simpan' : 'Tambah'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-primary hover:bg-primary">
+                        <TableHead className="w-12 text-primary-foreground">No</TableHead>
+                        <TableHead className="text-primary-foreground">Nama Semester</TableHead>
+                        <TableHead className="text-primary-foreground">Urutan</TableHead>
+                        <TableHead className="w-20 text-primary-foreground text-center">Aktif</TableHead>
+                        <TableHead className="w-24 text-primary-foreground">Aksi</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {semesters?.map((sem, index) => (
+                        <TableRow key={sem.id}>
+                          <TableCell className="text-center">{index + 1}</TableCell>
+                          <TableCell>
+                            <Badge variant={sem.is_active ? "secondary" : "outline"} className={!sem.is_active ? "opacity-50" : ""}>
+                              {sem.name}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{sem.order_index}</TableCell>
+                          <TableCell className="text-center">
+                            <Switch 
+                              checked={sem.is_active}
+                              onCheckedChange={(checked) => handleToggleSemester(sem.id, checked)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" onClick={() => openEditSemester(sem)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteSemester(sem.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                      {(!semesters || semesters.length === 0) && (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                            Belum ada semester. Klik "Tambah Semester" untuk menambahkan.
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
             </TabsContent>
