@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -189,6 +190,26 @@ async function fetchDosenNotifications(profileId: string): Promise<NotificationI
 
 export function useNotifications() {
   const { profile, user } = useAuth();
+  const queryClient = useQueryClient();
+
+  // Real-time: invalidate notifications when relevant data changes
+  useEffect(() => {
+    if (!user?.id) return;
+    const queryKey = ['notifications', user.id, profile?.role];
+    const invalidate = () => queryClient.invalidateQueries({ queryKey });
+
+    const channel = supabase
+      .channel(`notifications-${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'elearning_material_progress' }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'elearning_submissions' }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'elearning_materials' }, invalidate)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'elearning_assignments' }, invalidate)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, profile?.role, queryClient]);
 
   return useQuery({
     queryKey: ['notifications', user?.id, profile?.role],
@@ -200,7 +221,6 @@ export function useNotifications() {
       if (role === 'mahasiswa') {
         return fetchStudentNotifications(profile.id);
       } else if (role === 'dosen' || role === 'admin' || role === 'sub_admin') {
-        // Dosen, admin, sub_admin get ungraded submission notifications
         const dosenNotifs = await fetchDosenNotifications(profile.id);
         return dosenNotifs;
       }
@@ -208,7 +228,7 @@ export function useNotifications() {
       return [];
     },
     enabled: !!profile && !!user,
-    refetchInterval: 5 * 60 * 1000, // Refresh every 5 minutes
-    staleTime: 2 * 60 * 1000,
+    refetchInterval: 60 * 1000, // Refresh every minute as safety net
+    staleTime: 30 * 1000,
   });
 }

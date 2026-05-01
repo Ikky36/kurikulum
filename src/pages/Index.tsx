@@ -6,18 +6,24 @@ import { useCoursesWithStats } from '@/hooks/useCourses';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useAllStudents } from '@/hooks/useStudents';
 import { Skeleton } from '@/components/ui/skeleton';
-import { GraduationCap, BookOpen, Users, TrendingUp } from 'lucide-react';
+import { GraduationCap, BookOpen, Users, TrendingUp, Check, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
 
 export default function Index() {
   const { data: courses, isLoading, error } = useCoursesWithStats();
   const { data: settings } = useAppSettings();
   const { data: allStudents } = useAllStudents();
   const [curriculumFilter, setCurriculumFilter] = useState<string>('all');
+  const [academicYearIds, setAcademicYearIds] = useState<string[]>([]);
+  const [ayPopoverOpen, setAyPopoverOpen] = useState(false);
 
   const { data: curricula } = useQuery({
     queryKey: ['curricula-for-index'],
@@ -32,12 +38,47 @@ export default function Index() {
     },
   });
 
+  // Fetch ALL academic years (active + inactive) for the home page filter
+  const { data: academicYears } = useQuery({
+    queryKey: ['academic-years-all-for-index'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('academic_years')
+        .select('id, name, is_active')
+        .order('name', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // When academic years selected, find course IDs linked via elearning_classes
+  const { data: ayCourseIds } = useQuery({
+    queryKey: ['courses-by-academic-year', academicYearIds],
+    queryFn: async () => {
+      if (academicYearIds.length === 0) return null;
+      const { data, error } = await supabase
+        .from('elearning_classes')
+        .select('course_id')
+        .in('academic_year_id', academicYearIds);
+      if (error) throw error;
+      return new Set((data || []).map(c => c.course_id));
+    },
+    enabled: academicYearIds.length > 0,
+  });
+
   const filteredCourses = useMemo(() => {
     if (!courses) return [];
-    if (curriculumFilter === 'all') return courses;
-    if (curriculumFilter === 'none') return courses.filter(c => !c.curriculum_id);
-    return courses.filter(c => c.curriculum_id === curriculumFilter);
-  }, [courses, curriculumFilter]);
+    let result = courses;
+    if (curriculumFilter === 'none') {
+      result = result.filter(c => !c.curriculum_id);
+    } else if (curriculumFilter !== 'all') {
+      result = result.filter(c => c.curriculum_id === curriculumFilter);
+    }
+    if (academicYearIds.length > 0 && ayCourseIds) {
+      result = result.filter(c => ayCourseIds.has(c.id));
+    }
+    return result;
+  }, [courses, curriculumFilter, academicYearIds, ayCourseIds]);
 
   const appTitle = settings?.app_title || 'Student Achievement Tracker';
   const appTagline = settings?.app_tagline || 'Pantau dan kelola nilai mahasiswa Program Bahasa Arab dengan mudah. Visualisasi data yang jelas untuk hasil pembelajaran yang lebih baik.';
@@ -48,6 +89,16 @@ export default function Index() {
   const totalEnrollments = filteredCourses.reduce((sum, c) => sum + c.total_students, 0);
   const totalWeightedSum = filteredCourses.reduce((sum, c) => sum + (c.average_score * c.total_students), 0);
   const averageAllCourses = totalEnrollments > 0 ? totalWeightedSum / totalEnrollments : 0;
+
+  const toggleAy = (id: string) => {
+    setAcademicYearIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const ayLabel = academicYearIds.length === 0
+    ? 'Semua Tahun Akademik'
+    : academicYearIds.length === 1
+      ? academicYears?.find(a => a.id === academicYearIds[0])?.name || '1 dipilih'
+      : `${academicYearIds.length} dipilih`;
 
   return (
     <TooltipProvider>
@@ -75,9 +126,9 @@ export default function Index() {
           </div>
         </section>
 
-        {/* Curriculum Filter */}
+        {/* Filters Row: Kurikulum + Tahun Akademik */}
         <section className="container -mt-8 relative z-10 mb-4">
-          <div className="flex justify-end">
+          <div className="flex flex-wrap justify-end gap-2">
             <Select value={curriculumFilter} onValueChange={setCurriculumFilter}>
               <SelectTrigger className="w-[220px] bg-background shadow-sm">
                 <SelectValue placeholder="Semua Kurikulum" />
@@ -90,6 +141,63 @@ export default function Index() {
                 <SelectItem value="none">Tanpa Kurikulum</SelectItem>
               </SelectContent>
             </Select>
+
+            <Popover open={ayPopoverOpen} onOpenChange={setAyPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[240px] justify-between bg-background shadow-sm font-normal">
+                  <span className="truncate">{ayLabel}</span>
+                  {academicYearIds.length > 0 && (
+                    <Badge variant="secondary" className="ml-2">{academicYearIds.length}</Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[260px] p-0" align="end">
+                <div className="max-h-64 overflow-y-auto p-1">
+                  {(academicYears || []).length === 0 && (
+                    <div className="p-3 text-sm text-muted-foreground">Belum ada tahun akademik</div>
+                  )}
+                  {academicYears?.map(ay => {
+                    const checked = academicYearIds.includes(ay.id);
+                    return (
+                      <button
+                        key={ay.id}
+                        type="button"
+                        onClick={() => toggleAy(ay.id)}
+                        className={cn(
+                          "flex w-full items-center justify-between rounded px-2 py-2 text-sm hover:bg-accent",
+                          checked && "bg-accent"
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span className={cn(
+                            "flex h-4 w-4 items-center justify-center rounded border",
+                            checked ? "bg-primary border-primary text-primary-foreground" : "border-input"
+                          )}>
+                            {checked && <Check className="h-3 w-3" />}
+                          </span>
+                          {ay.name}
+                        </span>
+                        {!ay.is_active && (
+                          <Badge variant="outline" className="text-[10px]">Non-aktif</Badge>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                {academicYearIds.length > 0 && (
+                  <div className="border-t p-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => setAcademicYearIds([])}
+                    >
+                      <X className="h-3 w-3 mr-1" /> Reset
+                    </Button>
+                  </div>
+                )}
+              </PopoverContent>
+            </Popover>
           </div>
         </section>
 

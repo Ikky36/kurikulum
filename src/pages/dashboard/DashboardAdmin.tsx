@@ -57,6 +57,8 @@ export default function DashboardAdmin() {
 
   // Assignment state
   const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [selectedCurriculumForAssign, setSelectedCurriculumForAssign] = useState<string>('all');
+  const [selectedAcademicYearForAssign, setSelectedAcademicYearForAssign] = useState<string>('');
   const [selectedCourseForAssign, setSelectedCourseForAssign] = useState('');
   const [selectedDosenForAssign, setSelectedDosenForAssign] = useState<string[]>([]);
   const [selectedClassForAssign, setSelectedClassForAssign] = useState('');
@@ -121,6 +123,8 @@ export default function DashboardAdmin() {
   const [assignmentCourseFilter, setAssignmentCourseFilter] = useState('');
   const [assignmentClassFilter, setAssignmentClassFilter] = useState('');
   const [assignmentDosenFilter, setAssignmentDosenFilter] = useState('');
+  const [assignmentCurriculumFilter, setAssignmentCurriculumFilter] = useState<string>('all');
+  const [assignmentAcademicYearFilter, setAssignmentAcademicYearFilter] = useState<string>('all');
 
   // Role table filter state
   const [roleNameFilter, setRoleNameFilter] = useState('');
@@ -199,13 +203,14 @@ export default function DashboardAdmin() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('course_instructors')
-        .select(`*, courses:course_id (*), profiles:instructor_profile_id (*), class_groups:class_group_id (*)`);
+        .select(`*, courses:course_id (*), profiles:instructor_profile_id (*), class_groups:class_group_id (*), academic_years:academic_year_id (id, name, is_active)`);
       if (error) throw error;
       return data.map(d => ({
         ...d,
         course: d.courses as unknown as Course,
         instructor: d.profiles as unknown as Profile,
         classGroup: d.class_groups as unknown as { id: string; name: string } | null,
+        academicYear: d.academic_years as unknown as { id: string; name: string; is_active: boolean } | null,
       }));
     },
   });
@@ -237,6 +242,36 @@ export default function DashboardAdmin() {
     });
   };
 
+  // Fetch curricula for filtering courses in assignment
+  const { data: assignCurricula } = useQuery({
+    queryKey: ['curricula', 'active'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('curricula').select('id, name').eq('is_active', true).order('name');
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+  });
+
+  // Fetch academic years (active only for assignment dialog)
+  const { data: activeAcademicYears } = useQuery({
+    queryKey: ['academic-years', 'active'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('academic_years').select('id, name').eq('is_active', true).order('name', { ascending: false });
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+  });
+
+  // Fetch ALL academic years (for filter dropdown above table)
+  const { data: allAcademicYears } = useQuery({
+    queryKey: ['academic-years', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('academic_years').select('id, name, is_active').order('name', { ascending: false });
+      if (error) throw error;
+      return data as { id: string; name: string; is_active: boolean }[];
+    },
+  });
+
   // Fetch programs from settings
   const { data: programs } = useQuery({
     queryKey: ['programs'],
@@ -263,12 +298,12 @@ export default function DashboardAdmin() {
 
   // Assignment mutations
   const assignInstructorMutation = useMutation({
-    mutationFn: async ({ courseId, instructorIds, classGroupId }: { courseId: string; instructorIds: string[]; classGroupId?: string }) => {
-      // Insert multiple instructors
+    mutationFn: async ({ courseId, instructorIds, classGroupId, academicYearId }: { courseId: string; instructorIds: string[]; classGroupId?: string; academicYearId?: string }) => {
       const insertData = instructorIds.map(id => ({
         course_id: courseId,
         instructor_profile_id: id,
         class_group_id: classGroupId || null,
+        academic_year_id: academicYearId || null,
       }));
       const { error } = await supabase.from('course_instructors').insert(insertData);
       if (error) throw error;
@@ -280,6 +315,8 @@ export default function DashboardAdmin() {
       setSelectedCourseForAssign('');
       setSelectedDosenForAssign([]);
       setSelectedClassForAssign('');
+      setSelectedCurriculumForAssign('all');
+      setSelectedAcademicYearForAssign('');
     },
     onError: (error: any) => {
       toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
@@ -1483,6 +1520,32 @@ export default function DashboardAdmin() {
                         <DialogTitle>Tugaskan Dosen ke Mata Kuliah</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label>Kurikulum</Label>
+                            <Select value={selectedCurriculumForAssign} onValueChange={(v) => { setSelectedCurriculumForAssign(v); setSelectedCourseForAssign(''); }}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Semua Kurikulum</SelectItem>
+                                {assignCurricula?.map(c => (
+                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Tahun Akademik</Label>
+                            <Select value={selectedAcademicYearForAssign || 'none'} onValueChange={(v) => setSelectedAcademicYearForAssign(v === 'none' ? '' : v)}>
+                              <SelectTrigger><SelectValue placeholder="Pilih tahun akademik" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Tanpa Tahun Akademik</SelectItem>
+                                {activeAcademicYears?.map(ay => (
+                                  <SelectItem key={ay.id} value={ay.id}>{ay.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
                         <div className="space-y-2">
                           <Label>Mata Kuliah</Label>
                           <Popover open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
@@ -1513,6 +1576,7 @@ export default function DashboardAdmin() {
                                   <CommandEmpty>Mata kuliah tidak ditemukan.</CommandEmpty>
                                   <CommandGroup>
                                     {courses?.filter(course => {
+                                      if (selectedCurriculumForAssign !== 'all' && course.curriculum_id !== selectedCurriculumForAssign) return false;
                                       const searchLower = courseSearchQuery.toLowerCase();
                                       return course.code.toLowerCase().includes(searchLower) ||
                                              course.name.toLowerCase().includes(searchLower);
@@ -1596,7 +1660,8 @@ export default function DashboardAdmin() {
                           onClick={() => assignInstructorMutation.mutate({ 
                             courseId: selectedCourseForAssign, 
                             instructorIds: selectedDosenForAssign,
-                            classGroupId: selectedClassForAssign || undefined
+                            classGroupId: selectedClassForAssign || undefined,
+                            academicYearId: selectedAcademicYearForAssign || undefined,
                           })} 
                           disabled={!selectedCourseForAssign || selectedDosenForAssign.length === 0}
                         >
@@ -1605,6 +1670,34 @@ export default function DashboardAdmin() {
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
+                </div>
+
+                {/* Filters above table */}
+                <div className="flex flex-wrap items-center gap-2 mt-4">
+                  <Select value={assignmentCurriculumFilter} onValueChange={setAssignmentCurriculumFilter}>
+                    <SelectTrigger className="w-[200px]"><SelectValue placeholder="Filter Kurikulum" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Kurikulum</SelectItem>
+                      {assignCurricula?.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={assignmentAcademicYearFilter} onValueChange={setAssignmentAcademicYearFilter}>
+                    <SelectTrigger className="w-[220px]"><SelectValue placeholder="Filter Tahun Akademik" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Tahun Akademik</SelectItem>
+                      <SelectItem value="none">Tanpa Tahun Akademik</SelectItem>
+                      {allAcademicYears?.map(ay => (
+                        <SelectItem key={ay.id} value={ay.id}>{ay.name}{!ay.is_active ? ' (Non-aktif)' : ''}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {(assignmentCurriculumFilter !== 'all' || assignmentAcademicYearFilter !== 'all') && (
+                    <Button variant="ghost" size="sm" onClick={() => { setAssignmentCurriculumFilter('all'); setAssignmentAcademicYearFilter('all'); }}>
+                      Reset
+                    </Button>
+                  )}
                 </div>
                 
                 {/* Bulk Actions for assignments */}
@@ -1666,6 +1759,16 @@ export default function DashboardAdmin() {
                       </TableHead>
                       <TableHead className="text-primary-foreground">
                         <TableSortHeader
+                          sortKey="academic_year"
+                          currentSort={assignmentSort}
+                          onSort={setAssignmentSort}
+                          sortType="text"
+                        >
+                          Tahun Akademik
+                        </TableSortHeader>
+                      </TableHead>
+                      <TableHead className="text-primary-foreground">
+                        <TableSortHeader
                           sortKey="dosen"
                           currentSort={assignmentSort}
                           onSort={setAssignmentSort}
@@ -1679,13 +1782,16 @@ export default function DashboardAdmin() {
                   </TableHeader>
                   <TableBody>
                     {(() => {
-                      // Group instructors by course + class
+                      // Group instructors by course + class + academic_year
                       const grouped = (courseInstructors || []).reduce((acc, ci) => {
-                        const key = `${ci.course_id}_${ci.class_group_id || 'none'}`;
+                        const key = `${ci.course_id}_${ci.class_group_id || 'none'}_${ci.academic_year_id || 'none'}`;
                         if (!acc[key]) {
                           acc[key] = {
                             course: ci.course,
                             classGroup: ci.classGroup,
+                            academicYear: ci.academicYear,
+                            curriculumId: ci.course?.curriculum_id || null,
+                            academicYearId: ci.academic_year_id || null,
                             instructors: [],
                             ids: [],
                           };
@@ -1693,10 +1799,21 @@ export default function DashboardAdmin() {
                         acc[key].instructors.push(ci.instructor);
                         acc[key].ids.push(ci.id);
                         return acc;
-                      }, {} as Record<string, { course: Course | null; classGroup: { id: string; name: string } | null; instructors: (Profile | null)[]; ids: string[] }>);
+                      }, {} as Record<string, { course: Course | null; classGroup: { id: string; name: string } | null; academicYear: { id: string; name: string; is_active: boolean } | null; curriculumId: string | null; academicYearId: string | null; instructors: (Profile | null)[]; ids: string[] }>);
 
                       // Apply filters
                       let groupedEntries = Object.entries(grouped);
+
+                      if (assignmentCurriculumFilter !== 'all') {
+                        groupedEntries = groupedEntries.filter(([_, g]) => g.curriculumId === assignmentCurriculumFilter);
+                      }
+                      if (assignmentAcademicYearFilter !== 'all') {
+                        if (assignmentAcademicYearFilter === 'none') {
+                          groupedEntries = groupedEntries.filter(([_, g]) => !g.academicYearId);
+                        } else {
+                          groupedEntries = groupedEntries.filter(([_, g]) => g.academicYearId === assignmentAcademicYearFilter);
+                        }
+                      }
                       
                       if (assignmentCourseFilter) {
                         const query = assignmentCourseFilter.toLowerCase();
@@ -1724,8 +1841,8 @@ export default function DashboardAdmin() {
                       if (groupedEntries.length === 0) {
                         return (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                              {assignmentCourseFilter || assignmentClassFilter || assignmentDosenFilter 
+                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              {assignmentCourseFilter || assignmentClassFilter || assignmentDosenFilter || assignmentCurriculumFilter !== 'all' || assignmentAcademicYearFilter !== 'all'
                                 ? 'Tidak ada penugasan yang sesuai dengan filter' 
                                 : 'Belum ada penugasan'}
                             </TableCell>
@@ -1759,6 +1876,16 @@ export default function DashboardAdmin() {
                             <TableCell className="align-top">
                               {group.classGroup ? (
                                 <Badge variant="outline">{group.classGroup.name}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="align-top">
+                              {group.academicYear ? (
+                                <Badge variant={group.academicYear.is_active ? 'outline' : 'secondary'}>
+                                  {group.academicYear.name}
+                                  {!group.academicYear.is_active && ' (Non-aktif)'}
+                                </Badge>
                               ) : (
                                 <span className="text-muted-foreground text-sm">-</span>
                               )}
