@@ -1660,7 +1660,8 @@ export default function DashboardAdmin() {
                           onClick={() => assignInstructorMutation.mutate({ 
                             courseId: selectedCourseForAssign, 
                             instructorIds: selectedDosenForAssign,
-                            classGroupId: selectedClassForAssign || undefined
+                            classGroupId: selectedClassForAssign || undefined,
+                            academicYearId: selectedAcademicYearForAssign || undefined,
                           })} 
                           disabled={!selectedCourseForAssign || selectedDosenForAssign.length === 0}
                         >
@@ -1669,6 +1670,34 @@ export default function DashboardAdmin() {
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
+                </div>
+
+                {/* Filters above table */}
+                <div className="flex flex-wrap items-center gap-2 mt-4">
+                  <Select value={assignmentCurriculumFilter} onValueChange={setAssignmentCurriculumFilter}>
+                    <SelectTrigger className="w-[200px]"><SelectValue placeholder="Filter Kurikulum" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Kurikulum</SelectItem>
+                      {assignCurricula?.map(c => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select value={assignmentAcademicYearFilter} onValueChange={setAssignmentAcademicYearFilter}>
+                    <SelectTrigger className="w-[220px]"><SelectValue placeholder="Filter Tahun Akademik" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Tahun Akademik</SelectItem>
+                      <SelectItem value="none">Tanpa Tahun Akademik</SelectItem>
+                      {allAcademicYears?.map(ay => (
+                        <SelectItem key={ay.id} value={ay.id}>{ay.name}{!ay.is_active ? ' (Non-aktif)' : ''}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {(assignmentCurriculumFilter !== 'all' || assignmentAcademicYearFilter !== 'all') && (
+                    <Button variant="ghost" size="sm" onClick={() => { setAssignmentCurriculumFilter('all'); setAssignmentAcademicYearFilter('all'); }}>
+                      Reset
+                    </Button>
+                  )}
                 </div>
                 
                 {/* Bulk Actions for assignments */}
