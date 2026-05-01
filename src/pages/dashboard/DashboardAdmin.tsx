@@ -1759,6 +1759,16 @@ export default function DashboardAdmin() {
                       </TableHead>
                       <TableHead className="text-primary-foreground">
                         <TableSortHeader
+                          sortKey="academic_year"
+                          currentSort={assignmentSort}
+                          onSort={setAssignmentSort}
+                          sortType="text"
+                        >
+                          Tahun Akademik
+                        </TableSortHeader>
+                      </TableHead>
+                      <TableHead className="text-primary-foreground">
+                        <TableSortHeader
                           sortKey="dosen"
                           currentSort={assignmentSort}
                           onSort={setAssignmentSort}
