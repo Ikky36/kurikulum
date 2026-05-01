@@ -57,6 +57,8 @@ export default function DashboardAdmin() {
 
   // Assignment state
   const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [selectedCurriculumForAssign, setSelectedCurriculumForAssign] = useState<string>('all');
+  const [selectedAcademicYearForAssign, setSelectedAcademicYearForAssign] = useState<string>('');
   const [selectedCourseForAssign, setSelectedCourseForAssign] = useState('');
   const [selectedDosenForAssign, setSelectedDosenForAssign] = useState<string[]>([]);
   const [selectedClassForAssign, setSelectedClassForAssign] = useState('');
@@ -121,6 +123,8 @@ export default function DashboardAdmin() {
   const [assignmentCourseFilter, setAssignmentCourseFilter] = useState('');
   const [assignmentClassFilter, setAssignmentClassFilter] = useState('');
   const [assignmentDosenFilter, setAssignmentDosenFilter] = useState('');
+  const [assignmentCurriculumFilter, setAssignmentCurriculumFilter] = useState<string>('all');
+  const [assignmentAcademicYearFilter, setAssignmentAcademicYearFilter] = useState<string>('all');
 
   // Role table filter state
   const [roleNameFilter, setRoleNameFilter] = useState('');
