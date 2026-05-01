@@ -298,12 +298,12 @@ export default function DashboardAdmin() {
 
   // Assignment mutations
   const assignInstructorMutation = useMutation({
-    mutationFn: async ({ courseId, instructorIds, classGroupId }: { courseId: string; instructorIds: string[]; classGroupId?: string }) => {
-      // Insert multiple instructors
+    mutationFn: async ({ courseId, instructorIds, classGroupId, academicYearId }: { courseId: string; instructorIds: string[]; classGroupId?: string; academicYearId?: string }) => {
       const insertData = instructorIds.map(id => ({
         course_id: courseId,
         instructor_profile_id: id,
         class_group_id: classGroupId || null,
+        academic_year_id: academicYearId || null,
       }));
       const { error } = await supabase.from('course_instructors').insert(insertData);
       if (error) throw error;
@@ -315,6 +315,8 @@ export default function DashboardAdmin() {
       setSelectedCourseForAssign('');
       setSelectedDosenForAssign([]);
       setSelectedClassForAssign('');
+      setSelectedCurriculumForAssign('all');
+      setSelectedAcademicYearForAssign('');
     },
     onError: (error: any) => {
       toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
