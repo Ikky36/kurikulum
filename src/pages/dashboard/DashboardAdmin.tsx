@@ -1520,6 +1520,32 @@ export default function DashboardAdmin() {
                         <DialogTitle>Tugaskan Dosen ke Mata Kuliah</DialogTitle>
                       </DialogHeader>
                       <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-2">
+                            <Label>Kurikulum</Label>
+                            <Select value={selectedCurriculumForAssign} onValueChange={(v) => { setSelectedCurriculumForAssign(v); setSelectedCourseForAssign(''); }}>
+                              <SelectTrigger><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">Semua Kurikulum</SelectItem>
+                                {assignCurricula?.map(c => (
+                                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Tahun Akademik</Label>
+                            <Select value={selectedAcademicYearForAssign || 'none'} onValueChange={(v) => setSelectedAcademicYearForAssign(v === 'none' ? '' : v)}>
+                              <SelectTrigger><SelectValue placeholder="Pilih tahun akademik" /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Tanpa Tahun Akademik</SelectItem>
+                                {activeAcademicYears?.map(ay => (
+                                  <SelectItem key={ay.id} value={ay.id}>{ay.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
                         <div className="space-y-2">
                           <Label>Mata Kuliah</Label>
                           <Popover open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
@@ -1550,6 +1576,7 @@ export default function DashboardAdmin() {
                                   <CommandEmpty>Mata kuliah tidak ditemukan.</CommandEmpty>
                                   <CommandGroup>
                                     {courses?.filter(course => {
+                                      if (selectedCurriculumForAssign !== 'all' && course.curriculum_id !== selectedCurriculumForAssign) return false;
                                       const searchLower = courseSearchQuery.toLowerCase();
                                       return course.code.toLowerCase().includes(searchLower) ||
                                              course.name.toLowerCase().includes(searchLower);
