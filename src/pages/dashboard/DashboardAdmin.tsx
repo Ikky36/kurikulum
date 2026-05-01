@@ -203,13 +203,14 @@ export default function DashboardAdmin() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('course_instructors')
-        .select(`*, courses:course_id (*), profiles:instructor_profile_id (*), class_groups:class_group_id (*)`);
+        .select(`*, courses:course_id (*), profiles:instructor_profile_id (*), class_groups:class_group_id (*), academic_years:academic_year_id (id, name, is_active)`);
       if (error) throw error;
       return data.map(d => ({
         ...d,
         course: d.courses as unknown as Course,
         instructor: d.profiles as unknown as Profile,
         classGroup: d.class_groups as unknown as { id: string; name: string } | null,
+        academicYear: d.academic_years as unknown as { id: string; name: string; is_active: boolean } | null,
       }));
     },
   });
@@ -240,6 +241,36 @@ export default function DashboardAdmin() {
       return classSemesters.includes(courseSemester);
     });
   };
+
+  // Fetch curricula for filtering courses in assignment
+  const { data: assignCurricula } = useQuery({
+    queryKey: ['curricula', 'active'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('curricula').select('id, name').eq('is_active', true).order('name');
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+  });
+
+  // Fetch academic years (active only for assignment dialog)
+  const { data: activeAcademicYears } = useQuery({
+    queryKey: ['academic-years', 'active'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('academic_years').select('id, name').eq('is_active', true).order('name', { ascending: false });
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+  });
+
+  // Fetch ALL academic years (for filter dropdown above table)
+  const { data: allAcademicYears } = useQuery({
+    queryKey: ['academic-years', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('academic_years').select('id, name, is_active').order('name', { ascending: false });
+      if (error) throw error;
+      return data as { id: string; name: string; is_active: boolean }[];
+    },
+  });
 
   // Fetch programs from settings
   const { data: programs } = useQuery({
