@@ -1880,6 +1880,16 @@ export default function DashboardAdmin() {
                                 <span className="text-muted-foreground text-sm">-</span>
                               )}
                             </TableCell>
+                            <TableCell className="align-top">
+                              {group.academicYear ? (
+                                <Badge variant={group.academicYear.is_active ? 'outline' : 'secondary'}>
+                                  {group.academicYear.name}
+                                  {!group.academicYear.is_active && ' (Non-aktif)'}
+                                </Badge>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">-</span>
+                              )}
+                            </TableCell>
                             <TableCell>
                               <div className="flex flex-col gap-2">
                                 {group.instructors.filter(Boolean).map((instructor, idx) => (
