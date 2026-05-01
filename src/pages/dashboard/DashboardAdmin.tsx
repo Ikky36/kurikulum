@@ -1782,13 +1782,16 @@ export default function DashboardAdmin() {
                   </TableHeader>
                   <TableBody>
                     {(() => {
-                      // Group instructors by course + class
+                      // Group instructors by course + class + academic_year
                       const grouped = (courseInstructors || []).reduce((acc, ci) => {
-                        const key = `${ci.course_id}_${ci.class_group_id || 'none'}`;
+                        const key = `${ci.course_id}_${ci.class_group_id || 'none'}_${ci.academic_year_id || 'none'}`;
                         if (!acc[key]) {
                           acc[key] = {
                             course: ci.course,
                             classGroup: ci.classGroup,
+                            academicYear: ci.academicYear,
+                            curriculumId: ci.course?.curriculum_id || null,
+                            academicYearId: ci.academic_year_id || null,
                             instructors: [],
                             ids: [],
                           };
@@ -1796,10 +1799,21 @@ export default function DashboardAdmin() {
                         acc[key].instructors.push(ci.instructor);
                         acc[key].ids.push(ci.id);
                         return acc;
-                      }, {} as Record<string, { course: Course | null; classGroup: { id: string; name: string } | null; instructors: (Profile | null)[]; ids: string[] }>);
+                      }, {} as Record<string, { course: Course | null; classGroup: { id: string; name: string } | null; academicYear: { id: string; name: string; is_active: boolean } | null; curriculumId: string | null; academicYearId: string | null; instructors: (Profile | null)[]; ids: string[] }>);
 
                       // Apply filters
                       let groupedEntries = Object.entries(grouped);
+
+                      if (assignmentCurriculumFilter !== 'all') {
+                        groupedEntries = groupedEntries.filter(([_, g]) => g.curriculumId === assignmentCurriculumFilter);
+                      }
+                      if (assignmentAcademicYearFilter !== 'all') {
+                        if (assignmentAcademicYearFilter === 'none') {
+                          groupedEntries = groupedEntries.filter(([_, g]) => !g.academicYearId);
+                        } else {
+                          groupedEntries = groupedEntries.filter(([_, g]) => g.academicYearId === assignmentAcademicYearFilter);
+                        }
+                      }
                       
                       if (assignmentCourseFilter) {
                         const query = assignmentCourseFilter.toLowerCase();
@@ -1827,8 +1841,8 @@ export default function DashboardAdmin() {
                       if (groupedEntries.length === 0) {
                         return (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                              {assignmentCourseFilter || assignmentClassFilter || assignmentDosenFilter 
+                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              {assignmentCourseFilter || assignmentClassFilter || assignmentDosenFilter || assignmentCurriculumFilter !== 'all' || assignmentAcademicYearFilter !== 'all'
                                 ? 'Tidak ada penugasan yang sesuai dengan filter' 
                                 : 'Belum ada penugasan'}
                             </TableCell>
