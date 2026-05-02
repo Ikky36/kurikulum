@@ -139,7 +139,7 @@ export default function MataKuliah() {
         default: return null;
       }
     });
-  }, [courses, codeFilter, curriculumFilter, semesterFilter, instructorFilter, courseSort, curricula, isGenapSemester]);
+  }, [courses, codeFilter, curriculumFilter, semesterFilter, instructorFilter, courseSort, curricula, isGenapSemester, activeSemesterSet]);
 
   const renderCourseRow = (course: typeof filteredCourses[0], i: number) => {
     const rowContent = (
