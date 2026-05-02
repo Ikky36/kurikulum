@@ -111,6 +111,9 @@ export default function MataKuliah() {
     if (!courses) return [];
     
     let result = courses.filter(course => {
+      // Hide courses whose semester is inactive in settings
+      if (activeSemesterSet.size > 0 && course.semester && !activeSemesterSet.has(String(course.semester))) return false;
+
       // Apply genap/ganjil filter
       const semesterIsGenap = isSemesterGenap(course.semester);
       if (semesterIsGenap !== null && semesterIsGenap !== isGenapSemester) return false;
