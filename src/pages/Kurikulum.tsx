@@ -1122,17 +1122,27 @@ function KurikulumContent() {
     );
   };
 
-  const semesterOptions = ['1', '2', '3', '4', '5', '6', '7', '8'];
+  const semesterOptions = activeSemesters.map(s => s.name);
 
   const renderMataKuliahTable = () => {
     // Filter data - start from filteredCourses which already excludes inactive curricula
     const displayedCourses = filteredCourses.filter((course: any) => {
       const searchLower = filterMk.toLowerCase();
-      return (
+      const matchesSearch = (
         course.code?.toLowerCase().includes(searchLower) ||
         course.name?.toLowerCase().includes(searchLower) ||
         course.semester?.toLowerCase().includes(searchLower)
       );
+      const matchesSemester = filterMkSemester === 'all' || String(course.semester || '') === filterMkSemester;
+      return matchesSearch && matchesSemester;
+    }).sort((a: any, b: any) => {
+      // Sort by semester order_index then by code
+      const aIdx = activeSemesters.findIndex(s => s.name === String(a.semester || ''));
+      const bIdx = activeSemesters.findIndex(s => s.name === String(b.semester || ''));
+      const aPos = aIdx === -1 ? 999 : aIdx;
+      const bPos = bIdx === -1 ? 999 : bIdx;
+      if (aPos !== bPos) return aPos - bPos;
+      return (a.code || '').localeCompare(b.code || '');
     });
     
     const ids = displayedCourses.map((course: any) => course.id);
