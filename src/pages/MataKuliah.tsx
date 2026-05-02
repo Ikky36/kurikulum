@@ -57,6 +57,16 @@ export default function MataKuliah() {
     },
   });
 
+  // Active semesters for filtering visibility
+  const { data: activeSemesters } = useQuery({
+    queryKey: ['semesters', 'active'],
+    queryFn: async () => {
+      const { data } = await supabase.from('semesters').select('name').eq('is_active', true).order('order_index');
+      return (data || []).map(s => s.name);
+    },
+  });
+  const activeSemesterSet = useMemo(() => new Set(activeSemesters || []), [activeSemesters]);
+
 
   // Get unique values for filters
   const filterOptions = useMemo(() => {
@@ -74,10 +84,12 @@ export default function MataKuliah() {
     
     return {
       codes: Array.from(codes).sort(),
-      semesters: Array.from(semesters).sort(),
+      semesters: (activeSemesters && activeSemesters.length > 0)
+        ? activeSemesters.filter(s => semesters.has(s))
+        : Array.from(semesters).sort(),
       instructors: Array.from(instructorNames).sort(),
     };
-  }, [courses]);
+  }, [courses, activeSemesters]);
 
   // Get curriculum name helper
   const getCurriculumName = (curriculumId?: string | null) => {
@@ -99,6 +111,9 @@ export default function MataKuliah() {
     if (!courses) return [];
     
     let result = courses.filter(course => {
+      // Hide courses whose semester is inactive in settings
+      if (activeSemesterSet.size > 0 && course.semester && !activeSemesterSet.has(String(course.semester))) return false;
+
       // Apply genap/ganjil filter
       const semesterIsGenap = isSemesterGenap(course.semester);
       if (semesterIsGenap !== null && semesterIsGenap !== isGenapSemester) return false;
@@ -124,7 +139,7 @@ export default function MataKuliah() {
         default: return null;
       }
     });
-  }, [courses, codeFilter, curriculumFilter, semesterFilter, instructorFilter, courseSort, curricula, isGenapSemester]);
+  }, [courses, codeFilter, curriculumFilter, semesterFilter, instructorFilter, courseSort, curricula, isGenapSemester, activeSemesterSet]);
 
   const renderCourseRow = (course: typeof filteredCourses[0], i: number) => {
     const rowContent = (
