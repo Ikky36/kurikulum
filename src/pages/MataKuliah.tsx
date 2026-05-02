@@ -84,7 +84,9 @@ export default function MataKuliah() {
     
     return {
       codes: Array.from(codes).sort(),
-      semesters: Array.from(semesters).sort(),
+      semesters: (activeSemesters && activeSemesters.length > 0)
+        ? activeSemesters.filter(s => semesters.has(s))
+        : Array.from(semesters).sort(),
       instructors: Array.from(instructorNames).sort(),
     };
   }, [courses]);
