@@ -89,7 +89,7 @@ export default function MataKuliah() {
         : Array.from(semesters).sort(),
       instructors: Array.from(instructorNames).sort(),
     };
-  }, [courses]);
+  }, [courses, activeSemesters]);
 
   // Get curriculum name helper
   const getCurriculumName = (curriculumId?: string | null) => {
