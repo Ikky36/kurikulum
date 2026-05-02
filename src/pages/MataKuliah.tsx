@@ -55,6 +55,7 @@ export default function MataKuliah() {
       if (error) throw error;
       return data as Curriculum[];
     },
+  });
 
   // Active semesters for filtering visibility
   const { data: activeSemesters } = useQuery({
