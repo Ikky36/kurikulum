@@ -238,6 +238,18 @@ function KurikulumContent() {
     },
   });
 
+  // Active semesters from settings (sorted by order_index)
+  const { data: activeSemesters = [] } = useQuery({
+    queryKey: ['semesters', 'active'],
+    queryFn: async () => {
+      const { data } = await supabase.from('semesters').select('*').eq('is_active', true).order('order_index');
+      return (data || []) as { id: string; name: string; order_index: number }[];
+    },
+  });
+
+  // MK semester column filter
+  const [filterMkSemester, setFilterMkSemester] = useState<string>('all');
+
   // Get active curriculum IDs for filtering
   const activeCurriculumIds = useMemo(() => 
     curricula.filter((c: any) => c.is_active).map((c: any) => c.id),
