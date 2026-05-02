@@ -55,7 +55,16 @@ export default function MataKuliah() {
       if (error) throw error;
       return data as Curriculum[];
     },
+
+  // Active semesters for filtering visibility
+  const { data: activeSemesters } = useQuery({
+    queryKey: ['semesters', 'active'],
+    queryFn: async () => {
+      const { data } = await supabase.from('semesters').select('name').eq('is_active', true).order('order_index');
+      return (data || []).map(s => s.name);
+    },
   });
+  const activeSemesterSet = useMemo(() => new Set(activeSemesters || []), [activeSemesters]);
 
 
   // Get unique values for filters
