@@ -1192,7 +1192,20 @@ function KurikulumContent() {
                 <TableHead className="text-primary-foreground w-24">Kode</TableHead>
                 <TableHead className="text-primary-foreground">Nama</TableHead>
                 <TableHead className="text-primary-foreground">Kurikulum</TableHead>
-                <TableHead className="text-primary-foreground">Semester</TableHead>
+                <TableHead className="text-primary-foreground">
+                  <TableSortHeader
+                    sortKey="semester"
+                    currentSort={sortMk}
+                    onSort={setSortMk}
+                    sortType="number"
+                    filterOptions={activeSemesters.map(s => s.name)}
+                    filterValue={filterMkSemester}
+                    onFilterChange={setFilterMkSemester}
+                    filterPlaceholder="Filter semester..."
+                  >
+                    Semester
+                  </TableSortHeader>
+                </TableHead>
                 <TableHead className="text-primary-foreground w-16">SKS</TableHead>
                 <TableHead className="text-primary-foreground">CPL/PLO</TableHead>
                 <TableHead className="text-primary-foreground">PL</TableHead>
