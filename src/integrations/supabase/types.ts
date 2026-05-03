@@ -202,7 +202,8 @@ export type Database = {
       }
       bahan_kajian_kelompok: {
         Row: {
-          bahan_kajian: string
+          bahan_kajian: string | null
+          courses_data: Json
           created_at: string
           curriculum_id: string | null
           id: string
@@ -210,7 +211,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          bahan_kajian: string
+          bahan_kajian?: string | null
+          courses_data?: Json
           created_at?: string
           curriculum_id?: string | null
           id?: string
@@ -218,7 +220,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          bahan_kajian?: string
+          bahan_kajian?: string | null
+          courses_data?: Json
           created_at?: string
           curriculum_id?: string | null
           id?: string
