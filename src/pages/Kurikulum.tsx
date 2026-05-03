@@ -874,77 +874,109 @@ function KurikulumContent() {
 
   // State for Bahan Kajian dialog
   const [bkDialog, setBkDialog] = useState(false);
-  const [selectedCourseForBk, setSelectedCourseForBk] = useState<string>('');
-  const [selectedBahanKajian, setSelectedBahanKajian] = useState<string[]>([]);
   const [bkKelompok, setBkKelompok] = useState('');
   const [editingBk, setEditingBk] = useState<BahanKajianKelompok | null>(null);
-
-  // Get LLOs for selected course
-  const llosForSelectedCourse = selectedCourseForBk
-    ? llos.filter((llo: any) => {
-        const cloData = llo.clos;
-        return cloData && cloData.course_id === selectedCourseForBk;
-      })
-    : [];
-
-  // Get all unique bahan_kajian from LLOs
-  const availableBahanKajian = llosForSelectedCourse.flatMap((llo: any) => llo.bahan_kajian || []).filter(Boolean);
+  const [bkCurriculumId, setBkCurriculumId] = useState<string>('');
+  // Each entry: { course_id, bahan_kajian: [] }
+  const [bkCoursesData, setBkCoursesData] = useState<BkCourseEntry[]>([]);
+  // Open state per course-row combobox
+  const [coursePickerOpen, setCoursePickerOpen] = useState<Record<number, boolean>>({});
 
   const resetBkForm = () => {
     setBkDialog(false);
-    setSelectedCourseForBk('');
-    setSelectedBahanKajian([]);
     setBkKelompok('');
     setEditingBk(null);
     setBkCurriculumId('');
+    setBkCoursesData([]);
+    setCoursePickerOpen({});
   };
 
-  // BK curriculum state
-  const [bkCurriculumId, setBkCurriculumId] = useState<string>('');
-
   const handleSaveBk = () => {
-    if (!bkKelompok || selectedBahanKajian.length === 0) return;
-    
-    const bahanKajianStr = selectedBahanKajian.join(', ');
+    if (!bkKelompok) return;
+    const cleaned = bkCoursesData
+      .filter(c => c.course_id)
+      .map(c => ({
+        course_id: c.course_id,
+        bahan_kajian: (c.bahan_kajian || []).map(s => s.trim()).filter(Boolean),
+      }));
+    if (cleaned.length === 0) return;
+
     const currId = bkCurriculumId || (selectedCurriculumId !== 'all' ? selectedCurriculumId : null);
-    
+    // Keep legacy bahan_kajian column populated with a flat string for backwards compat
+    const flat = cleaned.flatMap(c => c.bahan_kajian).join(', ');
+    const payload = {
+      kelompok: bkKelompok,
+      bahan_kajian: flat,
+      courses_data: cleaned as any,
+      curriculum_id: currId || null,
+    };
+
     if (editingBk) {
-      saveMutation.mutate({ 
-        table: 'bahan_kajian_kelompok', 
-        data: { kelompok: bkKelompok, bahan_kajian: bahanKajianStr, curriculum_id: currId || null }, 
-        isNew: false, 
-        id: editingBk.id 
-      });
+      saveMutation.mutate({ table: 'bahan_kajian_kelompok', data: payload, isNew: false, id: editingBk.id });
     } else {
-      saveMutation.mutate({ 
-        table: 'bahan_kajian_kelompok', 
-        data: { kelompok: bkKelompok, bahan_kajian: bahanKajianStr, curriculum_id: currId || null }, 
-        isNew: true 
-      });
+      saveMutation.mutate({ table: 'bahan_kajian_kelompok', data: payload, isNew: true });
     }
     resetBkForm();
   };
 
-  const openEditBk = (item: any) => {
+  const openEditBk = (item: BahanKajianKelompok) => {
     setEditingBk(item);
     setBkKelompok(item.kelompok);
-    setSelectedBahanKajian(item.bahan_kajian.split(', ').map((s: string) => s.trim()));
+    const existing = Array.isArray(item.courses_data) ? (item.courses_data as BkCourseEntry[]) : [];
+    setBkCoursesData(existing.length > 0 ? existing : [{ course_id: '', bahan_kajian: [''] }]);
     setBkCurriculumId(item.curriculum_id || '');
     setBkDialog(true);
   };
 
+  const openAddBk = () => {
+    setBkCoursesData([{ course_id: '', bahan_kajian: [''] }]);
+    setBkDialog(true);
+  };
+
+  // Helpers for nested editing
+  const updateCourseEntry = (idx: number, patch: Partial<BkCourseEntry>) => {
+    setBkCoursesData(prev => prev.map((e, i) => i === idx ? { ...e, ...patch } : e));
+  };
+  const addCourseEntry = () => setBkCoursesData(prev => [...prev, { course_id: '', bahan_kajian: [''] }]);
+  const removeCourseEntry = (idx: number) => setBkCoursesData(prev => prev.filter((_, i) => i !== idx));
+  const addBkItem = (idx: number) => updateCourseEntry(idx, { bahan_kajian: [...(bkCoursesData[idx].bahan_kajian || []), ''] });
+  const updateBkItem = (idx: number, bIdx: number, value: string) => {
+    const newBk = [...(bkCoursesData[idx].bahan_kajian || [])];
+    newBk[bIdx] = value;
+    updateCourseEntry(idx, { bahan_kajian: newBk });
+  };
+  const removeBkItem = (idx: number, bIdx: number) => {
+    const newBk = (bkCoursesData[idx].bahan_kajian || []).filter((_, i) => i !== bIdx);
+    updateCourseEntry(idx, { bahan_kajian: newBk });
+  };
+
+  // Available courses filtered by curriculum
+  const dialogCurriculumId = bkCurriculumId || (selectedCurriculumId !== 'all' ? selectedCurriculumId : '');
+  const dialogAvailableCourses = useMemo(() => {
+    return courses.filter((c: any) => dialogCurriculumId ? c.curriculum_id === dialogCurriculumId : true);
+  }, [courses, dialogCurriculumId]);
+
+  const courseLabel = (id: string) => {
+    const c = courses.find((x: any) => x.id === id);
+    return c ? `${c.code} - ${c.name}` : 'Pilih mata kuliah...';
+  };
+
   const renderBahanKajianTable = () => {
-    // Filter data - use pre-filtered data based on curriculum
     const displayedBk = filteredBahanKajianData.filter(item => {
       const searchLower = filterBk.toLowerCase();
+      const inCourses = (item.courses_data || []).some((cd: BkCourseEntry) => {
+        const c: any = courses.find((x: any) => x.id === cd.course_id);
+        return c && (`${c.code} ${c.name}`.toLowerCase().includes(searchLower));
+      });
       return (
         item.kelompok?.toLowerCase().includes(searchLower) ||
-        item.bahan_kajian?.toLowerCase().includes(searchLower)
+        (item.bahan_kajian || '').toLowerCase().includes(searchLower) ||
+        inCourses
       );
     });
-    
+
     const ids = displayedBk.map(item => item.id);
-    
+
     const tableConfig = {
       tableName: 'bahan_kajian_kelompok',
       displayName: 'Bahan Kajian',
@@ -954,21 +986,21 @@ function KurikulumContent() {
       ],
       queryKey: 'bahan_kajian_kelompok',
     };
-    
+
     return (
       <Card className="mb-6">
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <CardTitle className="text-lg">BK - Bahan Kajian</CardTitle>
           <div className="flex flex-wrap items-center gap-2">
-            <KurikulumFilter 
-              searchTerm={filterBk} 
+            <KurikulumFilter
+              searchTerm={filterBk}
               onSearchChange={setFilterBk}
-              placeholder="Cari bahan kajian..."
+              placeholder="Cari bahan kajian / mata kuliah..."
             />
             {canEdit && (
               <>
                 <KurikulumImportExport tableConfig={tableConfig} data={bahanKajianKelompok} />
-                <Button size="sm" onClick={() => setBkDialog(true)}>
+                <Button size="sm" onClick={openAddBk}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
               </>
@@ -987,44 +1019,78 @@ function KurikulumContent() {
                 <TableHead className="text-primary-foreground w-16">No</TableHead>
                 <TableHead className="text-primary-foreground">Kelompok BK</TableHead>
                 <TableHead className="text-primary-foreground">Bahan Kajian</TableHead>
+                <TableHead className="text-primary-foreground">Mata Kuliah</TableHead>
                 {canEdit && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {displayedBk.length > 0 ? (
-                displayedBk.map((item, idx) => (
-                  <TableRow key={item.id}>
-                    {canEdit && (
+                displayedBk.map((item, idx) => {
+                  const cd = (item.courses_data || []) as BkCourseEntry[];
+                  const allBk = cd.flatMap(e => e.bahan_kajian || []);
+                  return (
+                    <TableRow key={item.id}>
+                      {canEdit && (
+                        <TableCell>
+                          <BulkSelectCheckbox id={item.id} />
+                        </TableCell>
+                      )}
+                      <TableCell>{idx + 1}</TableCell>
+                      <TableCell>{item.kelompok}</TableCell>
                       <TableCell>
-                        <BulkSelectCheckbox id={item.id} />
+                        {cd.length > 0 ? (
+                          <div className="space-y-2">
+                            {cd.map((entry, i) => {
+                              const c: any = courses.find((x: any) => x.id === entry.course_id);
+                              return (
+                                <div key={i}>
+                                  <div className="text-xs font-semibold text-muted-foreground">
+                                    {c ? `${c.code} - ${c.name}` : '—'}
+                                  </div>
+                                  <ul className="list-disc list-inside">
+                                    {(entry.bahan_kajian || []).map((bk, j) => (
+                                      <li key={j} className="text-sm">{bk}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <ul className="list-disc list-inside space-y-1">
+                            {(item.bahan_kajian || '').split(', ').filter(Boolean).map((bk, i) => (
+                              <li key={i} className="text-sm">{bk.trim()}</li>
+                            ))}
+                          </ul>
+                        )}
                       </TableCell>
-                    )}
-                    <TableCell>{idx + 1}</TableCell>
-                    <TableCell>{item.kelompok}</TableCell>
-                    <TableCell>
-                      <ul className="list-disc list-inside space-y-1">
-                        {item.bahan_kajian.split(', ').map((bk, i) => (
-                          <li key={i} className="text-sm">{bk.trim()}</li>
-                        ))}
-                      </ul>
-                    </TableCell>
-                    {canEdit && (
                       <TableCell>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEditBk(item)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDelete('bahan_kajian_kelompok', item.id)}>
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
+                        <ul className="list-disc list-inside space-y-1">
+                          {cd.map((entry, i) => {
+                            const c: any = courses.find((x: any) => x.id === entry.course_id);
+                            if (!c) return null;
+                            return <li key={i} className="text-sm">{c.code} - {c.name}</li>;
+                          })}
+                        </ul>
                       </TableCell>
-                    )}
-                  </TableRow>
-                ))
+                      {canEdit && (
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" onClick={() => openEditBk(item)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" onClick={() => handleDelete('bahan_kajian_kelompok', item.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  );
+                })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={canEdit ? 5 : 3} className="text-center text-muted-foreground">
+                  <TableCell colSpan={canEdit ? 6 : 4} className="text-center text-muted-foreground">
                     {filterBk ? 'Tidak ada data yang cocok' : 'Belum ada data'}
                   </TableCell>
                 </TableRow>
@@ -1035,14 +1101,17 @@ function KurikulumContent() {
 
           {/* Bahan Kajian Dialog */}
           <Dialog open={bkDialog} onOpenChange={(open) => { if (!open) resetBkForm(); }}>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingBk ? 'Edit Bahan Kajian' : 'Tambah Bahan Kajian'}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
                   <label className="text-sm font-medium">Kurikulum</label>
-                  <Select value={bkCurriculumId || (selectedCurriculumId !== 'all' ? selectedCurriculumId : '')} onValueChange={(v) => { setBkCurriculumId(v); setSelectedCourseForBk(''); }}>
+                  <Select
+                    value={bkCurriculumId || (selectedCurriculumId !== 'all' ? selectedCurriculumId : '')}
+                    onValueChange={(v) => { setBkCurriculumId(v); }}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Pilih Kurikulum" />
                     </SelectTrigger>
@@ -1055,67 +1124,106 @@ function KurikulumContent() {
                 </div>
                 <div>
                   <label className="text-sm font-medium">Kelompok BK</label>
-                  <Input 
-                    value={bkKelompok} 
-                    onChange={(e) => setBkKelompok(e.target.value)} 
+                  <Input
+                    value={bkKelompok}
+                    onChange={(e) => setBkKelompok(e.target.value)}
                     placeholder="Contoh: Kelompok A"
                   />
                 </div>
-                <div>
-                  <label className="text-sm font-medium">Pilih Mata Kuliah</label>
-                  <Select value={selectedCourseForBk} onValueChange={setSelectedCourseForBk}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih mata kuliah..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {courses.filter((course: any) => {
-                        const currId = bkCurriculumId || (selectedCurriculumId !== 'all' ? selectedCurriculumId : '');
-                        return currId ? course.curriculum_id === currId : true;
-                      }).map((course: any) => (
-                        <SelectItem key={course.id} value={course.id}>
-                          {course.code} - {course.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {selectedCourseForBk && (
-                  <div>
-                    <label className="text-sm font-medium">Pilih Bahan Kajian dari SUB-CPMK/LLO</label>
-                    {availableBahanKajian.length > 0 ? (
-                      <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2 mt-2">
-                        {[...new Set(availableBahanKajian)].map((bk: string, idx: number) => (
-                          <div key={idx} className="flex items-center space-x-2">
-                            <input
-                              type="checkbox"
-                              id={`bk-${idx}`}
-                              checked={selectedBahanKajian.includes(bk)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setSelectedBahanKajian([...selectedBahanKajian, bk]);
-                                } else {
-                                  setSelectedBahanKajian(selectedBahanKajian.filter(s => s !== bk));
-                                }
-                              }}
-                              className="h-4 w-4 rounded border-border"
-                            />
-                            <label htmlFor={`bk-${idx}`} className="text-sm cursor-pointer flex-1">
-                              {bk}
-                            </label>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Tidak ada bahan kajian pada mata kuliah ini. Silakan tambahkan bahan kajian di SUB-CPMK/LLO mata kuliah.
-                      </p>
-                    )}
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium">Mata Kuliah & Bahan Kajian</label>
+                    <Button type="button" variant="outline" size="sm" onClick={addCourseEntry}>
+                      <Plus className="h-4 w-4 mr-1" /> Tambah Mata Kuliah
+                    </Button>
                   </div>
-                )}
+
+                  {bkCoursesData.length === 0 && (
+                    <p className="text-sm text-muted-foreground">Tambahkan minimal satu mata kuliah.</p>
+                  )}
+
+                  {bkCoursesData.map((entry, idx) => {
+                    const usedIds = bkCoursesData.map((e, i) => i !== idx ? e.course_id : null).filter(Boolean) as string[];
+                    const selectableCourses = dialogAvailableCourses.filter((c: any) => !usedIds.includes(c.id));
+                    return (
+                      <div key={idx} className="border rounded-lg p-3 space-y-3">
+                        <div className="flex items-start gap-2">
+                          <div className="flex-1">
+                            <label className="text-xs font-medium">Mata Kuliah</label>
+                            <Popover open={!!coursePickerOpen[idx]} onOpenChange={(o) => setCoursePickerOpen(prev => ({ ...prev, [idx]: o }))}>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+                                  <span className={cn(!entry.course_id && 'text-muted-foreground', 'truncate')}>
+                                    {courseLabel(entry.course_id)}
+                                  </span>
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                <Command>
+                                  <CommandInput placeholder="Cari mata kuliah..." />
+                                  <CommandList>
+                                    <CommandEmpty>Mata kuliah tidak ditemukan.</CommandEmpty>
+                                    <CommandGroup>
+                                      {selectableCourses.map((c: any) => (
+                                        <CommandItem
+                                          key={c.id}
+                                          value={`${c.code} ${c.name}`}
+                                          onSelect={() => {
+                                            updateCourseEntry(idx, { course_id: c.id });
+                                            setCoursePickerOpen(prev => ({ ...prev, [idx]: false }));
+                                          }}
+                                        >
+                                          <Check className={cn('mr-2 h-4 w-4', entry.course_id === c.id ? 'opacity-100' : 'opacity-0')} />
+                                          {c.code} - {c.name}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+                          <Button type="button" variant="ghost" size="icon" className="mt-5 text-destructive" onClick={() => removeCourseEntry(idx)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label className="text-xs font-medium">Bahan Kajian</label>
+                            <Button type="button" variant="outline" size="sm" onClick={() => addBkItem(idx)}>
+                              <Plus className="h-3 w-3 mr-1" /> Tambah
+                            </Button>
+                          </div>
+                          {(entry.bahan_kajian || []).map((bk, bIdx) => (
+                            <div key={bIdx} className="flex gap-2">
+                              <Input
+                                value={bk}
+                                onChange={(e) => updateBkItem(idx, bIdx, e.target.value)}
+                                placeholder={`Bahan kajian ${bIdx + 1}`}
+                              />
+                              <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => removeBkItem(idx, bIdx)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                          {(entry.bahan_kajian || []).length === 0 && (
+                            <p className="text-xs text-muted-foreground">Belum ada bahan kajian.</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={resetBkForm}>Batal</Button>
-                <Button onClick={handleSaveBk} disabled={!bkKelompok || selectedBahanKajian.length === 0}>
+                <Button
+                  onClick={handleSaveBk}
+                  disabled={!bkKelompok || bkCoursesData.length === 0 || bkCoursesData.every(c => !c.course_id || (c.bahan_kajian || []).every(b => !b.trim()))}
+                >
                   {editingBk ? 'Simpan' : 'Tambah'}
                 </Button>
               </DialogFooter>
