@@ -214,7 +214,7 @@ function KurikulumContent() {
     queryKey: ['bahan_kajian_kelompok'],
     queryFn: async () => {
       const { data } = await supabase.from('bahan_kajian_kelompok').select('*').order('kelompok');
-      return data as BahanKajianKelompok[];
+      return (data || []) as unknown as BahanKajianKelompok[];
     },
   });
 
