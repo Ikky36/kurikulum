@@ -900,32 +900,35 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                       <Input type="number" min="0" max="100" step="0.1" value={lloWeight} onChange={(e) => setLloWeight(e.target.value)} placeholder="Contoh: 10" className="w-32" />
                     </div>
                     
-                    {/* Bahan Kajian */}
+                    {/* Bahan Kajian - selected from Kurikulum BK */}
                     <div className="space-y-2">
-                      <Label className="flex items-center justify-between">
-                        Bahan Kajian
-                        <Button type="button" variant="outline" size="sm" onClick={() => setLloBahanKajian([...lloBahanKajian, ''])}>
-                          <Plus className="h-3 w-3 mr-1" /> Tambah
-                        </Button>
-                      </Label>
-                      <div className="space-y-2">
-                        {lloBahanKajian.map((item, index) => (
-                          <div key={index} className="flex gap-2">
-                            <Input 
-                              value={item} 
-                              onChange={(e) => {
-                                const newItems = [...lloBahanKajian];
-                                newItems[index] = e.target.value;
-                                setLloBahanKajian(newItems);
-                              }} 
-                              placeholder={`Bahan kajian ${index + 1}`}
-                            />
-                            <Button type="button" variant="ghost" size="icon" className="shrink-0 text-destructive" onClick={() => setLloBahanKajian(lloBahanKajian.filter((_, i) => i !== index))}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
+                      <Label>Bahan Kajian</Label>
+                      {courseBahanKajian.length === 0 ? (
+                        <p className="text-xs text-muted-foreground">
+                          Belum ada bahan kajian untuk mata kuliah ini. Tambahkan terlebih dahulu pada halaman Kurikulum › BK.
+                        </p>
+                      ) : (
+                        <div className="border rounded-lg p-3 max-h-48 overflow-y-auto space-y-2">
+                          {courseBahanKajian.map((bk, index) => {
+                            const checked = lloBahanKajian.includes(bk);
+                            return (
+                              <div key={index} className="flex items-start space-x-2">
+                                <Checkbox
+                                  id={`llo-bk-${index}`}
+                                  checked={checked}
+                                  onCheckedChange={(c) => {
+                                    if (c) setLloBahanKajian([...lloBahanKajian, bk]);
+                                    else setLloBahanKajian(lloBahanKajian.filter(s => s !== bk));
+                                  }}
+                                />
+                                <label htmlFor={`llo-bk-${index}`} className="text-sm cursor-pointer leading-tight">
+                                  {bk}
+                                </label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
 
                     {/* Indikator */}
