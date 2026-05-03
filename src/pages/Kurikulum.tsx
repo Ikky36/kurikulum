@@ -40,7 +40,8 @@ type VmtsUppsMisi = { id: string; code: string; misi: string };
 type VmtsUppsTujuan = { id: string; code: string; tujuan: string };
 type VmtsUppsStrategi = { id: string; code: string; strategi: string };
 type ProfilLulusan = { id: string; code: string; profil: string; deskripsi: string | null };
-type BahanKajianKelompok = { id: string; kelompok: string; bahan_kajian: string };
+type BkCourseEntry = { course_id: string; bahan_kajian: string[] };
+type BahanKajianKelompok = { id: string; kelompok: string; bahan_kajian: string | null; courses_data?: BkCourseEntry[]; curriculum_id?: string | null };
 
 function KurikulumContent() {
   const { profile, hasAnyRole } = useAuth();
