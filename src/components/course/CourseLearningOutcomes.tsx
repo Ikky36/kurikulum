@@ -141,6 +141,30 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
     },
   });
 
+  // Fetch available Bahan Kajian for this course (from BK kelompok > courses_data)
+  const { data: courseBahanKajian = [] } = useQuery({
+    queryKey: ['course-bahan-kajian', courseId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('bahan_kajian_kelompok')
+        .select('courses_data');
+      if (error) throw error;
+      const items = new Set<string>();
+      for (const row of (data || []) as any[]) {
+        const cd = Array.isArray(row.courses_data) ? row.courses_data : [];
+        for (const entry of cd) {
+          if (entry?.course_id === courseId && Array.isArray(entry?.bahan_kajian)) {
+            for (const bk of entry.bahan_kajian) {
+              const v = (bk || '').trim();
+              if (v) items.add(v);
+            }
+          }
+        }
+      }
+      return Array.from(items);
+    },
+  });
+
   // Fetch Assessment-LLO links
   const { data: assessmentLlos } = useQuery({
     queryKey: ['assessment-llos', courseId],
