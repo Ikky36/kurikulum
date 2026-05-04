@@ -147,9 +147,9 @@ export function KurikulumImportExport({ tableConfig, data, extraDefaults }: Kuri
     let errorCount = 0;
 
     for (const row of validRows) {
-      const insertData: Record<string, any> = {};
-      tableConfig.columns.forEach(col => {
-        if (row[col.key]) insertData[col.key] = row[col.key];
+      const insertData: Record<string, any> = { ...(extraDefaults || {}) };
+      importableColumns.forEach(col => {
+        if (row[col.key] !== undefined && row[col.key] !== '') insertData[col.key] = row[col.key];
       });
 
       const { error } = await supabase.from(tableConfig.tableName as any).insert(insertData);
