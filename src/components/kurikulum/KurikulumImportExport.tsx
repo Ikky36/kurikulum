@@ -9,38 +9,52 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Download, Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
+interface TableColumn {
+  key: string;
+  label: string;
+  required?: boolean;
+  /** Format for export (e.g. stringify JSON, count items). Receives the whole row. */
+  exportValue?: (item: any) => any;
+  /** Skip this column for the import template / import row */
+  importOnlyExport?: boolean;
+}
+
 interface TableConfig {
   tableName: string;
   displayName: string;
-  columns: { key: string; label: string; required?: boolean }[];
+  columns: TableColumn[];
   queryKey: string;
 }
 
 interface KurikulumImportExportProps {
   tableConfig: TableConfig;
   data: any[];
+  /** Extra fields automatically appended to every imported row (e.g. curriculum_id). */
+  extraDefaults?: Record<string, any>;
 }
 
 type ImportRow = Record<string, any> & { status?: 'valid' | 'error' | 'exists'; message?: string };
 
-export function KurikulumImportExport({ tableConfig, data }: KurikulumImportExportProps) {
+export function KurikulumImportExport({ tableConfig, data, extraDefaults }: KurikulumImportExportProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importData, setImportData] = useState<ImportRow[]>([]);
   const [importing, setImporting] = useState(false);
 
+  const importableColumns = tableConfig.columns.filter(c => !c.importOnlyExport);
+
   // Download template
   const handleDownloadTemplate = () => {
     const templateData = [{}];
-    tableConfig.columns.forEach(col => {
+    importableColumns.forEach(col => {
       templateData[0][col.key] = col.key === 'code' ? 'CONTOH1' : `Contoh ${col.label}`;
     });
 
     const ws = XLSX.utils.json_to_sheet(templateData);
-    ws['!cols'] = tableConfig.columns.map(col => ({ wch: Math.max(col.label.length + 5, 20) }));
+    ws['!cols'] = importableColumns.map(col => ({ wch: Math.max(col.label.length + 5, 20) }));
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, tableConfig.displayName);
@@ -59,7 +73,8 @@ export function KurikulumImportExport({ tableConfig, data }: KurikulumImportExpo
     const exportData = data.map((item, idx) => {
       const row: Record<string, any> = { no: idx + 1 };
       tableConfig.columns.forEach(col => {
-        row[col.key] = item[col.key] || '';
+        const value = col.exportValue ? col.exportValue(item) : item[col.key];
+        row[col.key] = value === null || value === undefined ? '' : value;
       });
       return row;
     });
@@ -91,7 +106,7 @@ export function KurikulumImportExport({ tableConfig, data }: KurikulumImportExpo
         // Validate and mark rows
         const validatedData: ImportRow[] = jsonData.map((row) => {
           const missingFields: string[] = [];
-          tableConfig.columns.forEach(col => {
+          importableColumns.forEach(col => {
             if (col.required && !row[col.key]) {
               missingFields.push(col.label);
             }
@@ -132,9 +147,9 @@ export function KurikulumImportExport({ tableConfig, data }: KurikulumImportExpo
     let errorCount = 0;
 
     for (const row of validRows) {
-      const insertData: Record<string, any> = {};
-      tableConfig.columns.forEach(col => {
-        if (row[col.key]) insertData[col.key] = row[col.key];
+      const insertData: Record<string, any> = { ...(extraDefaults || {}) };
+      importableColumns.forEach(col => {
+        if (row[col.key] !== undefined && row[col.key] !== '') insertData[col.key] = row[col.key];
       });
 
       const { error } = await supabase.from(tableConfig.tableName as any).insert(insertData);

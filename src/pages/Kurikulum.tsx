@@ -544,7 +544,7 @@ function KurikulumContent() {
             />
             {canEdit && (
               <>
-                <KurikulumImportExport tableConfig={tableConfig} data={data} />
+                <KurikulumImportExport tableConfig={tableConfig} data={data} extraDefaults={selectedCurriculumId !== 'all' && table.startsWith('vmts_ps') ? { curriculum_id: selectedCurriculumId } : undefined} />
                 <Button size="sm" onClick={() => openEdit(table, { code: '', [valueKey]: '' }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
@@ -662,7 +662,7 @@ function KurikulumContent() {
             />
             {canEdit && (
               <>
-                <KurikulumImportExport tableConfig={tableConfig} data={profilLulusan} />
+                <KurikulumImportExport tableConfig={tableConfig} data={profilLulusan} extraDefaults={selectedCurriculumId !== 'all' ? { curriculum_id: selectedCurriculumId } : undefined} />
                 <Button size="sm" onClick={() => openEdit('profil_lulusan', { code: '', profil: '', deskripsi: '' }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
@@ -762,7 +762,7 @@ function KurikulumContent() {
             />
             {canEdit && (
               <>
-                <KurikulumImportExport tableConfig={tableConfig} data={plos} />
+                <KurikulumImportExport tableConfig={tableConfig} data={plos} extraDefaults={selectedCurriculumId !== 'all' ? { curriculum_id: selectedCurriculumId } : undefined} />
                 <Button size="sm" onClick={() => openEdit('plos', { code: '', description: '', profil_lulusan_ids: [] }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
@@ -982,7 +982,23 @@ function KurikulumContent() {
       displayName: 'Bahan Kajian',
       columns: [
         { key: 'kelompok', label: 'Kelompok BK', required: true },
-        { key: 'bahan_kajian', label: 'Bahan Kajian', required: true },
+        { key: 'bahan_kajian', label: 'Bahan Kajian (legacy/teks)', required: false },
+        {
+          key: 'courses_data',
+          label: 'Mata Kuliah & Bahan Kajian (JSON)',
+          required: false,
+          importOnlyExport: true,
+          exportValue: (item: any) => {
+            const cd = (item.courses_data || []) as { course_id: string; bahan_kajian: string[] }[];
+            if (!cd.length) return '';
+            const labels = cd.map(c => {
+              const course = courses?.find((co: any) => co.id === c.course_id);
+              const name = course ? `${course.code} - ${course.name}` : c.course_id;
+              return `${name}: ${(c.bahan_kajian || []).join('; ')}`;
+            });
+            return labels.join(' | ');
+          },
+        },
       ],
       queryKey: 'bahan_kajian_kelompok',
     };
@@ -999,7 +1015,7 @@ function KurikulumContent() {
             />
             {canEdit && (
               <>
-                <KurikulumImportExport tableConfig={tableConfig} data={bahanKajianKelompok} />
+                <KurikulumImportExport tableConfig={tableConfig} data={bahanKajianKelompok} extraDefaults={selectedCurriculumId !== 'all' ? { curriculum_id: selectedCurriculumId } : undefined} />
                 <Button size="sm" onClick={openAddBk}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
@@ -1283,7 +1299,7 @@ function KurikulumContent() {
             />
             {canEdit && (
               <>
-                <KurikulumImportExport tableConfig={tableConfig} data={courses} />
+                <KurikulumImportExport tableConfig={tableConfig} data={courses} extraDefaults={selectedCurriculumId !== 'all' ? { curriculum_id: selectedCurriculumId } : undefined} />
                 <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', sks: '0', ploIds: [], plIds: [] }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
