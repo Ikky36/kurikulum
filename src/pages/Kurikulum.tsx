@@ -544,7 +544,7 @@ function KurikulumContent() {
             />
             {canEdit && (
               <>
-                <KurikulumImportExport tableConfig={tableConfig} data={data} />
+                <KurikulumImportExport tableConfig={tableConfig} data={data} extraDefaults={selectedCurriculumId !== 'all' && table.startsWith('vmts_ps') ? { curriculum_id: selectedCurriculumId } : undefined} />
                 <Button size="sm" onClick={() => openEdit(table, { code: '', [valueKey]: '' }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
