@@ -9,16 +9,28 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Download, Upload, FileSpreadsheet, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
+interface TableColumn {
+  key: string;
+  label: string;
+  required?: boolean;
+  /** Format for export (e.g. stringify JSON, count items). Receives the whole row. */
+  exportValue?: (item: any) => any;
+  /** Skip this column for the import template / import row */
+  importOnlyExport?: boolean;
+}
+
 interface TableConfig {
   tableName: string;
   displayName: string;
-  columns: { key: string; label: string; required?: boolean }[];
+  columns: TableColumn[];
   queryKey: string;
 }
 
 interface KurikulumImportExportProps {
   tableConfig: TableConfig;
   data: any[];
+  /** Extra fields automatically appended to every imported row (e.g. curriculum_id). */
+  extraDefaults?: Record<string, any>;
 }
 
 type ImportRow = Record<string, any> & { status?: 'valid' | 'error' | 'exists'; message?: string };
