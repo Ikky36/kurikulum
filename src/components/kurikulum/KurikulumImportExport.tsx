@@ -106,7 +106,7 @@ export function KurikulumImportExport({ tableConfig, data, extraDefaults }: Kuri
         // Validate and mark rows
         const validatedData: ImportRow[] = jsonData.map((row) => {
           const missingFields: string[] = [];
-          tableConfig.columns.forEach(col => {
+          importableColumns.forEach(col => {
             if (col.required && !row[col.key]) {
               missingFields.push(col.label);
             }
