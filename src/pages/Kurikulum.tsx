@@ -982,7 +982,23 @@ function KurikulumContent() {
       displayName: 'Bahan Kajian',
       columns: [
         { key: 'kelompok', label: 'Kelompok BK', required: true },
-        { key: 'bahan_kajian', label: 'Bahan Kajian', required: true },
+        { key: 'bahan_kajian', label: 'Bahan Kajian (legacy/teks)', required: false },
+        {
+          key: 'courses_data',
+          label: 'Mata Kuliah & Bahan Kajian (JSON)',
+          required: false,
+          importOnlyExport: true,
+          exportValue: (item: any) => {
+            const cd = (item.courses_data || []) as { course_id: string; bahan_kajian: string[] }[];
+            if (!cd.length) return '';
+            const labels = cd.map(c => {
+              const course = courses?.find((co: any) => co.id === c.course_id);
+              const name = course ? `${course.code} - ${course.name}` : c.course_id;
+              return `${name}: ${(c.bahan_kajian || []).join('; ')}`;
+            });
+            return labels.join(' | ');
+          },
+        },
       ],
       queryKey: 'bahan_kajian_kelompok',
     };
