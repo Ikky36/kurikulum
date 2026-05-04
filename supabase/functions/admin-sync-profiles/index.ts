@@ -137,7 +137,8 @@ serve(async (req) => {
         authUser.user_metadata?.name ||
         email.split("@")[0] ||
         "User";
-      const role = authUser.user_metadata?.role || "mahasiswa";
+      // Never trust user_metadata.role — mirrors handle_new_user trigger
+      const role = "mahasiswa";
 
       try {
         // Insert profile
