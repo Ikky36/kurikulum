@@ -662,7 +662,7 @@ function KurikulumContent() {
             />
             {canEdit && (
               <>
-                <KurikulumImportExport tableConfig={tableConfig} data={profilLulusan} />
+                <KurikulumImportExport tableConfig={tableConfig} data={profilLulusan} extraDefaults={selectedCurriculumId !== 'all' ? { curriculum_id: selectedCurriculumId } : undefined} />
                 <Button size="sm" onClick={() => openEdit('profil_lulusan', { code: '', profil: '', deskripsi: '' }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
