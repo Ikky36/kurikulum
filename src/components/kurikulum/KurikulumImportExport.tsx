@@ -35,24 +35,26 @@ interface KurikulumImportExportProps {
 
 type ImportRow = Record<string, any> & { status?: 'valid' | 'error' | 'exists'; message?: string };
 
-export function KurikulumImportExport({ tableConfig, data }: KurikulumImportExportProps) {
+export function KurikulumImportExport({ tableConfig, data, extraDefaults }: KurikulumImportExportProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [showImportDialog, setShowImportDialog] = useState(false);
   const [importData, setImportData] = useState<ImportRow[]>([]);
   const [importing, setImporting] = useState(false);
 
+  const importableColumns = tableConfig.columns.filter(c => !c.importOnlyExport);
+
   // Download template
   const handleDownloadTemplate = () => {
     const templateData = [{}];
-    tableConfig.columns.forEach(col => {
+    importableColumns.forEach(col => {
       templateData[0][col.key] = col.key === 'code' ? 'CONTOH1' : `Contoh ${col.label}`;
     });
 
     const ws = XLSX.utils.json_to_sheet(templateData);
-    ws['!cols'] = tableConfig.columns.map(col => ({ wch: Math.max(col.label.length + 5, 20) }));
+    ws['!cols'] = importableColumns.map(col => ({ wch: Math.max(col.label.length + 5, 20) }));
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, tableConfig.displayName);
@@ -71,7 +73,8 @@ export function KurikulumImportExport({ tableConfig, data }: KurikulumImportExpo
     const exportData = data.map((item, idx) => {
       const row: Record<string, any> = { no: idx + 1 };
       tableConfig.columns.forEach(col => {
-        row[col.key] = item[col.key] || '';
+        const value = col.exportValue ? col.exportValue(item) : item[col.key];
+        row[col.key] = value === null || value === undefined ? '' : value;
       });
       return row;
     });
