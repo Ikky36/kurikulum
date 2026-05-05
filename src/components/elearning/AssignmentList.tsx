@@ -50,6 +50,7 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
   const [managingQuiz, setManagingQuiz] = useState<AssignmentWithRelations | null>(null);
   const [submittingLink, setSubmittingLink] = useState<AssignmentWithRelations | null>(null);
   const [gradingAssignment, setGradingAssignment] = useState<AssignmentWithRelations | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const typedAssignments = (assignments || []) as AssignmentWithRelations[];
   const isMahasiswa = profile?.role === 'mahasiswa';
