@@ -187,7 +187,7 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
           {filteredAssignments.map((assignment) => (
             <Card 
               key={assignment.id} 
-              className="group hover:shadow-lg transition-all duration-300 overflow-hidden md:[&>div:first-child]:hidden"
+              className="group hover:shadow-lg transition-all duration-300 overflow-hidden"
             >
               {/* Top Badge Bar */}
               <div className="h-1.5 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
