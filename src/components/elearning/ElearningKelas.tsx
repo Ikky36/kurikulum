@@ -92,6 +92,7 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
   const [deletingClassId, setDeletingClassId] = useState<string | null>(null);
   const [classesWithInstructors, setClassesWithInstructors] = useState<ClassWithRelations[]>([]);
   const [dosenCourseAssignments, setDosenCourseAssignments] = useState<{course_id: string, class_group_id: string | null}[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Form state
   const [formData, setFormData] = useState({
