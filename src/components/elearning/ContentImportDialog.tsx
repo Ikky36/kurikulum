@@ -268,6 +268,15 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
                   </Card>
                 ) : (
                   <>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Cari materi..."
+                        value={materialSearch}
+                        onChange={(e) => setMaterialSearch(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
                     <div className="flex items-center justify-between">
                       <Button variant="outline" size="sm" onClick={selectAllMaterials}>
                         {selectedMaterials.length === sourceMaterials?.length ? 'Batal Pilih Semua' : 'Pilih Semua'}
@@ -275,24 +284,30 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
                       <Badge variant="secondary">{selectedMaterials.length} dipilih</Badge>
                     </div>
                     <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                      {sourceMaterials?.map((material) => (
-                        <Card 
-                          key={material.id} 
-                          className={`cursor-pointer transition-colors ${selectedMaterials.includes(material.id) ? 'border-primary bg-primary/5' : ''}`}
-                          onClick={() => toggleMaterial(material.id)}
-                        >
-                          <CardContent className="py-3 flex items-center gap-3">
-                            <Checkbox
-                              checked={selectedMaterials.includes(material.id)}
-                              onCheckedChange={() => toggleMaterial(material.id)}
-                            />
-                            <BookOpen className="h-4 w-4 text-muted-foreground" />
-                            <div className="flex-1">
-                              <div className="font-medium">{material.title}</div>
-                              <div className="text-sm text-muted-foreground">{material.content_type}</div>
-                            </div>
-                          </CardContent>
-                        </Card>
+                      {sourceMaterials
+                        ?.filter((m: any) => {
+                          const q = materialSearch.trim().toLowerCase();
+                          if (!q) return true;
+                          return (m.title || '').toLowerCase().includes(q) || (m.content_type || '').toLowerCase().includes(q);
+                        })
+                        .map((material) => (
+                          <Card 
+                            key={material.id} 
+                            className={`cursor-pointer transition-colors ${selectedMaterials.includes(material.id) ? 'border-primary bg-primary/5' : ''}`}
+                            onClick={() => toggleMaterial(material.id)}
+                          >
+                            <CardContent className="py-3 flex items-center gap-3">
+                              <Checkbox
+                                checked={selectedMaterials.includes(material.id)}
+                                onCheckedChange={() => toggleMaterial(material.id)}
+                              />
+                              <BookOpen className="h-4 w-4 text-muted-foreground" />
+                              <div className="flex-1">
+                                <div className="font-medium">{material.title}</div>
+                                <div className="text-sm text-muted-foreground">{material.content_type}</div>
+                              </div>
+                            </CardContent>
+                          </Card>
                       ))}
                     </div>
                   </>
