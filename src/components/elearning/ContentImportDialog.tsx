@@ -55,6 +55,9 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
   const [selectedAssignments, setSelectedAssignments] = useState<string[]>([]);
   const [includeQuestions, setIncludeQuestions] = useState(true);
+  const [materialSearch, setMaterialSearch] = useState('');
+  const [assignmentSearch, setAssignmentSearch] = useState('');
+  const [classPickerOpen, setClassPickerOpen] = useState(false);
 
   const { data: otherClasses, isLoading: classesLoading } = useSameCourseClasses(courseId, targetClassId);
   const { data: sourceMaterials, isLoading: materialsLoading } = useSourceMaterials(sourceClassId);
