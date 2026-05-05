@@ -38,6 +38,7 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
   const [editingMaterial, setEditingMaterial] = useState<MaterialWithLLO | null>(null);
   const [viewingMaterial, setViewingMaterial] = useState<MaterialWithLLO | null>(null);
   const [fullViewMaterial, setFullViewMaterial] = useState<MaterialWithLLO | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Parse materials and handle sections type conversion
   const typedMaterials: MaterialWithLLO[] = (materials || []).map((m: any) => ({
