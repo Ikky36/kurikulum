@@ -190,27 +190,55 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
           {/* Source Class Selection */}
           <div className="space-y-2">
             <Label>Pilih Kelas Sumber</Label>
-            <Select value={sourceClassId} onValueChange={handleSourceClassChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih kelas dengan mata kuliah yang sama..." />
-              </SelectTrigger>
-              <SelectContent>
-                {classesLoading ? (
-                  <div className="p-2 text-center text-sm text-muted-foreground">Loading...</div>
-                ) : otherClasses?.length === 0 ? (
-                  <div className="p-2 text-center text-sm text-muted-foreground">
-                    Tidak ada kelas lain dengan mata kuliah yang sama
-                  </div>
-                ) : (
-                  otherClasses?.map((cls: any) => (
-                    <SelectItem key={cls.id} value={cls.id}>
-                      {cls.title} - {cls.class_group_name || ''}
-                      {cls.instructor_name ? ` (${cls.instructor_name})` : ''}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            <Popover open={classPickerOpen} onOpenChange={setClassPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between font-normal"
+                >
+                  {sourceClassId
+                    ? (() => {
+                        const c: any = otherClasses?.find((cl: any) => cl.id === sourceClassId);
+                        return c ? `${c.title} - ${c.class_group_name || ''}${c.instructor_name ? ` (${c.instructor_name})` : ''}` : 'Pilih kelas...';
+                      })()
+                    : 'Pilih kelas dengan mata kuliah yang sama...'}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Cari kelas, mata kuliah, atau dosen..." />
+                  <CommandList>
+                    {classesLoading ? (
+                      <div className="p-3 text-center text-sm text-muted-foreground">Loading...</div>
+                    ) : (
+                      <>
+                        <CommandEmpty>Tidak ada kelas ditemukan.</CommandEmpty>
+                        <CommandGroup>
+                          {otherClasses?.map((cls: any) => {
+                            const label = `${cls.title} - ${cls.class_group_name || ''}${cls.instructor_name ? ` (${cls.instructor_name})` : ''}`;
+                            return (
+                              <CommandItem
+                                key={cls.id}
+                                value={label}
+                                onSelect={() => {
+                                  handleSourceClassChange(cls.id);
+                                  setClassPickerOpen(false);
+                                }}
+                              >
+                                <Check className={cn('mr-2 h-4 w-4', sourceClassId === cls.id ? 'opacity-100' : 'opacity-0')} />
+                                {label}
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Content Selection */}
