@@ -404,130 +404,185 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {typedClasses.map((cls) => (
-            <Card 
-              key={cls.id} 
-              className="group hover:shadow-xl transition-all duration-300 overflow-hidden border-0 shadow-md bg-card"
-            >
-              {/* Card Header with Gradient */}
-              <div className="h-2 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
-              
-              <CardHeader className="pb-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-xl font-bold line-clamp-2 group-hover:text-primary transition-colors">
-                      {cls.course?.name} - {cls.class_group?.name}
-                    </CardTitle>
-                    <CardDescription className="line-clamp-2 mt-2">
-                      {cls.description || 'Tidak ada deskripsi'}
-                    </CardDescription>
-                  </div>
-                  <Badge 
-                    variant="secondary" 
-                    className={`gap-1.5 shrink-0 ${getVisibilityColor(cls.visibility)}`}
-                  >
-                    {getVisibilityIcon(cls.visibility)}
-                    <span className="hidden sm:inline">{getVisibilityLabel(cls.visibility)}</span>
-                  </Badge>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                {/* Course & Class Info */}
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <BookOpen className="h-4 w-4 text-primary" />
-                    </div>
+        <>
+          {/* Mobile: Card Grid */}
+          <div className="grid gap-6 sm:grid-cols-2 md:hidden">
+            {typedClasses.map((cls) => (
+              <Card 
+                key={cls.id} 
+                className="group hover:shadow-xl transition-all duration-300 overflow-hidden border-0 shadow-md bg-card"
+              >
+                <div className="h-2 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
+                <CardHeader className="pb-4">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground">Mata Kuliah</p>
-                      <p className="font-medium text-sm truncate">
-                        {cls.course?.code} - {cls.course?.name}
-                      </p>
+                      <CardTitle className="text-xl font-bold line-clamp-2 group-hover:text-primary transition-colors">
+                        {cls.course?.name} - {cls.class_group?.name}
+                      </CardTitle>
+                      <CardDescription className="line-clamp-2 mt-2">
+                        {cls.description || 'Tidak ada deskripsi'}
+                      </CardDescription>
+                    </div>
+                    <Badge variant="secondary" className={`gap-1.5 shrink-0 ${getVisibilityColor(cls.visibility)}`}>
+                      {getVisibilityIcon(cls.visibility)}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <div className="p-2 bg-primary/10 rounded-lg"><BookOpen className="h-4 w-4 text-primary" /></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Mata Kuliah</p>
+                        <p className="font-medium text-sm truncate">{cls.course?.code} - {cls.course?.name}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+                      <div className="p-2 bg-secondary/80 rounded-lg"><Users className="h-4 w-4 text-secondary-foreground" /></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground">Kelas</p>
+                        <p className="font-medium text-sm">{cls.class_group?.name || '-'}</p>
+                      </div>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                    <div className="p-2 bg-secondary/80 rounded-lg">
-                      <Users className="h-4 w-4 text-secondary-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground">Kelas</p>
-                      <p className="font-medium text-sm">{cls.class_group?.name || '-'}</p>
-                    </div>
+                  <div className="pt-4 border-t">
+                    <p className="text-xs text-muted-foreground mb-2">Dosen Pengampu</p>
+                    {cls.assignedInstructors && cls.assignedInstructors.length > 0 ? (
+                      <div className="flex flex-col gap-2">
+                        {cls.assignedInstructors.map((instructor) => (
+                          <div key={instructor.id} className="flex items-center gap-2">
+                            <Avatar className="h-8 w-8 ring-2 ring-primary/20">
+                              <AvatarImage src={instructor.photo_url || undefined} />
+                              <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                                {instructor.full_name?.charAt(0) || '?'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <p className="font-medium text-sm truncate">{instructor.full_name}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">Belum ada dosen ditugaskan</p>
+                    )}
                   </div>
-                </div>
-
-                {/* Assigned Instructors from course_instructors */}
-                <div className="pt-4 border-t">
-                  <p className="text-xs text-muted-foreground mb-2">Dosen Pengampu</p>
-                  {cls.assignedInstructors && cls.assignedInstructors.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                      {cls.assignedInstructors.map((instructor) => (
-                        <div key={instructor.id} className="flex items-center gap-2">
-                          <Avatar className="h-8 w-8 ring-2 ring-primary/20">
-                            <AvatarImage src={instructor.photo_url || undefined} />
-                            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
-                              {instructor.full_name?.charAt(0) || '?'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <p className="font-medium text-sm truncate">{instructor.full_name}</p>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">Belum ada dosen ditugaskan</p>
-                  )}
-                </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 pt-4 border-t">
-                  {onEnterClass && (
-                    <Button
-                      size="sm"
-                      className="flex-1 gap-2"
-                      onClick={() => onEnterClass({
+                  <div className="flex gap-2 pt-4 border-t">
+                    {onEnterClass && (
+                      <Button size="sm" className="flex-1 gap-2" onClick={() => onEnterClass({
                         id: cls.id,
                         title: `${cls.course?.name || ''} - ${cls.class_group?.name || ''}`,
                         courseId: cls.course?.id || '',
                         courseName: cls.course ? `${cls.course.code} - ${cls.course.name}` : '',
                         classGroupName: cls.class_group?.name || '',
-                      })}
-                    >
+                      })}>
+                        <LogIn className="h-4 w-4" /> Masuk
+                      </Button>
+                    )}
+                    {canDosenEditClass(cls) && (
+                      <>
+                        <Button variant="outline" size="sm" onClick={() => openEditDialog(cls)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-destructive" onClick={() => { setDeletingClassId(cls.id); setDeleteDialogOpen(true); }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Desktop & Tablet: Elegant List */}
+          <div className="hidden md:block space-y-3">
+            {typedClasses.map((cls) => (
+              <div
+                key={cls.id}
+                className="group flex items-center gap-4 p-4 bg-card border rounded-xl hover:shadow-md hover:border-primary/40 transition-all duration-200"
+              >
+                {/* Left accent */}
+                <div className="w-1 self-stretch rounded-full bg-gradient-to-b from-primary to-primary/40" />
+
+                {/* Icon */}
+                <div className="p-3 bg-primary/10 rounded-xl shrink-0">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                </div>
+
+                {/* Main info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-semibold text-base truncate group-hover:text-primary transition-colors">
+                      {cls.course?.code} - {cls.course?.name}
+                    </h3>
+                    <Badge variant="secondary" className={`gap-1 ${getVisibilityColor(cls.visibility)}`}>
+                      {getVisibilityIcon(cls.visibility)}
+                      <span className="text-xs">{getVisibilityLabel(cls.visibility)}</span>
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5" />
+                      {cls.class_group?.name || '-'}
+                    </span>
+                    {cls.description && (
+                      <span className="truncate hidden lg:inline">{cls.description}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Instructors */}
+                <div className="hidden lg:flex items-center gap-2 shrink-0 max-w-[260px]">
+                  {cls.assignedInstructors && cls.assignedInstructors.length > 0 ? (
+                    <div className="flex items-center gap-2">
+                      <div className="flex -space-x-2">
+                        {cls.assignedInstructors.slice(0, 3).map((ins) => (
+                          <Avatar key={ins.id} className="h-7 w-7 ring-2 ring-background">
+                            <AvatarImage src={ins.photo_url || undefined} />
+                            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                              {ins.full_name?.charAt(0) || '?'}
+                            </AvatarFallback>
+                          </Avatar>
+                        ))}
+                      </div>
+                      <span className="text-xs text-muted-foreground truncate">
+                        {cls.assignedInstructors[0].full_name}
+                        {cls.assignedInstructors.length > 1 && ` +${cls.assignedInstructors.length - 1}`}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-muted-foreground italic">Belum ada dosen</span>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex items-center gap-2 shrink-0">
+                  {onEnterClass && (
+                    <Button size="sm" className="gap-2" onClick={() => onEnterClass({
+                      id: cls.id,
+                      title: `${cls.course?.name || ''} - ${cls.class_group?.name || ''}`,
+                      courseId: cls.course?.id || '',
+                      courseName: cls.course ? `${cls.course.code} - ${cls.course.name}` : '',
+                      classGroupName: cls.class_group?.name || '',
+                    })}>
                       <LogIn className="h-4 w-4" />
-                      Masuk Kelas
+                      <span className="hidden lg:inline">Masuk</span>
                     </Button>
                   )}
                   {canDosenEditClass(cls) && (
                     <>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className={`gap-2 hover:bg-primary hover:text-primary-foreground transition-colors ${onEnterClass ? '' : 'flex-1'}`}
-                        onClick={() => openEditDialog(cls)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => openEditDialog(cls)}>
                         <Edit className="h-4 w-4" />
-                        {!onEnterClass && 'Edit Kelas'}
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 text-destructive hover:text-destructive-foreground hover:bg-destructive transition-colors"
-                        onClick={() => {
-                          setDeletingClassId(cls.id);
-                          setDeleteDialogOpen(true);
-                        }}
-                      >
+                      <Button variant="outline" size="sm" className="text-destructive hover:text-destructive-foreground hover:bg-destructive" onClick={() => { setDeletingClassId(cls.id); setDeleteDialogOpen(true); }}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </>
                   )}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Create/Edit Dialog */}
