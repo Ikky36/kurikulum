@@ -327,7 +327,16 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
                   </Card>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Cari tugas atau quiz..."
+                        value={assignmentSearch}
+                        onChange={(e) => setAssignmentSearch(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-4">
                         <Button variant="outline" size="sm" onClick={selectAllAssignments}>
                           {selectedAssignments.length === sourceAssignments?.length ? 'Batal Pilih Semua' : 'Pilih Semua'}
@@ -346,38 +355,44 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
                       <Badge variant="secondary">{selectedAssignments.length} dipilih</Badge>
                     </div>
                     <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                      {sourceAssignments?.map((assignment) => {
-                        const qCount = questionCounts?.[assignment.id] || 0;
-                        return (
-                          <Card 
-                            key={assignment.id} 
-                            className={`cursor-pointer transition-colors ${selectedAssignments.includes(assignment.id) ? 'border-primary bg-primary/5' : ''}`}
-                            onClick={() => toggleAssignment(assignment.id)}
-                          >
-                            <CardContent className="py-3 flex items-center gap-3">
-                              <Checkbox
-                                checked={selectedAssignments.includes(assignment.id)}
-                                onCheckedChange={() => toggleAssignment(assignment.id)}
-                              />
-                              {getAssignmentIcon(assignment.assignment_type)}
-                              <div className="flex-1">
-                                <div className="font-medium">{assignment.title}</div>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <span>{getAssignmentTypeLabel(assignment)}</span>
-                                  {assignment.assignment_type === 'quiz' && qCount > 0 && (
-                                    <Badge variant="outline" className="text-xs px-1.5 py-0">
-                                      {qCount} soal
-                                    </Badge>
-                                  )}
-                                  {assignment.time_limit_minutes && (
-                                    <span>• {assignment.time_limit_minutes} menit</span>
-                                  )}
+                      {sourceAssignments
+                        ?.filter((a: any) => {
+                          const q = assignmentSearch.trim().toLowerCase();
+                          if (!q) return true;
+                          return (a.title || '').toLowerCase().includes(q) || (a.assignment_type || '').toLowerCase().includes(q);
+                        })
+                        .map((assignment) => {
+                          const qCount = questionCounts?.[assignment.id] || 0;
+                          return (
+                            <Card 
+                              key={assignment.id} 
+                              className={`cursor-pointer transition-colors ${selectedAssignments.includes(assignment.id) ? 'border-primary bg-primary/5' : ''}`}
+                              onClick={() => toggleAssignment(assignment.id)}
+                            >
+                              <CardContent className="py-3 flex items-center gap-3">
+                                <Checkbox
+                                  checked={selectedAssignments.includes(assignment.id)}
+                                  onCheckedChange={() => toggleAssignment(assignment.id)}
+                                />
+                                {getAssignmentIcon(assignment.assignment_type)}
+                                <div className="flex-1">
+                                  <div className="font-medium">{assignment.title}</div>
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <span>{getAssignmentTypeLabel(assignment)}</span>
+                                    {assignment.assignment_type === 'quiz' && qCount > 0 && (
+                                      <Badge variant="outline" className="text-xs px-1.5 py-0">
+                                        {qCount} soal
+                                      </Badge>
+                                    )}
+                                    {assignment.time_limit_minutes && (
+                                      <span>• {assignment.time_limit_minutes} menit</span>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
                     </div>
                   </>
                 )}
