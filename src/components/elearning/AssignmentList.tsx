@@ -124,10 +124,29 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
     );
   }
 
+  const q = searchQuery.trim().toLowerCase();
+  const filteredAssignments = q
+    ? typedAssignments.filter(a =>
+        (a.title || '').toLowerCase().includes(q)
+        || (a.description || '').toLowerCase().includes(q)
+        || (a.assignment_type || '').toLowerCase().includes(q)
+        || (a.llo?.code || '').toLowerCase().includes(q)
+      )
+    : typedAssignments;
+
   return (
     <div className="space-y-6">
-      {canEdit && (
-        <div className="flex justify-end">
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-xl">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cari tugas atau quiz..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {canEdit && (
           <Button 
             onClick={() => { setEditingAssignment(null); setShowEditor(true); }}
             size="lg"
@@ -136,8 +155,8 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
             <Plus className="h-5 w-5" />
             Tambah Tugas/Quiz
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {typedAssignments.length === 0 ? (
         <Card className="border-dashed border-2">
@@ -157,12 +176,18 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
             )}
           </CardContent>
         </Card>
+      ) : filteredAssignments.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center text-muted-foreground">
+            Tidak ada tugas/quiz yang cocok dengan pencarian "{searchQuery}"
+          </CardContent>
+        </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {typedAssignments.map((assignment) => (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-1">
+          {filteredAssignments.map((assignment) => (
             <Card 
               key={assignment.id} 
-              className="group hover:shadow-lg transition-all duration-300 overflow-hidden"
+              className="group hover:shadow-lg transition-all duration-300 overflow-hidden md:[&>div:first-child]:hidden"
             >
               {/* Top Badge Bar */}
               <div className="h-1.5 bg-gradient-to-r from-primary via-primary/80 to-primary/60" />
