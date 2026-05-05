@@ -10,8 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { useToast } from '@/hooks/use-toast';
-import { Download, BookOpen, ClipboardCheck, HelpCircle, FileUp, Loader2 } from 'lucide-react';
+import { Download, BookOpen, ClipboardCheck, HelpCircle, FileUp, Loader2, Search, Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface ContentImportDialogProps {
   courseId: string;
@@ -51,6 +55,9 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
   const [selectedMaterials, setSelectedMaterials] = useState<string[]>([]);
   const [selectedAssignments, setSelectedAssignments] = useState<string[]>([]);
   const [includeQuestions, setIncludeQuestions] = useState(true);
+  const [materialSearch, setMaterialSearch] = useState('');
+  const [assignmentSearch, setAssignmentSearch] = useState('');
+  const [classPickerOpen, setClassPickerOpen] = useState(false);
 
   const { data: otherClasses, isLoading: classesLoading } = useSameCourseClasses(courseId, targetClassId);
   const { data: sourceMaterials, isLoading: materialsLoading } = useSourceMaterials(sourceClassId);
@@ -183,27 +190,55 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
           {/* Source Class Selection */}
           <div className="space-y-2">
             <Label>Pilih Kelas Sumber</Label>
-            <Select value={sourceClassId} onValueChange={handleSourceClassChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih kelas dengan mata kuliah yang sama..." />
-              </SelectTrigger>
-              <SelectContent>
-                {classesLoading ? (
-                  <div className="p-2 text-center text-sm text-muted-foreground">Loading...</div>
-                ) : otherClasses?.length === 0 ? (
-                  <div className="p-2 text-center text-sm text-muted-foreground">
-                    Tidak ada kelas lain dengan mata kuliah yang sama
-                  </div>
-                ) : (
-                  otherClasses?.map((cls: any) => (
-                    <SelectItem key={cls.id} value={cls.id}>
-                      {cls.title} - {cls.class_group_name || ''}
-                      {cls.instructor_name ? ` (${cls.instructor_name})` : ''}
-                    </SelectItem>
-                  ))
-                )}
-              </SelectContent>
-            </Select>
+            <Popover open={classPickerOpen} onOpenChange={setClassPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  className="w-full justify-between font-normal"
+                >
+                  {sourceClassId
+                    ? (() => {
+                        const c: any = otherClasses?.find((cl: any) => cl.id === sourceClassId);
+                        return c ? `${c.title} - ${c.class_group_name || ''}${c.instructor_name ? ` (${c.instructor_name})` : ''}` : 'Pilih kelas...';
+                      })()
+                    : 'Pilih kelas dengan mata kuliah yang sama...'}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Cari kelas, mata kuliah, atau dosen..." />
+                  <CommandList>
+                    {classesLoading ? (
+                      <div className="p-3 text-center text-sm text-muted-foreground">Loading...</div>
+                    ) : (
+                      <>
+                        <CommandEmpty>Tidak ada kelas ditemukan.</CommandEmpty>
+                        <CommandGroup>
+                          {otherClasses?.map((cls: any) => {
+                            const label = `${cls.title} - ${cls.class_group_name || ''}${cls.instructor_name ? ` (${cls.instructor_name})` : ''}`;
+                            return (
+                              <CommandItem
+                                key={cls.id}
+                                value={label}
+                                onSelect={() => {
+                                  handleSourceClassChange(cls.id);
+                                  setClassPickerOpen(false);
+                                }}
+                              >
+                                <Check className={cn('mr-2 h-4 w-4', sourceClassId === cls.id ? 'opacity-100' : 'opacity-0')} />
+                                {label}
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </>
+                    )}
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Content Selection */}
@@ -233,6 +268,15 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
                   </Card>
                 ) : (
                   <>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Cari materi..."
+                        value={materialSearch}
+                        onChange={(e) => setMaterialSearch(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
                     <div className="flex items-center justify-between">
                       <Button variant="outline" size="sm" onClick={selectAllMaterials}>
                         {selectedMaterials.length === sourceMaterials?.length ? 'Batal Pilih Semua' : 'Pilih Semua'}
@@ -240,24 +284,30 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
                       <Badge variant="secondary">{selectedMaterials.length} dipilih</Badge>
                     </div>
                     <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                      {sourceMaterials?.map((material) => (
-                        <Card 
-                          key={material.id} 
-                          className={`cursor-pointer transition-colors ${selectedMaterials.includes(material.id) ? 'border-primary bg-primary/5' : ''}`}
-                          onClick={() => toggleMaterial(material.id)}
-                        >
-                          <CardContent className="py-3 flex items-center gap-3">
-                            <Checkbox
-                              checked={selectedMaterials.includes(material.id)}
-                              onCheckedChange={() => toggleMaterial(material.id)}
-                            />
-                            <BookOpen className="h-4 w-4 text-muted-foreground" />
-                            <div className="flex-1">
-                              <div className="font-medium">{material.title}</div>
-                              <div className="text-sm text-muted-foreground">{material.content_type}</div>
-                            </div>
-                          </CardContent>
-                        </Card>
+                      {sourceMaterials
+                        ?.filter((m: any) => {
+                          const q = materialSearch.trim().toLowerCase();
+                          if (!q) return true;
+                          return (m.title || '').toLowerCase().includes(q) || (m.content_type || '').toLowerCase().includes(q);
+                        })
+                        .map((material) => (
+                          <Card 
+                            key={material.id} 
+                            className={`cursor-pointer transition-colors ${selectedMaterials.includes(material.id) ? 'border-primary bg-primary/5' : ''}`}
+                            onClick={() => toggleMaterial(material.id)}
+                          >
+                            <CardContent className="py-3 flex items-center gap-3">
+                              <Checkbox
+                                checked={selectedMaterials.includes(material.id)}
+                                onCheckedChange={() => toggleMaterial(material.id)}
+                              />
+                              <BookOpen className="h-4 w-4 text-muted-foreground" />
+                              <div className="flex-1">
+                                <div className="font-medium">{material.title}</div>
+                                <div className="text-sm text-muted-foreground">{material.content_type}</div>
+                              </div>
+                            </CardContent>
+                          </Card>
                       ))}
                     </div>
                   </>
@@ -277,7 +327,16 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
                   </Card>
                 ) : (
                   <>
-                    <div className="flex items-center justify-between">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Cari tugas atau quiz..."
+                        value={assignmentSearch}
+                        onChange={(e) => setAssignmentSearch(e.target.value)}
+                        className="pl-9"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-4">
                         <Button variant="outline" size="sm" onClick={selectAllAssignments}>
                           {selectedAssignments.length === sourceAssignments?.length ? 'Batal Pilih Semua' : 'Pilih Semua'}
@@ -296,38 +355,44 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
                       <Badge variant="secondary">{selectedAssignments.length} dipilih</Badge>
                     </div>
                     <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                      {sourceAssignments?.map((assignment) => {
-                        const qCount = questionCounts?.[assignment.id] || 0;
-                        return (
-                          <Card 
-                            key={assignment.id} 
-                            className={`cursor-pointer transition-colors ${selectedAssignments.includes(assignment.id) ? 'border-primary bg-primary/5' : ''}`}
-                            onClick={() => toggleAssignment(assignment.id)}
-                          >
-                            <CardContent className="py-3 flex items-center gap-3">
-                              <Checkbox
-                                checked={selectedAssignments.includes(assignment.id)}
-                                onCheckedChange={() => toggleAssignment(assignment.id)}
-                              />
-                              {getAssignmentIcon(assignment.assignment_type)}
-                              <div className="flex-1">
-                                <div className="font-medium">{assignment.title}</div>
-                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                  <span>{getAssignmentTypeLabel(assignment)}</span>
-                                  {assignment.assignment_type === 'quiz' && qCount > 0 && (
-                                    <Badge variant="outline" className="text-xs px-1.5 py-0">
-                                      {qCount} soal
-                                    </Badge>
-                                  )}
-                                  {assignment.time_limit_minutes && (
-                                    <span>• {assignment.time_limit_minutes} menit</span>
-                                  )}
+                      {sourceAssignments
+                        ?.filter((a: any) => {
+                          const q = assignmentSearch.trim().toLowerCase();
+                          if (!q) return true;
+                          return (a.title || '').toLowerCase().includes(q) || (a.assignment_type || '').toLowerCase().includes(q);
+                        })
+                        .map((assignment) => {
+                          const qCount = questionCounts?.[assignment.id] || 0;
+                          return (
+                            <Card 
+                              key={assignment.id} 
+                              className={`cursor-pointer transition-colors ${selectedAssignments.includes(assignment.id) ? 'border-primary bg-primary/5' : ''}`}
+                              onClick={() => toggleAssignment(assignment.id)}
+                            >
+                              <CardContent className="py-3 flex items-center gap-3">
+                                <Checkbox
+                                  checked={selectedAssignments.includes(assignment.id)}
+                                  onCheckedChange={() => toggleAssignment(assignment.id)}
+                                />
+                                {getAssignmentIcon(assignment.assignment_type)}
+                                <div className="flex-1">
+                                  <div className="font-medium">{assignment.title}</div>
+                                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                    <span>{getAssignmentTypeLabel(assignment)}</span>
+                                    {assignment.assignment_type === 'quiz' && qCount > 0 && (
+                                      <Badge variant="outline" className="text-xs px-1.5 py-0">
+                                        {qCount} soal
+                                      </Badge>
+                                    )}
+                                    {assignment.time_limit_minutes && (
+                                      <span>• {assignment.time_limit_minutes} menit</span>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        );
-                      })}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
                     </div>
                   </>
                 )}

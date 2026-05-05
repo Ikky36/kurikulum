@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { BookOpen, FileText, Video, Image, Trash2, Pencil, Eye, Plus, GripVertical, Lock, CheckCircle, Box, Maximize2 } from 'lucide-react';
+import { BookOpen, FileText, Video, Image, Trash2, Pencil, Eye, Plus, GripVertical, Lock, CheckCircle, Box, Maximize2, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { MaterialEditor } from './MaterialEditor';
 import { H5PViewer } from './H5PViewer';
 import { MaterialQuiz } from './MaterialQuiz';
@@ -37,6 +38,7 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
   const [editingMaterial, setEditingMaterial] = useState<MaterialWithLLO | null>(null);
   const [viewingMaterial, setViewingMaterial] = useState<MaterialWithLLO | null>(null);
   const [fullViewMaterial, setFullViewMaterial] = useState<MaterialWithLLO | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Parse materials and handle sections type conversion
   const typedMaterials: MaterialWithLLO[] = (materials || []).map((m: any) => ({
@@ -82,10 +84,31 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
     );
   }
 
+  const q = searchQuery.trim().toLowerCase();
+  const filteredMaterials = q
+    ? typedMaterials.filter(m => {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = m.content || '';
+        const text = (tmp.textContent || '').toLowerCase();
+        return (m.title || '').toLowerCase().includes(q)
+          || text.includes(q)
+          || (m.llo?.code || '').toLowerCase().includes(q);
+      })
+    : typedMaterials;
+
   return (
     <div className="space-y-6">
-      {canEdit && (
-        <div className="flex justify-end">
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-xl">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cari materi..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {canEdit && (
           <Button 
             onClick={() => { setEditingMaterial(null); setShowEditor(true); }}
             size="lg"
@@ -94,8 +117,8 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
             <Plus className="h-5 w-5" />
             Tambah Materi
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {typedMaterials.length === 0 ? (
         <Card className="border-dashed border-2">
@@ -115,9 +138,15 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
             )}
           </CardContent>
         </Card>
+      ) : filteredMaterials.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center text-muted-foreground">
+            Tidak ada materi yang cocok dengan pencarian "{searchQuery}"
+          </CardContent>
+        </Card>
       ) : (
         <div className="space-y-4">
-          {typedMaterials.map((material, index) => (
+          {filteredMaterials.map((material, index) => (
             <Card 
               key={material.id} 
               className="group hover:shadow-lg transition-all duration-300 overflow-hidden"

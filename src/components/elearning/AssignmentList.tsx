@@ -10,7 +10,8 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { ClipboardCheck, FileUp, HelpCircle, Trash2, Pencil, Play, Plus, Clock, Users, Shield, Lock, CheckCircle, AlertCircle, Link2, Eye, Upload } from 'lucide-react';
+import { ClipboardCheck, FileUp, HelpCircle, Trash2, Pencil, Play, Plus, Clock, Users, Shield, Lock, CheckCircle, AlertCircle, Link2, Eye, Upload, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { AssignmentEditor } from './AssignmentEditor';
 import { QuizManager } from './QuizManager';
 import { QuizResultViewer } from './QuizResultViewer';
@@ -49,6 +50,7 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
   const [managingQuiz, setManagingQuiz] = useState<AssignmentWithRelations | null>(null);
   const [submittingLink, setSubmittingLink] = useState<AssignmentWithRelations | null>(null);
   const [gradingAssignment, setGradingAssignment] = useState<AssignmentWithRelations | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const typedAssignments = (assignments || []) as AssignmentWithRelations[];
   const isMahasiswa = profile?.role === 'mahasiswa';
@@ -122,10 +124,29 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
     );
   }
 
+  const q = searchQuery.trim().toLowerCase();
+  const filteredAssignments = q
+    ? typedAssignments.filter(a =>
+        (a.title || '').toLowerCase().includes(q)
+        || (a.description || '').toLowerCase().includes(q)
+        || (a.assignment_type || '').toLowerCase().includes(q)
+        || (a.llo?.code || '').toLowerCase().includes(q)
+      )
+    : typedAssignments;
+
   return (
     <div className="space-y-6">
-      {canEdit && (
-        <div className="flex justify-end">
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-xl">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cari tugas atau quiz..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {canEdit && (
           <Button 
             onClick={() => { setEditingAssignment(null); setShowEditor(true); }}
             size="lg"
@@ -134,8 +155,8 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
             <Plus className="h-5 w-5" />
             Tambah Tugas/Quiz
           </Button>
-        </div>
-      )}
+        )}
+      </div>
 
       {typedAssignments.length === 0 ? (
         <Card className="border-dashed border-2">
@@ -155,9 +176,15 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
             )}
           </CardContent>
         </Card>
+      ) : filteredAssignments.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center text-muted-foreground">
+            Tidak ada tugas/quiz yang cocok dengan pencarian "{searchQuery}"
+          </CardContent>
+        </Card>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {typedAssignments.map((assignment) => (
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-1 md:[&_>_div]:max-w-none">
+          {filteredAssignments.map((assignment) => (
             <Card 
               key={assignment.id} 
               className="group hover:shadow-lg transition-all duration-300 overflow-hidden"
