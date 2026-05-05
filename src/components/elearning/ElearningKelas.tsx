@@ -340,7 +340,18 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
     );
   }
 
-  const typedClasses = classesWithInstructors.length > 0 ? classesWithInstructors : (classes || []) as ClassWithRelations[];
+  const allTypedClasses = classesWithInstructors.length > 0 ? classesWithInstructors : (classes || []) as ClassWithRelations[];
+
+  const q = searchQuery.trim().toLowerCase();
+  const typedClasses = q
+    ? allTypedClasses.filter((cls) => {
+        const courseName = `${cls.course?.code || ''} ${cls.course?.name || ''}`.toLowerCase();
+        const classGroup = (cls.class_group?.name || '').toLowerCase();
+        const title = (cls.title || '').toLowerCase();
+        const instructors = (cls.assignedInstructors || []).map(i => i.full_name?.toLowerCase() || '').join(' ');
+        return courseName.includes(q) || classGroup.includes(q) || title.includes(q) || instructors.includes(q);
+      })
+    : allTypedClasses;
 
   return (
     <div className="space-y-6">
@@ -358,6 +369,17 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
             Buat Kelas Baru
           </Button>
         )}
+      </div>
+
+      {/* Search */}
+      <div className="relative max-w-xl">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Cari mata kuliah, dosen, atau kelas..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
       {/* Classes Grid */}
