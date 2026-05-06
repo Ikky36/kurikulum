@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { MaterialSection } from './MaterialSectionEditor';
 import type { SectionFile } from './SectionFileUploader';
+import { InteractiveVideoPlayer } from './InteractiveVideoPlayer';
 
 interface MaterialFullViewerProps {
   material: {
