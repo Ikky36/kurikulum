@@ -308,6 +308,12 @@ export function MaterialSectionEditor({
                       onChange={(content) => updateSection(section.id, { content })} 
                     />
 
+                    {/* Interactive Video */}
+                    <InteractiveVideoEditor
+                      value={section.interactiveVideo}
+                      onChange={(iv) => updateSection(section.id, { interactiveVideo: iv })}
+                    />
+
                     {/* File Uploader for Section */}
                     <div className="space-y-2 p-3 bg-muted/50 rounded-lg border border-border">
                       <Label className="text-sm flex items-center gap-2">
