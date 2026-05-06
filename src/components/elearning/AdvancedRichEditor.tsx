@@ -331,6 +331,41 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
     }
   }, [handleInput]);
 
+  // Click-to-delete for inserted media (image, video, audio, iframe embeds)
+  const handleEditorClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (!target || !editorRef.current) return;
+
+    const mediaSelectors = 'img, video, audio, iframe';
+    let mediaEl = target.closest(mediaSelectors) as HTMLElement | null;
+
+    // Also allow clicking on wrapper containers
+    if (!mediaEl) {
+      const wrapper = target.closest('.video-embed, .audio-embed, .media-container') as HTMLElement | null;
+      if (wrapper) {
+        mediaEl = wrapper.querySelector(mediaSelectors) as HTMLElement | null;
+      }
+    }
+
+    if (!mediaEl) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const label =
+      mediaEl.tagName === 'IMG' ? 'gambar' :
+      mediaEl.tagName === 'VIDEO' ? 'video' :
+      mediaEl.tagName === 'AUDIO' ? 'audio' : 'media ini';
+
+    if (window.confirm(`Hapus ${label} ini?`)) {
+      const wrapper = mediaEl.closest('.video-embed, .audio-embed, .media-container') as HTMLElement | null;
+      (wrapper ?? mediaEl).remove();
+      isInternalChange.current = true;
+      onChange(editorRef.current.innerHTML);
+      toast({ title: 'Dihapus', description: `${label.charAt(0).toUpperCase() + label.slice(1)} berhasil dihapus` });
+    }
+  }, [onChange, toast]);
+
   const ToolbarButton = ({ icon: Icon, onClick, title, active = false }: any) => (
     <Button
       type="button"
