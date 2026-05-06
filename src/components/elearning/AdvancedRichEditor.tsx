@@ -331,6 +331,41 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
     }
   }, [handleInput]);
 
+  // Click-to-delete for inserted media (image, video, audio, iframe embeds)
+  const handleEditorClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    if (!target || !editorRef.current) return;
+
+    const mediaSelectors = 'img, video, audio, iframe';
+    let mediaEl = target.closest(mediaSelectors) as HTMLElement | null;
+
+    // Also allow clicking on wrapper containers
+    if (!mediaEl) {
+      const wrapper = target.closest('.video-embed, .audio-embed, .media-container') as HTMLElement | null;
+      if (wrapper) {
+        mediaEl = wrapper.querySelector(mediaSelectors) as HTMLElement | null;
+      }
+    }
+
+    if (!mediaEl) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const label =
+      mediaEl.tagName === 'IMG' ? 'gambar' :
+      mediaEl.tagName === 'VIDEO' ? 'video' :
+      mediaEl.tagName === 'AUDIO' ? 'audio' : 'media ini';
+
+    if (window.confirm(`Hapus ${label} ini?`)) {
+      const wrapper = mediaEl.closest('.video-embed, .audio-embed, .media-container') as HTMLElement | null;
+      (wrapper ?? mediaEl).remove();
+      isInternalChange.current = true;
+      onChange(editorRef.current.innerHTML);
+      toast({ title: 'Dihapus', description: `${label.charAt(0).toUpperCase() + label.slice(1)} berhasil dihapus` });
+    }
+  }, [onChange, toast]);
+
   const ToolbarButton = ({ icon: Icon, onClick, title, active = false }: any) => (
     <Button
       type="button"
@@ -587,8 +622,9 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
-          className="min-h-[300px] p-4 focus:outline-none prose prose-sm max-w-none"
+          className="min-h-[300px] p-4 focus:outline-none prose prose-sm max-w-none editor-area"
           onInput={handleInput}
+          onClick={handleEditorClick}
           style={{ fontFamily: selectedFont !== 'inherit' ? selectedFont : undefined }}
           data-placeholder={placeholder || 'Mulai menulis konten...'}
         />
@@ -665,6 +701,29 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
         }
         [contenteditable] audio {
           width: 100%;
+        }
+        .editor-area iframe,
+        .editor-area video,
+        .editor-area audio {
+          pointer-events: none;
+        }
+        .editor-area .video-embed,
+        .editor-area .audio-embed,
+        .editor-area .media-container,
+        .editor-area img {
+          cursor: pointer;
+          transition: outline 0.15s ease, opacity 0.15s ease;
+        }
+        .editor-area img:hover,
+        .editor-area video:hover,
+        .editor-area audio:hover,
+        .editor-area iframe:hover,
+        .editor-area .video-embed:hover,
+        .editor-area .audio-embed:hover,
+        .editor-area .media-container:hover {
+          outline: 2px dashed hsl(var(--destructive));
+          outline-offset: 2px;
+          opacity: 0.92;
         }
       `}</style>
     </Card>
