@@ -12,6 +12,8 @@ import { AIContentGenerator } from './AIContentGenerator';
 import { SectionFileUploader, type SectionFile } from './SectionFileUploader';
 export type { SectionFile } from './SectionFileUploader';
 import { useElearningAssignments } from '@/hooks/useElearningMaterials';
+import { InteractiveVideoEditor, type InteractiveVideo } from './InteractiveVideoEditor';
+export type { InteractiveVideo } from './InteractiveVideoEditor';
 
 export interface SectionQuiz {
   assignmentId: string;
@@ -25,6 +27,7 @@ export interface MaterialSection {
   files?: SectionFile[];
   quizBefore?: SectionQuiz | null;
   quizAfter?: SectionQuiz | null;
+  interactiveVideo?: InteractiveVideo | null;
 }
 
 interface MaterialSectionEditorProps {
