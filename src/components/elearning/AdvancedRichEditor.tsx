@@ -702,6 +702,27 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
         [contenteditable] audio {
           width: 100%;
         }
+        .editor-area img,
+        .editor-area video,
+        .editor-area audio,
+        .editor-area iframe,
+        .editor-area .video-embed,
+        .editor-area .audio-embed,
+        .editor-area .media-container {
+          cursor: pointer;
+          transition: outline 0.15s ease, opacity 0.15s ease;
+        }
+        .editor-area img:hover,
+        .editor-area video:hover,
+        .editor-area audio:hover,
+        .editor-area iframe:hover,
+        .editor-area .video-embed:hover,
+        .editor-area .audio-embed:hover,
+        .editor-area .media-container:hover {
+          outline: 2px dashed hsl(var(--destructive));
+          outline-offset: 2px;
+          opacity: 0.92;
+        }
       `}</style>
     </Card>
   );
