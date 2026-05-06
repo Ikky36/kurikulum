@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import type { MaterialSection } from './MaterialSectionEditor';
 import type { SectionFile } from './SectionFileUploader';
+import { InteractiveVideoPlayer } from './InteractiveVideoPlayer';
 
 interface MaterialFullViewerProps {
   material: {
@@ -366,6 +367,16 @@ export function MaterialFullViewer({ material, onClose }: MaterialFullViewerProp
             {activeItem?.type === 'section' && (
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">{activeItem.title}</h1>
+
+                {getActiveSection()?.interactiveVideo?.url && (
+                  <div className="mb-6">
+                    <InteractiveVideoPlayer
+                      data={getActiveSection()!.interactiveVideo!}
+                      title={activeItem.title}
+                    />
+                  </div>
+                )}
+
                 <div 
                   className="prose prose-sm sm:prose-base max-w-none dark:prose-invert bidi-content prose-img:rounded-lg prose-img:max-w-full"
                   dir="auto"
