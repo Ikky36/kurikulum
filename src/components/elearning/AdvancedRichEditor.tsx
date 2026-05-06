@@ -622,8 +622,9 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
-          className="min-h-[300px] p-4 focus:outline-none prose prose-sm max-w-none"
+          className="min-h-[300px] p-4 focus:outline-none prose prose-sm max-w-none editor-area"
           onInput={handleInput}
+          onClick={handleEditorClick}
           style={{ fontFamily: selectedFont !== 'inherit' ? selectedFont : undefined }}
           data-placeholder={placeholder || 'Mulai menulis konten...'}
         />
