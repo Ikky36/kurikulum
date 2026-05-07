@@ -112,14 +112,14 @@ export function InteractiveVideoEditor({ value, onChange }: Props) {
       </Label>
 
       <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">URL Video (MP4/WebM langsung)</Label>
+        <Label className="text-xs text-muted-foreground">URL Video (YouTube, Vimeo, atau MP4/WebM langsung)</Label>
         <Input
-          placeholder="https://.../video.mp4"
+          placeholder="YouTube, Vimeo, atau https://.../video.mp4"
           value={data.url}
           onChange={(e) => update({ url: e.target.value })}
         />
         <p className="text-xs text-muted-foreground">
-          Gunakan URL file video langsung (mp4/webm). Soal/overlay/bookmark akan tampil sesuai menit yang ditentukan.
+          Mendukung YouTube, Vimeo, dan file mp4/webm. Soal/overlay/bookmark akan tampil sesuai menit yang ditentukan.
         </p>
       </div>
 
