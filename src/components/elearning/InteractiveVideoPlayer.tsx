@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,8 +23,61 @@ interface ActiveOverlay {
   expiresAt: number;
 }
 
+// ---------- URL helpers ----------
+function getYouTubeId(url: string): string | null {
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    if (u.hostname.includes('youtu.be')) {
+      return u.pathname.slice(1).split('/')[0] || null;
+    }
+    if (u.hostname.includes('youtube.com') || u.hostname.includes('youtube-nocookie.com')) {
+      if (u.pathname === '/watch') return u.searchParams.get('v');
+      const parts = u.pathname.split('/').filter(Boolean);
+      const idx = parts.findIndex((p) => p === 'embed' || p === 'shorts' || p === 'v');
+      if (idx >= 0 && parts[idx + 1]) return parts[idx + 1];
+    }
+  } catch {
+    // not a URL
+  }
+  return null;
+}
+
+function getVimeoId(url: string): string | null {
+  if (!url) return null;
+  const m = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  return m ? m[1] : null;
+}
+
+// ---------- YouTube IFrame API loader ----------
+let ytApiPromise: Promise<any> | null = null;
+function loadYouTubeApi(): Promise<any> {
+  if (typeof window === 'undefined') return Promise.reject(new Error('no window'));
+  if ((window as any).YT && (window as any).YT.Player) return Promise.resolve((window as any).YT);
+  if (ytApiPromise) return ytApiPromise;
+  ytApiPromise = new Promise((resolve) => {
+    const prev = (window as any).onYouTubeIframeAPIReady;
+    (window as any).onYouTubeIframeAPIReady = () => {
+      if (typeof prev === 'function') {
+        try { prev(); } catch {}
+      }
+      resolve((window as any).YT);
+    };
+    if (!document.querySelector('script[data-youtube-iframe-api]')) {
+      const s = document.createElement('script');
+      s.src = 'https://www.youtube.com/iframe_api';
+      s.async = true;
+      s.dataset.youtubeIframeApi = '1';
+      document.head.appendChild(s);
+    }
+  });
+  return ytApiPromise;
+}
+
 export function InteractiveVideoPlayer({ data, title }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const ytContainerRef = useRef<HTMLDivElement>(null);
+  const ytPlayerRef = useRef<any>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [overlay, setOverlay] = useState<ActiveOverlay | null>(null);
   const [activeQuestion, setActiveQuestion] = useState<InteractiveMarker | null>(null);
@@ -34,47 +87,67 @@ export function InteractiveVideoPlayer({ data, title }: Props) {
   const passedQuestionsRef = useRef<Set<string>>(new Set());
 
   const sortedMarkers = [...(data.markers || [])].sort((a, b) => a.time - b.time);
-  const bookmarks = sortedMarkers.filter(m => m.kind === 'bookmark');
 
-  // Time tracking
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v) return;
+  const ytId = getYouTubeId(data.url);
+  const vimeoId = getVimeoId(data.url);
+  const isYouTube = !!ytId;
+  const isVimeo = !!vimeoId;
+  const isDirect = !isYouTube && !isVimeo;
 
-    const onTime = () => {
-      const t = v.currentTime;
-      setCurrentTime(t);
+  // Unified controls
+  const pause = useCallback(() => {
+    if (isYouTube && ytPlayerRef.current?.pauseVideo) ytPlayerRef.current.pauseVideo();
+    else if (videoRef.current) videoRef.current.pause();
+  }, [isYouTube]);
 
-      // Expire overlay
-      if (overlay && Date.now() > overlay.expiresAt) {
-        setOverlay(null);
-      }
+  const play = useCallback(() => {
+    if (isYouTube && ytPlayerRef.current?.playVideo) ytPlayerRef.current.playVideo();
+    else if (videoRef.current) videoRef.current.play().catch(() => {});
+  }, [isYouTube]);
 
-      // Trigger markers within 0.6s window, not yet fired
-      for (const m of sortedMarkers) {
-        if (firedRef.current.has(m.id)) continue;
-        if (t >= m.time && t < m.time + 0.8) {
-          firedRef.current.add(m.id);
-          if (m.kind === 'text' || m.kind === 'image') {
-            setOverlay({ marker: m, expiresAt: Date.now() + (m.durationSec || 5) * 1000 });
-          } else if (m.kind === 'question') {
-            if (!passedQuestionsRef.current.has(m.id)) {
-              v.pause();
-              setActiveQuestion(m);
-              setSelectedAnswer(null);
-              setQuestionResult(null);
-            }
+  const seek = useCallback((sec: number) => {
+    if (isYouTube && ytPlayerRef.current?.seekTo) {
+      ytPlayerRef.current.seekTo(sec, true);
+      ytPlayerRef.current.playVideo?.();
+    } else if (videoRef.current) {
+      videoRef.current.currentTime = sec;
+      videoRef.current.play().catch(() => {});
+    }
+  }, [isYouTube]);
+
+  // Process time updates: triggers markers + expires overlay
+  const processTime = useCallback((t: number) => {
+    setCurrentTime(t);
+    setOverlay((prev) => (prev && Date.now() > prev.expiresAt ? null : prev));
+
+    for (const m of sortedMarkers) {
+      if (firedRef.current.has(m.id)) continue;
+      if (t >= m.time && t < m.time + 1.2) {
+        firedRef.current.add(m.id);
+        if (m.kind === 'text' || m.kind === 'image') {
+          setOverlay({ marker: m, expiresAt: Date.now() + (m.durationSec || 5) * 1000 });
+        } else if (m.kind === 'question') {
+          if (!passedQuestionsRef.current.has(m.id)) {
+            pause();
+            setActiveQuestion(m);
+            setSelectedAnswer(null);
+            setQuestionResult(null);
           }
         }
       }
-    };
+    }
+  }, [sortedMarkers, pause]);
 
+  // Native <video> listeners
+  useEffect(() => {
+    if (!isDirect) return;
+    const v = videoRef.current;
+    if (!v) return;
+
+    const onTime = () => processTime(v.currentTime);
     const onSeeking = () => {
-      // Allow re-firing markers that are ahead of new position
       const t = v.currentTime;
-      firedRef.current = new Set(
-        sortedMarkers.filter(m => m.time < t - 0.5).map(m => m.id)
-      );
+      firedRef.current = new Set(sortedMarkers.filter(m => m.time < t - 0.5).map(m => m.id));
     };
 
     v.addEventListener('timeupdate', onTime);
@@ -83,14 +156,49 @@ export function InteractiveVideoPlayer({ data, title }: Props) {
       v.removeEventListener('timeupdate', onTime);
       v.removeEventListener('seeking', onSeeking);
     };
-  }, [sortedMarkers, overlay]);
+  }, [isDirect, processTime, sortedMarkers]);
 
-  const seekTo = (sec: number) => {
-    const v = videoRef.current;
-    if (!v) return;
-    v.currentTime = sec;
-    v.play().catch(() => {});
-  };
+  // YouTube player setup + polling
+  useEffect(() => {
+    if (!isYouTube || !ytId) return;
+    let intervalId: number | null = null;
+    let cancelled = false;
+    let lastT = 0;
+
+    loadYouTubeApi().then((YT) => {
+      if (cancelled || !ytContainerRef.current) return;
+      ytPlayerRef.current = new YT.Player(ytContainerRef.current, {
+        videoId: ytId,
+        playerVars: {
+          rel: 0,
+          modestbranding: 1,
+          playsinline: 1,
+        },
+        events: {
+          onReady: () => {
+            intervalId = window.setInterval(() => {
+              const p = ytPlayerRef.current;
+              if (!p?.getCurrentTime) return;
+              const t = p.getCurrentTime();
+              // Detect backward seek -> reset fired markers ahead of new pos
+              if (t < lastT - 1) {
+                firedRef.current = new Set(sortedMarkers.filter(m => m.time < t - 0.5).map(m => m.id));
+              }
+              lastT = t;
+              processTime(t);
+            }, 400);
+          },
+        },
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      if (intervalId) window.clearInterval(intervalId);
+      try { ytPlayerRef.current?.destroy?.(); } catch {}
+      ytPlayerRef.current = null;
+    };
+  }, [isYouTube, ytId, processTime, sortedMarkers]);
 
   const handleSubmitAnswer = () => {
     if (!activeQuestion?.question || selectedAnswer === null) return;
@@ -103,15 +211,12 @@ export function InteractiveVideoPlayer({ data, title }: Props) {
 
   const handleContinue = () => {
     if (!activeQuestion) return;
-    const v = videoRef.current;
-    if (questionResult === 'wrong' && v) {
+    if (questionResult === 'wrong') {
       const rewindTo = activeQuestion.question?.rewindTo ?? Math.max(0, activeQuestion.time - 10);
-      // allow re-trigger on rewind
       firedRef.current.delete(activeQuestion.id);
-      v.currentTime = rewindTo;
-      v.play().catch(() => {});
-    } else if (v) {
-      v.play().catch(() => {});
+      seek(rewindTo);
+    } else {
+      play();
     }
     setActiveQuestion(null);
     setSelectedAnswer(null);
@@ -125,17 +230,37 @@ export function InteractiveVideoPlayer({ data, title }: Props) {
       <CardContent className="p-0">
         <div className="grid md:grid-cols-[1fr_240px] gap-0">
           <div className="relative bg-black">
-            <video
-              ref={videoRef}
-              src={data.url}
-              controls
-              className="w-full max-h-[70vh] bg-black"
-              title={title}
-            />
+            {isYouTube ? (
+              <div className="relative w-full" style={{ aspectRatio: '16 / 9' }}>
+                <div ref={ytContainerRef} className="absolute inset-0 w-full h-full" />
+              </div>
+            ) : isVimeo ? (
+              <div className="relative w-full" style={{ aspectRatio: '16 / 9' }}>
+                <iframe
+                  src={`https://player.vimeo.com/video/${vimeoId}`}
+                  className="absolute inset-0 w-full h-full"
+                  allow="autoplay; fullscreen; picture-in-picture"
+                  allowFullScreen
+                  title={title}
+                />
+                <div className="absolute bottom-2 left-2 bg-amber-500/90 text-white text-[10px] px-2 py-1 rounded">
+                  Marker tidak tersedia untuk Vimeo
+                </div>
+              </div>
+            ) : (
+              <video
+                ref={videoRef}
+                src={data.url}
+                controls
+                playsInline
+                className="w-full max-h-[70vh] bg-black"
+                title={title}
+              />
+            )}
 
             {/* Overlay text/image */}
             {overlay && (
-              <div className="absolute inset-x-0 top-0 flex justify-center p-3 pointer-events-none animate-in fade-in slide-in-from-top-2">
+              <div className="absolute inset-x-0 top-0 flex justify-center p-3 pointer-events-none animate-in fade-in slide-in-from-top-2 z-10">
                 <div className="bg-background/95 backdrop-blur border rounded-lg shadow-lg px-4 py-3 max-w-[90%] pointer-events-auto">
                   <div className="flex items-start gap-2">
                     <div className="flex-1">
@@ -167,7 +292,7 @@ export function InteractiveVideoPlayer({ data, title }: Props) {
 
             {/* Question modal overlay */}
             {activeQuestion?.question && (
-              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-10">
+              <div className="absolute inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-20">
                 <Card className="w-full max-w-lg">
                   <CardContent className="p-5 space-y-4">
                     <div className="flex items-center gap-2 text-primary">
@@ -256,7 +381,7 @@ export function InteractiveVideoPlayer({ data, title }: Props) {
                     <button
                       key={m.id}
                       type="button"
-                      onClick={() => seekTo(m.time)}
+                      onClick={() => seek(m.time)}
                       className={cn(
                         'w-full text-left px-2 py-2 rounded-md hover:bg-muted text-xs transition-colors flex items-start gap-2',
                         isPast && 'opacity-70'
