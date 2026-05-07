@@ -112,7 +112,7 @@ export function InteractiveVideoEditor({ value, onChange }: Props) {
       </Label>
 
       <div className="space-y-2">
-        <Label className="text-xs text-muted-foreground">URL Video (MP4/WebM langsung)</Label>
+        <Label className="text-xs text-muted-foreground">URL Video (YouTube, Vimeo, atau MP4/WebM langsung)</Label>
         <Input
           placeholder="https://.../video.mp4"
           value={data.url}
