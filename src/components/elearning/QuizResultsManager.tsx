@@ -49,11 +49,45 @@ interface Submission {
 }
 
 export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: QuizResultsManagerProps) {
-  const { profile } = useAuth();
+  const { profile, hasAnyRole } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const canReset = hasAnyRole(['admin', 'sub_admin', 'dosen']);
   const [open, setOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<StudentInfo | null>(null);
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [resettingStudentId, setResettingStudentId] = useState<string | null>(null);
+
+  const resetStudentAttempts = async (studentId: string, studentName: string) => {
+    setResettingStudentId(studentId);
+    try {
+      const { error } = await supabase
+        .from('elearning_submissions')
+        .delete()
+        .eq('assignment_id', assignmentId)
+        .eq('student_profile_id', studentId);
+      if (error) throw error;
+      toast({
+        title: 'Kesempatan direset',
+        description: `Semua percobaan ${studentName} telah dihapus.`,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['quiz-results-all-submissions', assignmentId] });
+      if (selectedStudent?.id === studentId) {
+        setSelectedSubmission(null);
+        setSelectedStudent(null);
+      }
+    } catch (err: any) {
+      toast({
+        title: 'Gagal mereset',
+        description: err?.message || 'Terjadi kesalahan.',
+        variant: 'destructive',
+      });
+    } finally {
+      setResettingStudentId(null);
+    }
+  };
+
 
   // Fetch all class students
   const { data: allStudents, isLoading: studentsLoading } = useQuery({
