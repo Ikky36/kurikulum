@@ -671,7 +671,10 @@ export default function QuizTaking() {
                       try { options = JSON.parse(options); } catch { options = []; }
                     }
                     if (currentQuestion.question_type === 'true_false') {
-                      options = ['Benar', 'Salah'];
+                      // Use stored options (e.g. Arabic) if present; fallback to Indonesian
+                      if (!Array.isArray(options) || options.length < 2) {
+                        options = ['Benar', 'Salah'];
+                      }
                     }
                     return (options || []).map((option: string, idx: number) => {
                       const isArabicOption = containsArabic(option);
