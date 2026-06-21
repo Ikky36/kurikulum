@@ -466,20 +466,24 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                 {filteredStudents.map(({ student, bestScore, totalAttempts }) => (
                   <Card
                     key={student.id}
-                    className={`cursor-pointer hover:shadow-md transition-shadow ${totalAttempts === 0 ? 'opacity-60' : ''}`}
-                    onClick={() => totalAttempts > 0 ? setSelectedStudent(student) : null}
+                    className={`hover:shadow-md transition-shadow ${totalAttempts === 0 ? 'opacity-60' : ''}`}
                   >
                     <CardContent className="p-3 flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={student.photo_url || undefined} />
-                        <AvatarFallback>{student.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate">{student.full_name}</p>
-                        <p className="text-xs text-muted-foreground">{student.nim || student.email}</p>
+                      <div
+                        className={`flex-1 min-w-0 flex items-center gap-3 ${totalAttempts > 0 ? 'cursor-pointer' : ''}`}
+                        onClick={() => totalAttempts > 0 ? setSelectedStudent(student) : null}
+                      >
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={student.photo_url || undefined} />
+                          <AvatarFallback>{student.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{student.full_name}</p>
+                          <p className="text-xs text-muted-foreground">{student.nim || student.email}</p>
+                        </div>
                       </div>
                       {totalAttempts > 0 ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap justify-end">
                           <Badge variant="secondary" className="text-xs">
                             {totalAttempts}x percobaan
                           </Badge>
@@ -487,7 +491,42 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                             <Trophy className="h-3 w-3 mr-1" />
                             {bestScore?.toFixed(0) || 0}%
                           </Badge>
-                          <Eye className="h-4 w-4 text-muted-foreground" />
+                          {canReset && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-8 px-2 text-destructive hover:text-destructive"
+                                  disabled={resettingStudentId === student.id}
+                                  title="Reset kesempatan"
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Reset Kesempatan Mahasiswa?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Semua percobaan ({totalAttempts}x) milik <b>{student.full_name}</b> pada quiz ini akan dihapus permanen. Mahasiswa dapat mengerjakan ulang dari awal. Lanjutkan?
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-destructive hover:bg-destructive/90"
+                                    onClick={() => resetStudentAttempts(student.id, student.full_name)}
+                                  >
+                                    Ya, Reset
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                          <Eye
+                            className="h-4 w-4 text-muted-foreground cursor-pointer"
+                            onClick={() => setSelectedStudent(student)}
+                          />
                         </div>
                       ) : (
                         <Badge variant="outline" className="text-muted-foreground">
@@ -497,6 +536,7 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                     </CardContent>
                   </Card>
                 ))}
+
                 {filteredStudents.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground">
                     <p>Tidak ada mahasiswa ditemukan.</p>
