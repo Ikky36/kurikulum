@@ -598,7 +598,41 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
 
             {/* Attempt selector */}
             <div>
-              <h3 className="font-semibold mb-3">Riwayat Percobaan</h3>
+              <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+                <h3 className="font-semibold">Riwayat Percobaan</h3>
+                {canReset && selectedStudent && selectedStudentSubmissions.length > 0 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-destructive hover:text-destructive gap-2"
+                        disabled={resettingStudentId === selectedStudent.id}
+                      >
+                        <RotateCcw className="h-4 w-4" />
+                        Reset Kesempatan
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Reset Kesempatan Mahasiswa?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Semua {selectedStudentSubmissions.length} percobaan milik <b>{selectedStudent.full_name}</b> pada quiz ini akan dihapus permanen. Mahasiswa dapat mengerjakan ulang dari awal. Lanjutkan?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Batal</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-destructive hover:bg-destructive/90"
+                          onClick={() => resetStudentAttempts(selectedStudent.id, selectedStudent.full_name)}
+                        >
+                          Ya, Reset
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
+              </div>
               <div className="flex flex-wrap gap-2">
                 {selectedStudentSubmissions.map((submission) => (
                   <Button
@@ -616,6 +650,7 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                 ))}
               </div>
             </div>
+
 
             {/* Submission detail */}
             {selectedSubmission ? (
