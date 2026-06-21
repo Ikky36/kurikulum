@@ -268,31 +268,49 @@ export function MaterialQuiz({ assignmentId, assignmentTitle, onComplete }: Mate
         )}
 
         {/* True/False */}
-        {currentQuestion.question_type === 'true_false' && (
-          <RadioGroup
-            value={answers[currentQuestion.id] || ''}
-            onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
-          >
-            <div className="grid grid-cols-2 gap-4">
-              {['true', 'false'].map((val) => (
-                <div 
-                  key={val}
-                  className={`flex items-center justify-center p-4 rounded-lg border cursor-pointer transition-colors ${
-                    answers[currentQuestion.id] === val 
-                      ? 'bg-primary/5 border-primary' 
-                      : 'hover:bg-muted'
-                  }`}
-                  onClick={() => handleAnswerChange(currentQuestion.id, val)}
-                >
-                  <RadioGroupItem value={val} id={val} className="mr-2" />
-                  <Label htmlFor={val} className="cursor-pointer font-medium">
-                    {val === 'true' ? 'Benar' : 'Salah'}
-                  </Label>
-                </div>
-              ))}
-            </div>
-          </RadioGroup>
-        )}
+        {currentQuestion.question_type === 'true_false' && (() => {
+          const tfOptions = options.length >= 2
+            ? options.map(o => o.text)
+            : ['Benar', 'Salah'];
+          return (
+            <RadioGroup
+              value={answers[currentQuestion.id]?.toString() || ''}
+              onValueChange={(value) => handleAnswerChange(currentQuestion.id, parseInt(value))}
+            >
+              <div className="grid grid-cols-2 gap-4">
+                {tfOptions.map((label, idx) => {
+                  const isArabicOption = containsArabic(label);
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex items-center justify-center p-4 rounded-lg border cursor-pointer transition-colors bidi-content ${
+                        answers[currentQuestion.id] === idx
+                          ? 'bg-primary/5 border-primary'
+                          : 'hover:bg-muted'
+                      }`}
+                      dir="auto"
+                      onClick={() => handleAnswerChange(currentQuestion.id, idx)}
+                    >
+                      <RadioGroupItem value={String(idx)} id={`tf-${currentQuestion.id}-${idx}`} className="mr-2" />
+                      <Label
+                        htmlFor={`tf-${currentQuestion.id}-${idx}`}
+                        className={`cursor-pointer font-medium bidi-content ${isArabicOption ? 'font-arabic' : ''}`}
+                        dir="auto"
+                        style={isArabicOption ? {
+                          fontFamily: "'Scheherazade New', 'Amiri', serif",
+                          fontSize: '1.2em',
+                          lineHeight: 1.8,
+                        } : undefined}
+                      >
+                        {label}
+                      </Label>
+                    </div>
+                  );
+                })}
+              </div>
+            </RadioGroup>
+          );
+        })()}
 
         {/* Multiple Answer */}
         {currentQuestion.question_type === 'multiple_answer' && (
