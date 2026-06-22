@@ -659,7 +659,7 @@ export default function QuizTaking() {
             </CardHeader>
             <CardContent>
               {/* Multiple Choice / True False */}
-              {(currentQuestion.question_type === 'multiple_choice' || currentQuestion.question_type === 'true_false') && (
+              {(currentQuestion.question_type === 'multiple_choice' || currentQuestion.question_type === 'true_false' || currentQuestion.question_type === 'select_missing_word') && (
                 <RadioGroup
                   value={answers[currentQuestion.id] || ''}
                   onValueChange={(value) => handleAnswerChange(currentQuestion.id, value)}
