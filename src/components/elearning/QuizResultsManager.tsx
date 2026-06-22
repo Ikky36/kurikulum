@@ -155,11 +155,22 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
     const bestScore = studentSubs.length > 0
       ? Math.max(...studentSubs.map(s => s.score || 0))
       : null;
+      
+    const hasViolation = studentSubs.some(sub => {
+      try {
+        const ans = typeof sub.answers === 'string' ? JSON.parse(sub.answers) : sub.answers;
+        return ans?._is_auto_submitted === true;
+      } catch {
+        return false;
+      }
+    });
+
     return {
       student: cs.student,
       submissions: studentSubs,
       bestScore,
       totalAttempts: studentSubs.length,
+      hasViolation,
     };
   });
 
@@ -478,7 +489,10 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                           <AvatarFallback>{student.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{student.full_name}</p>
+                          <p className="font-medium truncate flex items-center gap-2">
+                            {student.full_name}
+                            {hasViolation && <span title="Ada riwayat pelanggaran aturan kuis" className="text-base cursor-help">🚩</span>}
+                          </p>
                           <p className="text-xs text-muted-foreground">{student.nim || student.email}</p>
                         </div>
                       </div>
@@ -643,6 +657,15 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                     className="gap-2"
                   >
                     <span>Percobaan {submission.attempt_number}</span>
+                    {(() => {
+                      try {
+                        const ans = typeof submission.answers === 'string' ? JSON.parse(submission.answers) : submission.answers;
+                        if (ans?._is_auto_submitted) {
+                          return <span title="Disubmit Otomatis">🚩</span>;
+                        }
+                      } catch {}
+                      return null;
+                    })()}
                     <Badge variant="secondary" className="text-xs">
                       {submission.score?.toFixed(0) || 0}%
                     </Badge>
@@ -666,6 +689,27 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                       {format(new Date(selectedSubmission.submitted_at), 'dd MMM yyyy, HH:mm', { locale: idLocale })}
                     </Badge>
                   </div>
+                  
+                  {(() => {
+                    try {
+                      const ans = typeof selectedSubmission.answers === 'string' ? JSON.parse(selectedSubmission.answers) : selectedSubmission.answers;
+                      if (ans?._is_auto_submitted) {
+                        return (
+                          <div className="mb-4 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded p-3 text-sm text-red-600 dark:text-red-400">
+                            <div className="flex items-center gap-2 font-semibold">
+                              <AlertCircle className="h-4 w-4" />
+                              Disubmit paksa oleh sistem karena pelanggaran aturan
+                            </div>
+                            {ans._violation_reason && (
+                              <p className="mt-1 ml-6 text-xs text-red-500">Alasan: {ans._violation_reason}</p>
+                            )}
+                          </div>
+                        );
+                      }
+                    } catch {}
+                    return null;
+                  })()}
+
                   <ScrollArea className="h-[350px] pr-4">
                     {renderSubmissionDetail(selectedSubmission)}
                   </ScrollArea>

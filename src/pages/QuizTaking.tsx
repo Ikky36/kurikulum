@@ -93,6 +93,8 @@ export default function QuizTaking() {
   const [showFocusWarning, setShowFocusWarning] = useState(false);
   const focusViolationRef = useRef(false);
   const quizStartedRef = useRef(false);
+  const wakeLockRef = useRef<any>(null);
+  const hideTimeRef = useRef<number | null>(null);
 
 
   const { data: assignment, isLoading: loadingAssignment } = useQuery({
@@ -163,6 +165,10 @@ export default function QuizTaking() {
 
   // Focus mode detection - prevent tab switching
   const handleVisibilityChange = useCallback(() => {
+    if (document.hidden) {
+      hideTimeRef.current = Date.now();
+    }
+
     if (document.hidden && assignment?.is_safe_exam_mode) {
       setTabBlurCount(prev => prev + 1);
       setFocusModeWarnings(prev => prev + 1);
@@ -172,21 +178,40 @@ export default function QuizTaking() {
       
       if (tabBlurCount >= 2) {
         toast.error('Quiz dihentikan karena terlalu banyak peringatan!');
-        handleAutoSubmit();
+        handleAutoSubmit(true, 'Pelanggaran berulang: Meninggalkan halaman kuis (Mode Ujian)');
       }
     }
 
-    // Focus Mode: any tab switch triggers warning → auto-submit
-    if (document.hidden && assignment?.is_focus_mode && focusModeActive && !focusViolationRef.current && !showResults) {
-      focusViolationRef.current = true;
-      setShowFocusWarning(true);
+    // Focus Mode: 5s grace period logic
+    if (assignment?.is_focus_mode && focusModeActive && !focusViolationRef.current && !showResults) {
+      if (document.hidden) {
+        hideTimeRef.current = Date.now();
+      } else if (hideTimeRef.current) {
+        const timeAway = Date.now() - hideTimeRef.current;
+        hideTimeRef.current = null;
+
+        if (timeAway > 5000) {
+          focusViolationRef.current = true;
+          handleAutoSubmit(true, `Meninggalkan halaman kuis lebih dari batas waktu (Tercatat keluar selama ${Math.round(timeAway / 1000)} detik)`);
+        } else {
+          setFocusModeWarnings(prev => {
+            const next = prev + 1;
+            if (next >= 2) {
+              focusViolationRef.current = true;
+              handleAutoSubmit(true, 'Pelanggaran berulang: 2 kali keluar dari halaman kuis meskipun sudah diperingatkan');
+            } else {
+              toast.error('Peringatan 1: Anda terdeteksi keluar dari kuis. Jangan ulangi lagi atau kuis akan langsung dihentikan.');
+            }
+            return next;
+          });
+        }
+      }
     }
   }, [assignment?.is_safe_exam_mode, assignment?.is_focus_mode, tabBlurCount, focusModeActive, showResults]);
 
   // Focus Mode: fullscreen change detection
   const handleFullscreenChange = useCallback(() => {
     if (!document.fullscreenElement && assignment?.is_focus_mode && focusModeActive && !focusViolationRef.current && !showResults) {
-      focusViolationRef.current = true;
       setShowFocusWarning(true);
     }
   }, [assignment?.is_focus_mode, focusModeActive, showResults]);
@@ -223,13 +248,24 @@ export default function QuizTaking() {
     document.addEventListener('keydown', handleKeyDown);
     document.addEventListener('fullscreenchange', handleFullscreenChange);
 
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if ((assignment?.is_focus_mode && focusModeActive) || assignment?.is_safe_exam_mode) {
+        if (!showResults) {
+          e.preventDefault();
+          e.returnValue = '';
+        }
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       document.removeEventListener('contextmenu', handleContextMenu);
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [handleVisibilityChange, handleContextMenu, handleKeyDown, handleFullscreenChange]);
+  }, [handleVisibilityChange, handleContextMenu, handleKeyDown, handleFullscreenChange, assignment?.is_focus_mode, assignment?.is_safe_exam_mode, focusModeActive, showResults]);
 
   // Focus Mode: enter fullscreen when quiz starts
   const enterFocusMode = useCallback(async () => {
@@ -238,6 +274,15 @@ export default function QuizTaking() {
       setFocusModeActive(true);
       quizStartedRef.current = true;
       toast.success('Mode Fokus aktif. Jangan keluar fullscreen atau berpindah tab.');
+      
+      // Request Wake Lock
+      if ('wakeLock' in navigator) {
+        try {
+          wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+        } catch (err) {
+          console.error('Wake Lock request failed:', err);
+        }
+      }
     } catch {
       toast.error('Gagal mengaktifkan mode fullscreen. Pastikan browser mendukung fitur ini.');
     }
@@ -245,18 +290,23 @@ export default function QuizTaking() {
 
   // Focus Mode: exit fullscreen when quiz ends
   useEffect(() => {
-    if (showResults && document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
+    if (showResults) {
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
       setFocusModeActive(false);
+      if (wakeLockRef.current) {
+        wakeLockRef.current.release().catch(console.error);
+        wakeLockRef.current = null;
+      }
     }
   }, [showResults]);
 
   // Focus Mode: auto-submit on violation confirmation
-  const handleFocusViolationSubmit = useCallback(async () => {
+  const handleReturnToFocusMode = useCallback(async () => {
     setShowFocusWarning(false);
-    toast.error('Quiz otomatis dikumpulkan karena Anda meninggalkan mode fokus.');
-    await handleSubmit();
-  }, []);
+    await enterFocusMode();
+  }, [enterFocusMode]);
 
   // Timer
   useEffect(() => {
@@ -281,9 +331,13 @@ export default function QuizTaking() {
     return () => clearInterval(timer);
   }, [timeLeft, showResults]);
 
-  const handleAutoSubmit = async () => {
-    toast.warning('Waktu habis! Quiz akan disubmit otomatis.');
-    await handleSubmit();
+  const handleAutoSubmit = async (isAuto = true, reason: string = 'Waktu habis! Quiz disubmit otomatis.') => {
+    if (!focusViolationRef.current || reason.includes('Waktu habis')) {
+      toast.warning(reason);
+    } else {
+      toast.error(`KUIS DIHENTIKAN OTOMATIS: ${reason}`);
+    }
+    await handleSubmit(isAuto, reason);
   };
 
   const formatTime = (seconds: number) => {
@@ -313,7 +367,7 @@ export default function QuizTaking() {
     setAnswers(prev => ({ ...prev, [questionId]: value }));
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (isAuto = false, violationReason = '') => {
     if (!profile?.id || !assignmentId) return;
 
     setIsSubmitting(true);
@@ -332,10 +386,17 @@ export default function QuizTaking() {
 
       const attemptNumber = (previousSubmissions?.length || 0) + 1;
 
+      const finalAnswers = {
+        ...answers,
+        _is_auto_submitted: isAuto,
+        _violation_reason: violationReason || null,
+        _focus_mode_warnings: focusModeWarnings
+      };
+
       const submissionData = {
         assignment_id: assignmentId,
         student_profile_id: profile.id,
-        answers: JSON.stringify(answers),
+        answers: JSON.stringify(finalAnswers),
         score: gradingResult.percentage,
         attempt_number: attemptNumber,
         submitted_at: new Date().toISOString(),
@@ -904,19 +965,19 @@ export default function QuizTaking() {
       <AlertDialog open={showFocusWarning}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+            <AlertDialogTitle className="flex items-center gap-2 text-warning">
               <AlertTriangle className="h-5 w-5" />
-              Pelanggaran Mode Fokus
+              Layar Penuh Tertutup
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Anda telah keluar dari mode fullscreen atau berpindah tab/aplikasi. 
-              Sesuai aturan, quiz Anda akan otomatis dikumpulkan dengan jawaban yang sudah diisi.
+              Anda telah keluar dari mode layar penuh (fullscreen). Anda harus kembali ke layar penuh untuk melanjutkan kuis. Waktu kuis akan terus berjalan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogAction onClick={handleFocusViolationSubmit}>
-              Kumpulkan Quiz
-            </AlertDialogAction>
+            <Button onClick={handleReturnToFocusMode}>
+              <Maximize className="h-4 w-4 mr-2" />
+              Kembali ke Mode Fokus
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
