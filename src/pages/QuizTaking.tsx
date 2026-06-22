@@ -89,6 +89,7 @@ export default function QuizTaking() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [tabBlurCount, setTabBlurCount] = useState(0);
   const [focusModeActive, setFocusModeActive] = useState(false);
+  const [focusConsent, setFocusConsent] = useState(false);
   const [showFocusWarning, setShowFocusWarning] = useState(false);
   const focusViolationRef = useRef(false);
   const quizStartedRef = useRef(false);
