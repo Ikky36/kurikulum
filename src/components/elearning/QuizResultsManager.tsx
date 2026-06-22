@@ -148,8 +148,10 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
       if (error) throw error;
       return data;
     },
-    enabled: open && !!selectedStudent,
+    enabled: open,
   });
+
+  const totalQuizPoints = questions?.reduce((sum: number, q: any) => sum + (q.points || 0), 0) || 0;
 
   const studentSubmissions: Submission[] = [];
   const testSubmissions: Submission[] = [];
@@ -564,7 +566,7 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                           </Badge>
                           <Badge className="bg-primary/10 text-primary">
                             <Trophy className="h-3 w-3 mr-1" />
-                            {bestScore?.toFixed(0) || 0}%
+                            {totalQuizPoints > 0 ? `${Math.round(((bestScore || 0) / 100) * totalQuizPoints)} / ${totalQuizPoints} poin (${bestScore?.toFixed(0) || 0}%)` : `${bestScore?.toFixed(0) || 0}%`}
                           </Badge>
                           {canReset && (
                             <AlertDialog>
@@ -660,7 +662,7 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                             </Badge>
                             <Badge className="bg-primary/10 text-primary">
                               <Trophy className="h-3 w-3 mr-1" />
-                              {bestScore?.toFixed(0) || 0}%
+                              {totalQuizPoints > 0 ? `${Math.round(((bestScore || 0) / 100) * totalQuizPoints)} / ${totalQuizPoints} poin (${bestScore?.toFixed(0) || 0}%)` : `${bestScore?.toFixed(0) || 0}%`}
                             </Badge>
                             <Eye
                               className="h-4 w-4 text-muted-foreground cursor-pointer"
