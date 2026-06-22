@@ -535,7 +535,7 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
                   {cls.assignedInstructors && cls.assignedInstructors.length > 0 ? (
                     <div className="flex items-center gap-2">
                       <div className="flex -space-x-2">
-                        {cls.assignedInstructors.slice(0, 3).map((ins) => (
+                        {cls.assignedInstructors.map((ins) => (
                           <Avatar key={ins.id} className="h-7 w-7 ring-2 ring-background">
                             <AvatarImage src={ins.photo_url || undefined} />
                             <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
@@ -544,9 +544,8 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
                           </Avatar>
                         ))}
                       </div>
-                      <span className="text-xs text-muted-foreground truncate">
-                        {cls.assignedInstructors[0].full_name}
-                        {cls.assignedInstructors.length > 1 && ` +${cls.assignedInstructors.length - 1}`}
+                      <span className="text-xs text-muted-foreground truncate" title={cls.assignedInstructors.map(ins => ins.full_name).join(', ')}>
+                        {cls.assignedInstructors.map(ins => ins.full_name).join(', ')}
                       </span>
                     </div>
                   ) : (
