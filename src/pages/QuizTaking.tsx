@@ -404,6 +404,7 @@ export default function QuizTaking() {
         score: gradingResult ? gradingResult.percentage : 0,
         attempt_number: attemptNumber,
         submitted_at: new Date().toISOString(),
+        is_test_mode: isTestMode,
       };
 
       try {

@@ -90,18 +90,24 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
     }
   };
 
-
-  // Fetch all class students
-  const { data: allStudents, isLoading: studentsLoading } = useQuery({
-    queryKey: ['quiz-results-students', classId],
+  const { data: eClass } = useQuery({
+    queryKey: ['elearning-class', classId],
     queryFn: async () => {
-      const { data: eClass, error: classError } = await supabase
+      const { data, error } = await supabase
         .from('elearning_classes')
-        .select('class_group_id')
+        .select('*')
         .eq('id', classId)
         .single();
-      if (classError) throw classError;
+      if (error) throw error;
+      return data;
+    },
+    enabled: open && !!classId,
+  });
 
+  const { data: allStudents, isLoading: studentsLoading } = useQuery({
+    queryKey: ['class-students-result', eClass?.class_group_id],
+    queryFn: async () => {
+      if (!eClass?.class_group_id) return [];
       const { data, error } = await supabase
         .from('class_students')
         .select(`
@@ -114,17 +120,16 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
       if (error) throw error;
       return data as unknown as Array<{ student_profile_id: string; student: StudentInfo }>;
     },
-    enabled: open,
+    enabled: open && !!eClass?.class_group_id,
   });
 
-  // Fetch all submissions for this assignment
   const { data: allSubmissions } = useQuery({
     queryKey: ['quiz-results-all-submissions', assignmentId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('elearning_submissions')
         .select(`
-          id, student_profile_id, score, attempt_number, submitted_at, answers, feedback,
+          id, student_profile_id, score, attempt_number, submitted_at, answers, feedback, is_test_mode,
           profiles(id, full_name, email, photo_url, nim)
         `)
         .eq('assignment_id', assignmentId)
@@ -135,7 +140,6 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
     enabled: open,
   });
 
-  // Fetch questions with correct answers (for dosen/admin)
   const { data: questions } = useQuery({
     queryKey: ['quiz-questions-result', assignmentId],
     queryFn: async () => {
@@ -147,7 +151,6 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
     enabled: open && !!selectedStudent,
   });
 
-  // Split submissions
   const studentSubmissions: Submission[] = [];
   const testSubmissions: Submission[] = [];
 
@@ -161,7 +164,8 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
         try { ans = JSON.parse(ans); } catch(e) {}
       }
 
-      if (ans && typeof ans === 'object' && ans._is_test_mode === true) {
+      // Check DB column first, fallback to JSON flag
+      if (sub.is_test_mode === true || (ans && typeof ans === 'object' && ans._is_test_mode === true)) {
         testSubmissions.push(sub);
       } else {
         studentSubmissions.push(sub);
