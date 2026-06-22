@@ -407,6 +407,16 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
                             <HelpCircle className="h-4 w-4" />
                             Kelola Soal
                           </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => handleStartQuiz(assignment)}
+                            className="gap-1 border-yellow-500/50 bg-yellow-500/10 text-yellow-700 hover:bg-yellow-500/20 hover:text-yellow-800 dark:text-yellow-400 dark:hover:bg-yellow-500/20"
+                            title="Uji coba kuis ini sebagai Mahasiswa"
+                          >
+                            <Play className="h-4 w-4" />
+                            Uji Coba
+                          </Button>
                         </>
                        )}
                       <Button 
