@@ -75,8 +75,9 @@ interface GradingResult {
 export default function QuizTaking() {
   const { assignmentId } = useParams<{ assignmentId: string }>();
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, hasAnyRole } = useAuth();
   const queryClient = useQueryClient();
+  const isDosenPreview = hasAnyRole ? hasAnyRole(['admin', 'sub_admin', 'dosen']) : false;
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
@@ -390,7 +391,8 @@ export default function QuizTaking() {
         ...answers,
         _is_auto_submitted: isAuto,
         _violation_reason: violationReason || null,
-        _focus_mode_warnings: focusModeWarnings
+        _focus_mode_warnings: focusModeWarnings,
+        _is_test_mode: isDosenPreview
       };
 
       const submissionData = {
@@ -427,6 +429,7 @@ export default function QuizTaking() {
   };
 
   const canTakeQuiz = () => {
+    if (isDosenPreview) return true;
     if (!assignment?.max_attempts) return true;
     return (previousSubmissions?.length || 0) < assignment.max_attempts;
   };
@@ -677,6 +680,12 @@ export default function QuizTaking() {
 
   return (
     <div className="min-h-screen bg-background">
+      {isDosenPreview && (
+        <div className="bg-yellow-500/20 border-b border-yellow-500/50 text-yellow-800 dark:text-yellow-200 px-4 py-2 text-center text-sm font-medium">
+          <AlertTriangle className="h-4 w-4 inline-block mr-2 -mt-1" />
+          Mode Uji Coba Dosen: Pengerjaan ini tidak akan masuk ke statistik mahasiswa.
+        </div>
+      )}
       {/* Header */}
       <div className="sticky top-0 z-50 bg-card border-b shadow-sm">
         <div className="max-w-4xl mx-auto px-4 py-3">

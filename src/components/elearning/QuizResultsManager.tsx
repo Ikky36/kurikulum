@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import {
@@ -46,6 +47,7 @@ interface Submission {
   submitted_at: string;
   answers: any;
   feedback: string | null;
+  profiles?: any;
 }
 
 export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: QuizResultsManagerProps) {
@@ -121,7 +123,10 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
     queryFn: async () => {
       const { data, error } = await supabase
         .from('elearning_submissions')
-        .select('id, student_profile_id, score, attempt_number, submitted_at, answers, feedback')
+        .select(`
+          id, student_profile_id, score, attempt_number, submitted_at, answers, feedback,
+          profiles(id, full_name, email, photo_url, nim)
+        `)
         .eq('assignment_id', assignmentId)
         .order('attempt_number', { ascending: false });
       if (error) throw error;
@@ -142,12 +147,39 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
     enabled: open && !!selectedStudent,
   });
 
-  // Group submissions by student
-  const submissionsByStudent = allSubmissions?.reduce((acc, sub) => {
+  // Split submissions
+  const studentSubmissions: Submission[] = [];
+  const testSubmissions: Submission[] = [];
+
+  allSubmissions?.forEach(sub => {
+    try {
+      const ans = typeof sub.answers === 'string' ? JSON.parse(sub.answers) : sub.answers;
+      if (ans?._is_test_mode) {
+        testSubmissions.push(sub);
+      } else {
+        studentSubmissions.push(sub);
+      }
+    } catch {
+      studentSubmissions.push(sub);
+    }
+  });
+
+  // Group student submissions by student
+  const submissionsByStudent = studentSubmissions.reduce((acc, sub) => {
     if (!acc[sub.student_profile_id]) acc[sub.student_profile_id] = [];
     acc[sub.student_profile_id].push(sub);
     return acc;
   }, {} as Record<string, Submission[]>) || {};
+
+  // Group test submissions by submitter
+  const testSubmissionsBySubmitter = testSubmissions.reduce((acc, sub) => {
+    if (!acc[sub.student_profile_id]) acc[sub.student_profile_id] = {
+      profile: sub.profiles,
+      submissions: []
+    };
+    acc[sub.student_profile_id].submissions.push(sub);
+    return acc;
+  }, {} as Record<string, { profile: any, submissions: Submission[] }>) || {};
 
   // Prepare student list with best scores
   const studentList = (allStudents || []).map(cs => {
@@ -194,7 +226,7 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
   const notSubmittedCount = totalStudents - submittedCount;
 
   const selectedStudentSubmissions = selectedStudent
-    ? (submissionsByStudent[selectedStudent.id] || [])
+    ? (submissionsByStudent[selectedStudent.id] || testSubmissionsBySubmitter[selectedStudent.id]?.submissions || [])
     : [];
 
   const parseOptionsArray = (options: any): any[] | null => {
@@ -434,8 +466,14 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
 
         {!selectedStudent ? (
           // Student list view
-          <div className="space-y-4">
-            {/* Stats */}
+          <Tabs defaultValue="students" className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="students">Nilai Mahasiswa</TabsTrigger>
+              <TabsTrigger value="tests">Riwayat Uji Coba</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="students" className="space-y-4">
+              {/* Stats */}
             <div className="grid grid-cols-3 gap-4">
               <Card>
                 <CardContent className="pt-4 text-center">
@@ -558,7 +596,68 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                 )}
               </div>
             </ScrollArea>
-          </div>
+            </TabsContent>
+
+            <TabsContent value="tests" className="space-y-4">
+              <ScrollArea className="h-[400px]">
+                <div className="space-y-2">
+                  {Object.values(testSubmissionsBySubmitter).map(({ profile, submissions }) => {
+                    if (!profile) return null;
+                    const totalAttempts = submissions.length;
+                    const bestScore = totalAttempts > 0 ? Math.max(...submissions.map((s: any) => s.score || 0)) : 0;
+                    const hasViolation = submissions.some((sub: any) => {
+                      try {
+                        const ans = typeof sub.answers === 'string' ? JSON.parse(sub.answers) : sub.answers;
+                        return ans?._is_auto_submitted === true;
+                      } catch { return false; }
+                    });
+
+                    return (
+                      <Card key={profile.id} className="hover:shadow-md transition-shadow">
+                        <CardContent className="p-3 flex items-center gap-3">
+                          <div
+                            className="flex-1 min-w-0 flex items-center gap-3 cursor-pointer"
+                            onClick={() => setSelectedStudent(profile as any)}
+                          >
+                            <Avatar className="h-10 w-10">
+                              <AvatarImage src={profile.photo_url || undefined} />
+                              <AvatarFallback>{profile.full_name?.substring(0, 2).toUpperCase() || '?'}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate flex items-center gap-2">
+                                {profile.full_name} (Uji Coba)
+                                {hasViolation && <span title="Ada riwayat pelanggaran aturan kuis" className="text-base cursor-help">🚩</span>}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{profile.email}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap justify-end">
+                            <Badge variant="secondary" className="text-xs">
+                              {totalAttempts}x percobaan
+                            </Badge>
+                            <Badge className="bg-primary/10 text-primary">
+                              <Trophy className="h-3 w-3 mr-1" />
+                              {bestScore?.toFixed(0) || 0}%
+                            </Badge>
+                            <Eye
+                              className="h-4 w-4 text-muted-foreground cursor-pointer"
+                              onClick={() => setSelectedStudent(profile as any)}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+
+                  {Object.keys(testSubmissionsBySubmitter).length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>Belum ada dosen/admin yang melakukan uji coba kuis ini.</p>
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+            </TabsContent>
+          </Tabs>
         ) : (
           // Student detail view
           <div className="space-y-4">
