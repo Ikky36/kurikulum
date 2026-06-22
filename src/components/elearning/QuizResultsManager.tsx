@@ -662,6 +662,23 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                   {Object.keys(testSubmissionsBySubmitter).length === 0 && (
                     <div className="text-center py-8 text-muted-foreground">
                       <p>Belum ada dosen/admin yang melakukan uji coba kuis ini.</p>
+                      
+                      {/* DEBUG PANEL */}
+                      <div className="mt-8 text-left text-xs bg-muted p-4 rounded-md overflow-auto max-h-40">
+                        <p className="font-bold text-destructive mb-2">Debug Info (Hanya sementara):</p>
+                        <p>Total Submissions Fetched: {allSubmissions?.length || 0}</p>
+                        <p>Student Submissions: {studentSubmissions.length}</p>
+                        <p>Test Submissions: {testSubmissions.length}</p>
+                        <p>Raw first 3 submissions:</p>
+                        <pre>
+                          {JSON.stringify(allSubmissions?.slice(0, 3).map(s => ({
+                            profileId: s.student_profile_id,
+                            roleData: s.profiles,
+                            answersType: typeof s.answers,
+                            answersSnippet: typeof s.answers === 'string' ? s.answers.substring(0, 50) : s.answers
+                          })), null, 2)}
+                        </pre>
+                      </div>
                     </div>
                   )}
                 </div>
