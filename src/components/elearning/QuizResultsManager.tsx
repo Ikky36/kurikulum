@@ -512,7 +512,7 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
             {/* Student list */}
             <ScrollArea className="h-[400px]">
               <div className="space-y-2">
-                {filteredStudents.map(({ student, bestScore, totalAttempts }) => (
+                {filteredStudents.map(({ student, bestScore, totalAttempts, hasViolation }) => (
                   <Card
                     key={student.id}
                     className={`hover:shadow-md transition-shadow ${totalAttempts === 0 ? 'opacity-60' : ''}`}
