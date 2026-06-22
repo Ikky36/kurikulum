@@ -401,20 +401,44 @@ export default function QuizTaking() {
         assignment_id: assignmentId,
         student_profile_id: profile.id,
         answers: JSON.stringify(finalAnswers),
-        score: gradingResult.percentage,
+        score: gradingResult ? gradingResult.percentage : 0,
         attempt_number: attemptNumber,
         submitted_at: new Date().toISOString(),
       };
 
-      await submitQuiz.mutateAsync(submissionData);
+      try {
+        await submitQuiz.mutateAsync(submissionData);
+      } catch (mutateError: any) {
+        // If it fails due to RLS, and it's test mode, we save to local storage as fallback
+        if (isTestMode) {
+          console.warn("DB Submit failed, falling back to localStorage for test mode", mutateError);
+          const localSubmissionsStr = localStorage.getItem(`test_submissions_${assignmentId}`) || '[]';
+          try {
+            const localSubmissions = JSON.parse(localSubmissionsStr);
+            localSubmissions.push({
+              ...submissionData,
+              id: `local_${Date.now()}`,
+              profiles: {
+                id: profile.id,
+                full_name: profile.full_name + ' (Local Test)',
+                email: profile.email
+              }
+            });
+            localStorage.setItem(`test_submissions_${assignmentId}`, JSON.stringify(localSubmissions));
+            toast.success('Uji Coba berhasil disimpan secara lokal!');
+          } catch(e) {}
+        } else {
+          throw mutateError;
+        }
+      }
       
       // Transform grading result for display
-      const result = {
+      const result = gradingResult ? {
         score: gradingResult.earned_points,
         total: gradingResult.total_points,
         percentage: gradingResult.percentage,
         details: gradingResult.details,
-      };
+      } : { score: 0, total: 100, percentage: 0, details: [] };
       
       setSubmissionResult(result);
       setShowResults(true);
@@ -422,9 +446,14 @@ export default function QuizTaking() {
       // Invalidate quiz questions to get correct answers now that student has submitted
       queryClient.invalidateQueries({ queryKey: ['quiz-questions', assignmentId] });
       
-      toast.success('Quiz berhasil disubmit!');
+      if (!isTestMode) {
+        toast.success('Quiz berhasil disubmit!');
+      }
     } catch (error: any) {
       toast.error(error.message || 'Gagal submit quiz');
+      if (hasAnyRole && hasAnyRole(['admin', 'sub_admin', 'dosen'])) {
+        localStorage.setItem('debug_last_submit_error', error.message || JSON.stringify(error));
+      }
     } finally {
       setIsSubmitting(false);
     }

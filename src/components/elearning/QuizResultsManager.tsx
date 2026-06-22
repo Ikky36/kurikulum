@@ -170,6 +170,15 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
       studentSubmissions.push(sub);
     }
   });
+  
+  // Merge local test submissions
+  try {
+    const localStr = localStorage.getItem(`test_submissions_${assignmentId}`);
+    if (localStr) {
+      const localSubs = JSON.parse(localStr);
+      localSubs.forEach((sub: any) => testSubmissions.push(sub));
+    }
+  } catch(e) {}
 
   // Group student submissions by student
   const submissionsByStudent = studentSubmissions.reduce((acc, sub) => {
@@ -669,7 +678,8 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                         <p>Total Submissions Fetched: {allSubmissions?.length || 0}</p>
                         <p>Student Submissions: {studentSubmissions.length}</p>
                         <p>Test Submissions: {testSubmissions.length}</p>
-                        <p>Raw first 3 submissions:</p>
+                        <p className="text-red-500 font-semibold mt-2">Error Submit Terakhir: {localStorage.getItem('debug_last_submit_error') || 'Tidak ada error terekam'}</p>
+                        <p className="mt-2">Raw first 3 submissions:</p>
                         <pre>
                           {JSON.stringify(allSubmissions?.slice(0, 3).map(s => ({
                             profileId: s.student_profile_id,
