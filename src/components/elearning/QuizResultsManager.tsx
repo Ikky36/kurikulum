@@ -153,8 +153,15 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
 
   allSubmissions?.forEach(sub => {
     try {
-      const ans = typeof sub.answers === 'string' ? JSON.parse(sub.answers) : sub.answers;
-      if (ans?._is_test_mode) {
+      let ans = sub.answers;
+      if (typeof ans === 'string') {
+        try { ans = JSON.parse(ans); } catch(e) {}
+      }
+      if (typeof ans === 'string') {
+        try { ans = JSON.parse(ans); } catch(e) {}
+      }
+
+      if (ans && typeof ans === 'object' && ans._is_test_mode === true) {
         testSubmissions.push(sub);
       } else {
         studentSubmissions.push(sub);
@@ -173,11 +180,14 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
 
   // Group test submissions by submitter
   const testSubmissionsBySubmitter = testSubmissions.reduce((acc, sub) => {
-    if (!acc[sub.student_profile_id]) acc[sub.student_profile_id] = {
-      profile: sub.profiles,
+    const profileId = sub.student_profile_id || 'unknown';
+    const profileData = Array.isArray(sub.profiles) ? sub.profiles[0] : sub.profiles;
+    
+    if (!acc[profileId]) acc[profileId] = {
+      profile: profileData || { id: profileId, full_name: 'Dosen / Admin', email: '-' },
       submissions: []
     };
-    acc[sub.student_profile_id].submissions.push(sub);
+    acc[profileId].submissions.push(sub);
     return acc;
   }, {} as Record<string, { profile: any, submissions: Submission[] }>) || {};
 

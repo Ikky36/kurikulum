@@ -387,12 +387,14 @@ export default function QuizTaking() {
 
       const attemptNumber = (previousSubmissions?.length || 0) + 1;
 
+      const isTestMode = hasAnyRole ? hasAnyRole(['admin', 'sub_admin', 'dosen']) : false;
+
       const finalAnswers = {
         ...answers,
         _is_auto_submitted: isAuto,
         _violation_reason: violationReason || null,
         _focus_mode_warnings: focusModeWarnings,
-        _is_test_mode: isDosenPreview
+        _is_test_mode: isTestMode
       };
 
       const submissionData = {
