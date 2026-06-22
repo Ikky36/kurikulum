@@ -932,12 +932,15 @@ export default function QuizTaking() {
               <ChevronRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={isSubmitting} className="flex-1 sm:flex-none gap-2">
+            <Button onClick={() => handleSubmit(false)} disabled={isSubmitting} className="flex-1 sm:flex-none gap-2">
               {isSubmitting ? (
-                <>Submitting...</>
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Menyimpan...
+                </>
               ) : (
                 <>
-                  <Send className="h-4 w-4" />
+                  <CheckCircle className="h-4 w-4" />
                   Submit
                 </>
               )}
