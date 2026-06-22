@@ -531,22 +531,22 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
                 </div>
 
                 {/* Instructors */}
-                <div className="hidden lg:flex items-center gap-2 shrink-0 max-w-[260px]">
+                <div className="hidden lg:flex items-center justify-end gap-2 shrink-0 max-w-[350px]">
                   {cls.assignedInstructors && cls.assignedInstructors.length > 0 ? (
-                    <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        {cls.assignedInstructors.map((ins) => (
-                          <Avatar key={ins.id} className="h-7 w-7 ring-2 ring-background">
+                    <div className="flex flex-wrap items-center justify-end gap-1.5">
+                      {cls.assignedInstructors.map((ins) => (
+                        <div key={ins.id} className="flex items-center gap-1.5 bg-muted/40 border border-muted-foreground/10 px-2 py-1 rounded-full" title={ins.full_name}>
+                          <Avatar className="h-5 w-5">
                             <AvatarImage src={ins.photo_url || undefined} />
-                            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-xs">
+                            <AvatarFallback className="bg-primary/10 text-primary font-semibold text-[10px]">
                               {ins.full_name?.charAt(0) || '?'}
                             </AvatarFallback>
                           </Avatar>
-                        ))}
-                      </div>
-                      <span className="text-xs text-muted-foreground truncate" title={cls.assignedInstructors.map(ins => ins.full_name).join(', ')}>
-                        {cls.assignedInstructors.map(ins => ins.full_name).join(', ')}
-                      </span>
+                          <span className="text-xs font-medium text-muted-foreground whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">
+                            {ins.full_name}
+                          </span>
+                        </div>
+                      ))}
                     </div>
                   ) : (
                     <span className="text-xs text-muted-foreground italic">Belum ada dosen</span>
