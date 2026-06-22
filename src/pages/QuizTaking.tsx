@@ -460,13 +460,37 @@ export default function QuizTaking() {
               <AlertDescription>
                 <ul className="list-disc list-inside space-y-1 text-sm">
                   <li>Browser akan masuk mode fullscreen</li>
-                  <li>Jangan keluar dari fullscreen</li>
-                  <li>Jangan berpindah tab atau aplikasi lain</li>
-                  <li><strong>Jika melanggar, quiz akan otomatis dikumpulkan</strong></li>
+                  <li>Jangan keluar dari fullscreen (jangan tekan tombol <kbd className="px-1 py-0.5 text-xs border rounded">Esc</kbd>, <kbd className="px-1 py-0.5 text-xs border rounded">F11</kbd>, atau <kbd className="px-1 py-0.5 text-xs border rounded">Alt+Tab</kbd>)</li>
+                  <li>Jangan berpindah tab, jendela, atau aplikasi lain</li>
+                  <li>Jangan meminimalkan browser atau membuka notifikasi</li>
+                  <li><strong className="text-destructive">Jika melanggar, quiz akan otomatis dikumpulkan dan tidak dapat diulang</strong></li>
                 </ul>
               </AlertDescription>
             </Alert>
-            <Button onClick={enterFocusMode} className="w-full gap-2">
+
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                Pastikan Anda sudah siap mengerjakan quiz. Tutup semua aplikasi lain (chat, notifikasi, media sosial) sebelum melanjutkan agar tidak keluar dari mode fokus secara tidak sengaja.
+              </AlertDescription>
+            </Alert>
+
+            <label className="flex items-start gap-2 p-3 border rounded-lg cursor-pointer hover:bg-muted/50 transition-colors">
+              <Checkbox
+                checked={focusConsent}
+                onCheckedChange={(checked) => setFocusConsent(checked as boolean)}
+                className="mt-0.5"
+              />
+              <span className="text-sm leading-relaxed">
+                Saya telah membaca dan memahami aturan Mode Fokus. Saya bersedia menerima konsekuensi quiz otomatis dikumpulkan jika saya keluar dari mode fokus, baik sengaja maupun tidak sengaja.
+              </span>
+            </label>
+
+            <Button
+              onClick={enterFocusMode}
+              className="w-full gap-2"
+              disabled={!focusConsent}
+            >
               <Maximize className="h-4 w-4" />
               Mulai Quiz (Masuk Fullscreen)
             </Button>
