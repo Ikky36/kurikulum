@@ -33,83 +33,26 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
   const { data: leaderboard, isLoading } = useQuery({
     queryKey: ['assignment-leaderboard', assignmentId, classId],
     queryFn: async () => {
-      // First get the class_group_id from elearning_classes
-      const { data: classData, error: classError } = await supabase
-        .from('elearning_classes')
-        .select('class_group_id')
-        .eq('id', classId)
-        .maybeSingle();
+      const { data: rpcData, error: rpcError } = await supabase
+        .rpc('get_assignment_leaderboard', {
+          p_assignment_id: assignmentId,
+          p_class_id: classId
+        });
 
-      if (classError) throw classError;
-      if (!classData?.class_group_id) return [];
+      if (rpcError) throw rpcError;
 
-      // Get all students in the class
-      const { data: classStudents, error: studentsError } = await supabase
-        .from('class_students')
-        .select(`
-          student_profile_id,
-          student:profiles!class_students_student_profile_id_fkey (
-            id,
-            full_name,
-            nim,
-            photo_url
-          )
-        `)
-        .eq('class_group_id', classData.class_group_id);
-
-      if (studentsError) throw studentsError;
-
-      // Get all submissions for this assignment
-      const { data: submissions, error: submissionsError } = await supabase
-        .from('elearning_submissions')
-        .select(`
-          student_profile_id,
-          score,
-          attempt_number,
-          submitted_at
-        `)
-        .eq('assignment_id', assignmentId);
-
-      if (submissionsError) throw submissionsError;
-
-      // Create a map of student submissions with best scores
-      const submissionMap = new Map<string, { best_score: number; attempts: number; submitted_at: string }>();
-      
-      (submissions || []).forEach((submission) => {
-        const studentId = submission.student_profile_id;
-        const existing = submissionMap.get(studentId);
-        const score = submission.score ?? 0;
-        
-        if (!existing) {
-          submissionMap.set(studentId, {
-            best_score: score,
-            attempts: 1,
-            submitted_at: submission.submitted_at,
-          });
-        } else {
-          existing.attempts += 1;
-          if (score > existing.best_score) {
-            existing.best_score = score;
-            existing.submitted_at = submission.submitted_at;
-          }
-        }
-      });
-
-      // Combine class students with their submissions
-      const entries: LeaderboardEntry[] = (classStudents || []).map((cs: any) => {
-        const submission = submissionMap.get(cs.student_profile_id);
-        return {
-          rank: 0,
-          student_profile_id: cs.student_profile_id,
-          full_name: cs.student?.full_name || 'Unknown',
-          nim: cs.student?.nim || null,
-          photo_url: cs.student?.photo_url || null,
-          best_score: submission?.best_score ?? null,
-          attempts: submission?.attempts || 0,
-          submitted_at: submission?.submitted_at || null,
-          has_submitted: !!submission,
-        };
-      });
+      // Map the RPC data to LeaderboardEntry
+      const entries: LeaderboardEntry[] = (rpcData || []).map((row: any) => ({
+        rank: 0,
+        student_profile_id: row.student_profile_id,
+        full_name: row.full_name,
+        nim: row.nim,
+        photo_url: row.photo_url,
+        best_score: row.best_score,
+        attempts: row.attempts,
+        submitted_at: row.submitted_at,
+        has_submitted: row.attempts > 0,
+      }));
 
       // Sort: submitted students first by score descending, then non-submitted alphabetically
       const sorted = entries.sort((a, b) => {
