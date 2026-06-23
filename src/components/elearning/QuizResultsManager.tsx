@@ -129,7 +129,7 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
       const { data, error } = await supabase
         .from('elearning_submissions')
         .select(`
-          id, student_profile_id, score, attempt_number, submitted_at, answers, feedback, is_test_mode,
+          id, student_profile_id, score, attempt_number, submitted_at, answers, feedback,
           profiles(id, full_name, email, photo_url, nim)
         `)
         .eq('assignment_id', assignmentId)
