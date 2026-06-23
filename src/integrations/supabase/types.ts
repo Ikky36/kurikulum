@@ -2456,6 +2456,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_assignment_leaderboard: {
+        Args: { p_assignment_id: string; p_class_id: string }
+        Returns: {
+          attempts: number
+          best_score: number
+          full_name: string
+          nim: string
+          photo_url: string
+          student_profile_id: string
+          submitted_at: string
+        }[]
+      }
       get_import_source_classes: {
         Args: { p_course_id: string; p_exclude_class_id: string }
         Returns: {

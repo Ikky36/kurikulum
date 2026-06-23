@@ -167,7 +167,7 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
       }
 
       // Check DB column first, fallback to JSON flag
-      if (sub.is_test_mode === true || (ans && typeof ans === 'object' && ans._is_test_mode === true)) {
+      if ((sub as any).is_test_mode === true || (ans && typeof ans === 'object' && ans._is_test_mode === true)) {
         testSubmissions.push(sub);
       } else {
         studentSubmissions.push(sub);
