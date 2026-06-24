@@ -711,6 +711,7 @@ export type Database = {
           seb_password: string | null
           seb_quit_password: string | null
           show_answer_mode: string | null
+          start_date: string | null
           submission_type: string | null
           time_limit_minutes: number | null
           title: string
@@ -735,6 +736,7 @@ export type Database = {
           seb_password?: string | null
           seb_quit_password?: string | null
           show_answer_mode?: string | null
+          start_date?: string | null
           submission_type?: string | null
           time_limit_minutes?: number | null
           title: string
@@ -759,6 +761,7 @@ export type Database = {
           seb_password?: string | null
           seb_quit_password?: string | null
           show_answer_mode?: string | null
+          start_date?: string | null
           submission_type?: string | null
           time_limit_minutes?: number | null
           title?: string
