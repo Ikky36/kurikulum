@@ -102,7 +102,7 @@ export function ScoreRecapTab({ classId }: ScoreRecapTabProps) {
   const exportToCSV = () => {
     if (!students) return;
     
-    const headers = ['NIM', 'Nama Mahasiswa', ...validAssignments.map(a => `"${a.title}"`), 'Total Skor', 'Persentase (%)'];
+    const headers = ['NIM', 'Nama Mahasiswa', ...validAssignments.map(a => `"${(a as any).assignment_code || a.title}"`), 'Total Skor', 'Persentase (%)'];
     
     const rows = students.map(s => {
       const prof = s.profiles as any;
@@ -170,9 +170,10 @@ export function ScoreRecapTab({ classId }: ScoreRecapTabProps) {
               <TableBody>
                 {validAssignments.map(assignment => {
                   const score = myStats.bestScores[assignment.id];
+                  const titleText = (assignment as any).assignment_code || assignment.title;
                   return (
                     <TableRow key={assignment.id}>
-                      <TableCell className="font-medium">{assignment.title}</TableCell>
+                      <TableCell className="font-medium" title={assignment.title}>{titleText}</TableCell>
                       <TableCell className="text-right">
                         {score !== undefined ? (
                           <span className="font-bold text-primary">{score}</span>
@@ -204,13 +205,16 @@ export function ScoreRecapTab({ classId }: ScoreRecapTabProps) {
           <TableHeader>
             <TableRow>
               <TableHead className="min-w-[200px]">Nama Mahasiswa</TableHead>
-              {validAssignments.map(assignment => (
-                <TableHead key={assignment.id} className="text-center min-w-[120px] whitespace-nowrap">
-                  <div className="truncate max-w-[150px]" title={assignment.title}>
-                    {assignment.title}
-                  </div>
-                </TableHead>
-              ))}
+              {validAssignments.map(assignment => {
+                const headerText = (assignment as any).assignment_code || assignment.title;
+                return (
+                  <TableHead key={assignment.id} className="text-center min-w-[120px] align-bottom pb-3">
+                    <div className="max-w-[150px] line-clamp-3 whitespace-normal break-words mx-auto" title={assignment.title}>
+                      {headerText}
+                    </div>
+                  </TableHead>
+                );
+              })}
               <TableHead className="text-center bg-primary/5">Total Skor</TableHead>
               <TableHead className="text-center bg-primary/5">%</TableHead>
             </TableRow>

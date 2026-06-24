@@ -32,6 +32,7 @@ type ExtendedAssignment = ElearningAssignment & {
   prerequisite_material_id?: string | null;
   prerequisite_assignment_id?: string | null;
   start_date?: string | null;
+  assignment_code?: string | null;
 };
 
 export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: AssignmentEditorProps) {
@@ -45,6 +46,7 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
   const extendedAssignment = assignment as ExtendedAssignment | null;
 
   const [title, setTitle] = useState(assignment?.title || '');
+  const [assignmentCode, setAssignmentCode] = useState(extendedAssignment?.assignment_code || '');
   const [description, setDescription] = useState(assignment?.description || '');
   const [assignmentType, setAssignmentType] = useState(assignment?.assignment_type || 'quiz');
   const [startDate, setStartDate] = useState(extendedAssignment?.start_date?.slice(0, 16) || '');
@@ -99,6 +101,7 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
 
       const data: any = {
         title,
+        assignment_code: assignmentCode || null,
         description: description || null,
         assignment_type: dbAssignmentType,
         submission_type: getSubmissionType(assignmentType),
@@ -134,7 +137,16 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
   return (
     <div className="space-y-6">
       {/* Basic Info */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label className="text-base font-medium">Kode Tugas</Label>
+          <Input 
+            value={assignmentCode} 
+            onChange={(e) => setAssignmentCode(e.target.value)} 
+            placeholder="Cth: Q1, HW1..."
+            className="h-12"
+          />
+        </div>
         <div className="space-y-2">
           <Label className="text-base font-medium">Judul *</Label>
           <Input 
