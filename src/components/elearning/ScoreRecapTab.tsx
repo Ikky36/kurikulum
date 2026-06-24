@@ -246,7 +246,7 @@ export function ScoreRecapTab({ classId }: ScoreRecapTabProps) {
             
             {(!students || students.length === 0) && (
               <TableRow>
-                <TableCell col colSpan={validAssignments.length + 3} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={validAssignments.length + 3} className="text-center py-8 text-muted-foreground">
                   Belum ada mahasiswa di kelas ini.
                 </TableCell>
               </TableRow>

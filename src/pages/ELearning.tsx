@@ -7,7 +7,7 @@ import { BookOpen, ClipboardList, FileText, BarChart3, Scale, ArrowLeft, LogIn }
 import { ElearningKelas } from '@/components/elearning/ElearningKelas';
 import { ElearningPresensi } from '@/components/elearning/ElearningPresensi';
 import { ElearningMateri } from '@/components/elearning/ElearningMateri';
-import { ElearningRubrik } from '@/components/elearning/ElearningRubrik';
+
 import { ScoreRecapTab } from '@/components/elearning/ScoreRecapTab';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
