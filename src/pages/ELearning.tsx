@@ -7,6 +7,9 @@ import { BookOpen, ClipboardList, FileText, BarChart3, Scale, ArrowLeft, LogIn }
 import { ElearningKelas } from '@/components/elearning/ElearningKelas';
 import { ElearningPresensi } from '@/components/elearning/ElearningPresensi';
 import { ElearningMateri } from '@/components/elearning/ElearningMateri';
+import { ElearningRubrik } from '@/components/elearning/ElearningRubrik';
+import { ScoreRecapTab } from '@/components/elearning/ScoreRecapTab';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -134,7 +137,7 @@ export default function ELearning() {
         {selectedClass ? (
           // Class Detail View with Tabs
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className={`grid w-full max-w-lg h-12 ${canViewPresensi ? 'grid-cols-4' : 'grid-cols-3'}`}>
+            <TabsList className={`grid w-full max-w-2xl h-12 ${canViewPresensi ? 'grid-cols-5' : 'grid-cols-4'}`}>
               {canViewPresensi && (
                 <TabsTrigger value="presensi" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                   <ClipboardList className="h-4 w-4" />
@@ -148,6 +151,10 @@ export default function ELearning() {
               <TabsTrigger value="tugas" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">Tugas & Quiz</span>
+              </TabsTrigger>
+              <TabsTrigger value="rekap" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <BarChart3 className="h-4 w-4" />
+                <span className="hidden sm:inline">Rekap Skor</span>
               </TabsTrigger>
               <TabsTrigger value="rubrik" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Scale className="h-4 w-4" />
@@ -175,6 +182,10 @@ export default function ELearning() {
                 courseId={selectedClass.courseId}
                 tabView="assignments"
               />
+            </TabsContent>
+
+            <TabsContent value="rekap" className="mt-8">
+              <ScoreRecapTab classId={selectedClass.id} />
             </TabsContent>
 
             <TabsContent value="rubrik" className="mt-8">

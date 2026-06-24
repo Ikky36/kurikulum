@@ -31,6 +31,7 @@ type ExtendedAssignment = ElearningAssignment & {
   show_answer_mode?: string | null;
   prerequisite_material_id?: string | null;
   prerequisite_assignment_id?: string | null;
+  start_date?: string | null;
 };
 
 export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: AssignmentEditorProps) {
@@ -46,6 +47,7 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
   const [title, setTitle] = useState(assignment?.title || '');
   const [description, setDescription] = useState(assignment?.description || '');
   const [assignmentType, setAssignmentType] = useState(assignment?.assignment_type || 'quiz');
+  const [startDate, setStartDate] = useState(extendedAssignment?.start_date?.slice(0, 16) || '');
   const [dueDate, setDueDate] = useState(assignment?.due_date?.slice(0, 16) || '');
   const [maxAttempts, setMaxAttempts] = useState(assignment?.max_attempts?.toString() || '1');
   const [timeLimit, setTimeLimit] = useState(assignment?.time_limit_minutes?.toString() || '');
@@ -100,6 +102,7 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
         description: description || null,
         assignment_type: dbAssignmentType,
         submission_type: getSubmissionType(assignmentType),
+        start_date: startDate ? new Date(startDate).toISOString() : null,
         due_date: dueDate ? new Date(dueDate).toISOString() : null,
         max_attempts: maxAttempts ? parseInt(maxAttempts) : null,
         time_limit_minutes: timeLimit ? parseInt(timeLimit) : null,
@@ -168,7 +171,16 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
       </div>
 
       {/* Time Settings */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Waktu Mulai</Label>
+          <Input 
+            type="datetime-local" 
+            value={startDate} 
+            onChange={(e) => setStartDate(e.target.value)}
+            className="h-11"
+          />
+        </div>
         <div className="space-y-2">
           <Label className="text-sm font-medium">Deadline</Label>
           <Input 

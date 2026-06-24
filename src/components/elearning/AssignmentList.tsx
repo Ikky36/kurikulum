@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,6 +36,54 @@ type AssignmentWithRelations = ElearningAssignment & {
   seb_password?: string | null;
   seb_quit_password?: string | null;
   show_answer_mode?: string | null;
+  start_date?: string | null;
+};
+
+const CountdownTimer = ({ targetDate, onComplete }: { targetDate: string, onComplete: () => void }) => {
+  const [timeLeft, setTimeLeft] = useState<{days: number, hours: number, minutes: number, seconds: number} | null>(null);
+
+  useEffect(() => {
+    const target = new Date(targetDate).getTime();
+    
+    const calculateTimeLeft = () => {
+      const now = new Date().getTime();
+      const difference = target - now;
+      
+      if (difference <= 0) {
+        return null;
+      }
+      
+      return {
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((difference % (1000 * 60)) / 1000)
+      };
+    };
+
+    setTimeLeft(calculateTimeLeft());
+
+    const timer = setInterval(() => {
+      const left = calculateTimeLeft();
+      setTimeLeft(left);
+      if (!left) {
+        clearInterval(timer);
+        onComplete();
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [targetDate, onComplete]);
+
+  if (!timeLeft) return null;
+
+  return (
+    <div className="flex items-center gap-1.5 text-sm font-medium text-amber-600 bg-amber-50 px-3 py-2 rounded-md border border-amber-200 mt-2 mb-2 w-fit">
+      <Clock className="h-4 w-4 animate-pulse" />
+      <span>Bisa dikerjakan dalam:</span>
+      <span className="font-mono">{timeLeft.days}h {timeLeft.hours}j {timeLeft.minutes}m {timeLeft.seconds}d</span>
+    </div>
+  );
 };
 
 export function AssignmentList({ classId, courseId, canEdit }: AssignmentListProps) {
@@ -51,6 +99,21 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
   const [submittingLink, setSubmittingLink] = useState<AssignmentWithRelations | null>(null);
   const [gradingAssignment, setGradingAssignment] = useState<AssignmentWithRelations | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [unlockedAssignments, setUnlockedAssignments] = useState<Set<string>>(new Set());
+
+  const handleTimerComplete = useCallback((id: string) => {
+    setUnlockedAssignments(prev => {
+      const newSet = new Set(prev);
+      newSet.add(id);
+      return newSet;
+    });
+  }, []);
+
+  const isLocked = (assignment: AssignmentWithRelations) => {
+    if (!assignment.start_date) return false;
+    if (unlockedAssignments.has(assignment.id)) return false;
+    return new Date(assignment.start_date).getTime() > new Date().getTime();
+  };
 
   const typedAssignments = (assignments || []) as AssignmentWithRelations[];
   const isMahasiswa = profile?.role === 'mahasiswa';
@@ -309,13 +372,26 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
                           )}
                         </>
                       ) : (
-                        <Button 
-                          onClick={() => handleStartQuiz(assignment)} 
-                          className="gap-2 flex-1"
-                        >
-                          <Play className="h-4 w-4" />
-                          Kerjakan Quiz
-                        </Button>
+                        isLocked(assignment) ? (
+                          <div className="w-full">
+                            <CountdownTimer 
+                              targetDate={assignment.start_date!} 
+                              onComplete={() => handleTimerComplete(assignment.id)} 
+                            />
+                            <Button disabled className="gap-2 w-full">
+                              <Lock className="h-4 w-4" />
+                              Terkunci
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button 
+                            onClick={() => handleStartQuiz(assignment)} 
+                            className="gap-2 flex-1"
+                          >
+                            <Play className="h-4 w-4" />
+                            Kerjakan Quiz
+                          </Button>
+                        )
                       )}
                     </div>
                   )}
@@ -363,6 +439,22 @@ export function AssignmentList({ classId, courseId, canEdit }: AssignmentListPro
                             </>
                           );
                         }
+                        
+                        if (isLocked(assignment)) {
+                          return (
+                            <div className="w-full">
+                              <CountdownTimer 
+                                targetDate={assignment.start_date!} 
+                                onComplete={() => handleTimerComplete(assignment.id)} 
+                              />
+                              <Button disabled className="gap-2 w-full">
+                                <Lock className="h-4 w-4" />
+                                Terkunci
+                              </Button>
+                            </div>
+                          );
+                        }
+
                         return (
                           <Button 
                             onClick={() => setSubmittingLink(assignment)} 
