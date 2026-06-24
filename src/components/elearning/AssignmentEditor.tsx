@@ -70,6 +70,11 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
   const otherAssignments = (assignments || []).filter((a: any) => a.id !== assignment?.id);
 
   const handleSubmit = async () => {
+    if (!assignmentCode.trim()) {
+      toast({ title: 'Error', description: 'Kode Tugas harus diisi', variant: 'destructive' });
+      return;
+    }
+
     if (!title.trim()) {
       toast({ title: 'Error', description: 'Judul harus diisi', variant: 'destructive' });
       return;
@@ -139,7 +144,7 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
       {/* Basic Info */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="space-y-2">
-          <Label className="text-base font-medium">Kode Tugas</Label>
+          <Label className="text-base font-medium">Kode Tugas *</Label>
           <Input 
             value={assignmentCode} 
             onChange={(e) => setAssignmentCode(e.target.value)} 
