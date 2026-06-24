@@ -93,20 +93,21 @@ export function ScoreRecapTab({ classId }: ScoreRecapTabProps) {
     });
     
     const totalScore = Object.values(bestScores).reduce((sum, score) => sum + score, 0);
+    const averageScore = validAssignments.length > 0 ? totalScore / validAssignments.length : 0;
     const maxPossibleScore = validAssignments.length * 100;
     const percentage = maxPossibleScore > 0 ? (totalScore / maxPossibleScore) * 100 : 0;
     
-    return { bestScores, totalScore, maxPossibleScore, percentage };
+    return { bestScores, totalScore, averageScore, maxPossibleScore, percentage };
   };
 
   const exportToCSV = () => {
     if (!students) return;
     
-    const headers = ['NIM', 'Nama Mahasiswa', ...validAssignments.map(a => `"${(a as any).assignment_code || a.title}"`), 'Total Skor', 'Persentase (%)'];
+    const headers = ['NIM', 'Nama Mahasiswa', ...validAssignments.map(a => `"${(a as any).assignment_code || a.title}"`), 'Rata-Rata', 'Persentase (%)'];
     
     const rows = students.map(s => {
       const prof = s.profiles as any;
-      const { bestScores, totalScore, percentage } = getStudentBestScores(s.student_profile_id);
+      const { bestScores, averageScore, percentage } = getStudentBestScores(s.student_profile_id);
       
       const assignmentScores = validAssignments.map(a => bestScores[a.id] !== undefined ? bestScores[a.id] : 0);
       
@@ -114,7 +115,7 @@ export function ScoreRecapTab({ classId }: ScoreRecapTabProps) {
         prof?.nim || '-',
         `"${prof?.full_name || '-'}"`,
         ...assignmentScores,
-        totalScore,
+        averageScore.toFixed(2),
         percentage.toFixed(2)
       ].join(',');
     });
@@ -143,8 +144,8 @@ export function ScoreRecapTab({ classId }: ScoreRecapTabProps) {
             <div className="flex flex-col md:flex-row gap-8 items-center">
               <div className="flex-1 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium text-muted-foreground">Total Pencapaian</span>
-                  <span className="font-bold text-primary">{myStats.totalScore} / {myStats.maxPossibleScore}</span>
+                  <span className="font-medium text-muted-foreground">Rata-Rata Pencapaian</span>
+                  <span className="font-bold text-primary">{myStats.averageScore.toFixed(1)} / 100</span>
                 </div>
                 <Progress value={myStats.percentage} className="h-3" />
                 <div className="text-right text-xs font-medium text-muted-foreground">
@@ -215,8 +216,8 @@ export function ScoreRecapTab({ classId }: ScoreRecapTabProps) {
                   </TableHead>
                 );
               })}
-              <TableHead className="text-center bg-primary/5">Total Skor</TableHead>
-              <TableHead className="text-center bg-primary/5">%</TableHead>
+              <TableHead className="text-center font-bold">Rata-Rata</TableHead>
+              <TableHead className="text-center font-bold">Persentase</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -239,7 +240,7 @@ export function ScoreRecapTab({ classId }: ScoreRecapTabProps) {
                     );
                   })}
                   <TableCell className="text-center font-bold bg-primary/5">
-                    {stats.totalScore}
+                    {stats.averageScore.toFixed(1)}
                   </TableCell>
                   <TableCell className="text-center font-bold bg-primary/5 text-primary">
                     {stats.percentage.toFixed(1)}%
