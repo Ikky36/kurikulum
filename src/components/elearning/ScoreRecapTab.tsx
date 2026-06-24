@@ -97,17 +97,20 @@ export function ScoreRecapTab({ classId }: ScoreRecapTabProps) {
     const maxPossibleScore = validAssignments.length * 100;
     const percentage = maxPossibleScore > 0 ? (totalScore / maxPossibleScore) * 100 : 0;
     
-    return { bestScores, totalScore, averageScore, maxPossibleScore, percentage };
+    const completedAssignmentsCount = Object.keys(bestScores).length;
+    const completionPercentage = validAssignments.length > 0 ? (completedAssignmentsCount / validAssignments.length) * 100 : 0;
+    
+    return { bestScores, totalScore, averageScore, maxPossibleScore, percentage, completionPercentage };
   };
 
   const exportToCSV = () => {
     if (!students) return;
     
-    const headers = ['NIM', 'Nama Mahasiswa', ...validAssignments.map(a => `"${(a as any).assignment_code || a.title}"`), 'Rata-Rata', 'Persentase (%)'];
+    const headers = ['NIM', 'Nama Mahasiswa', ...validAssignments.map(a => `"${(a as any).assignment_code || a.title}"`), 'Rata-Rata', 'Persentase Nilai (%)', 'Persentase Ketuntasan (%)'];
     
     const rows = students.map(s => {
       const prof = s.profiles as any;
-      const { bestScores, averageScore, percentage } = getStudentBestScores(s.student_profile_id);
+      const { bestScores, averageScore, percentage, completionPercentage } = getStudentBestScores(s.student_profile_id);
       
       const assignmentScores = validAssignments.map(a => bestScores[a.id] !== undefined ? bestScores[a.id] : 0);
       
@@ -116,7 +119,8 @@ export function ScoreRecapTab({ classId }: ScoreRecapTabProps) {
         `"${prof?.full_name || '-'}"`,
         ...assignmentScores,
         averageScore.toFixed(2),
-        percentage.toFixed(2)
+        percentage.toFixed(2),
+        completionPercentage.toFixed(2)
       ].join(',');
     });
     
@@ -217,7 +221,8 @@ export function ScoreRecapTab({ classId }: ScoreRecapTabProps) {
                 );
               })}
               <TableHead className="text-center font-bold">Rata-Rata</TableHead>
-              <TableHead className="text-center font-bold">Persentase</TableHead>
+              <TableHead className="text-center font-bold min-w-[100px]">Persentase Nilai</TableHead>
+              <TableHead className="text-center font-bold min-w-[100px]">Persentase Ketuntasan</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -245,13 +250,16 @@ export function ScoreRecapTab({ classId }: ScoreRecapTabProps) {
                   <TableCell className="text-center font-bold bg-primary/5 text-primary">
                     {stats.percentage.toFixed(1)}%
                   </TableCell>
+                  <TableCell className="text-center font-bold bg-primary/5 text-emerald-600">
+                    {stats.completionPercentage.toFixed(1)}%
+                  </TableCell>
                 </TableRow>
               );
             })}
             
             {(!students || students.length === 0) && (
               <TableRow>
-                <TableCell colSpan={validAssignments.length + 3} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={validAssignments.length + 4} className="text-center py-8 text-muted-foreground">
                   Belum ada mahasiswa di kelas ini.
                 </TableCell>
               </TableRow>
