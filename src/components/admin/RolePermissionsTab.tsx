@@ -174,16 +174,6 @@ export function RolePermissionsTab() {
     updatePermissionsMutation.mutate(localPermissions);
   };
 
-  if (isLoading) {
-    return (
-      <Card>
-        <CardContent className="py-8 flex justify-center">
-          <Loader2 className="h-8 w-8 animate-spin" />
-        </CardContent>
-      </Card>
-    );
-  }
-
   // Filter roles based on search
   const filteredRoles = useMemo(() => {
     if (!searchQuery) return ROLES;
@@ -197,6 +187,16 @@ export function RolePermissionsTab() {
       )
     );
   }, [searchQuery]);
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardContent className="py-8 flex justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
