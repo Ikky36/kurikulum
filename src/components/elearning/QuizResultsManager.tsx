@@ -130,7 +130,7 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
         .from('elearning_submissions')
         .select(`
           id, student_profile_id, score, attempt_number, submitted_at, answers, feedback,
-          profiles(id, full_name, email, photo_url, nim)
+          profiles!elearning_submissions_student_profile_id_fkey(id, full_name, email, photo_url, nim)
         `)
         .eq('assignment_id', assignmentId)
         .order('attempt_number', { ascending: false });
