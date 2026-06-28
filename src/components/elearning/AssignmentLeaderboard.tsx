@@ -195,8 +195,8 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
           <span className="hidden sm:inline">Leaderboard</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md sm:max-w-lg lg:max-w-4xl">
-        <DialogHeader>
+      <DialogContent className="max-w-md sm:max-w-lg lg:max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-yellow-500" />
             Leaderboard
@@ -204,8 +204,9 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
           <p className="text-sm text-muted-foreground line-clamp-1">{assignmentTitle}</p>
         </DialogHeader>
 
+        <div className="flex-1 overflow-y-auto pr-2 sm:pr-4 pb-4">
         {/* Stats Badge */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 mt-4">
           <Badge variant="secondary" className="gap-1">
             <Users className="h-3 w-3" />
             {submittedCount}/{totalCount} mahasiswa sudah mengerjakan
@@ -283,7 +284,7 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
 
             {/* Desktop Table View */}
             <div className="hidden lg:block">
-              <div className="max-h-[60vh] overflow-auto">
+              <div>
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -364,8 +365,8 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
 
             {/* Mobile/Tablet Card View */}
             <div className="lg:hidden">
-              <div className="max-h-[60vh] overflow-auto">
-                <div className="space-y-2 pr-4">
+              <div>
+                <div className="space-y-2">
                   {/* Full Leaderboard List */}
                   {leaderboard.map((entry) => (
                     <div
@@ -427,6 +428,7 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
             </div>
           </>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );
