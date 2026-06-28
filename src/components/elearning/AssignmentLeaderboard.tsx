@@ -148,13 +148,16 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
       </Avatar>
     );
     
-    const displayStudents = students.slice(0, 3);
-    const extraCount = students.length - 3;
+    // If multiple students, reduce size slightly and only show 1 avatar + "+X" to save space
+    const isMultiple = students.length > 1;
+    const actualSizeClass = isMultiple ? "h-10 w-10 sm:h-12 sm:w-12" : sizeClass;
+    const displayStudents = isMultiple ? students.slice(0, 1) : students;
+    const extraCount = students.length - 1;
     
     return (
       <div className="flex -space-x-3 sm:-space-x-4">
         {displayStudents.map((s, i) => (
-          <Avatar key={s.student_profile_id} className={`${sizeClass} border-4 ${borderColor} shadow-md bg-white dark:bg-gray-800 relative`} style={{ zIndex: 10 - i }}>
+          <Avatar key={s.student_profile_id} className={`${actualSizeClass} border-4 ${borderColor} shadow-md bg-white dark:bg-gray-800 relative z-10`}>
             <AvatarImage src={s.photo_url || ''} />
             <AvatarFallback className={`${fallbackBg} ${fallbackText} text-xs font-bold`}>
               {getInitials(s.full_name)}
@@ -162,7 +165,7 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
           </Avatar>
         ))}
         {extraCount > 0 && (
-          <Avatar className={`${sizeClass} border-4 ${borderColor} shadow-md bg-gray-100 dark:bg-gray-700 relative`} style={{ zIndex: 0 }}>
+          <Avatar className={`${actualSizeClass} border-4 ${borderColor} shadow-md bg-gray-100 dark:bg-gray-700 relative z-0`}>
             <AvatarFallback className="text-xs font-bold text-gray-500 dark:text-gray-400">
               +{extraCount}
             </AvatarFallback>
@@ -224,7 +227,7 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
           <>
             {/* Top 3 Podium (Visible on all screens) */}
             {hasPodiumData && (
-              <div className="flex justify-center items-end gap-2 sm:gap-4 mb-8 pt-6">
+              <div className="flex justify-center items-end gap-2 sm:gap-4 mb-8 pt-10">
                 {/* 2nd Place */}
                 <div className="flex flex-col items-center z-10 -mr-2 sm:-mr-4">
                   {renderPodiumAvatars(rank2Students, "border-gray-200", "bg-gray-100", "text-gray-600")}
