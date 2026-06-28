@@ -64,11 +64,17 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
         return a.full_name.localeCompare(b.full_name);
       });
 
-      // Assign ranks only to submitted students
-      let rank = 1;
+      // Assign dense ranks only to submitted students (same score = same rank)
+      let currentRank = 1;
+      let prevScore: number | null = null;
+      
       sorted.forEach((entry) => {
         if (entry.has_submitted) {
-          entry.rank = rank++;
+          if (prevScore !== null && entry.best_score !== prevScore) {
+            currentRank++;
+          }
+          entry.rank = currentRank;
+          prevScore = entry.best_score;
         }
       });
 
@@ -128,8 +134,55 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
       .slice(0, 2);
   };
 
-  // Get top 3 for podium (only from those who submitted)
-  const topThree = leaderboard?.filter(e => e.has_submitted).slice(0, 3) || [];
+  // Get students by rank for podium
+  const rank1Students = leaderboard?.filter(e => e.has_submitted && e.rank === 1) || [];
+  const rank2Students = leaderboard?.filter(e => e.has_submitted && e.rank === 2) || [];
+  const rank3Students = leaderboard?.filter(e => e.has_submitted && e.rank === 3) || [];
+  
+  const hasPodiumData = rank1Students.length > 0 || rank2Students.length > 0 || rank3Students.length > 0;
+
+  const renderPodiumAvatars = (students: LeaderboardEntry[], borderColor: string, fallbackBg: string, fallbackText: string, sizeClass = "h-12 w-12 sm:h-14 sm:w-14") => {
+    if (students.length === 0) return (
+      <Avatar className={`${sizeClass} border-4 ${borderColor} z-10 bg-white dark:bg-gray-800 shadow-md`}>
+        <AvatarFallback className={`${fallbackBg} ${fallbackText} font-bold`}>?</AvatarFallback>
+      </Avatar>
+    );
+    
+    const displayStudents = students.slice(0, 3);
+    const extraCount = students.length - 3;
+    
+    return (
+      <div className="flex -space-x-3 sm:-space-x-4">
+        {displayStudents.map((s, i) => (
+          <Avatar key={s.student_profile_id} className={`${sizeClass} border-4 ${borderColor} shadow-md bg-white dark:bg-gray-800 relative`} style={{ zIndex: 10 - i }}>
+            <AvatarImage src={s.photo_url || ''} />
+            <AvatarFallback className={`${fallbackBg} ${fallbackText} text-xs font-bold`}>
+              {getInitials(s.full_name)}
+            </AvatarFallback>
+          </Avatar>
+        ))}
+        {extraCount > 0 && (
+          <Avatar className={`${sizeClass} border-4 ${borderColor} shadow-md bg-gray-100 dark:bg-gray-700 relative`} style={{ zIndex: 0 }}>
+            <AvatarFallback className="text-xs font-bold text-gray-500 dark:text-gray-400">
+              +{extraCount}
+            </AvatarFallback>
+          </Avatar>
+        )}
+      </div>
+    );
+  };
+  
+  const getPodiumNames = (students: LeaderboardEntry[]) => {
+    if (students.length === 0) return "-";
+    if (students.length === 1) return students[0].full_name.split(' ')[0];
+    if (students.length === 2) return `${students[0].full_name.split(' ')[0]}, ${students[1].full_name.split(' ')[0]}`;
+    return `${students.length} Mahasiswa`;
+  };
+  
+  const getPodiumScore = (students: LeaderboardEntry[]) => {
+    if (students.length === 0) return "0%";
+    return `${students[0].best_score?.toFixed(0) ?? 0}%`;
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -170,59 +223,56 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
         ) : (
           <>
             {/* Top 3 Podium (Visible on all screens) */}
-            {topThree.length >= 3 && (
+            {hasPodiumData && (
               <div className="flex justify-center items-end gap-2 sm:gap-4 mb-8 pt-6">
                 {/* 2nd Place */}
                 <div className="flex flex-col items-center z-10 -mr-2 sm:-mr-4">
-                  <Avatar className="h-12 w-12 sm:h-14 sm:w-14 border-4 border-gray-200 z-10 bg-white dark:bg-gray-800 shadow-md">
-                    <AvatarImage src={topThree[1]?.photo_url || ''} />
-                    <AvatarFallback className="bg-gray-100 text-gray-600 text-sm sm:text-base font-bold">
-                      {getInitials(topThree[1]?.full_name || '')}
-                    </AvatarFallback>
-                  </Avatar>
+                  {renderPodiumAvatars(rank2Students, "border-gray-200", "bg-gray-100", "text-gray-600")}
                   <div className="mt-2 w-20 sm:w-24 h-24 sm:h-28 bg-gradient-to-t from-gray-300 to-gray-200 dark:from-gray-800 dark:to-gray-700 rounded-t-lg flex flex-col items-center justify-start pt-3 sm:pt-4 shadow-lg border-t border-l border-r border-gray-300 dark:border-gray-600">
                     <span className="text-2xl font-bold text-gray-500 dark:text-gray-400">2</span>
                     <Medal className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 mt-1" />
                   </div>
                   <div className="text-center mt-3 w-24">
-                    <p className="text-[11px] sm:text-xs font-semibold truncate px-1" title={topThree[1]?.full_name}>{topThree[1]?.full_name.split(' ')[0]}</p>
-                    <Badge variant="secondary" className="text-[10px] sm:text-xs mt-1 font-bold">{topThree[1]?.best_score?.toFixed(0) ?? 0}%</Badge>
+                    <p className="text-[11px] sm:text-xs font-semibold truncate px-1" title={rank2Students.map(s=>s.full_name).join(', ')}>
+                      {getPodiumNames(rank2Students)}
+                    </p>
+                    {rank2Students.length > 0 && (
+                      <Badge variant="secondary" className="text-[10px] sm:text-xs mt-1 font-bold">{getPodiumScore(rank2Students)}</Badge>
+                    )}
                   </div>
                 </div>
                 
                 {/* 1st Place */}
                 <div className="flex flex-col items-center z-20">
                   <Crown className="h-8 w-8 text-yellow-500 mb-1 drop-shadow-md animate-pulse" />
-                  <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-4 border-yellow-400 z-10 shadow-xl bg-white dark:bg-gray-800">
-                    <AvatarImage src={topThree[0]?.photo_url || ''} />
-                    <AvatarFallback className="bg-yellow-100 text-yellow-700 text-base sm:text-lg font-bold">
-                      {getInitials(topThree[0]?.full_name || '')}
-                    </AvatarFallback>
-                  </Avatar>
+                  {renderPodiumAvatars(rank1Students, "border-yellow-400", "bg-yellow-100", "text-yellow-700", "h-16 w-16 sm:h-20 sm:w-20")}
                   <div className="mt-2 w-24 sm:w-28 h-32 sm:h-36 bg-gradient-to-t from-yellow-400 to-yellow-300 dark:from-yellow-700 dark:to-yellow-600 rounded-t-lg flex flex-col items-center justify-start pt-3 sm:pt-4 shadow-xl border-t border-l border-r border-yellow-300 dark:border-yellow-500">
                     <span className="text-3xl sm:text-4xl font-black text-yellow-100 drop-shadow-md">1</span>
                   </div>
                   <div className="text-center mt-3 w-28">
-                    <p className="text-[11px] sm:text-xs font-bold truncate px-1 text-yellow-600 dark:text-yellow-400" title={topThree[0]?.full_name}>{topThree[0]?.full_name.split(' ')[0]}</p>
-                    <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400 text-[10px] sm:text-xs mt-1 border border-yellow-300 dark:border-yellow-700 font-bold">{topThree[0]?.best_score?.toFixed(0) ?? 0}%</Badge>
+                    <p className="text-[11px] sm:text-xs font-bold truncate px-1 text-yellow-600 dark:text-yellow-400" title={rank1Students.map(s=>s.full_name).join(', ')}>
+                      {getPodiumNames(rank1Students)}
+                    </p>
+                    {rank1Students.length > 0 && (
+                      <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400 text-[10px] sm:text-xs mt-1 border border-yellow-300 dark:border-yellow-700 font-bold">{getPodiumScore(rank1Students)}</Badge>
+                    )}
                   </div>
                 </div>
                 
                 {/* 3rd Place */}
                 <div className="flex flex-col items-center z-10 -ml-2 sm:-ml-4">
-                  <Avatar className="h-12 w-12 sm:h-14 sm:w-14 border-4 border-amber-300 z-10 bg-white dark:bg-gray-800 shadow-md">
-                    <AvatarImage src={topThree[2]?.photo_url || ''} />
-                    <AvatarFallback className="bg-amber-100 text-amber-700 text-sm sm:text-base font-bold">
-                      {getInitials(topThree[2]?.full_name || '')}
-                    </AvatarFallback>
-                  </Avatar>
+                  {renderPodiumAvatars(rank3Students, "border-amber-300", "bg-amber-100", "text-amber-700")}
                   <div className="mt-2 w-20 sm:w-24 h-20 sm:h-24 bg-gradient-to-t from-amber-300 to-amber-200 dark:from-amber-800 dark:to-amber-700 rounded-t-lg flex flex-col items-center justify-start pt-3 sm:pt-4 shadow-lg border-t border-l border-r border-amber-300 dark:border-amber-600">
                     <span className="text-2xl font-bold text-amber-600 dark:text-amber-500">3</span>
                     <Award className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 mt-1" />
                   </div>
                   <div className="text-center mt-3 w-24">
-                    <p className="text-[11px] sm:text-xs font-semibold truncate px-1" title={topThree[2]?.full_name}>{topThree[2]?.full_name.split(' ')[0]}</p>
-                    <Badge variant="secondary" className="text-[10px] sm:text-xs mt-1 font-bold">{topThree[2]?.best_score?.toFixed(0) ?? 0}%</Badge>
+                    <p className="text-[11px] sm:text-xs font-semibold truncate px-1" title={rank3Students.map(s=>s.full_name).join(', ')}>
+                      {getPodiumNames(rank3Students)}
+                    </p>
+                    {rank3Students.length > 0 && (
+                      <Badge variant="secondary" className="text-[10px] sm:text-xs mt-1 font-bold">{getPodiumScore(rank3Students)}</Badge>
+                    )}
                   </div>
                 </div>
               </div>
@@ -339,15 +389,15 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
 
                         {/* Name & NIM */}
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{entry.full_name}</p>
+                          <p className="font-medium text-sm line-clamp-2 break-words leading-tight">{entry.full_name}</p>
                           {entry.nim && (
-                            <p className="text-xs text-muted-foreground">{entry.nim}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{entry.nim}</p>
                           )}
                         </div>
                       </div>
 
                       {/* Score & Attempts - second row on mobile */}
-                      <div className="flex items-center justify-between sm:justify-end gap-2 pl-9 sm:pl-0 shrink-0">
+                      <div className="flex items-center justify-between sm:justify-end gap-2 pl-9 sm:pl-0 shrink-0 mt-2 sm:mt-0">
                         {entry.has_submitted ? (
                           <>
                             <span className="text-xs text-muted-foreground flex items-center gap-1 sm:order-1">
