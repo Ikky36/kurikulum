@@ -20,6 +20,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Curriculum, Program, AppSetting, InstrumenPenilaian } from '@/lib/types';
 import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SistemKuliahManager } from '@/components/admin/SistemKuliahManager';
 
 export default function Settings() {
@@ -1749,7 +1750,9 @@ export default function Settings() {
             {/* Permissions Tab - Only for admin */}
             {canAccessTheme && (
               <TabsContent value="permissions" className="mt-0">
-                <RolePermissionsTab />
+                <ErrorBoundary>
+                  <RolePermissionsTab />
+                </ErrorBoundary>
               </TabsContent>
             )}
           </div>
