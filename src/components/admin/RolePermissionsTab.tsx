@@ -75,7 +75,28 @@ export function RolePermissionsTab() {
 
   useEffect(() => {
     if (permissions) {
-      setLocalPermissions(permissions);
+      const completePermissions: RolePermission[] = [];
+      ROLES.forEach(r => {
+        PERMISSION_KEYS.forEach(pk => {
+          const existing = permissions.find(p => p.role === r.value && p.permission_key === pk.key);
+          if (existing) {
+            completePermissions.push({
+              ...existing,
+              scope: existing.scope || 'connected' // Fallback for null scope
+            });
+          } else {
+            completePermissions.push({
+              id: `${r.value}-${pk.key}-new`,
+              role: r.value,
+              permission_key: pk.key,
+              can_view: false,
+              can_edit: false,
+              scope: 'connected'
+            });
+          }
+        });
+      });
+      setLocalPermissions(completePermissions);
       setHasChanges(false);
     }
   }, [permissions]);
@@ -83,15 +104,30 @@ export function RolePermissionsTab() {
   const updatePermissionsMutation = useMutation({
     mutationFn: async (updatedPermissions: RolePermission[]) => {
       for (const perm of updatedPermissions) {
-        const { error } = await supabase
-          .from('role_permissions')
-          .update({
-            can_view: perm.can_view,
-            can_edit: perm.can_edit,
-            scope: perm.scope,
-          })
-          .eq('id', perm.id);
-        if (error) throw error;
+        if (perm.id.endsWith('-new')) {
+          // Insert new permission
+          const { error } = await supabase
+            .from('role_permissions')
+            .insert({
+              role: perm.role,
+              permission_key: perm.permission_key,
+              can_view: perm.can_view,
+              can_edit: perm.can_edit,
+              scope: perm.scope,
+            });
+          if (error) throw error;
+        } else {
+          // Update existing permission
+          const { error } = await supabase
+            .from('role_permissions')
+            .update({
+              can_view: perm.can_view,
+              can_edit: perm.can_edit,
+              scope: perm.scope,
+            })
+            .eq('id', perm.id);
+          if (error) throw error;
+        }
       }
     },
     onSuccess: () => {
@@ -228,7 +264,7 @@ export function RolePermissionsTab() {
                       {/* Can View */}
                       <label className="flex items-center gap-2 cursor-pointer">
                         <Checkbox
-                          checked={permission.can_view}
+                          checked={!!permission.can_view}
                           onCheckedChange={(checked) => 
                             handlePermissionChange(role.value, perm.key, 'can_view', !!checked)
                           }
@@ -240,7 +276,7 @@ export function RolePermissionsTab() {
                       {/* Can Edit */}
                       <label className="flex items-center gap-2 cursor-pointer">
                         <Checkbox
-                          checked={permission.can_edit}
+                          checked={!!permission.can_edit}
                           onCheckedChange={(checked) => 
                             handlePermissionChange(role.value, perm.key, 'can_edit', !!checked)
                           }
@@ -254,7 +290,7 @@ export function RolePermissionsTab() {
                       <div className="flex items-center gap-2">
                         <Link2 className="h-4 w-4 text-muted-foreground" />
                         <Select
-                          value={permission.scope}
+                          value={permission.scope || 'connected'}
                           onValueChange={(value) => 
                             handlePermissionChange(role.value, perm.key, 'scope', value)
                           }
