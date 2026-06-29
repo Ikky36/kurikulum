@@ -20,9 +20,10 @@ interface ElearningMateriProps {
   selectedClassId: string;
   courseId: string;
   tabView: 'materials' | 'assignments' | 'rubrics';
+  isActive?: boolean;
 }
 
-export function ElearningMateri({ selectedClassId, courseId, tabView }: ElearningMateriProps) {
+export function ElearningMateri({ selectedClassId, courseId, tabView, isActive = true }: ElearningMateriProps) {
   const { profile } = useAuth();
   const { data: classes, isLoading } = useElearningClasses();
   const [dosenCourseAssignments, setDosenCourseAssignments] = useState<{course_id: string, class_group_id: string | null}[]>([]);
@@ -58,12 +59,15 @@ export function ElearningMateri({ selectedClassId, courseId, tabView }: Elearnin
 
   const selectedClass = typedClasses.find(c => c.id === selectedClassId);
   
-  const isCreator = selectedClass?.instructor_profile_id === profile?.id;
-  const isAssignedDosen = isDosen && dosenCourseAssignments.some(
-    assignment => selectedClass?.course_id === assignment.course_id &&
-    (assignment.class_group_id === null || assignment.class_group_id === selectedClass?.class_group_id)
-  );
-  const canEdit = isAdmin || isSubAdmin || isCreator || isAssignedDosen;
+  const canEdit = useMemo(() => {
+    const isCreator = selectedClass?.instructor_profile_id === profile?.id;
+    const hasDosenAccess = isDosen && dosenCourseAssignments.some(
+      assignment => selectedClass?.course_id === assignment.course_id &&
+      (assignment.class_group_id === null || assignment.class_group_id === selectedClass.class_group_id)
+    );
+    
+    return (isAdmin || isSubAdmin || isCreator || hasDosenAccess) && isActive;
+  }, [isAdmin, isSubAdmin, isDosen, dosenCourseAssignments, selectedClass, profile?.id, isActive]);
 
   if (isLoading) {
     return (

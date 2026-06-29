@@ -3,7 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { BookOpen, ClipboardList, FileText, BarChart3, Scale, ArrowLeft, LogIn } from 'lucide-react';
+import { BookOpen, ClipboardList, FileText, BarChart3, Scale, ArrowLeft, LogIn, Info } from 'lucide-react';
 import { ElearningKelas } from '@/components/elearning/ElearningKelas';
 import { ElearningPresensi } from '@/components/elearning/ElearningPresensi';
 import { ElearningMateri } from '@/components/elearning/ElearningMateri';
@@ -11,6 +11,7 @@ import { ElearningMateri } from '@/components/elearning/ElearningMateri';
 import { ScoreRecapTab } from '@/components/elearning/ScoreRecapTab';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 
 interface SelectedClassInfo {
@@ -19,6 +20,7 @@ interface SelectedClassInfo {
   courseId: string;
   courseName: string;
   classGroupName: string;
+  isActive?: boolean;
 }
 
 export default function ELearning() {
@@ -120,6 +122,19 @@ export default function ELearning() {
               </>
             )}
           </div>
+        </div>
+
+        {selectedClass?.isActive === false && (
+          <Alert variant="destructive" className="bg-destructive/10 border-destructive/20 text-destructive">
+            <Info className="h-4 w-4" />
+            <AlertTitle>Mode Arsip</AlertTitle>
+            <AlertDescription>
+              Kelas ini berada dalam kurikulum yang sudah dinonaktifkan. Anda dalam mode Read-Only.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <div className="flex-1 space-y-4">
           {canViewRecap && !selectedClass && (
             <Button 
               variant="outline" 
@@ -164,7 +179,10 @@ export default function ELearning() {
 
             {canViewPresensi && (
               <TabsContent value="presensi" className="mt-8">
-                <ElearningPresensi selectedClassId={selectedClass.id} />
+                <ElearningPresensi 
+                  selectedClassId={selectedClass.id} 
+                  isActive={selectedClass.isActive} 
+                />
               </TabsContent>
             )}
 
@@ -173,6 +191,7 @@ export default function ELearning() {
                 selectedClassId={selectedClass.id} 
                 courseId={selectedClass.courseId}
                 tabView="materials"
+                isActive={selectedClass.isActive}
               />
             </TabsContent>
 
@@ -181,6 +200,7 @@ export default function ELearning() {
                 selectedClassId={selectedClass.id} 
                 courseId={selectedClass.courseId}
                 tabView="assignments"
+                isActive={selectedClass.isActive}
               />
             </TabsContent>
 

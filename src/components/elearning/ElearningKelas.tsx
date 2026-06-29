@@ -65,6 +65,7 @@ interface SelectedClassInfo {
   courseId: string;
   courseName: string;
   classGroupName: string;
+  isActive?: boolean;
 }
 
 interface ElearningKelasProps {
@@ -463,17 +464,18 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">Belum ada dosen ditugaskan</p>
-                    )}
-                  </div>
-                  <div className="flex gap-2 pt-4 border-t">
                     {onEnterClass && (
-                      <Button size="sm" className="flex-1 gap-2" onClick={() => onEnterClass({
-                        id: cls.id,
-                        title: `${cls.course?.name || ''} - ${cls.class_group?.name || ''}`,
-                        courseId: cls.course?.id || '',
-                        courseName: cls.course ? `${cls.course.code} - ${cls.course.name}` : '',
-                        classGroupName: cls.class_group?.name || '',
-                      })}>
+                      <Button size="sm" className="flex-1 gap-2" onClick={() => {
+                        const courseActive = courses?.find(c => c.id === cls.course_id)?.is_active ?? true;
+                        onEnterClass({
+                          id: cls.id,
+                          title: `${cls.course?.name || ''} - ${cls.class_group?.name || ''}`,
+                          courseId: cls.course?.id || '',
+                          courseName: cls.course ? `${cls.course.code} - ${cls.course.name}` : '',
+                          classGroupName: cls.class_group?.name || '',
+                          isActive: courseActive,
+                        });
+                      }}>
                         <LogIn className="h-4 w-4" /> Masuk
                       </Button>
                     )}
@@ -608,16 +610,19 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
                   {(() => {
                     // Filter courses based on role
                     if (isAdmin || isSubAdmin) {
-                      // Admin and sub_admin can see all courses
-                      return courses?.map((course) => (
+                      // Admin and sub_admin can see all active courses
+                      const activeCourses = courses?.filter(c => c.is_active || c.id === formData.course_id);
+                      return activeCourses?.map((course) => (
                         <SelectItem key={course.id} value={course.id}>
                           <span className="font-medium">{course.code}</span> - {course.name}
                         </SelectItem>
                       ));
                     } else if (isDosen) {
-                      // Dosen can only see courses they're assigned to
+                      // Dosen can only see active courses they're assigned to
                       const assignedCourseIds = dosenCourseAssignments.map(a => a.course_id);
-                      const filteredCourses = courses?.filter(c => assignedCourseIds.includes(c.id));
+                      const filteredCourses = courses?.filter(c => 
+                        assignedCourseIds.includes(c.id) && (c.is_active || c.id === formData.course_id)
+                      );
                       if (!filteredCourses || filteredCourses.length === 0) {
                         return <div className="px-2 py-1.5 text-sm text-muted-foreground">Tidak ada mata kuliah yang ditugaskan</div>;
                       }

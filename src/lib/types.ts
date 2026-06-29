@@ -30,6 +30,7 @@ export interface ClassGroup {
   description?: string;
   course_id?: string | null;
   semester?: string | null;
+  is_active?: boolean;
   course?: Course;
   created_at: string;
   updated_at: string;
@@ -50,6 +51,7 @@ export interface Course {
   sks?: number;
   passing_score: number;
   curriculum_id?: string | null;
+  is_active?: boolean;
   created_at: string;
   updated_at: string;
 }

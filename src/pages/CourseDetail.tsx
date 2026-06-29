@@ -21,6 +21,7 @@ import { CourseLearningOutcomes } from '@/components/course/CourseLearningOutcom
 import { SemesterBadge } from '@/components/ui/semester-badge';
 import { LearningAchievementStats } from '@/components/course/LearningAchievementStats';
 import { AssessmentScoreImportExport } from '@/components/course/AssessmentScoreImportExport';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -78,7 +79,8 @@ export default function CourseDetail() {
   const isInstructor = role === 'dosen' && instructors?.some(
     (instructor: any) => instructor.id === user?.id || instructor.instructor_profile_id === user?.id
   );
-  const canEdit = role === 'admin' || role === 'sub_admin' || isInstructor;
+  const hasBasePermission = role === 'admin' || role === 'sub_admin' || isInstructor;
+  const canEdit = hasBasePermission && (course?.is_active ?? true); // If course is inactive, it's read-only
 
   const isLoading = courseLoading || instructorsLoading || gradesLoading;
 
@@ -390,6 +392,16 @@ export default function CourseDetail() {
             )}
           </div>
         </div>
+
+        {course.is_active === false && (
+          <Alert variant="destructive" className="mb-6 bg-destructive/10 border-destructive/20 text-destructive">
+            <Info className="h-4 w-4" />
+            <AlertTitle>Mode Arsip</AlertTitle>
+            <AlertDescription>
+              Mata kuliah ini berada dalam kurikulum yang sudah dinonaktifkan. Anda dalam mode Read-Only.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList>

@@ -6,13 +6,26 @@ export function useCourses() {
   return useQuery({
     queryKey: ['courses'],
     queryFn: async () => {
+      // First, get active curricula
+      const { data: activeCurricula, error: curriculaError } = await supabase
+        .from('curricula')
+        .select('id')
+        .eq('is_active', true);
+      
+      if (curriculaError) throw curriculaError;
+      const activeCurriculumIds = activeCurricula?.map(c => c.id) || [];
+
       const { data, error } = await supabase
         .from('courses')
         .select('*')
         .order('code');
       
       if (error) throw error;
-      return data as Course[];
+      
+      return data?.map(course => ({
+        ...course,
+        is_active: !course.curriculum_id || activeCurriculumIds.includes(course.curriculum_id)
+      })) as Course[];
     },
   });
 }
@@ -38,10 +51,11 @@ export function useCoursesWithStats() {
       
       if (coursesError) throw coursesError;
       
-      // Filter courses: only those with active curriculum or no curriculum
-      const courses = allCourses?.filter(course => 
-        !course.curriculum_id || activeCurriculumIds.includes(course.curriculum_id)
-      ) || [];
+      // Compute is_active based on curriculum (true if no curriculum or curriculum is active)
+      const courses = allCourses?.map(course => ({
+        ...course,
+        is_active: !course.curriculum_id || activeCurriculumIds.includes(course.curriculum_id)
+      })) || [];
 
       // Get all grades
       const { data: grades, error: gradesError } = await supabase
@@ -130,6 +144,15 @@ export function useCourse(courseId: string) {
   return useQuery({
     queryKey: ['course', courseId],
     queryFn: async () => {
+      // First, get active curricula
+      const { data: activeCurricula, error: curriculaError } = await supabase
+        .from('curricula')
+        .select('id')
+        .eq('is_active', true);
+      
+      if (curriculaError) throw curriculaError;
+      const activeCurriculumIds = activeCurricula?.map(c => c.id) || [];
+
       const { data, error } = await supabase
         .from('courses')
         .select('*')
@@ -137,7 +160,12 @@ export function useCourse(courseId: string) {
         .maybeSingle();
       
       if (error) throw error;
-      return data as Course | null;
+      if (!data) return null;
+
+      return {
+        ...data,
+        is_active: !data.curriculum_id || activeCurriculumIds.includes(data.curriculum_id)
+      } as Course;
     },
     enabled: !!courseId,
   });

@@ -1036,6 +1036,12 @@ export default function Settings() {
                               <Switch 
                                 checked={curriculum.is_active}
                                 onCheckedChange={(checked) => {
+                                  if (!checked) {
+                                    const confirmDeactivate = window.confirm(
+                                      "Menonaktifkan kurikulum akan menyebabkan semua Mata Kuliah dan Daftar Kelas terkait masuk ke mode Arsip (Read-Only). Anda tetap bisa melihat dan mengekspor data. Lanjutkan?"
+                                    );
+                                    if (!confirmDeactivate) return;
+                                  }
                                   updateCurriculumMutation.mutate({ id: curriculum.id, is_active: checked });
                                 }}
                               />

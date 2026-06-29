@@ -94,7 +94,7 @@ export default function MataKuliah() {
   // Get curriculum name helper
   const getCurriculumName = (curriculumId?: string | null) => {
     if (!curriculumId) return null;
-    return curricula?.find(c => c.id === curriculumId)?.name || null;
+    return allCurricula?.find(c => c.id === curriculumId)?.name || null;
   };
 
   // Helper to determine if semester is genap (even) or ganjil (odd)
@@ -360,13 +360,13 @@ export default function MataKuliah() {
                         currentSort={courseSort}
                         onSort={setCourseSort}
                         sortType="text"
-                        filterOptions={curricula?.map(c => c.name) || []}
-                        filterValue={curriculumFilter === 'all' ? 'all' : curricula?.find(c => c.id === curriculumFilter)?.name || 'all'}
+                        filterOptions={allCurricula?.map(c => c.name) || []}
+                        filterValue={curriculumFilter === 'all' ? 'all' : allCurricula?.find(c => c.id === curriculumFilter)?.name || 'all'}
                         onFilterChange={(val) => {
                           if (val === 'all') {
                             setCurriculumFilter('all');
                           } else {
-                            const found = curricula?.find(c => c.name === val);
+                            const found = allCurricula?.find(c => c.name === val);
                             setCurriculumFilter(found?.id || 'all');
                           }
                         }}
