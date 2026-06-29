@@ -54,6 +54,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2, Calendar, Clock, Users, Check, X, AlertCircle, Save } from 'lucide-react';
 import { AttendanceImportExport } from './AttendanceImportExport';
@@ -495,7 +496,10 @@ export function ElearningPresensi({ selectedClassId: propSelectedClassId }: Elea
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
-                                    <p className="font-medium text-sm">{cs.student?.full_name}</p>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <p className="font-medium text-sm">{cs.student?.full_name}</p>
+                                      <StudentSemesterBadge studentId={cs.student_profile_id} />
+                                    </div>
                                     <p className="text-xs text-muted-foreground">{cs.student?.nim}</p>
                                   </div>
                                 </div>

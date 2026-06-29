@@ -17,8 +17,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { User, Mail, Camera, Loader2, Upload, Download, Save, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { Course, Profile, Grade } from '@/lib/types';
+import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 import * as XLSX from 'xlsx';
 import { TableFilterHeader } from '@/components/ui/table-column-filter';
 
@@ -694,7 +695,10 @@ function GradeRow({
             <AvatarImage src={student.photo_url || undefined} />
             <AvatarFallback className="text-xs">{student.full_name?.charAt(0)}</AvatarFallback>
           </Avatar>
+        <div className="flex flex-wrap items-center gap-2">
           <span className="font-medium">{student.full_name}</span>
+          <StudentSemesterBadge studentId={student.id} />
+        </div>
         </div>
       </TableCell>
       <TableCell className="font-mono text-sm">{student.nim || '-'}</TableCell>
