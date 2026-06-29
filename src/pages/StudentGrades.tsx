@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom';
 import { useMemo } from 'react';
+import { SemesterBadge } from '@/components/ui/semester-badge';
 import { Layout } from '@/components/layout/Layout';
 import { useStudent, useStudentGrades } from '@/hooks/useStudents';
 import { useCourses, useCourseAssessments } from '@/hooks/useCourses';
@@ -174,7 +175,12 @@ export default function StudentGrades() {
                   </AvatarFallback>
                 </Avatar>
                 <h3 className="font-bold text-xl">{student.full_name}</h3>
-                <Badge variant="secondary" className="mt-2">Mahasiswa</Badge>
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant="secondary">Mahasiswa</Badge>
+                  {student.enrollment_year && (
+                    <SemesterBadge enrollmentYear={student.enrollment_year} variant="default" />
+                  )}
+                </div>
               </div>
               
               <div className="space-y-3">

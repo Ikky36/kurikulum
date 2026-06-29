@@ -24,6 +24,7 @@ import {
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { containsArabic } from '@/components/ui/arabic-text';
+import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 
 interface QuizResultsManagerProps {
   assignmentId: string;
@@ -552,10 +553,13 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                           <AvatarFallback>{student.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate flex items-center gap-2">
-                            {student.full_name}
-                            {hasViolation && <span title="Ada riwayat pelanggaran aturan kuis" className="text-base cursor-help">🚩</span>}
-                          </p>
+                          <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                            <p className="font-medium truncate flex items-center gap-2">
+                              {student.full_name}
+                              {hasViolation && <span title="Ada riwayat pelanggaran aturan kuis" className="text-base cursor-help">⚠️</span>}
+                            </p>
+                            <StudentSemesterBadge studentId={student.id} />
+                          </div>
                           <p className="text-xs text-muted-foreground">{student.nim || student.email}</p>
                         </div>
                       </div>
@@ -651,7 +655,7 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                             <div className="flex-1 min-w-0">
                               <p className="font-medium truncate flex items-center gap-2">
                                 {profile.full_name} (Uji Coba)
-                                {hasViolation && <span title="Ada riwayat pelanggaran aturan kuis" className="text-base cursor-help">🚩</span>}
+                                {hasViolation && <span title="Ada riwayat pelanggaran aturan kuis" className="text-base cursor-help">⚠️</span>}
                               </p>
                               <p className="text-xs text-muted-foreground">{profile.email}</p>
                             </div>
@@ -722,7 +726,10 @@ export function QuizResultsManager({ assignmentId, assignmentTitle, classId }: Q
                     <AvatarFallback>{selectedStudent.full_name.substring(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-semibold text-lg">{selectedStudent.full_name}</p>
+                    <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                      <p className="font-semibold text-lg">{selectedStudent.full_name}</p>
+                      <StudentSemesterBadge studentId={selectedStudent.id} />
+                    </div>
                     <p className="text-sm text-muted-foreground">{selectedStudent.nim || selectedStudent.email}</p>
                   </div>
                 </div>

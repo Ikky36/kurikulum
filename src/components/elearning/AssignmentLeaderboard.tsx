@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -317,7 +318,12 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
                                 {getInitials(entry.full_name)}
                               </AvatarFallback>
                             </Avatar>
-                            <span className="font-medium">{entry.full_name}</span>
+                            <div className="flex flex-col">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium">{entry.full_name}</span>
+                                <StudentSemesterBadge studentId={entry.student_profile_id} />
+                              </div>
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
@@ -393,7 +399,10 @@ export function AssignmentLeaderboard({ assignmentId, assignmentTitle, classId }
 
                         {/* Name & NIM */}
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm line-clamp-2 break-words leading-tight">{entry.full_name}</p>
+                          <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                            <p className="font-medium text-sm line-clamp-2 break-words leading-tight">{entry.full_name}</p>
+                            <StudentSemesterBadge studentId={entry.student_profile_id} />
+                          </div>
                           {entry.nim && (
                             <p className="text-xs text-muted-foreground mt-0.5">{entry.nim}</p>
                           )}

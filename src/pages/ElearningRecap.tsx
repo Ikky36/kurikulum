@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
+import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 import { 
   Users, BookOpen, ClipboardCheck, CheckCircle, XCircle, 
   Clock, TrendingUp, Download, BarChart3 
@@ -389,7 +391,10 @@ export default function ElearningRecap() {
                             return (
                               <TableRow key={student.id}>
                                 <TableCell className="sticky left-0 bg-card font-medium">
-                                  {student.full_name}
+                                  <div className="flex flex-col gap-1">
+                                    <span className="whitespace-nowrap">{student.full_name}</span>
+                                    <StudentSemesterBadge studentId={student.id} className="w-fit" />
+                                  </div>
                                 </TableCell>
                                 {sessions.map((session: any) => (
                                   <TableCell key={session.id} className="text-center">
@@ -447,7 +452,10 @@ export default function ElearningRecap() {
                             return (
                               <TableRow key={student.id}>
                                 <TableCell className="sticky left-0 bg-card font-medium">
-                                  {student.full_name}
+                                  <div className="flex flex-col gap-1">
+                                    <span className="whitespace-nowrap">{student.full_name}</span>
+                                    <StudentSemesterBadge studentId={student.id} className="w-fit" />
+                                  </div>
                                 </TableCell>
                                 {materials.map((material: any) => {
                                   const prog = materialProgress.progress[student.id]?.[material.id] || 0;
@@ -516,7 +524,10 @@ export default function ElearningRecap() {
                             return (
                               <TableRow key={student.id}>
                                 <TableCell className="sticky left-0 bg-card font-medium">
-                                  {student.full_name}
+                                  <div className="flex flex-col gap-1">
+                                    <span className="whitespace-nowrap">{student.full_name}</span>
+                                    <StudentSemesterBadge studentId={student.id} className="w-fit" />
+                                  </div>
                                 </TableCell>
                                 {assignments.map((assignment: any) => {
                                   const submission = assignmentRecap.submissions[student.id]?.[assignment.id];

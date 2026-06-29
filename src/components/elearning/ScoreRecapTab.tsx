@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 
 interface ScoreRecapTabProps {
   classId: string;
@@ -233,7 +234,10 @@ export function ScoreRecapTab({ classId }: ScoreRecapTabProps) {
               return (
                 <TableRow key={student.student_profile_id}>
                   <TableCell>
-                    <div className="font-medium">{prof?.full_name || 'Tanpa Nama'}</div>
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <div className="font-medium">{prof?.full_name || 'Tanpa Nama'}</div>
+                      <StudentSemesterBadge studentId={student.student_profile_id} />
+                    </div>
                     <div className="text-xs text-muted-foreground">{prof?.nim || '-'}</div>
                   </TableCell>
                   {validAssignments.map(assignment => {

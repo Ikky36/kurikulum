@@ -5,6 +5,7 @@ import { Navigate } from 'react-router-dom';
 import { User, Mail, Shield, GraduationCap, Calendar } from 'lucide-react';
 import { ChangePasswordCard } from '@/components/settings/ChangePasswordCard';
 import { Badge } from '@/components/ui/badge';
+import { SemesterBadge } from '@/components/ui/semester-badge';
 
 export default function Profile() {
   const { user, profile, loading } = useAuth();
@@ -101,7 +102,10 @@ export default function Profile() {
                       <Calendar className="h-5 w-5 text-muted-foreground" />
                       <div>
                         <p className="text-sm text-muted-foreground">Tahun Angkatan</p>
-                        <p className="font-medium">{profile.enrollment_year}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <p className="font-medium">{profile.enrollment_year}</p>
+                          <SemesterBadge enrollmentYear={profile.enrollment_year} variant="default" />
+                        </div>
                       </div>
                     </div>
                   )}

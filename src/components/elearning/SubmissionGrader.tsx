@@ -21,6 +21,7 @@ import {
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import { AnnotatedPreview } from './AnnotatedPreview';
+import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 
 interface SubmissionGraderProps {
   assignmentId: string;
@@ -302,7 +303,10 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
                           <AvatarFallback>{getInitials(student.full_name)}</AvatarFallback>
                         </Avatar>
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium truncate">{student.full_name}</p>
+                          <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                            <p className="font-medium truncate">{student.full_name}</p>
+                            <StudentSemesterBadge studentId={student.id} />
+                          </div>
                           <p className="text-sm text-muted-foreground truncate">
                             {student.nim || student.email}
                           </p>
@@ -378,7 +382,10 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
                       <AvatarFallback>{getInitials(selectedSubmission.student.full_name)}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="font-semibold">{selectedSubmission.student.full_name}</p>
+                      <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                        <p className="font-semibold">{selectedSubmission.student.full_name}</p>
+                        <StudentSemesterBadge studentId={selectedSubmission.student.id} />
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         {selectedSubmission.student.nim || selectedSubmission.student.email}
                       </p>

@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { CourseLearningOutcomes } from '@/components/course/CourseLearningOutcomes';
+import { SemesterBadge } from '@/components/ui/semester-badge';
 import { LearningAchievementStats } from '@/components/course/LearningAchievementStats';
 import { AssessmentScoreImportExport } from '@/components/course/AssessmentScoreImportExport';
 import { supabase } from '@/integrations/supabase/client';
@@ -684,7 +685,12 @@ export default function CourseDetail() {
                                     {student?.full_name?.charAt(0) || '?'}
                                   </AvatarFallback>
                                 </Avatar>
-                                <span className="font-medium">{student?.full_name}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{student?.full_name}</span>
+                                  {student?.enrollment_year && (
+                                    <SemesterBadge enrollmentYear={student.enrollment_year} variant="secondary" />
+                                  )}
+                                </div>
                               </Link>
                             </TableCell>
                             <TableCell className="text-center capitalize">
