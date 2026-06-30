@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,7 +51,7 @@ function KurikulumContent() {
   const { clearSelection } = useBulkSelect();
 
   // Selected curriculum filter state
-  const [selectedCurriculumId, setSelectedCurriculumId] = useState<string>('all');
+  const [selectedCurriculumId, setSelectedCurriculumId] = useState<string>('');
 
   // Filter states
   const [filterPtMisi, setFilterPtMisi] = useState('');
@@ -266,25 +266,32 @@ function KurikulumContent() {
     [curricula]
   );
 
+  // Auto-select first active curriculum if none selected
+  useEffect(() => {
+    if (!selectedCurriculumId && activeCurricula.length > 0) {
+      setSelectedCurriculumId(activeCurricula[0].id);
+    }
+  }, [activeCurricula, selectedCurriculumId]);
+
   // Determine which curriculum IDs to filter by
   const filterCurriculumIds = useMemo(() => {
-    if (selectedCurriculumId === 'all') {
+    if (!selectedCurriculumId) {
       return activeCurriculumIds;
     }
     return [selectedCurriculumId];
   }, [selectedCurriculumId, activeCurriculumIds]);
 
-  // Helper: filter items by curriculum. When 'all', show items matching active curricula OR without curriculum_id.
+  // Helper: filter items by curriculum. When empty, show items matching active curricula OR without curriculum_id.
   // When specific curriculum selected, only show items with that curriculum_id.
   const filterByCurriculum = (items: any[]) => {
-    if (selectedCurriculumId === 'all') {
+    if (!selectedCurriculumId) {
       return items.filter((item: any) => !item.curriculum_id || activeCurriculumIds.includes(item.curriculum_id));
     }
     return items.filter((item: any) => item.curriculum_id === selectedCurriculumId);
   };
 
   const findByCurriculum = (items: any[]) => {
-    if (selectedCurriculumId === 'all') {
+    if (!selectedCurriculumId) {
       return items.find((item: any) => !item.curriculum_id || activeCurriculumIds.includes(item.curriculum_id));
     }
     return items.find((item: any) => item.curriculum_id === selectedCurriculumId);
@@ -384,7 +391,7 @@ function KurikulumContent() {
   const openEdit = (type: string, data: any, isNew: boolean) => {
     // Auto-set curriculum_id from current filter when creating new items
     const defaultData = data || {};
-    if (isNew && selectedCurriculumId !== 'all' && !defaultData.curriculum_id) {
+    if (isNew && selectedCurriculumId !== '' && !defaultData.curriculum_id) {
       defaultData.curriculum_id = selectedCurriculumId;
     }
     setFormData(defaultData);
@@ -547,7 +554,7 @@ function KurikulumContent() {
                 <Button size="sm" onClick={() => openEdit(table, { code: '', [valueKey]: '' }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
-                <KurikulumImportExport tableConfig={tableConfig} data={data} extraDefaults={selectedCurriculumId !== 'all' && table.startsWith('vmts_ps') ? { curriculum_id: selectedCurriculumId } : undefined} />
+                <KurikulumImportExport tableConfig={tableConfig} data={data} extraDefaults={selectedCurriculumId !== '' && table.startsWith('vmts_ps') ? { curriculum_id: selectedCurriculumId } : undefined} />
               </div>
             )}
           </div>
@@ -665,7 +672,7 @@ function KurikulumContent() {
                 <Button size="sm" onClick={() => openEdit('profil_lulusan', { code: '', profil: '', deskripsi: '' }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
-                <KurikulumImportExport tableConfig={tableConfig} data={profilLulusan} extraDefaults={selectedCurriculumId !== 'all' ? { curriculum_id: selectedCurriculumId } : undefined} />
+                <KurikulumImportExport tableConfig={tableConfig} data={profilLulusan} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
               </div>
             )}
           </div>
@@ -765,7 +772,7 @@ function KurikulumContent() {
                 <Button size="sm" onClick={() => openEdit('plos', { code: '', description: '', profil_lulusan_ids: [] }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
-                <KurikulumImportExport tableConfig={tableConfig} data={plos} extraDefaults={selectedCurriculumId !== 'all' ? { curriculum_id: selectedCurriculumId } : undefined} />
+                <KurikulumImportExport tableConfig={tableConfig} data={plos} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
               </div>
             )}
           </div>
@@ -901,7 +908,7 @@ function KurikulumContent() {
       }));
     if (cleaned.length === 0) return;
 
-    const currId = bkCurriculumId || (selectedCurriculumId !== 'all' ? selectedCurriculumId : null);
+    const currId = bkCurriculumId || (selectedCurriculumId !== '' ? selectedCurriculumId : null);
     // Keep legacy bahan_kajian column populated with a flat string for backwards compat
     const flat = cleaned.flatMap(c => c.bahan_kajian).join(', ');
     const payload = {
@@ -951,7 +958,7 @@ function KurikulumContent() {
   };
 
   // Available courses filtered by curriculum
-  const dialogCurriculumId = bkCurriculumId || (selectedCurriculumId !== 'all' ? selectedCurriculumId : '');
+  const dialogCurriculumId = bkCurriculumId || (selectedCurriculumId !== '' ? selectedCurriculumId : '');
   const dialogAvailableCourses = useMemo(() => {
     return courses.filter((c: any) => dialogCurriculumId ? c.curriculum_id === dialogCurriculumId : true);
   }, [courses, dialogCurriculumId]);
@@ -1018,7 +1025,7 @@ function KurikulumContent() {
                 <Button size="sm" onClick={openAddBk}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
-                <KurikulumImportExport tableConfig={tableConfig} data={bahanKajianKelompok} extraDefaults={selectedCurriculumId !== 'all' ? { curriculum_id: selectedCurriculumId } : undefined} />
+                <KurikulumImportExport tableConfig={tableConfig} data={bahanKajianKelompok} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
               </div>
             )}
           </div>
@@ -1125,7 +1132,7 @@ function KurikulumContent() {
                 <div>
                   <label className="text-sm font-medium">Kurikulum</label>
                   <Select
-                    value={bkCurriculumId || (selectedCurriculumId !== 'all' ? selectedCurriculumId : '')}
+                    value={bkCurriculumId || (selectedCurriculumId !== '' ? selectedCurriculumId : '')}
                     onValueChange={(v) => { setBkCurriculumId(v); }}
                   >
                     <SelectTrigger>
@@ -1302,7 +1309,7 @@ function KurikulumContent() {
                 <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', sks: '0', ploIds: [], plIds: [] }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
-                <KurikulumImportExport tableConfig={tableConfig} data={courses} extraDefaults={selectedCurriculumId !== 'all' ? { curriculum_id: selectedCurriculumId } : undefined} />
+                <KurikulumImportExport tableConfig={tableConfig} data={courses} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
               </div>
             )}
           </div>
@@ -2000,10 +2007,9 @@ function KurikulumContent() {
             <label className="text-sm font-medium text-muted-foreground">Filter Kurikulum:</label>
             <Select value={selectedCurriculumId} onValueChange={setSelectedCurriculumId}>
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Semua Kurikulum Aktif" />
+                <SelectValue placeholder="Pilih Kurikulum" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Semua Kurikulum Aktif</SelectItem>
                 {activeCurricula.map((c: any) => (
                   <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                 ))}
