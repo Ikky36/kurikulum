@@ -166,8 +166,6 @@ export function useImportAssignments() {
           max_attempts: assignment.max_attempts,
           time_limit_minutes: assignment.time_limit_minutes,
           is_safe_exam_mode: assignment.is_safe_exam_mode,
-          seb_password: assignment.seb_password,
-          seb_quit_password: assignment.seb_quit_password,
           seb_config_url: assignment.seb_config_url,
           show_answer_mode: assignment.show_answer_mode,
           submission_type: assignment.submission_type,
