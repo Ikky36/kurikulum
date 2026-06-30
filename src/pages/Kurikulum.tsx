@@ -2013,7 +2013,7 @@ function KurikulumContent() {
         </div>
 
         <Tabs defaultValue="vmts-pt">
-          <TabsList className={`grid grid-cols-2 ${showVmtsUpps ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} w-full mb-6`}>
+          <TabsList className={`h-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${showVmtsUpps ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} gap-2 w-full mb-6 p-2`}>
             <TabsTrigger value="vmts-pt">VMTS PT</TabsTrigger>
             {showVmtsUpps && <TabsTrigger value="vmts-upps">VMTS UPPS</TabsTrigger>}
             <TabsTrigger value="vmts-ps">VMTS PS</TabsTrigger>
