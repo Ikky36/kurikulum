@@ -59,8 +59,25 @@ export function AssignmentEditor({ classId, courseId, assignment, onSuccess }: A
   const [isSafeExamMode, setIsSafeExamMode] = useState(assignment?.is_safe_exam_mode || false);
   const [isFocusMode, setIsFocusMode] = useState((assignment as any)?.is_focus_mode || false);
   const [showAnswerMode, setShowAnswerMode] = useState(extendedAssignment?.show_answer_mode || 'after_quiz');
-  const [sebPassword, setSebPassword] = useState(extendedAssignment?.seb_password || '');
-  const [sebQuitPassword, setSebQuitPassword] = useState(extendedAssignment?.seb_quit_password || '');
+  const [sebPassword, setSebPassword] = useState('');
+  const [sebQuitPassword, setSebQuitPassword] = useState('');
+
+  // Fetch SEB passwords from secrets table (only owning instructor / admin can read)
+  useEffect(() => {
+    if (!assignment?.id || !isSafeExamMode) return;
+    (async () => {
+      const { data } = await supabase
+        .from('elearning_assignment_seb_secrets')
+        .select('seb_password, seb_quit_password')
+        .eq('assignment_id', assignment.id)
+        .maybeSingle();
+      if (data) {
+        setSebPassword(data.seb_password || '');
+        setSebQuitPassword(data.seb_quit_password || '');
+      }
+    })();
+  }, [assignment?.id, isSafeExamMode]);
+
   const [prerequisiteMaterialId, setPrerequisiteMaterialId] = useState(extendedAssignment?.prerequisite_material_id || '');
   const [prerequisiteAssignmentId, setPrerequisiteAssignmentId] = useState(extendedAssignment?.prerequisite_assignment_id || '');
   const [showPrerequisites, setShowPrerequisites] = useState(false);
