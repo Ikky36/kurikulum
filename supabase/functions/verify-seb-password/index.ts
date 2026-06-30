@@ -53,9 +53,9 @@ Deno.serve(async (req) => {
     );
 
     const { data: assignment, error: fetchError } = await supabaseAdmin
-      .from('elearning_assignments')
+      .from('elearning_assignment_seb_secrets')
       .select('seb_password')
-      .eq('id', assignment_id)
+      .eq('assignment_id', assignment_id)
       .single();
 
     if (fetchError || !assignment) {

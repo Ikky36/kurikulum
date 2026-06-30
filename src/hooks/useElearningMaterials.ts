@@ -112,19 +112,34 @@ export function useElearningAssignments(classId: string) {
   });
 }
 
+// Helper to upsert SEB passwords into separate secrets table
+async function upsertSebSecrets(assignmentId: string, sebPassword: string | null, sebQuitPassword: string | null) {
+  if (sebPassword == null && sebQuitPassword == null) {
+    await supabase.from('elearning_assignment_seb_secrets').delete().eq('assignment_id', assignmentId);
+    return;
+  }
+  await supabase
+    .from('elearning_assignment_seb_secrets')
+    .upsert({ assignment_id: assignmentId, seb_password: sebPassword, seb_quit_password: sebQuitPassword }, { onConflict: 'assignment_id' });
+}
+
 // Create assignment
 export function useCreateAssignment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (data: TablesInsert<'elearning_assignments'>) => {
+    mutationFn: async (data: TablesInsert<'elearning_assignments'> & { seb_password?: string | null; seb_quit_password?: string | null }) => {
+      const { seb_password, seb_quit_password, ...rest } = data as any;
       const { data: result, error } = await supabase
         .from('elearning_assignments')
-        .insert(data)
+        .insert(rest)
         .select()
         .single();
 
       if (error) throw error;
+      if (result && (seb_password || seb_quit_password)) {
+        await upsertSebSecrets(result.id, seb_password ?? null, seb_quit_password ?? null);
+      }
       return result;
     },
     onSuccess: (_, variables) => {
@@ -138,15 +153,20 @@ export function useUpdateAssignment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...data }: TablesUpdate<'elearning_assignments'> & { id: string }) => {
+    mutationFn: async ({ id, ...data }: TablesUpdate<'elearning_assignments'> & { id: string; seb_password?: string | null; seb_quit_password?: string | null }) => {
+      const { seb_password, seb_quit_password, ...rest } = data as any;
+      const hasSebFields = 'seb_password' in (data as any) || 'seb_quit_password' in (data as any);
       const { data: result, error } = await supabase
         .from('elearning_assignments')
-        .update(data)
+        .update(rest)
         .eq('id', id)
         .select()
         .single();
 
       if (error) throw error;
+      if (hasSebFields) {
+        await upsertSebSecrets(id, seb_password ?? null, seb_quit_password ?? null);
+      }
       return result;
     },
     onSuccess: () => {
@@ -154,6 +174,7 @@ export function useUpdateAssignment() {
     },
   });
 }
+
 
 // Delete assignment
 export function useDeleteAssignment() {

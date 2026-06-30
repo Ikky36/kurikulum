@@ -691,9 +691,42 @@ export type Database = {
           },
         ]
       }
+      elearning_assignment_seb_secrets: {
+        Row: {
+          assignment_id: string
+          created_at: string
+          seb_password: string | null
+          seb_quit_password: string | null
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          created_at?: string
+          seb_password?: string | null
+          seb_quit_password?: string | null
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          created_at?: string
+          seb_password?: string | null
+          seb_quit_password?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "elearning_assignment_seb_secrets_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: true
+            referencedRelation: "elearning_assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       elearning_assignments: {
         Row: {
           assessment_id: string | null
+          assignment_code: string | null
           assignment_type: string
           created_at: string
           description: string | null
@@ -708,8 +741,6 @@ export type Database = {
           prerequisite_assignment_id: string | null
           prerequisite_material_id: string | null
           seb_config_url: string | null
-          seb_password: string | null
-          seb_quit_password: string | null
           show_answer_mode: string | null
           start_date: string | null
           submission_type: string | null
@@ -719,6 +750,7 @@ export type Database = {
         }
         Insert: {
           assessment_id?: string | null
+          assignment_code?: string | null
           assignment_type: string
           created_at?: string
           description?: string | null
@@ -733,8 +765,6 @@ export type Database = {
           prerequisite_assignment_id?: string | null
           prerequisite_material_id?: string | null
           seb_config_url?: string | null
-          seb_password?: string | null
-          seb_quit_password?: string | null
           show_answer_mode?: string | null
           start_date?: string | null
           submission_type?: string | null
@@ -744,6 +774,7 @@ export type Database = {
         }
         Update: {
           assessment_id?: string | null
+          assignment_code?: string | null
           assignment_type?: string
           created_at?: string
           description?: string | null
@@ -758,8 +789,6 @@ export type Database = {
           prerequisite_assignment_id?: string | null
           prerequisite_material_id?: string | null
           seb_config_url?: string | null
-          seb_password?: string | null
-          seb_quit_password?: string | null
           show_answer_mode?: string | null
           start_date?: string | null
           submission_type?: string | null

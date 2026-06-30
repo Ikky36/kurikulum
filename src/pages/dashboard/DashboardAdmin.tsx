@@ -22,7 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target, Eye, EyeOff, Settings, CheckSquare, LogIn } from 'lucide-react';
 import { Navigate, Link } from 'react-router-dom';
 import { Course, Profile, AppRole, Program } from '@/lib/types';
-import { CourseImportExport } from '@/components/admin/CourseImportExport';
+
 import { SistemKuliahManager } from '@/components/admin/SistemKuliahManager';
 import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 import { UserImportExport } from '@/components/admin/UserImportExport';
