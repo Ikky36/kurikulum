@@ -22,6 +22,7 @@ import { Course, Profile, Grade } from '@/lib/types';
 import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 import * as XLSX from 'xlsx';
 import { TableFilterHeader } from '@/components/ui/table-column-filter';
+import { DashboardScoreRecap } from '@/components/dashboard/DashboardScoreRecap';
 
 export default function DashboardDosen() {
   const { user, profile, role, refreshProfile, loading } = useAuth();
@@ -328,7 +329,7 @@ export default function DashboardDosen() {
     if (successCount > 0) {
       const message = skippedCount > 0 
         ? `${successCount} nilai berhasil diimport, ${skippedCount} baris dilewati karena tidak valid${errorCount > 0 ? `, ${errorCount} gagal tersimpan` : ''}`
-        : `${successCount} nilai berhasil diimport${errorCount > 0 ? `, ${errorCount} gagal` : ''}`;
+        : `${successCount} nilai berhasil diimport${errorCount > 0 ? `${errorCount} gagal` : ''}`;
       toast({ title: 'Import Selesai', description: message });
     } else {
       toast({ title: 'Import gagal', description: 'Tidak ada data yang berhasil diimport', variant: 'destructive' });
@@ -650,6 +651,11 @@ export default function DashboardDosen() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Laporan Rekap Skor Kelas (E-Learning) */}
+        <div className="mt-12">
+          <DashboardScoreRecap />
+        </div>
       </div>
     </Layout>
   );

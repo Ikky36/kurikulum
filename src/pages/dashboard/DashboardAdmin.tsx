@@ -28,6 +28,7 @@ import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 import { UserImportExport } from '@/components/admin/UserImportExport';
 import { UserPagination } from '@/components/admin/UserPagination';
 import { KurikulumTab } from '@/components/admin/KurikulumTab';
+import { DashboardScoreRecap } from '@/components/dashboard/DashboardScoreRecap';
 import { TableFilterHeader } from '@/components/ui/table-column-filter';
 import { TableSortHeader, SortConfig, sortData } from '@/components/ui/table-sort-header';
 
@@ -933,10 +934,14 @@ export default function DashboardAdmin() {
         </div>
 
         <Tabs defaultValue="kelas" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="kelas" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Target className="h-4 w-4" />
               <span className="hidden sm:inline">Kelas</span>
+            </TabsTrigger>
+            <TabsTrigger value="rekap" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <CheckSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Rekap Skor</span>
             </TabsTrigger>
             <TabsTrigger value="accounts" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Kelola Akun</TabsTrigger>
             <TabsTrigger value="assignments" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Penugasan</TabsTrigger>
@@ -946,6 +951,11 @@ export default function DashboardAdmin() {
           {/* Kelas Tab */}
           <TabsContent value="kelas">
             <KurikulumTab />
+          </TabsContent>
+
+          {/* Rekap Skor Tab */}
+          <TabsContent value="rekap">
+            <DashboardScoreRecap />
           </TabsContent>
 
           {/* Accounts Tab */}
