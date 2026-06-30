@@ -55,11 +55,11 @@ export function Navbar() {
               <GraduationCap className="h-5 w-5 text-primary-foreground" />
             )}
           </div>
-          <div className="hidden sm:block">
-            <h1 className="font-display text-lg font-bold text-foreground">
+          <div className="hidden sm:flex flex-col justify-center">
+            <h1 className="font-display text-base md:text-lg font-bold text-foreground leading-tight whitespace-nowrap">
               {appName}
             </h1>
-            <p className="text-xs text-muted-foreground">Student Achievement</p>
+            <p className="text-xs text-muted-foreground whitespace-nowrap">Student Achievement</p>
           </div>
         </Link>
 
