@@ -694,6 +694,7 @@ export type Database = {
       elearning_assignments: {
         Row: {
           assessment_id: string | null
+          assignment_code: string | null
           assignment_type: string
           created_at: string
           description: string | null
@@ -719,6 +720,7 @@ export type Database = {
         }
         Insert: {
           assessment_id?: string | null
+          assignment_code?: string | null
           assignment_type: string
           created_at?: string
           description?: string | null
@@ -744,6 +746,7 @@ export type Database = {
         }
         Update: {
           assessment_id?: string | null
+          assignment_code?: string | null
           assignment_type?: string
           created_at?: string
           description?: string | null
