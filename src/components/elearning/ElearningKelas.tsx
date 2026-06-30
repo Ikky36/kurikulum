@@ -10,6 +10,7 @@ import {
   type ElearningClass,
 } from '@/hooks/useElearning';
 import { useRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -92,6 +93,9 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
   const [editingClass, setEditingClass] = useState<ClassWithRelations | null>(null);
   const [deletingClassId, setDeletingClassId] = useState<string | null>(null);
   const [classesWithInstructors, setClassesWithInstructors] = useState<ClassWithRelations[]>([]);
+  
+  const { data: appSettings } = useAppSettings();
+
   const [dosenCourseAssignments, setDosenCourseAssignments] = useState<{course_id: string, class_group_id: string | null}[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -343,10 +347,38 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
 
   const allTypedClasses = classesWithInstructors.length > 0 ? classesWithInstructors : (classes || []) as ClassWithRelations[];
 
-  // Filter out classes that belong to inactive courses (based on curriculum)
+  // Helper to determine if semester is genap (even) or ganjil (odd)
+  const isSemesterGenap = (semester: string | null | undefined) => {
+    if (!semester) return null;
+    const match = semester.match(/\d+/);
+    if (!match) return null;
+    const num = parseInt(match[0]);
+    return num % 2 === 0;
+  };
+
+  // Filter out classes that belong to inactive courses (based on curriculum) and global active semester
   const activeClasses = allTypedClasses.filter(cls => {
     const course = courses?.find(c => c.id === cls.course_id);
-    return course ? course.is_active !== false : true;
+    if (course && course.is_active === false) return false;
+
+    const activeType = appSettings?.active_semester_type || 'all';
+    if (activeType !== 'all') {
+      const groupName = cls.class_group?.name?.toLowerCase() || '';
+      const isGroupNameGanjil = groupName.includes('ganjil') || groupName.includes('smt 1') || groupName.includes('smt 3') || groupName.includes('smt 5') || groupName.includes('smt 7');
+      const isGroupNameGenap = groupName.includes('genap') || groupName.includes('smt 2') || groupName.includes('smt 4') || groupName.includes('smt 6') || groupName.includes('smt 8');
+      
+      let semesterIsGenap: boolean | null = null;
+      if (isGroupNameGanjil) semesterIsGenap = false;
+      else if (isGroupNameGenap) semesterIsGenap = true;
+      else if (course) semesterIsGenap = isSemesterGenap(course.semester);
+
+      if (semesterIsGenap !== null) {
+        if (activeType === 'ganjil' && semesterIsGenap === true) return false;
+        if (activeType === 'genap' && semesterIsGenap === false) return false;
+      }
+    }
+    
+    return true;
   });
 
   const q = searchQuery.trim().toLowerCase();

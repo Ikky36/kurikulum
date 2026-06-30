@@ -22,11 +22,14 @@ import { Curriculum, Program, AppSetting, InstrumenPenilaian } from '@/lib/types
 import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SistemKuliahManager } from '@/components/admin/SistemKuliahManager';
+import { useAppSettings, useUpdateAppSetting } from '@/hooks/useAppSettings';
 
 export default function Settings() {
   const { user, role, loading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { data: appSettings } = useAppSettings();
+  const updateAppSetting = useUpdateAppSetting();
 
   // Curriculum state
   const [showCurriculumDialog, setShowCurriculumDialog] = useState(false);
@@ -1188,7 +1191,35 @@ export default function Settings() {
             </TabsContent>
 
             {/* Semesters Tab */}
-            <TabsContent value="semesters" className="mt-0">
+            <TabsContent value="semesters" className="mt-0 space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Siklus Semester Aktif</CardTitle>
+                  <CardDescription>
+                    Pilih siklus semester yang aktif saat ini. Pengaturan ini akan menyaring secara otomatis daftar mata kuliah dan kelas e-learning yang muncul di seluruh sistem.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col gap-2 max-w-sm">
+                    <Label htmlFor="active_semester_type">Semester Aktif Default</Label>
+                    <Select
+                      value={appSettings?.active_semester_type || 'all'}
+                      onValueChange={(val) => updateAppSetting.mutate({ key: 'active_semester_type', value: val })}
+                      disabled={updateAppSetting.isPending}
+                    >
+                      <SelectTrigger id="active_semester_type">
+                        <SelectValue placeholder="Pilih Siklus..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Semester</SelectItem>
+                        <SelectItem value="ganjil">Semester Ganjil</SelectItem>
+                        <SelectItem value="genap">Semester Genap</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </CardContent>
+              </Card>
+
               <Card>
                 <CardHeader>
                   <div className="flex items-center justify-between">

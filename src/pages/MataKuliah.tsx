@@ -18,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Curriculum } from '@/lib/types';
 import { TableSortHeader, SortConfig, sortData } from '@/components/ui/table-sort-header';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 export default function MataKuliah() {
   const { data: courses, isLoading, error } = useCoursesWithStats();
@@ -32,7 +33,9 @@ export default function MataKuliah() {
   const [curriculumFilter, setCurriculumFilter] = useState('all');
   const [semesterFilter, setSemesterFilter] = useState('all');
   const [instructorFilter, setInstructorFilter] = useState('all');
-  const [isGenapSemester, setIsGenapSemester] = useState(false); // false = ganjil, true = genap
+  
+  // App Settings
+  const { data: appSettings } = useAppSettings();
   
   // Sort state
   const [courseSort, setCourseSort] = useState<SortConfig | null>(null);
@@ -114,9 +117,15 @@ export default function MataKuliah() {
       // Hide courses whose semester is inactive in settings
       if (activeSemesterSet.size > 0 && course.semester && !activeSemesterSet.has(String(course.semester))) return false;
 
-      // Apply genap/ganjil filter
-      const semesterIsGenap = isSemesterGenap(course.semester);
-      if (semesterIsGenap !== null && semesterIsGenap !== isGenapSemester) return false;
+      // Apply genap/ganjil filter from global settings
+      const activeType = appSettings?.active_semester_type || 'all';
+      if (activeType !== 'all') {
+        const semesterIsGenap = isSemesterGenap(course.semester);
+        if (semesterIsGenap !== null) {
+          if (activeType === 'ganjil' && semesterIsGenap === true) return false;
+          if (activeType === 'genap' && semesterIsGenap === false) return false;
+        }
+      }
       
       if (codeFilter !== 'all' && course.code !== codeFilter) return false;
       if (curriculumFilter !== 'all' && course.curriculum_id !== curriculumFilter) return false;
@@ -139,7 +148,7 @@ export default function MataKuliah() {
         default: return null;
       }
     });
-  }, [courses, codeFilter, curriculumFilter, semesterFilter, instructorFilter, courseSort, curricula, isGenapSemester, activeSemesterSet]);
+  }, [courses, codeFilter, curriculumFilter, semesterFilter, instructorFilter, courseSort, curricula, activeSemesterSet, appSettings?.active_semester_type]);
 
   const renderCourseRow = (course: typeof filteredCourses[0], i: number) => {
     const rowContent = (
@@ -298,31 +307,6 @@ export default function MataKuliah() {
               <CardHeader className="flex flex-row items-center justify-between border-b flex-wrap gap-4">
                 <div className="flex items-center gap-6">
                   <CardTitle className="text-lg">Daftar Mata Kuliah</CardTitle>
-                  <div className="flex items-center gap-3 bg-muted/50 rounded-lg px-4 py-2">
-                    <Label 
-                      htmlFor="semester-switch" 
-                      className={cn(
-                        "text-sm font-medium cursor-pointer transition-colors",
-                        !isGenapSemester ? "text-primary" : "text-muted-foreground"
-                      )}
-                    >
-                      Ganjil
-                    </Label>
-                    <Switch
-                      id="semester-switch"
-                      checked={isGenapSemester}
-                      onCheckedChange={setIsGenapSemester}
-                    />
-                    <Label 
-                      htmlFor="semester-switch" 
-                      className={cn(
-                        "text-sm font-medium cursor-pointer transition-colors",
-                        isGenapSemester ? "text-primary" : "text-muted-foreground"
-                      )}
-                    >
-                      Genap
-                    </Label>
-                  </div>
                 </div>
               </CardHeader>
             <div className="overflow-x-auto">

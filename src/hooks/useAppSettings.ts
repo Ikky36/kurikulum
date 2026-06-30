@@ -8,6 +8,7 @@ export interface AppSettings {
   footer_text: string;
   logo_url: string;
   primary_color: string;
+  active_semester_type?: string;
 }
 
 const defaultSettings: AppSettings = {
@@ -38,6 +39,7 @@ export function useAppSettings() {
         footer_text: settingsMap['footer_text'] || defaultSettings.footer_text,
         logo_url: settingsMap['logo_url'] || defaultSettings.logo_url,
         primary_color: settingsMap['primary_color'] || defaultSettings.primary_color,
+        active_semester_type: settingsMap['active_semester_type'] || 'all',
       } as AppSettings;
     },
   });
