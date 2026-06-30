@@ -343,16 +343,22 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
 
   const allTypedClasses = classesWithInstructors.length > 0 ? classesWithInstructors : (classes || []) as ClassWithRelations[];
 
+  // Filter out classes that belong to inactive courses (based on curriculum)
+  const activeClasses = allTypedClasses.filter(cls => {
+    const course = courses?.find(c => c.id === cls.course_id);
+    return course ? course.is_active !== false : true;
+  });
+
   const q = searchQuery.trim().toLowerCase();
   const typedClasses = q
-    ? allTypedClasses.filter((cls) => {
+    ? activeClasses.filter((cls) => {
         const courseName = `${cls.course?.code || ''} ${cls.course?.name || ''}`.toLowerCase();
-        const classGroup = (cls.class_group?.name || '').toLowerCase();
         const title = (cls.title || '').toLowerCase();
         const instructors = (cls.assignedInstructors || []).map(i => i.full_name?.toLowerCase() || '').join(' ');
+        const classGroup = (cls.class_group?.name || '').toLowerCase();
         return courseName.includes(q) || classGroup.includes(q) || title.includes(q) || instructors.includes(q);
       })
-    : allTypedClasses;
+    : activeClasses;
 
   return (
     <div className="space-y-6">

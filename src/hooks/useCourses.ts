@@ -51,11 +51,16 @@ export function useCoursesWithStats() {
       
       if (coursesError) throw coursesError;
       
+      // Filter courses: only those with active curriculum or no curriculum
+      const activeCourses = allCourses?.filter(course => 
+        !course.curriculum_id || activeCurriculumIds.includes(course.curriculum_id)
+      ) || [];
+
       // Compute is_active based on curriculum (true if no curriculum or curriculum is active)
-      const courses = allCourses?.map(course => ({
+      const courses = activeCourses.map(course => ({
         ...course,
-        is_active: !course.curriculum_id || activeCurriculumIds.includes(course.curriculum_id)
-      })) || [];
+        is_active: true
+      }));
 
       // Get all grades
       const { data: grades, error: gradesError } = await supabase
