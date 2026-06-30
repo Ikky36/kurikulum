@@ -464,6 +464,9 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
                       </div>
                     ) : (
                       <p className="text-sm text-muted-foreground italic">Belum ada dosen ditugaskan</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 pt-4 border-t">
                     {onEnterClass && (
                       <Button size="sm" className="flex-1 gap-2" onClick={() => {
                         const courseActive = courses?.find(c => c.id === cls.course_id)?.is_active ?? true;
