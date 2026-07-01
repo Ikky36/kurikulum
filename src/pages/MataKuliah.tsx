@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { useCoursesWithStats } from '@/hooks/useCourses';
@@ -30,7 +30,7 @@ export default function MataKuliah() {
   
   // Filter states
   const [codeFilter, setCodeFilter] = useState('all');
-  const [curriculumFilter, setCurriculumFilter] = useState('all');
+  const [curriculumFilter, setCurriculumFilter] = useState('');
   const [semesterFilter, setSemesterFilter] = useState('all');
   const [instructorFilter, setInstructorFilter] = useState('all');
   
@@ -49,6 +49,13 @@ export default function MataKuliah() {
       return data as Curriculum[];
     },
   });
+
+  // Set default curriculum filter to the first active curriculum
+  useEffect(() => {
+    if (curricula && curricula.length > 0 && curriculumFilter === '') {
+      setCurriculumFilter(curricula[0].id);
+    }
+  }, [curricula, curriculumFilter]);
 
   // Fetch all curricula including inactive for filtering purposes
   const { data: allCurricula } = useQuery({
@@ -128,7 +135,7 @@ export default function MataKuliah() {
       }
       
       if (codeFilter !== 'all' && course.code !== codeFilter) return false;
-      if (curriculumFilter !== 'all' && course.curriculum_id !== curriculumFilter) return false;
+      if (curriculumFilter !== '' && course.curriculum_id !== curriculumFilter) return false;
       if (semesterFilter !== 'all' && course.semester !== semesterFilter) return false;
       if (instructorFilter !== 'all' && !course.instructors.some(i => i.full_name === instructorFilter)) return false;
       return true;
@@ -309,6 +316,26 @@ export default function MataKuliah() {
                 <div className="flex items-center gap-6">
                   <CardTitle className="text-lg">Daftar Mata Kuliah</CardTitle>
                 </div>
+                {curricula && curricula.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Kurikulum:</span>
+                    <Select
+                      value={curriculumFilter}
+                      onValueChange={setCurriculumFilter}
+                    >
+                      <SelectTrigger className="w-[200px] h-9">
+                        <SelectValue placeholder="Pilih kurikulum" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {curricula.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </CardHeader>
             <div className="overflow-x-auto">
               <Table>
@@ -369,17 +396,6 @@ export default function MataKuliah() {
                         currentSort={courseSort}
                         onSort={setCourseSort}
                         sortType="text"
-                        filterOptions={allCurricula?.map(c => c.name) || []}
-                        filterValue={curriculumFilter === 'all' ? 'all' : allCurricula?.find(c => c.id === curriculumFilter)?.name || 'all'}
-                        onFilterChange={(val) => {
-                          if (val === 'all') {
-                            setCurriculumFilter('all');
-                          } else {
-                            const found = allCurricula?.find(c => c.name === val);
-                            setCurriculumFilter(found?.id || 'all');
-                          }
-                        }}
-                        filterPlaceholder="Filter kurikulum..."
                       >
                         Kurikulum
                       </TableSortHeader>
