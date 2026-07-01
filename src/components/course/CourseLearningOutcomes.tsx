@@ -619,7 +619,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Target className="h-5 w-5 text-primary" />
-              CPL/PLO Terkait
+              CPL/PLO
             </CardTitle>
             <CardDescription>Capaian Pembelajaran Lulusan yang terkait dengan mata kuliah ini</CardDescription>
           </CardHeader>
@@ -859,7 +859,7 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
                   <div className="space-y-4">
                     <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label>CPMK/CLO Terkait</Label>
+                        <Label>CPMK/CLO</Label>
                         <Select value={selectedCloForLlo} onValueChange={setSelectedCloForLlo}>
                           <SelectTrigger><SelectValue placeholder="Pilih CPMK/CLO" /></SelectTrigger>
                           <SelectContent>
