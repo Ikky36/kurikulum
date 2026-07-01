@@ -1291,7 +1291,7 @@ function KurikulumContent() {
       const aPos = aIdx === -1 ? 999 : aIdx;
       const bPos = bIdx === -1 ? 999 : bIdx;
       if (aPos !== bPos) return aPos - bPos;
-      return (a.code || '').localeCompare(b.code || '');
+      return (a.code || '').localeCompare(b.code || '', undefined, { numeric: true, sensitivity: 'base' });
     });
     
     const ids = displayedCourses.map((course: any) => course.id);
