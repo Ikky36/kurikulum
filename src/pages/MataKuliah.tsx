@@ -141,6 +141,18 @@ export default function MataKuliah() {
       return true;
     });
     
+    // Default sorting: sort by active semester order, then by course code
+    result.sort((a, b) => {
+      if (activeSemesters && activeSemesters.length > 0) {
+        const aIdx = activeSemesters.indexOf(String(a.semester || ''));
+        const bIdx = activeSemesters.indexOf(String(b.semester || ''));
+        const aPos = aIdx === -1 ? 999 : aIdx;
+        const bPos = bIdx === -1 ? 999 : bIdx;
+        if (aPos !== bPos) return aPos - bPos;
+      }
+      return (a.code || '').localeCompare(b.code || '');
+    });
+    
     // Apply sorting
     return sortData(result, courseSort, (item, key) => {
       switch (key) {
@@ -155,7 +167,7 @@ export default function MataKuliah() {
         default: return null;
       }
     });
-  }, [courses, codeFilter, curriculumFilter, semesterFilter, instructorFilter, courseSort, curricula, activeSemesterSet, appSettings?.active_semester_type]);
+  }, [courses, codeFilter, curriculumFilter, semesterFilter, instructorFilter, courseSort, curricula, activeSemesterSet, activeSemesters, appSettings?.active_semester_type]);
 
   const renderCourseRow = (course: typeof filteredCourses[0], i: number) => {
     const rowContent = (
