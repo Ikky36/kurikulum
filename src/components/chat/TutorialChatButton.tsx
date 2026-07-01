@@ -246,6 +246,10 @@ export function TutorialChatButton() {
     return { left, top };
   };
 
+  if (tutorialDisabled) {
+    return null;
+  }
+
   if (!isOpen) {
     return (
       <Button
