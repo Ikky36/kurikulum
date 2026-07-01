@@ -410,6 +410,20 @@ function KurikulumContent() {
     }
   };
 
+  const handleFixData = async () => {
+    if (!selectedCurriculumId) return;
+    try {
+      toast.info('Menyelamatkan data CPL yang hilang...');
+      await supabase.from('plos').update({ curriculum_id: selectedCurriculumId }).is('curriculum_id', null);
+      await supabase.from('courses').update({ curriculum_id: selectedCurriculumId }).is('curriculum_id', null);
+      queryClient.invalidateQueries();
+      toast.success('Data CPL berhasil diselamatkan ke Kurikulum Aktif!');
+    } catch (error: any) {
+      toast.error('Gagal: ' + error.message);
+    }
+  };
+
+
   // Update PLO mutation
   const updatePloMutation = useMutation({
     mutationFn: async ({ id, profil_lulusan_id }: { id: string; profil_lulusan_id: string | null }) => {
@@ -2002,8 +2016,17 @@ function KurikulumContent() {
     <Layout>
       <div className="container py-8 px-4 sm:px-6 lg:px-10 xl:px-16">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <h1 className="font-display text-3xl font-bold">Kurikulum</h1>
           <div className="flex items-center gap-2">
+            <BookOpen className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-bold tracking-tight">Kurikulum</h1>
+            {canEdit && (
+              <Button variant="outline" size="sm" onClick={handleFixData} className="ml-4 border-yellow-500 text-yellow-600 hover:bg-yellow-50">
+                Perbaiki Data Hilang
+              </Button>
+            )}
+          </div>
+          
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <label className="text-sm font-medium text-muted-foreground">Filter Kurikulum:</label>
             <Select value={selectedCurriculumId} onValueChange={setSelectedCurriculumId}>
               <SelectTrigger className="w-[200px]">
