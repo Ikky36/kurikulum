@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -29,6 +30,7 @@ const getInitialPosition = (): Position => {
 };
 
 export function TutorialChatButton() {
+  const { data: appSettings } = useAppSettings();
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -48,6 +50,10 @@ export function TutorialChatButton() {
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef<Position>({ x: 0, y: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  if (appSettings?.enable_tutorial === 'false') {
+    return null;
+  }
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Save position to localStorage

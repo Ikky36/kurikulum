@@ -61,6 +61,7 @@ export default function Settings() {
   const [appTitle, setAppTitle] = useState('');
   const [appTagline, setAppTagline] = useState('');
   const [footerText, setFooterText] = useState('');
+  const [enableTutorial, setEnableTutorial] = useState(true);
   const [logoUrl, setLogoUrl] = useState('');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [primaryColor, setPrimaryColor] = useState('');
@@ -162,6 +163,7 @@ export default function Settings() {
       setAppTitle(settingsMap['app_title'] || 'Student Achievement Tracker');
       setAppTagline(settingsMap['app_tagline'] || 'Pantau dan kelola nilai mahasiswa Program Bahasa Arab dengan mudah. Visualisasi data yang jelas untuk hasil pembelajaran yang lebih baik.');
       setFooterText(settingsMap['footer_text'] || '© 2024 Student Achievement Tracker PBA. Semua hak dilindungi.');
+      setEnableTutorial(settingsMap['enable_tutorial'] !== 'false');
       setLogoUrl(settingsMap['logo_url'] || '');
       setPrimaryColor(settingsMap['primary_color'] || '');
       setAiApiKey(settingsMap['ai_api_key'] || '');
@@ -604,6 +606,7 @@ export default function Settings() {
     await updateSettingMutation.mutateAsync({ key: 'app_title', value: appTitle });
     await updateSettingMutation.mutateAsync({ key: 'app_tagline', value: appTagline });
     await updateSettingMutation.mutateAsync({ key: 'footer_text', value: footerText });
+    await updateSettingMutation.mutateAsync({ key: 'enable_tutorial', value: enableTutorial ? 'true' : 'false' });
   };
 
   const handleSaveAiSettings = async () => {
@@ -925,7 +928,19 @@ export default function Settings() {
                         />
                         <p className="text-xs text-muted-foreground">Ditampilkan di bagian bawah setiap halaman</p>
                       </div>
-                      <Button onClick={handleSaveAllTexts}>Simpan Semua Teks</Button>
+                      <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <Label className="text-base">Bantuan Tutorial</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Aktifkan tombol chat bantuan tutorial di pojok kanan bawah layar.
+                          </p>
+                        </div>
+                        <Switch
+                          checked={enableTutorial}
+                          onCheckedChange={setEnableTutorial}
+                        />
+                      </div>
+                      <Button onClick={handleSaveAllTexts}>Simpan Semua Pengaturan</Button>
                     </div>
                   </CardContent>
                 </Card>

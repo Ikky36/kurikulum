@@ -9,6 +9,7 @@ export interface AppSettings {
   logo_url: string;
   primary_color: string;
   active_semester_type?: string;
+  enable_tutorial?: string;
 }
 
 const defaultSettings: AppSettings = {
@@ -18,6 +19,7 @@ const defaultSettings: AppSettings = {
   footer_text: '© 2024 Student Achievement Tracker PBA. Semua hak dilindungi.',
   logo_url: '',
   primary_color: '',
+  enable_tutorial: 'true',
 };
 
 export function useAppSettings() {
@@ -40,6 +42,7 @@ export function useAppSettings() {
         logo_url: settingsMap['logo_url'] || defaultSettings.logo_url,
         primary_color: settingsMap['primary_color'] || defaultSettings.primary_color,
         active_semester_type: settingsMap['active_semester_type'] || 'all',
+        enable_tutorial: settingsMap['enable_tutorial'] || defaultSettings.enable_tutorial,
       } as AppSettings;
     },
   });
