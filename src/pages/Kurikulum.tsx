@@ -483,7 +483,7 @@ function KurikulumContent() {
             <TableHeader>
               <TableRow className="bg-primary hover:bg-primary">
                 <TableHead className="text-primary-foreground text-center">{title}</TableHead>
-                {canEdit && visiData && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+                {canEdit && visiData && <TableHead className="text-primary-foreground text-center w-24">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -578,12 +578,12 @@ function KurikulumContent() {
             <TableHeader>
               <TableRow className="bg-primary hover:bg-primary">
                 {canEdit && (
-                  <TableHead className="text-primary-foreground w-12">
+                  <TableHead className="text-primary-foreground text-center w-12">
                     <BulkSelectAllCheckbox ids={ids} />
                   </TableHead>
                 )}
-                <TableHead className="text-primary-foreground w-16">No</TableHead>
-                <TableHead className="text-primary-foreground w-24">
+                <TableHead className="text-primary-foreground text-center w-16">No</TableHead>
+                <TableHead className="text-primary-foreground text-center w-24">
                   <TableSortHeader
                     sortKey="code"
                     currentSort={sortConfig}
@@ -593,7 +593,7 @@ function KurikulumContent() {
                     Kode
                   </TableSortHeader>
                 </TableHead>
-                <TableHead className="text-primary-foreground">
+                <TableHead className="text-primary-foreground text-center">
                   <TableSortHeader
                     sortKey="value"
                     currentSort={sortConfig}
@@ -603,7 +603,7 @@ function KurikulumContent() {
                     {valueLabel}
                   </TableSortHeader>
                 </TableHead>
-                {canEdit && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+                {canEdit && <TableHead className="text-primary-foreground text-center w-24">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -696,15 +696,15 @@ function KurikulumContent() {
             <TableHeader>
               <TableRow className="bg-primary hover:bg-primary">
                 {canEdit && (
-                  <TableHead className="text-primary-foreground w-12">
+                  <TableHead className="text-primary-foreground text-center w-12">
                     <BulkSelectAllCheckbox ids={ids} />
                   </TableHead>
                 )}
-                <TableHead className="text-primary-foreground w-16">No</TableHead>
-                <TableHead className="text-primary-foreground w-24">Kode</TableHead>
-                <TableHead className="text-primary-foreground">Profil Lulusan</TableHead>
-                <TableHead className="text-primary-foreground">Deskripsi</TableHead>
-                {canEdit && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+                <TableHead className="text-primary-foreground text-center w-16">No</TableHead>
+                <TableHead className="text-primary-foreground text-center w-24">Kode</TableHead>
+                <TableHead className="text-primary-foreground text-center">Profil Lulusan</TableHead>
+                <TableHead className="text-primary-foreground text-center">Deskripsi</TableHead>
+                {canEdit && <TableHead className="text-primary-foreground text-center w-24">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -796,15 +796,15 @@ function KurikulumContent() {
             <TableHeader>
               <TableRow className="bg-primary hover:bg-primary">
                 {canEdit && (
-                  <TableHead className="text-primary-foreground w-12">
+                  <TableHead className="text-primary-foreground text-center w-12">
                     <BulkSelectAllCheckbox ids={ids} />
                   </TableHead>
                 )}
-                <TableHead className="text-primary-foreground w-16">No</TableHead>
-                <TableHead className="text-primary-foreground w-24">Kode</TableHead>
-                <TableHead className="text-primary-foreground">CPL</TableHead>
-                <TableHead className="text-primary-foreground">PL</TableHead>
-                {canEdit && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+                <TableHead className="text-primary-foreground text-center w-16">No</TableHead>
+                <TableHead className="text-primary-foreground text-center w-24">Kode</TableHead>
+                <TableHead className="text-primary-foreground text-center">CPL</TableHead>
+                <TableHead className="text-primary-foreground text-center">PL</TableHead>
+                {canEdit && <TableHead className="text-primary-foreground text-center w-24">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1049,15 +1049,15 @@ function KurikulumContent() {
             <TableHeader>
               <TableRow className="bg-primary hover:bg-primary">
                 {canEdit && (
-                  <TableHead className="text-primary-foreground w-12">
+                  <TableHead className="text-primary-foreground text-center w-12">
                     <BulkSelectAllCheckbox ids={ids} />
                   </TableHead>
                 )}
-                <TableHead className="text-primary-foreground w-16">No</TableHead>
-                <TableHead className="text-primary-foreground">Kelompok BK</TableHead>
-                <TableHead className="text-primary-foreground">Bahan Kajian</TableHead>
-                <TableHead className="text-primary-foreground">Mata Kuliah</TableHead>
-                {canEdit && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+                <TableHead className="text-primary-foreground text-center w-16">No</TableHead>
+                <TableHead className="text-primary-foreground text-center">Kelompok BK</TableHead>
+                <TableHead className="text-primary-foreground text-center">Bahan Kajian</TableHead>
+                <TableHead className="text-primary-foreground text-center">Mata Kuliah</TableHead>
+                {canEdit && <TableHead className="text-primary-foreground text-center w-24">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1333,15 +1333,15 @@ function KurikulumContent() {
             <TableHeader>
               <TableRow className="bg-primary hover:bg-primary">
                 {canEdit && (
-                  <TableHead className="text-primary-foreground w-12">
+                  <TableHead className="text-primary-foreground text-center w-12">
                     <BulkSelectAllCheckbox ids={ids} />
                   </TableHead>
                 )}
-                <TableHead className="text-primary-foreground w-16">No</TableHead>
-                <TableHead className="text-primary-foreground w-24">Kode</TableHead>
-                <TableHead className="text-primary-foreground">Nama</TableHead>
-                <TableHead className="text-primary-foreground">Kurikulum</TableHead>
-                <TableHead className="text-primary-foreground">
+                <TableHead className="text-primary-foreground text-center w-16">No</TableHead>
+                <TableHead className="text-primary-foreground text-center w-24">Kode</TableHead>
+                <TableHead className="text-primary-foreground text-center">Nama</TableHead>
+                <TableHead className="text-primary-foreground text-center">Kurikulum</TableHead>
+                <TableHead className="text-primary-foreground text-center">
                   <TableSortHeader
                     sortKey="semester"
                     currentSort={sortMk}
@@ -1355,10 +1355,10 @@ function KurikulumContent() {
                     Semester
                   </TableSortHeader>
                 </TableHead>
-                <TableHead className="text-primary-foreground w-16">SKS</TableHead>
-                <TableHead className="text-primary-foreground">CPL/PLO</TableHead>
-                <TableHead className="text-primary-foreground">PL</TableHead>
-                {canEdit && <TableHead className="text-primary-foreground w-24">Aksi</TableHead>}
+                <TableHead className="text-primary-foreground text-center w-16">SKS</TableHead>
+                <TableHead className="text-primary-foreground text-center">CPL/PLO</TableHead>
+                <TableHead className="text-primary-foreground text-center">PL</TableHead>
+                {canEdit && <TableHead className="text-primary-foreground text-center w-24">Aksi</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
