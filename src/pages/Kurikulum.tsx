@@ -1709,10 +1709,24 @@ function KurikulumContent() {
                         type="checkbox"
                         checked={selectedPloIds.includes(plo.id)}
                         onChange={(e) => {
-                          const newIds = e.target.checked
+                          const isChecked = e.target.checked;
+                          const newIds = isChecked
                             ? [...selectedPloIds, plo.id]
                             : selectedPloIds.filter((id) => id !== plo.id);
-                          setFormData({ ...formData, ploIds: newIds as any });
+                          
+                          let newFormData = { ...formData, ploIds: newIds as any };
+                          
+                          // Auto-check related PLs
+                          if (isChecked) {
+                            const relatedPlIds = plo.plo_profil_lulusan?.map((p: any) => p.profil_lulusan_id) || [];
+                            if (relatedPlIds.length > 0) {
+                              const currentPlIds = (formData.plIds as unknown as string[]) || [];
+                              const mergedPlIds = Array.from(new Set([...currentPlIds, ...relatedPlIds]));
+                              newFormData.plIds = mergedPlIds as any;
+                            }
+                          }
+                          
+                          setFormData(newFormData);
                         }}
                       />
                       <span className="text-sm">{plo.code} - {plo.description}</span>
