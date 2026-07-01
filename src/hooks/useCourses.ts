@@ -24,7 +24,7 @@ export function useCourses() {
       
       return data?.map(course => ({
         ...course,
-        is_active: !course.curriculum_id || activeCurriculumIds.includes(course.curriculum_id)
+        is_active: !!course.curriculum_id && activeCurriculumIds.includes(course.curriculum_id)
       })) as Course[];
     },
   });
@@ -51,9 +51,9 @@ export function useCoursesWithStats() {
       
       if (coursesError) throw coursesError;
       
-      // Filter courses: only those with active curriculum or no curriculum
+      // Filter courses: only those with active curriculum
       const activeCourses = allCourses?.filter(course => 
-        !course.curriculum_id || activeCurriculumIds.includes(course.curriculum_id)
+        course.curriculum_id && activeCurriculumIds.includes(course.curriculum_id)
       ) || [];
 
       // Compute is_active based on curriculum (true if no curriculum or curriculum is active)
@@ -169,7 +169,7 @@ export function useCourse(courseId: string) {
 
       return {
         ...data,
-        is_active: !data.curriculum_id || activeCurriculumIds.includes(data.curriculum_id)
+        is_active: !!data.curriculum_id && activeCurriculumIds.includes(data.curriculum_id)
       } as Course;
     },
     enabled: !!courseId,
