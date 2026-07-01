@@ -50,11 +50,8 @@ export function TutorialChatButton() {
   const [isDragging, setIsDragging] = useState(false);
   const dragOffset = useRef<Position>({ x: 0, y: 0 });
   const buttonRef = useRef<HTMLButtonElement>(null);
-
-  if (appSettings?.enable_tutorial === 'false') {
-    return null;
-  }
   const containerRef = useRef<HTMLDivElement>(null);
+  const tutorialDisabled = appSettings?.enable_tutorial === 'false';
 
   // Save position to localStorage
   useEffect(() => {
@@ -248,6 +245,10 @@ export function TutorialChatButton() {
     
     return { left, top };
   };
+
+  if (tutorialDisabled) {
+    return null;
+  }
 
   if (!isOpen) {
     return (

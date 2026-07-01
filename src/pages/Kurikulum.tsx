@@ -1722,7 +1722,7 @@ function KurikulumContent() {
                             if (relatedPlIds.length > 0) {
                               const currentPlIds = (formData.plIds as unknown as string[]) || [];
                               const mergedPlIds = Array.from(new Set([...currentPlIds, ...relatedPlIds]));
-                              newFormData.plIds = mergedPlIds as any;
+                              (newFormData as any).plIds = mergedPlIds;
                             }
                           }
                           
