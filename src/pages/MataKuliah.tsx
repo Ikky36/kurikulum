@@ -167,6 +167,12 @@ export default function MataKuliah() {
             {course.name}
           </span>
         </TableCell>
+        <TableCell className="text-center">
+          <Badge variant="outline">{course.semester || '-'}</Badge>
+        </TableCell>
+        <TableCell className="text-center">
+          <span className="font-medium">{(course as any).sks ?? 0}</span>
+        </TableCell>
         <TableCell>
           {getCurriculumName(course.curriculum_id) ? (
             <Badge variant="outline">{getCurriculumName(course.curriculum_id)}</Badge>
@@ -215,12 +221,7 @@ export default function MataKuliah() {
             </span>
           </div>
         </TableCell>
-        <TableCell className="text-center">
-          <Badge variant="outline">{course.semester || '-'}</Badge>
-        </TableCell>
-        <TableCell className="text-center">
-          <span className="font-medium">{(course as any).sks ?? 0}</span>
-        </TableCell>
+
         <TableCell>
           {isGuest ? (
             <Lock className="h-4 w-4 text-muted-foreground" />
@@ -340,6 +341,30 @@ export default function MataKuliah() {
                     </TableHead>
                     <TableHead className="font-semibold text-primary-foreground">
                       <TableSortHeader
+                        sortKey="semester"
+                        currentSort={courseSort}
+                        onSort={setCourseSort}
+                        sortType="text"
+                        filterOptions={filterOptions.semesters}
+                        filterValue={semesterFilter}
+                        onFilterChange={setSemesterFilter}
+                        filterPlaceholder="Filter semester..."
+                      >
+                        Semester
+                      </TableSortHeader>
+                    </TableHead>
+                    <TableHead className="font-semibold text-primary-foreground text-center">
+                      <TableSortHeader
+                        sortKey="sks"
+                        currentSort={courseSort}
+                        onSort={setCourseSort}
+                        sortType="number"
+                      >
+                        SKS
+                      </TableSortHeader>
+                    </TableHead>
+                    <TableHead className="font-semibold text-primary-foreground">
+                      <TableSortHeader
                         sortKey="curriculum"
                         currentSort={courseSort}
                         onSort={setCourseSort}
@@ -393,30 +418,7 @@ export default function MataKuliah() {
                         Rata-rata
                       </TableSortHeader>
                     </TableHead>
-                    <TableHead className="font-semibold text-primary-foreground">
-                      <TableSortHeader
-                        sortKey="semester"
-                        currentSort={courseSort}
-                        onSort={setCourseSort}
-                        sortType="text"
-                        filterOptions={filterOptions.semesters}
-                        filterValue={semesterFilter}
-                        onFilterChange={setSemesterFilter}
-                        filterPlaceholder="Filter semester..."
-                      >
-                        Semester
-                      </TableSortHeader>
-                    </TableHead>
-                    <TableHead className="font-semibold text-primary-foreground text-center">
-                      <TableSortHeader
-                        sortKey="sks"
-                        currentSort={courseSort}
-                        onSort={setCourseSort}
-                        sortType="number"
-                      >
-                        SKS
-                      </TableSortHeader>
-                    </TableHead>
+
                     
                     <TableHead className="text-primary-foreground"></TableHead>
                   </TableRow>
