@@ -585,6 +585,7 @@ function KurikulumContent() {
                 <TableHead className="text-primary-foreground text-center w-16">No</TableHead>
                 <TableHead className="text-primary-foreground text-center w-24">
                   <TableSortHeader
+                    className="w-full justify-center"
                     sortKey="code"
                     currentSort={sortConfig}
                     onSort={onSortChange}
@@ -595,6 +596,7 @@ function KurikulumContent() {
                 </TableHead>
                 <TableHead className="text-primary-foreground text-center">
                   <TableSortHeader
+                    className="w-full justify-center"
                     sortKey="value"
                     currentSort={sortConfig}
                     onSort={onSortChange}
@@ -1343,6 +1345,7 @@ function KurikulumContent() {
                 <TableHead className="text-primary-foreground text-center">Kurikulum</TableHead>
                 <TableHead className="text-primary-foreground text-center">
                   <TableSortHeader
+                    className="w-full justify-center"
                     sortKey="semester"
                     currentSort={sortMk}
                     onSort={setSortMk}
