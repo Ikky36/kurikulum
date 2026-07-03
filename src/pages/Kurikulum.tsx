@@ -28,6 +28,7 @@ import {
 import { KurikulumImportExport } from '@/components/kurikulum/KurikulumImportExport';
 import { KurikulumFilter } from '@/components/kurikulum/KurikulumFilter';
 import { TableSortHeader, SortConfig, sortData } from '@/components/ui/table-sort-header';
+import { VmtsImportExport } from '@/components/kurikulum/VmtsImportExport';
 
 type VmtsVisi = { id: string; visi: string; curriculum_id?: string | null };
 type VmtsPtMisi = { id: string; code: string; misi: string };
@@ -568,7 +569,7 @@ function KurikulumContent() {
                 <Button size="sm" onClick={() => openEdit(table, { code: '', [valueKey]: '' }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
-                <KurikulumImportExport tableConfig={tableConfig} data={data} extraDefaults={selectedCurriculumId !== '' && table.startsWith('vmts_ps') ? { curriculum_id: selectedCurriculumId } : undefined} />
+                {/* <KurikulumImportExport tableConfig={tableConfig} data={data} extraDefaults={selectedCurriculumId !== '' && table.startsWith('vmts_ps') ? { curriculum_id: selectedCurriculumId } : undefined} /> */}
               </div>
             )}
           </div>
@@ -2057,6 +2058,18 @@ function KurikulumContent() {
             </Select>
           </div>
         </div>
+
+        {canEdit && (
+          <VmtsImportExport 
+            curriculumId={selectedCurriculumId}
+            data={{
+              pt: { visi: filteredPtVisi ? [filteredPtVisi] : [], misi: filteredPtMisi, tujuan: filteredPtTujuan, strategi: filteredPtStrategi },
+              upps: { visi: filteredUppsVisi ? [filteredUppsVisi] : [], misi: filteredUppsMisi, tujuan: filteredUppsTujuan, strategi: filteredUppsStrategi },
+              ps: { visi: filteredPsVisi ? [filteredPsVisi] : [], misi: filteredPsMisi, tujuan: filteredPsTujuan, strategi: filteredPsStrategi }
+            }}
+            onSuccess={() => queryClient.invalidateQueries()}
+          />
+        )}
 
         <Tabs defaultValue="vmts-pt">
           <TabsList className={`h-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${showVmtsUpps ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} gap-2 w-full mb-6 p-2`}>
