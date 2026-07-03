@@ -194,7 +194,7 @@ export function VmtsImportExport({ curriculumId, data, onSuccess }: VmtsImportEx
         </Button>
         <Button variant="default" size="sm" onClick={() => fileInputRef.current?.click()} disabled={importing}>
           <Upload className="h-4 w-4 mr-1" />
-          {importing ? 'Mengimport...' : 'Import Semua'}
+          {importing ? 'Mengimport...' : 'Import'}
         </Button>
         <input
           ref={fileInputRef}

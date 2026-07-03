@@ -53,6 +53,7 @@ function KurikulumContent() {
 
   // Selected curriculum filter state
   const [selectedCurriculumId, setSelectedCurriculumId] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<string>('vmts-pt');
 
   // Filter states
   const [filterPtMisi, setFilterPtMisi] = useState('');
@@ -2059,19 +2060,7 @@ function KurikulumContent() {
           </div>
         </div>
 
-        {canEdit && (
-          <VmtsImportExport 
-            curriculumId={selectedCurriculumId}
-            data={{
-              pt: { visi: filteredPtVisi ? [filteredPtVisi] : [], misi: filteredPtMisi, tujuan: filteredPtTujuan, strategi: filteredPtStrategi },
-              upps: { visi: filteredUppsVisi ? [filteredUppsVisi] : [], misi: filteredUppsMisi, tujuan: filteredUppsTujuan, strategi: filteredUppsStrategi },
-              ps: { visi: filteredPsVisi ? [filteredPsVisi] : [], misi: filteredPsMisi, tujuan: filteredPsTujuan, strategi: filteredPsStrategi }
-            }}
-            onSuccess={() => queryClient.invalidateQueries()}
-          />
-        )}
-
-        <Tabs defaultValue="vmts-pt">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className={`h-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${showVmtsUpps ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} gap-2 w-full mb-6 p-2`}>
             <TabsTrigger value="vmts-pt">VMTS PT</TabsTrigger>
             {showVmtsUpps && <TabsTrigger value="vmts-upps">VMTS UPPS</TabsTrigger>}
@@ -2081,6 +2070,18 @@ function KurikulumContent() {
             <TabsTrigger value="bahan-kajian">BK</TabsTrigger>
             <TabsTrigger value="mata-kuliah">MK</TabsTrigger>
           </TabsList>
+
+          {canEdit && activeTab.startsWith('vmts') && (
+            <VmtsImportExport 
+              curriculumId={selectedCurriculumId}
+              data={{
+                pt: { visi: filteredPtVisi ? [filteredPtVisi] : [], misi: filteredPtMisi, tujuan: filteredPtTujuan, strategi: filteredPtStrategi },
+                upps: { visi: filteredUppsVisi ? [filteredUppsVisi] : [], misi: filteredUppsMisi, tujuan: filteredUppsTujuan, strategi: filteredUppsStrategi },
+                ps: { visi: filteredPsVisi ? [filteredPsVisi] : [], misi: filteredPsMisi, tujuan: filteredPsTujuan, strategi: filteredPsStrategi }
+              }}
+              onSuccess={() => queryClient.invalidateQueries()}
+            />
+          )}
 
           <TabsContent value="vmts-pt">
             {renderVisiCard('Visi PT', filteredPtVisi, 'vmts_pt_visi')}
