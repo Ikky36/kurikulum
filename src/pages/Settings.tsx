@@ -1098,6 +1098,19 @@ export default function Settings() {
                       <CardDescription>Atur bagian VMTS mana saja yang akan ditampilkan di halaman Kurikulum</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
+                      <div className="flex items-center justify-between bg-muted/30 p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium text-base">Tampilkan Tab VMTS UPPS</p>
+                          <p className="text-sm text-muted-foreground">Aktifkan untuk menampilkan tab VMTS UPPS secara keseluruhan</p>
+                        </div>
+                        <Switch
+                          checked={settings?.['show_vmts_upps'] !== 'false'}
+                          onCheckedChange={(checked) => {
+                            updateSettingMutation.mutate({ key: 'show_vmts_upps', value: checked ? 'true' : 'false' });
+                          }}
+                        />
+                      </div>
+                      
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Level PT */}
                         <div className="space-y-4">
@@ -1123,15 +1136,6 @@ export default function Settings() {
                         {/* Level UPPS */}
                         <div className="space-y-4">
                           <h3 className="font-semibold text-base border-b pb-2">VMTS UPPS</h3>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">Tampilkan Tab Keseluruhan</span>
-                            <Switch
-                              checked={settings?.['show_vmts_upps'] !== 'false'}
-                              onCheckedChange={(checked) => {
-                                updateSettingMutation.mutate({ key: 'show_vmts_upps', value: checked ? 'true' : 'false' });
-                              }}
-                            />
-                          </div>
                           {[
                             { key: 'show_vmts_upps_visi', label: 'Visi UPPS' },
                             { key: 'show_vmts_upps_misi', label: 'Misi UPPS' },
