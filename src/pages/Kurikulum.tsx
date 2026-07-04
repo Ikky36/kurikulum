@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useMultiTableRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { Layout } from '@/components/layout/Layout';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -195,14 +196,10 @@ function KurikulumContent() {
     },
   });
 
-  // Setting: show VMTS UPPS tab
-  const { data: showVmtsUpps = true } = useQuery({
-    queryKey: ['app-settings', 'show_vmts_upps'],
-    queryFn: async () => {
-      const { data } = await supabase.from('app_settings').select('setting_value').eq('setting_key', 'show_vmts_upps').single();
-      return data?.setting_value !== 'false';
-    },
-  });
+  // Setting: show VMTS UPPS tab and raw settings
+  const { data: appSettings } = useAppSettings();
+  const rawSettings = appSettings?.raw || {};
+  const showVmtsUpps = rawSettings['show_vmts_upps'] !== 'false';
 
   const { data: profilLulusan = [] } = useQuery({
     queryKey: ['profil_lulusan'],
@@ -2084,26 +2081,26 @@ function KurikulumContent() {
           )}
 
           <TabsContent value="vmts-pt">
-            {renderVisiCard('Visi PT', filteredPtVisi, 'vmts_pt_visi')}
-            {renderCodeTable('Misi PT', filteredPtMisi, 'vmts_pt_misi', 'misi', 'Misi Perguruan Tinggi', filterPtMisi, setFilterPtMisi, sortPtMisi, setSortPtMisi)}
-            {renderCodeTable('Tujuan PT', filteredPtTujuan, 'vmts_pt_tujuan', 'tujuan', 'Tujuan Perguruan Tinggi', filterPtTujuan, setFilterPtTujuan, sortPtTujuan, setSortPtTujuan)}
-            {renderCodeTable('Strategi PT', filteredPtStrategi, 'vmts_pt_strategi', 'strategi', 'Strategi Perguruan Tinggi', filterPtStrategi, setFilterPtStrategi, sortPtStrategi, setSortPtStrategi)}
+            {rawSettings['show_vmts_pt_visi'] !== 'false' && renderVisiCard('Visi PT', filteredPtVisi, 'vmts_pt_visi')}
+            {rawSettings['show_vmts_pt_misi'] !== 'false' && renderCodeTable('Misi PT', filteredPtMisi, 'vmts_pt_misi', 'misi', 'Misi Perguruan Tinggi', filterPtMisi, setFilterPtMisi, sortPtMisi, setSortPtMisi)}
+            {rawSettings['show_vmts_pt_tujuan'] !== 'false' && renderCodeTable('Tujuan PT', filteredPtTujuan, 'vmts_pt_tujuan', 'tujuan', 'Tujuan Perguruan Tinggi', filterPtTujuan, setFilterPtTujuan, sortPtTujuan, setSortPtTujuan)}
+            {rawSettings['show_vmts_pt_strategi'] !== 'false' && renderCodeTable('Strategi PT', filteredPtStrategi, 'vmts_pt_strategi', 'strategi', 'Strategi Perguruan Tinggi', filterPtStrategi, setFilterPtStrategi, sortPtStrategi, setSortPtStrategi)}
           </TabsContent>
 
           {showVmtsUpps && (
             <TabsContent value="vmts-upps">
-              {renderVisiCard('Visi UPPS', filteredUppsVisi, 'vmts_upps_visi')}
-              {renderCodeTable('Misi UPPS', filteredUppsMisi, 'vmts_upps_misi', 'misi', 'Misi UPPS', filterUppsMisi, setFilterUppsMisi, sortUppsMisi, setSortUppsMisi)}
-              {renderCodeTable('Tujuan UPPS', filteredUppsTujuan, 'vmts_upps_tujuan', 'tujuan', 'Tujuan UPPS', filterUppsTujuan, setFilterUppsTujuan, sortUppsTujuan, setSortUppsTujuan)}
-              {renderCodeTable('Strategi UPPS', filteredUppsStrategi, 'vmts_upps_strategi', 'strategi', 'Strategi UPPS', filterUppsStrategi, setFilterUppsStrategi, sortUppsStrategi, setSortUppsStrategi)}
+              {rawSettings['show_vmts_upps_visi'] !== 'false' && renderVisiCard('Visi UPPS', filteredUppsVisi, 'vmts_upps_visi')}
+              {rawSettings['show_vmts_upps_misi'] !== 'false' && renderCodeTable('Misi UPPS', filteredUppsMisi, 'vmts_upps_misi', 'misi', 'Misi UPPS', filterUppsMisi, setFilterUppsMisi, sortUppsMisi, setSortUppsMisi)}
+              {rawSettings['show_vmts_upps_tujuan'] !== 'false' && renderCodeTable('Tujuan UPPS', filteredUppsTujuan, 'vmts_upps_tujuan', 'tujuan', 'Tujuan UPPS', filterUppsTujuan, setFilterUppsTujuan, sortUppsTujuan, setSortUppsTujuan)}
+              {rawSettings['show_vmts_upps_strategi'] !== 'false' && renderCodeTable('Strategi UPPS', filteredUppsStrategi, 'vmts_upps_strategi', 'strategi', 'Strategi UPPS', filterUppsStrategi, setFilterUppsStrategi, sortUppsStrategi, setSortUppsStrategi)}
             </TabsContent>
           )}
 
           <TabsContent value="vmts-ps">
-            {renderVisiCard('Visi Keilmuan PS', filteredPsVisi, 'vmts_ps_visi')}
-            {renderCodeTable('Misi PS', filteredPsMisi, 'vmts_ps_misi', 'misi', 'Misi Program Studi', filterPsMisi, setFilterPsMisi, sortPsMisi, setSortPsMisi)}
-            {renderCodeTable('Tujuan PS', filteredPsTujuan, 'vmts_ps_tujuan', 'tujuan', 'Tujuan Program Studi', filterPsTujuan, setFilterPsTujuan, sortPsTujuan, setSortPsTujuan)}
-            {renderCodeTable('Strategi PS', filteredPsStrategi, 'vmts_ps_strategi', 'strategi', 'Strategi Program Studi', filterPsStrategi, setFilterPsStrategi, sortPsStrategi, setSortPsStrategi)}
+            {rawSettings['show_vmts_ps_visi'] !== 'false' && renderVisiCard('Visi Keilmuan PS', filteredPsVisi, 'vmts_ps_visi')}
+            {rawSettings['show_vmts_ps_misi'] !== 'false' && renderCodeTable('Misi PS', filteredPsMisi, 'vmts_ps_misi', 'misi', 'Misi Program Studi', filterPsMisi, setFilterPsMisi, sortPsMisi, setSortPsMisi)}
+            {rawSettings['show_vmts_ps_tujuan'] !== 'false' && renderCodeTable('Tujuan PS', filteredPsTujuan, 'vmts_ps_tujuan', 'tujuan', 'Tujuan Program Studi', filterPsTujuan, setFilterPsTujuan, sortPsTujuan, setSortPsTujuan)}
+            {rawSettings['show_vmts_ps_strategi'] !== 'false' && renderCodeTable('Strategi PS', filteredPsStrategi, 'vmts_ps_strategi', 'strategi', 'Strategi Program Studi', filterPsStrategi, setFilterPsStrategi, sortPsStrategi, setSortPsStrategi)}
           </TabsContent>
 
           <TabsContent value="profil-lulusan">

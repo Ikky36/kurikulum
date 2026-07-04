@@ -10,6 +10,7 @@ export interface AppSettings {
   primary_color: string;
   active_semester_type?: string;
   enable_tutorial?: string;
+  raw: Record<string, string>;
 }
 
 const defaultSettings: AppSettings = {
@@ -43,6 +44,7 @@ export function useAppSettings() {
         primary_color: settingsMap['primary_color'] || defaultSettings.primary_color,
         active_semester_type: settingsMap['active_semester_type'] || 'all',
         enable_tutorial: settingsMap['enable_tutorial'] || defaultSettings.enable_tutorial,
+        raw: settingsMap,
       } as AppSettings;
     },
   });

@@ -1091,24 +1091,85 @@ export default function Settings() {
                       )}
                     </TableBody>
                   </Table>
-                  {/* VMTS UPPS Toggle */}
+                  {/* VMTS Visibility Toggle */}
                   <Card className="mt-6">
                     <CardHeader>
-                      <CardTitle>Pengaturan VMTS UPPS</CardTitle>
-                      <CardDescription>Atur visibilitas tab VMTS UPPS di halaman Kurikulum</CardDescription>
+                      <CardTitle>Pengaturan Visibilitas VMTS</CardTitle>
+                      <CardDescription>Atur bagian VMTS mana saja yang akan ditampilkan di halaman Kurikulum</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">Tampilkan Tab VMTS UPPS</p>
-                          <p className="text-sm text-muted-foreground">Aktifkan untuk menampilkan tab VMTS UPPS di halaman Kurikulum</p>
+                    <CardContent className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Level PT */}
+                        <div className="space-y-4">
+                          <h3 className="font-semibold text-base border-b pb-2">VMTS PT</h3>
+                          {[
+                            { key: 'show_vmts_pt_visi', label: 'Visi PT' },
+                            { key: 'show_vmts_pt_misi', label: 'Misi PT' },
+                            { key: 'show_vmts_pt_tujuan', label: 'Tujuan PT' },
+                            { key: 'show_vmts_pt_strategi', label: 'Strategi PT' },
+                          ].map(item => (
+                            <div key={item.key} className="flex items-center justify-between">
+                              <span className="text-sm">{item.label}</span>
+                              <Switch
+                                checked={settings?.[item.key] !== 'false'}
+                                onCheckedChange={(checked) => {
+                                  updateSettingMutation.mutate({ key: item.key, value: checked ? 'true' : 'false' });
+                                }}
+                              />
+                            </div>
+                          ))}
                         </div>
-                        <Switch
-                          checked={settings?.['show_vmts_upps'] !== 'false'}
-                          onCheckedChange={(checked) => {
-                            updateSettingMutation.mutate({ key: 'show_vmts_upps', value: checked ? 'true' : 'false' });
-                          }}
-                        />
+
+                        {/* Level UPPS */}
+                        <div className="space-y-4">
+                          <h3 className="font-semibold text-base border-b pb-2">VMTS UPPS</h3>
+                          <div className="flex items-center justify-between mb-2 bg-muted/50 p-2 rounded">
+                            <span className="text-sm font-medium">Tampilkan Tab Keseluruhan</span>
+                            <Switch
+                              checked={settings?.['show_vmts_upps'] !== 'false'}
+                              onCheckedChange={(checked) => {
+                                updateSettingMutation.mutate({ key: 'show_vmts_upps', value: checked ? 'true' : 'false' });
+                              }}
+                            />
+                          </div>
+                          {[
+                            { key: 'show_vmts_upps_visi', label: 'Visi UPPS' },
+                            { key: 'show_vmts_upps_misi', label: 'Misi UPPS' },
+                            { key: 'show_vmts_upps_tujuan', label: 'Tujuan UPPS' },
+                            { key: 'show_vmts_upps_strategi', label: 'Strategi UPPS' },
+                          ].map(item => (
+                            <div key={item.key} className="flex items-center justify-between">
+                              <span className="text-sm">{item.label}</span>
+                              <Switch
+                                checked={settings?.[item.key] !== 'false'}
+                                onCheckedChange={(checked) => {
+                                  updateSettingMutation.mutate({ key: item.key, value: checked ? 'true' : 'false' });
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Level PS */}
+                        <div className="space-y-4">
+                          <h3 className="font-semibold text-base border-b pb-2">VMTS PS</h3>
+                          {[
+                            { key: 'show_vmts_ps_visi', label: 'Visi PS' },
+                            { key: 'show_vmts_ps_misi', label: 'Misi PS' },
+                            { key: 'show_vmts_ps_tujuan', label: 'Tujuan PS' },
+                            { key: 'show_vmts_ps_strategi', label: 'Strategi PS' },
+                          ].map(item => (
+                            <div key={item.key} className="flex items-center justify-between">
+                              <span className="text-sm">{item.label}</span>
+                              <Switch
+                                checked={settings?.[item.key] !== 'false'}
+                                onCheckedChange={(checked) => {
+                                  updateSettingMutation.mutate({ key: item.key, value: checked ? 'true' : 'false' });
+                                }}
+                              />
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
