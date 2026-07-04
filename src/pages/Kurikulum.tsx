@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { Plus, Pencil, Trash2, Check, ChevronsUpDown, BookOpen } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { cn } from '@/lib/utils';
+import { cn, getVmtsAcronym } from '@/lib/utils';
 import { 
   BulkSelectProvider, 
   BulkSelectCheckbox, 
@@ -2059,9 +2059,9 @@ function KurikulumContent() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className={`h-auto grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${showVmtsUpps ? 'lg:grid-cols-7' : 'lg:grid-cols-6'} gap-2 w-full mb-6 p-2`}>
-            <TabsTrigger value="vmts-pt">VMTS PT</TabsTrigger>
-            {showVmtsUpps && <TabsTrigger value="vmts-upps">VMTS UPPS</TabsTrigger>}
-            <TabsTrigger value="vmts-ps">VMTS PS</TabsTrigger>
+            <TabsTrigger value="vmts-pt">{getVmtsAcronym('pt', rawSettings)} PT</TabsTrigger>
+            {showVmtsUpps && <TabsTrigger value="vmts-upps">{getVmtsAcronym('upps', rawSettings)} UPPS</TabsTrigger>}
+            <TabsTrigger value="vmts-ps">{getVmtsAcronym('ps', rawSettings)} PS</TabsTrigger>
             <TabsTrigger value="profil-lulusan">PL</TabsTrigger>
             <TabsTrigger value="cpl">CPL</TabsTrigger>
             <TabsTrigger value="bahan-kajian">BK</TabsTrigger>

@@ -23,6 +23,7 @@ import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SistemKuliahManager } from '@/components/admin/SistemKuliahManager';
 import { useAppSettings, useUpdateAppSetting } from '@/hooks/useAppSettings';
+import { getVmtsAcronym } from '@/lib/utils';
 
 export default function Settings() {
   const { user, role, loading } = useAuth();
@@ -1114,7 +1115,7 @@ export default function Settings() {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Level PT */}
                         <div className="space-y-4">
-                          <h3 className="font-semibold text-base border-b pb-2">VMTS PT</h3>
+                          <h3 className="font-semibold text-base border-b pb-2">{getVmtsAcronym('pt', settings || {})} PT</h3>
                           {[
                             { key: 'show_vmts_pt_visi', label: 'Visi PT' },
                             { key: 'show_vmts_pt_misi', label: 'Misi PT' },
@@ -1135,7 +1136,7 @@ export default function Settings() {
 
                         {/* Level UPPS */}
                         <div className="space-y-4">
-                          <h3 className="font-semibold text-base border-b pb-2">VMTS UPPS</h3>
+                          <h3 className="font-semibold text-base border-b pb-2">{getVmtsAcronym('upps', settings || {})} UPPS</h3>
                           {[
                             { key: 'show_vmts_upps_visi', label: 'Visi UPPS' },
                             { key: 'show_vmts_upps_misi', label: 'Misi UPPS' },
@@ -1156,7 +1157,7 @@ export default function Settings() {
 
                         {/* Level PS */}
                         <div className="space-y-4">
-                          <h3 className="font-semibold text-base border-b pb-2">VMTS PS</h3>
+                          <h3 className="font-semibold text-base border-b pb-2">{getVmtsAcronym('ps', settings || {})} PS</h3>
                           {[
                             { key: 'show_vmts_ps_visi', label: 'Visi PS' },
                             { key: 'show_vmts_ps_misi', label: 'Misi PS' },
