@@ -1123,7 +1123,7 @@ export default function Settings() {
                         {/* Level UPPS */}
                         <div className="space-y-4">
                           <h3 className="font-semibold text-base border-b pb-2">VMTS UPPS</h3>
-                          <div className="flex items-center justify-between mb-2 bg-muted/50 p-2 rounded">
+                          <div className="flex items-center justify-between">
                             <span className="text-sm font-medium">Tampilkan Tab Keseluruhan</span>
                             <Switch
                               checked={settings?.['show_vmts_upps'] !== 'false'}
