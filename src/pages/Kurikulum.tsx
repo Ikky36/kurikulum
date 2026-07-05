@@ -687,7 +687,7 @@ function KurikulumContent() {
                 <Button size="sm" onClick={() => openEdit('profil_lulusan', { code: '', profil: '', deskripsi: '' }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
-                <KurikulumImportExport tableConfig={tableConfig} data={profilLulusan} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
+                <KurikulumImportExport tableConfig={tableConfig} data={filteredProfilLulusanData} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
               </div>
             )}
           </div>
@@ -787,7 +787,7 @@ function KurikulumContent() {
                 <Button size="sm" onClick={() => openEdit('plos', { code: '', description: '', profil_lulusan_ids: [] }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
-                <KurikulumImportExport tableConfig={tableConfig} data={plos} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
+                <KurikulumImportExport tableConfig={tableConfig} data={filteredPlosData} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
               </div>
             )}
           </div>
@@ -1040,7 +1040,7 @@ function KurikulumContent() {
                 <Button size="sm" onClick={openAddBk}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
-                <KurikulumImportExport tableConfig={tableConfig} data={bahanKajianKelompok} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
+                <KurikulumImportExport tableConfig={tableConfig} data={filteredBahanKajianData} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
               </div>
             )}
           </div>
@@ -1324,7 +1324,7 @@ function KurikulumContent() {
                 <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', sks: '0', ploIds: [], plIds: [] }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
-                <KurikulumImportExport tableConfig={tableConfig} data={courses} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
+                <KurikulumImportExport tableConfig={tableConfig} data={filteredCourses} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
               </div>
             )}
           </div>
