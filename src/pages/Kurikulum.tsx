@@ -768,6 +768,14 @@ function KurikulumContent() {
       columns: [
         { key: 'code', label: 'Kode', required: true },
         { key: 'description', label: 'Deskripsi CPL', required: true },
+        { 
+          key: 'pl', 
+          label: 'PL', 
+          exportValue: (item: any) => {
+            const pls = item.plo_profil_lulusan?.map((ppl: any) => ppl.profil_lulusan?.code).filter(Boolean) || [];
+            return pls.join(', ');
+          }
+        },
       ],
       queryKey: 'plos',
     };
