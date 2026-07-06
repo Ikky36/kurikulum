@@ -7,6 +7,7 @@ import { BookOpen, ClipboardList, FileText, BarChart3, Scale, ArrowLeft, LogIn, 
 import { ElearningKelas } from '@/components/elearning/ElearningKelas';
 import { ElearningPresensi } from '@/components/elearning/ElearningPresensi';
 import { ElearningMateri } from '@/components/elearning/ElearningMateri';
+import { ElearningImportExport } from '@/components/elearning/ElearningImportExport';
 
 import { ScoreRecapTab } from '@/components/elearning/ScoreRecapTab';
 import { Badge } from '@/components/ui/badge';
@@ -111,6 +112,9 @@ export default function ELearning() {
                       {selectedClass.courseName} • {selectedClass.classGroupName}
                     </p>
                   </div>
+                </div>
+                <div className="mt-4 sm:mt-0 flex gap-2 justify-end">
+                  <ElearningImportExport classId={selectedClass.id} isActive={selectedClass.isActive} />
                 </div>
               </>
             ) : (
