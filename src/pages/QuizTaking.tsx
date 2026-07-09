@@ -456,8 +456,10 @@ export default function QuizTaking() {
       setSubmissionResult(result);
       setShowResults(true);
       
-      // Invalidate quiz questions to get correct answers now that student has submitted
+      // Invalidate quiz questions and results to get correct answers now that student has submitted
       queryClient.invalidateQueries({ queryKey: ['quiz-questions', assignmentId] });
+      queryClient.invalidateQueries({ queryKey: ['quiz-results'] });
+      queryClient.invalidateQueries({ queryKey: ['quiz-submissions'] });
       
       if (!isTestMode) {
         toast.success('Quiz berhasil disubmit!');
@@ -553,139 +555,12 @@ export default function QuizTaking() {
 
               {/* Show answers based on show_answer_mode */}
               {(assignment?.show_answer_mode === 'after_quiz' || assignment?.show_answer_mode === 'after_each') && (
-                <div className="space-y-4 mt-8">
-                  <h3 className="font-semibold text-lg">Pembahasan</h3>
-                  {!resultQuestions ? (
-                    <div className="text-center py-8 text-muted-foreground animate-pulse">Memuat pembahasan...</div>
-                  ) : (
-                    resultQuestions.map((question: any, idx: number) => {
-                      const detail = submissionResult.details.find((d: any) => String(d.question_id) === String(question.id));
-                      if (!detail) return null;
-                      
-                      const originalQuestion = question;
-                      
-                      const getDisplayAnswer = (val: any) => {
-                        if (val === null || val === undefined) return '-';
-                        
-                        const qType = originalQuestion?.question_type;
-                        let optionsJson = originalQuestion?.options;
-                        
-                        const optionItemToText = (opt: any): string => {
-                          if (opt === null || opt === undefined) return '';
-                          if (typeof opt === 'object') {
-                            return String(opt.text ?? opt.label ?? opt.value ?? JSON.stringify(opt));
-                          }
-                          return String(opt);
-                        };
-
-                        if (qType === 'multiple_choice' || qType === 'true_false' || qType === 'select_missing_word') {
-                          let arr: any[] = [];
-                          let rawObj: any = null;
-                          try {
-                            const parsed = typeof optionsJson === 'string' ? JSON.parse(optionsJson) : (optionsJson || []);
-                            const doubleParsed = typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
-                            if (Array.isArray(doubleParsed)) {
-                              arr = doubleParsed;
-                            } else if (doubleParsed && typeof doubleParsed === 'object') {
-                              rawObj = doubleParsed;
-                              arr = Object.values(doubleParsed);
-                            }
-                          } catch(e) {}
-                          
-                          // Check if val is a direct key in the raw object
-                          if (rawObj && typeof val === 'string' && rawObj[val] !== undefined) {
-                            return optionItemToText(rawObj[val]);
-                          }
-                          if (rawObj && typeof val === 'number' && rawObj[String(val)] !== undefined) {
-                            return optionItemToText(rawObj[String(val)]);
-                          }
-
-                          if (arr.length > 0) {
-                            // Try exact text match first
-                            const textOptions = arr.map(o => optionItemToText(o));
-                            if (typeof val === 'string' && textOptions.includes(val)) return val;
-                            
-                            // Try index match
-                            let idx = -1;
-                            if (typeof val === 'number') idx = val;
-                            else if (typeof val === 'string' && /^\d+$/.test(val.trim())) idx = parseInt(val.trim(), 10);
-                            
-                            if (idx >= 0 && idx < arr.length) return optionItemToText(arr[idx]);
-                            if (idx - 1 >= 0 && idx - 1 < arr.length) return optionItemToText(arr[idx - 1]);
-                            
-                            // Try finding by id or value
-                            for (const opt of arr) {
-                              if (opt && typeof opt === 'object') {
-                                if (String(opt.id) === String(val) || String(opt.value) === String(val)) {
-                                  return optionItemToText(opt);
-                                }
-                              }
-                            }
-                          }
-                        }
-                        
-                        if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return String(val);
-                        try { return JSON.stringify(val); } catch { return String(val); }
-                      };
-
-                    const isCorrect = Boolean(detail?.is_correct);
-
-                    return (
-                      <Card key={idx} className={isCorrect ? 'border-green-500/50' : 'border-red-500/50'}>
-                        <CardContent className="pt-4">
-                          <div className="flex items-start gap-3">
-                            <Badge variant={isCorrect ? 'default' : 'destructive'}>
-                              {idx + 1}
-                            </Badge>
-                            <div className="flex-1 space-y-2">
-                              <p 
-                                className={`font-medium bidi-content ${containsArabic(detail.question || '') ? 'font-arabic' : ''}`}
-                                dir="auto"
-                                style={containsArabic(detail.question || '') ? {
-                                  fontFamily: "'Scheherazade New', 'Amiri', serif",
-                                  fontSize: '1.3em',
-                                  lineHeight: 2,
-                                } : undefined}
-                              >{detail.question}</p>
-                              <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                  <span className="text-muted-foreground">Jawaban Anda:</span>
-                                  <p 
-                                    className={`bidi-content ${isCorrect ? 'text-green-600' : 'text-red-600'} ${containsArabic(getDisplayAnswer(detail.user_answer)) ? 'font-arabic' : ''}`}
-                                    dir="auto"
-                                    style={containsArabic(getDisplayAnswer(detail.user_answer)) ? {
-                                      fontFamily: "'Scheherazade New', 'Amiri', serif",
-                                      fontSize: '1.2em',
-                                      lineHeight: 1.8,
-                                    } : undefined}
-                                  >
-                                    {getDisplayAnswer(detail.user_answer)}
-                                  </p>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Jawaban Benar:</span>
-                                  <p 
-                                    className={`text-green-600 bidi-content ${containsArabic(getDisplayAnswer(detail.correct_answer)) ? 'font-arabic' : ''}`}
-                                    dir="auto"
-                                    style={containsArabic(getDisplayAnswer(detail.correct_answer)) ? {
-                                      fontFamily: "'Scheherazade New', 'Amiri', serif",
-                                      fontSize: '1.2em',
-                                      lineHeight: 1.8,
-                                    } : undefined}
-                                  >{getDisplayAnswer(detail.correct_answer)}</p>
-                                </div>
-                              </div>
-                              {detail.feedback && (
-                                <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
-                                  💡 {detail.feedback}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
+                <div className="mt-8 bg-card rounded-lg shadow-sm border overflow-hidden">
+                  <QuizResultViewer
+                    assignmentId={assignmentId!}
+                    assignmentTitle={assignment?.title || ''}
+                    showAnswerMode={assignment?.show_answer_mode || null}
+                  />
                 </div>
               )}
 
