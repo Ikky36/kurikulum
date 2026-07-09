@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { MatchingQuestion } from '@/components/quiz/MatchingQuestion';
 import { containsArabic } from '@/components/ui/arabic-text';
+import { QuizResultViewer } from '@/components/elearning/QuizResultViewer';
 
 interface QuizQuestion {
   id: string;
@@ -146,6 +147,18 @@ export default function QuizTaking() {
       return data;
     },
     enabled: !!assignmentId && !!profile?.id,
+  });
+
+  // Fetch questions specifically for the result view to ensure options are available
+  const { data: resultQuestions } = useQuery({
+    queryKey: ['quiz-questions-result-inline', assignmentId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .rpc('get_quiz_questions_for_student', { p_assignment_id: assignmentId });
+      if (error) throw error;
+      return data as QuizQuestion[];
+    },
+    enabled: !!assignmentId && showResults,
   });
 
   // Submit quiz mutation
@@ -518,7 +531,204 @@ export default function QuizTaking() {
     );
   }
 
+  if (showResults && submissionResult) {
+    return (
+      <div className="min-h-screen bg-background p-4 md:p-8">
+        <div className="max-w-3xl mx-auto space-y-6">
+          <Card className="border-2 border-primary/20">
+            <CardHeader className="text-center bg-gradient-to-r from-primary/10 to-transparent">
+              <CheckCircle className="h-16 w-16 mx-auto mb-4 text-primary" />
+              <CardTitle className="text-2xl">Quiz Selesai!</CardTitle>
+              <CardDescription>{assignment?.title}</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="text-center mb-6">
+                <div className="text-5xl font-bold text-primary mb-2">
+                  {submissionResult.percentage}%
+                </div>
+                <p className="text-muted-foreground">
+                  Skor: {submissionResult.score} / {submissionResult.total} poin
+                </p>
+              </div>
+
+              {/* Show answers based on show_answer_mode */}
+              {(assignment?.show_answer_mode === 'after_quiz' || assignment?.show_answer_mode === 'after_each') && (
+                <div className="space-y-4 mt-8">
+                  <h3 className="font-semibold text-lg">Pembahasan</h3>
+                  {!resultQuestions ? (
+                    <div className="text-center py-8 text-muted-foreground animate-pulse">Memuat pembahasan...</div>
+                  ) : (
+                    resultQuestions.map((question: any, idx: number) => {
+                      const detail = submissionResult.details.find((d: any) => String(d.question_id) === String(question.id));
+                      if (!detail) return null;
+                      
+                      const originalQuestion = question;
+                      
+                      const getDisplayAnswer = (val: any) => {
+                        if (val === null || val === undefined) return '-';
+                        
+                        const qType = originalQuestion?.question_type;
+                        let optionsJson = originalQuestion?.options;
+                        
+                        const optionItemToText = (opt: any): string => {
+                          if (opt === null || opt === undefined) return '';
+                          if (typeof opt === 'object') {
+                            return String(opt.text ?? opt.label ?? opt.value ?? JSON.stringify(opt));
+                          }
+                          return String(opt);
+                        };
+
+                        if (qType === 'multiple_choice' || qType === 'true_false' || qType === 'select_missing_word') {
+                          let arr: any[] = [];
+                          let rawObj: any = null;
+                          try {
+                            const parsed = typeof optionsJson === 'string' ? JSON.parse(optionsJson) : (optionsJson || []);
+                            const doubleParsed = typeof parsed === 'string' ? JSON.parse(parsed) : parsed;
+                            if (Array.isArray(doubleParsed)) {
+                              arr = doubleParsed;
+                            } else if (doubleParsed && typeof doubleParsed === 'object') {
+                              rawObj = doubleParsed;
+                              arr = Object.values(doubleParsed);
+                            }
+                          } catch(e) {}
+                          
+                          // Check if val is a direct key in the raw object
+                          if (rawObj && typeof val === 'string' && rawObj[val] !== undefined) {
+                            return optionItemToText(rawObj[val]);
+                          }
+                          if (rawObj && typeof val === 'number' && rawObj[String(val)] !== undefined) {
+                            return optionItemToText(rawObj[String(val)]);
+                          }
+
+                          if (arr.length > 0) {
+                            // Try exact text match first
+                            const textOptions = arr.map(o => optionItemToText(o));
+                            if (typeof val === 'string' && textOptions.includes(val)) return val;
+                            
+                            // Try index match
+                            let idx = -1;
+                            if (typeof val === 'number') idx = val;
+                            else if (typeof val === 'string' && /^\d+$/.test(val.trim())) idx = parseInt(val.trim(), 10);
+                            
+                            if (idx >= 0 && idx < arr.length) return optionItemToText(arr[idx]);
+                            if (idx - 1 >= 0 && idx - 1 < arr.length) return optionItemToText(arr[idx - 1]);
+                            
+                            // Try finding by id or value
+                            for (const opt of arr) {
+                              if (opt && typeof opt === 'object') {
+                                if (String(opt.id) === String(val) || String(opt.value) === String(val)) {
+                                  return optionItemToText(opt);
+                                }
+                              }
+                            }
+                          }
+                        }
+                        
+                        if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return String(val);
+                        try { return JSON.stringify(val); } catch { return String(val); }
+                      };
+
+                    const isCorrect = Boolean(detail?.is_correct);
+
+                    return (
+                      <Card key={idx} className={isCorrect ? 'border-green-500/50' : 'border-red-500/50'}>
+                        <CardContent className="pt-4">
+                          <div className="flex items-start gap-3">
+                            <Badge variant={isCorrect ? 'default' : 'destructive'}>
+                              {idx + 1}
+                            </Badge>
+                            <div className="flex-1 space-y-2">
+                              <p 
+                                className={`font-medium bidi-content ${containsArabic(detail.question || '') ? 'font-arabic' : ''}`}
+                                dir="auto"
+                                style={containsArabic(detail.question || '') ? {
+                                  fontFamily: "'Scheherazade New', 'Amiri', serif",
+                                  fontSize: '1.3em',
+                                  lineHeight: 2,
+                                } : undefined}
+                              >{detail.question}</p>
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground">Jawaban Anda:</span>
+                                  <p 
+                                    className={`bidi-content ${isCorrect ? 'text-green-600' : 'text-red-600'} ${containsArabic(getDisplayAnswer(detail.user_answer)) ? 'font-arabic' : ''}`}
+                                    dir="auto"
+                                    style={containsArabic(getDisplayAnswer(detail.user_answer)) ? {
+                                      fontFamily: "'Scheherazade New', 'Amiri', serif",
+                                      fontSize: '1.2em',
+                                      lineHeight: 1.8,
+                                    } : undefined}
+                                  >
+                                    {getDisplayAnswer(detail.user_answer)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground">Jawaban Benar:</span>
+                                  <p 
+                                    className={`text-green-600 bidi-content ${containsArabic(getDisplayAnswer(detail.correct_answer)) ? 'font-arabic' : ''}`}
+                                    dir="auto"
+                                    style={containsArabic(getDisplayAnswer(detail.correct_answer)) ? {
+                                      fontFamily: "'Scheherazade New', 'Amiri', serif",
+                                      fontSize: '1.2em',
+                                      lineHeight: 1.8,
+                                    } : undefined}
+                                  >{getDisplayAnswer(detail.correct_answer)}</p>
+                                </div>
+                              </div>
+                              {detail.feedback && (
+                                <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                                  💡 {detail.feedback}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="flex justify-center mt-8">
+                <Button onClick={() => navigateBackToClass()}>
+                  Kembali ke Kelas
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   if (!canTakeQuiz()) {
+    if (previousSubmissions && previousSubmissions.length > 0) {
+      return (
+        <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+          <div className="w-full max-w-4xl space-y-4">
+            <Alert variant="destructive" className="border-warning/50 bg-warning/10 text-warning-foreground">
+              <AlertTriangle className="h-5 w-5" />
+              <AlertDescription className="text-base font-medium">
+                Batas Percobaan Tercapai. Anda telah mencapai batas maksimal percobaan ({assignment?.max_attempts}x). Anda hanya dapat melihat hasil sebelumnya.
+              </AlertDescription>
+            </Alert>
+            <div className="bg-card rounded-lg shadow-sm border overflow-hidden">
+              <QuizResultViewer
+                assignmentId={assignmentId!}
+                assignmentTitle={assignment?.title || ''}
+                showAnswerMode={assignment?.show_answer_mode || null}
+              />
+            </div>
+            <div className="flex justify-center pt-4">
+              <Button variant="outline" onClick={() => navigateBackToClass()}>
+                Kembali ke Kelas
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
@@ -594,114 +804,6 @@ export default function QuizTaking() {
             </Button>
           </CardContent>
         </Card>
-      </div>
-    );
-  }
-
-  if (showResults && submissionResult) {
-    return (
-      <div className="min-h-screen bg-background p-4 md:p-8">
-        <div className="max-w-3xl mx-auto space-y-6">
-          <Card className="border-2 border-primary/20">
-            <CardHeader className="text-center bg-gradient-to-r from-primary/10 to-transparent">
-              <CheckCircle className="h-16 w-16 mx-auto mb-4 text-primary" />
-              <CardTitle className="text-2xl">Quiz Selesai!</CardTitle>
-              <CardDescription>{assignment?.title}</CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="text-center mb-6">
-                <div className="text-5xl font-bold text-primary mb-2">
-                  {submissionResult.percentage}%
-                </div>
-                <p className="text-muted-foreground">
-                  Skor: {submissionResult.score} / {submissionResult.total} poin
-                </p>
-              </div>
-
-              {/* Show answers based on show_answer_mode */}
-              {(assignment?.show_answer_mode === 'after_quiz' || assignment?.show_answer_mode === 'after_each') && (
-                <div className="space-y-4 mt-8">
-                  <h3 className="font-semibold text-lg">Pembahasan</h3>
-                  {submissionResult.details.map((detail: any, idx: number) => {
-                    const formatAnswer = (val: any) => {
-                      if (val === null || val === undefined) return '-';
-                      if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return String(val);
-                      try {
-                        return JSON.stringify(val);
-                      } catch {
-                        return String(val);
-                      }
-                    };
-
-                    const isCorrect = Boolean(detail?.is_correct);
-
-                    return (
-                      <Card key={idx} className={isCorrect ? 'border-green-500/50' : 'border-red-500/50'}>
-                        <CardContent className="pt-4">
-                          <div className="flex items-start gap-3">
-                            <Badge variant={isCorrect ? 'default' : 'destructive'}>
-                              {idx + 1}
-                            </Badge>
-                            <div className="flex-1 space-y-2">
-                              <p 
-                                className={`font-medium bidi-content ${containsArabic(detail.question || '') ? 'font-arabic' : ''}`}
-                                dir="auto"
-                                style={containsArabic(detail.question || '') ? {
-                                  fontFamily: "'Scheherazade New', 'Amiri', serif",
-                                  fontSize: '1.3em',
-                                  lineHeight: 2,
-                                } : undefined}
-                              >{detail.question}</p>
-                              <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                  <span className="text-muted-foreground">Jawaban Anda:</span>
-                                  <p 
-                                    className={`bidi-content ${isCorrect ? 'text-green-600' : 'text-red-600'} ${containsArabic(formatAnswer(detail.user_answer)) ? 'font-arabic' : ''}`}
-                                    dir="auto"
-                                    style={containsArabic(formatAnswer(detail.user_answer)) ? {
-                                      fontFamily: "'Scheherazade New', 'Amiri', serif",
-                                      fontSize: '1.2em',
-                                      lineHeight: 1.8,
-                                    } : undefined}
-                                  >
-                                    {formatAnswer(detail.user_answer)}
-                                  </p>
-                                </div>
-                                <div>
-                                  <span className="text-muted-foreground">Jawaban Benar:</span>
-                                  <p 
-                                    className={`text-green-600 bidi-content ${containsArabic(formatAnswer(detail.correct_answer)) ? 'font-arabic' : ''}`}
-                                    dir="auto"
-                                    style={containsArabic(formatAnswer(detail.correct_answer)) ? {
-                                      fontFamily: "'Scheherazade New', 'Amiri', serif",
-                                      fontSize: '1.2em',
-                                      lineHeight: 1.8,
-                                    } : undefined}
-                                  >{formatAnswer(detail.correct_answer)}</p>
-                                </div>
-                              </div>
-                              {detail.feedback && (
-                                <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
-                                  💡 {detail.feedback}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
-
-              <div className="flex justify-center mt-8">
-                <Button onClick={() => navigateBackToClass()}>
-                  Kembali ke Kelas
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     );
   }
