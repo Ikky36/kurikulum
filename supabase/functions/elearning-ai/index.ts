@@ -92,7 +92,7 @@ serve(async (req) => {
       // Determine API URL and model based on provider
       if (aiProvider === "gemini") {
         apiUrl = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
-        model = "gemini-2.0-flash";
+        model = "gemini-2.5-flash";
       } else if (aiProvider === "openai") {
         apiUrl = "https://api.openai.com/v1/chat/completions";
         model = "gpt-4o-mini";
