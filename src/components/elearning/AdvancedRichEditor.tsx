@@ -61,7 +61,9 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
   const { toast } = useToast();
   const editorRef = useRef<HTMLDivElement>(null);
   const isInternalChange = useRef(false);
+  const savedSelection = useRef<Range | null>(null);
   const [linkUrl, setLinkUrl] = useState('');
+  const [linkText, setLinkText] = useState('');
   const [imageUrl, setImageUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
@@ -112,9 +114,15 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
     }
   }, [onChange]);
 
-  const insertHtmlAtCursor = useCallback((html: string) => {
+  const insertHtmlAtCursor = useCallback((html: string, savedRange?: Range | null) => {
     editorRef.current?.focus();
     const selection = window.getSelection();
+    
+    if (savedRange && selection) {
+      selection.removeAllRanges();
+      selection.addRange(savedRange);
+    }
+    
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       range.deleteContents();
@@ -152,8 +160,17 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
       toast({ title: 'Error', description: 'Masukkan URL link', variant: 'destructive' });
       return;
     }
-    execCommand('createLink', linkUrl);
+
+    const display = linkText || linkUrl;
+    const url = linkUrl.startsWith('http') || linkUrl.startsWith('mailto:') || linkUrl.startsWith('tel:') ? linkUrl : `https://${linkUrl}`;
+    
+    const html = `<a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #2563eb; text-decoration: underline;">${display}</a>`;
+    
+    insertHtmlAtCursor(html, savedSelection.current);
+    
     setLinkUrl('');
+    setLinkText('');
+    savedSelection.current = null;
   };
 
   const insertImage = () => {
@@ -511,7 +528,18 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
           <Separator orientation="vertical" className="h-6" />
 
           {/* Link */}
-          <Popover>
+          <Popover onOpenChange={(open) => {
+            if (open) {
+              const sel = window.getSelection();
+              if (sel && sel.rangeCount > 0 && editorRef.current?.contains(sel.anchorNode)) {
+                savedSelection.current = sel.getRangeAt(0).cloneRange();
+                setLinkText(sel.toString());
+              } else {
+                savedSelection.current = null;
+                setLinkText('');
+              }
+            }
+          }}>
             <PopoverTrigger asChild>
               <Button variant="ghost" size="icon" className="h-8 w-8" title="Insert Link">
                 <Link className="h-4 w-4" />
@@ -519,12 +547,24 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
             </PopoverTrigger>
             <PopoverContent className="w-80">
               <div className="space-y-3">
-                <Label>URL Link</Label>
-                <Input
-                  value={linkUrl}
-                  onChange={(e) => setLinkUrl(e.target.value)}
-                  placeholder="https://example.com"
-                />
+                <div>
+                  <Label>Teks Link (Opsional)</Label>
+                  <Input
+                    value={linkText}
+                    onChange={(e) => setLinkText(e.target.value)}
+                    placeholder="Teks yang ditampilkan"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label>URL Link</Label>
+                  <Input
+                    value={linkUrl}
+                    onChange={(e) => setLinkUrl(e.target.value)}
+                    placeholder="https://example.com"
+                    className="mt-1"
+                  />
+                </div>
                 <Button size="sm" onClick={insertLink} className="w-full">Insert Link</Button>
               </div>
             </PopoverContent>
