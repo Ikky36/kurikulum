@@ -110,24 +110,32 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
     };
 
     const arr = parseOptionsArray(options);
-    const idx = typeof value === 'number'
-      ? value
-      : (typeof value === 'string' && /^\d+$/.test(value) ? parseInt(value, 10) : null);
+    
+    const extract = (val: any) => {
+      const idx = typeof val === 'number'
+        ? val
+        : (typeof val === 'string' && /^\d+$/.test(val) ? parseInt(val, 10) : null);
 
-    if (arr && idx !== null) {
-      if (idx >= 0 && idx < arr.length) add(optionItemToText(arr[idx]));
-      if (idx - 1 >= 0 && idx - 1 < arr.length) add(optionItemToText(arr[idx - 1]));
+      if (arr && idx !== null && idx >= 0 && idx < arr.length) {
+        add(optionItemToText(arr[idx]));
+      } else if (val !== null && val !== undefined) {
+        add(val);
+      }
+    };
+
+    if (Array.isArray(value)) {
+      value.forEach(extract);
+    } else {
+      extract(value);
     }
 
-    if (typeof value === 'string' && !/^\d+$/.test(value)) add(value);
-    if (!candidates.length && value !== null && value !== undefined) add(value);
     return candidates;
   };
 
   const resolveOptionText = (value: any, options: any): string => {
     if (value === null || value === undefined) return '-';
     const cands = getChoiceCandidates(value, options);
-    return cands[0] ?? String(value);
+    return cands.join(', ') || String(value);
   };
 
   const getAnswerDisplay = (answer: any, questionType: string, options?: any): string => {
@@ -161,24 +169,17 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
     return String(answer);
   };
 
-  const getCorrectAnswerDisplay = (question: any, userAnswer?: any): string => {
+  const getCorrectAnswerDisplay = (question: any): string => {
     if (question.question_type === 'matching' && question.options) {
       const parsedOptions = parseOptionsArray(question.options);
       if (parsedOptions) {
-        return parsedOptions
-          .map((pair: { left: string; right: string }) => `${pair.left} → ${pair.right}`)
-          .join(', ');
+        return parsedOptions.map((pair: { left: string; right: string }) => `${pair.left} → ${pair.right}`).join(', ');
       }
     }
 
     if ((question.question_type === 'multiple_choice' || question.question_type === 'true_false' || question.question_type === 'select_missing_word') && question.options) {
       const correctCandidates = getChoiceCandidates(question.correct_answer, question.options);
-      if (userAnswer !== undefined) {
-        const userNorms = getChoiceCandidates(userAnswer, question.options).map(s => s.toLowerCase().trim());
-        const matched = correctCandidates.find(c => userNorms.includes(c.toLowerCase().trim()));
-        if (matched) return matched;
-      }
-      return correctCandidates[0] ?? resolveOptionText(question.correct_answer, question.options);
+      return correctCandidates.join(', ') || resolveOptionText(question.correct_answer, question.options);
     }
 
     return getAnswerDisplay(question.correct_answer, question.question_type, question.options);
@@ -208,7 +209,7 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
           const userAnswer = userAnswers[question.id];
           const isCorrect = checkAnswer(userAnswer, question.correct_answer, question.question_type, question.options);
           const userAnswerText = getAnswerDisplay(userAnswer, question.question_type, question.options);
-          const correctAnswerText = getCorrectAnswerDisplay(question, userAnswer);
+          const correctAnswerText = getCorrectAnswerDisplay(question);
 
           return (
             <Card key={question.id} className={isCorrect ? 'border-green-500/50 bg-green-50/30 dark:bg-green-950/10' : 'border-red-500/50 bg-red-50/30 dark:bg-red-950/10'}>
@@ -266,7 +267,7 @@ export function QuizResultViewer({ assignmentId, assignmentTitle, showAnswerMode
                             lineHeight: 1.8,
                           } : undefined}
                         >
-                          {correctAnswerText}
+                          {correctAnswerText} <span className="font-semibold">(+{question.points} poin)</span>
                         </p>
                       </div>
                     </div>
