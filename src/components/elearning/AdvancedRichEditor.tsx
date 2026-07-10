@@ -157,7 +157,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
       selection.addRange(savedRange);
     }
     
-    if (selection && selection.rangeCount > 0) {
+    if (selection && selection.rangeCount > 0 && editorRef.current?.contains(selection.anchorNode)) {
       const range = selection.getRangeAt(0);
       range.deleteContents();
       
@@ -204,12 +204,13 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
        const html = `<div contenteditable="false" class="interactive-video-embed" data-interactive-video="${jsonStr}" style="background: #f1f5f9; padding: 2rem; text-align: center; border-radius: 0.5rem; margin: 1rem 0; border: 2px dashed #3b82f6; cursor: pointer; user-select: none;">
          <span style="font-weight: 600; color: #3b82f6; pointer-events: none;">🎥 Video Interaktif (Klik untuk Edit)</span>
        </div><br/>`;
-       insertHtmlAtCursor(html);
+       insertHtmlAtCursor(html, savedSelection.current);
     }
     
     setShowInteractiveVideoDialog(false);
     setEditingVideoData(null);
     setEditingVideoElement(null);
+    savedSelection.current = null;
   };
 
   const insertLink = () => {
@@ -717,6 +718,12 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
             className="h-8 w-8 text-primary" 
             title="Video Interaktif"
             onClick={() => {
+              const sel = window.getSelection();
+              if (sel && sel.rangeCount > 0 && editorRef.current?.contains(sel.anchorNode)) {
+                savedSelection.current = sel.getRangeAt(0).cloneRange();
+              } else {
+                savedSelection.current = null;
+              }
               setEditingVideoData(null);
               setEditingVideoElement(null);
               setShowInteractiveVideoDialog(true);
