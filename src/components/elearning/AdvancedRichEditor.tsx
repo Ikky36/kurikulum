@@ -12,7 +12,7 @@ import {
   Link, Image, Video, AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Heading1, Heading2, Heading3, Type, Table, Undo, Redo,
   Palette, FileVideo, ImageIcon, Quote, Code, Minus, Music,
-  PilcrowLeft, PilcrowRight
+  PilcrowLeft, PilcrowRight, Presentation
 } from 'lucide-react';
 
 // Google Fonts list
@@ -65,6 +65,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
   const [imageUrl, setImageUrl] = useState('');
   const [videoUrl, setVideoUrl] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
+  const [slideUrl, setSlideUrl] = useState('');
   const [tableRows, setTableRows] = useState('3');
   const [tableCols, setTableCols] = useState('3');
   const [selectedFont, setSelectedFont] = useState('inherit');
@@ -227,6 +228,25 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
     toast({ title: 'Audio ditambahkan', description: 'Audio player berhasil dimasukkan' });
   };
 
+  const insertSlide = () => {
+    if (!slideUrl) {
+      toast({ title: 'Error', description: 'Masukkan URL Google Slide', variant: 'destructive' });
+      return;
+    }
+
+    const slideMatch = slideUrl.match(/(https:\/\/docs\.google\.com\/presentation\/d\/(?:e\/)?[a-zA-Z0-9-_]+)/);
+    
+    if (slideMatch) {
+      const embedUrl = `${slideMatch[1]}/embed?start=false&loop=false&delayms=3000`;
+      const embedHtml = `<div class="slide-embed" style="position: relative; padding-bottom: 56.25%; height: 0; margin: 1rem 0; background: #f1f5f9; border-radius: 0.5rem; overflow: hidden;"><iframe src="${embedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 0.5rem;" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe></div><p><br></p>`;
+      insertHtmlAtCursor(embedHtml);
+      setSlideUrl('');
+      toast({ title: 'Slide ditambahkan', description: 'Google Slide berhasil dimasukkan' });
+    } else {
+      toast({ title: 'Error', description: 'URL Google Slide tidak valid', variant: 'destructive' });
+    }
+  };
+
   const insertTable = () => {
     const rows = parseInt(tableRows) || 3;
     const cols = parseInt(tableCols) || 3;
@@ -341,7 +361,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
 
     // Also allow clicking on wrapper containers
     if (!mediaEl) {
-      const wrapper = target.closest('.video-embed, .audio-embed, .media-container') as HTMLElement | null;
+      const wrapper = target.closest('.video-embed, .audio-embed, .slide-embed, .media-container') as HTMLElement | null;
       if (wrapper) {
         mediaEl = wrapper.querySelector(mediaSelectors) as HTMLElement | null;
       }
@@ -358,7 +378,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
       mediaEl.tagName === 'AUDIO' ? 'audio' : 'media ini';
 
     if (window.confirm(`Hapus ${label} ini?`)) {
-      const wrapper = mediaEl.closest('.video-embed, .audio-embed, .media-container') as HTMLElement | null;
+      const wrapper = mediaEl.closest('.video-embed, .audio-embed, .slide-embed, .media-container') as HTMLElement | null;
       (wrapper ?? mediaEl).remove();
       isInternalChange.current = true;
       onChange(editorRef.current.innerHTML);
@@ -572,6 +592,27 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
             </PopoverContent>
           </Popover>
 
+          {/* Google Slide */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8" title="Insert Google Slide">
+                <Presentation className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-3">
+                <Label>URL Google Slide</Label>
+                <Input
+                  value={slideUrl}
+                  onChange={(e) => setSlideUrl(e.target.value)}
+                  placeholder="https://docs.google.com/presentation/d/..."
+                />
+                <p className="text-xs text-muted-foreground">Pastikan link memiliki akses "Siapa saja yang memiliki link" (Anyone with the link)</p>
+                <Button size="sm" onClick={insertSlide} className="w-full">Insert Slide</Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           {/* Table */}
           <Popover>
             <PopoverTrigger asChild>
@@ -662,7 +703,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
           border-radius: 0.5rem;
           overflow-x: auto;
         }
-        .video-embed {
+        .video-embed, .slide-embed {
           position: relative;
           padding-bottom: 56.25%;
           height: 0;
@@ -671,7 +712,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
           border-radius: 0.5rem;
           overflow: hidden;
         }
-        .video-embed iframe {
+        .video-embed iframe, .slide-embed iframe {
           position: absolute;
           top: 0;
           left: 0;
@@ -709,6 +750,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
         }
         .editor-area .video-embed,
         .editor-area .audio-embed,
+        .editor-area .slide-embed,
         .editor-area .media-container,
         .editor-area img {
           cursor: pointer;
@@ -720,6 +762,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
         .editor-area iframe:hover,
         .editor-area .video-embed:hover,
         .editor-area .audio-embed:hover,
+        .editor-area .slide-embed:hover,
         .editor-area .media-container:hover {
           outline: 2px dashed hsl(var(--destructive));
           outline-offset: 2px;
