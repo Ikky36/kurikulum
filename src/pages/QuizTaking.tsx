@@ -553,14 +553,144 @@ export default function QuizTaking() {
                 </p>
               </div>
 
-              {/* Show answers based on show_answer_mode */}
+              {/* TAMPILKAN PEMBAHASAN LANGSUNG TANPA TOMBOL */}
               {(assignment?.show_answer_mode === 'after_quiz' || assignment?.show_answer_mode === 'after_each') && (
-                <div className="mt-8 bg-card rounded-lg shadow-sm border overflow-hidden">
-                  <QuizResultViewer
-                    assignmentId={assignmentId!}
-                    assignmentTitle={assignment?.title || ''}
-                    showAnswerMode={assignment?.show_answer_mode || null}
-                  />
+                <div className="space-y-4 mt-8">
+                  <h3 className="font-semibold text-lg">Pembahasan</h3>
+                  {submissionResult.details.map((detail: any, idx: number) => {
+                    const originalQuestion = questions?.find((q: any) => q.id === detail.question_id || q.question_text === detail.question);
+
+                    const parseOptionsArray = (options: any): any[] | null => {
+                      try {
+                        const parsed = typeof options === 'string' ? JSON.parse(options) : options;
+                        return Array.isArray(parsed) ? parsed : null;
+                      } catch {
+                        return null;
+                      }
+                    };
+
+                    const optionItemToText = (opt: any): string => {
+                      if (opt === null || opt === undefined) return '';
+                      if (typeof opt === 'object') {
+                        if ('text' in opt) return String((opt as any).text ?? '');
+                        if ('label' in opt) return String((opt as any).label ?? '');
+                        if ('value' in opt) return String((opt as any).value ?? '');
+                      }
+                      return String(opt);
+                    };
+
+                    const getChoiceCandidates = (value: any, options: any): string[] => {
+                      const candidates: string[] = [];
+                      const add = (v: any) => {
+                        const t = String(v ?? '').trim();
+                        if (!t) return;
+                        if (!candidates.includes(t)) candidates.push(t);
+                      };
+                      const arr = parseOptionsArray(options);
+                      const extract = (val: any) => {
+                        const matchIdx = typeof val === 'number' ? val : (typeof val === 'string' && /^\d+$/.test(val) ? parseInt(val, 10) : null);
+                        if (arr && matchIdx !== null && matchIdx >= 0 && matchIdx < arr.length) {
+                          add(optionItemToText(arr[matchIdx]));
+                        } else if (val !== null && val !== undefined) {
+                          add(val);
+                        }
+                      };
+                      if (Array.isArray(value)) value.forEach(extract);
+                      else extract(value);
+                      return candidates;
+                    };
+
+                    const resolveOptionText = (value: any, options: any): string => {
+                      if (value === null || value === undefined) return '-';
+                      return getChoiceCandidates(value, options).join(', ') || String(value);
+                    };
+
+                    const formatAnswer = (val: any) => {
+                      if (val === null || val === undefined) return '-';
+                      if (originalQuestion) {
+                        const qType = originalQuestion.question_type;
+                        if (qType === 'multiple_choice' || qType === 'true_false' || qType === 'select_missing_word' || qType === 'multiple_answer') {
+                           return resolveOptionText(val, originalQuestion.options);
+                        }
+                        if (qType === 'matching') {
+                           if (typeof val === 'object' && !Array.isArray(val)) {
+                             return Object.entries(val).map(([left, right]) => `${left} → ${right}`).join(', ');
+                           }
+                        }
+                      }
+                      if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') return String(val);
+                      try {
+                        return JSON.stringify(val);
+                      } catch {
+                        return String(val);
+                      }
+                    };
+
+                    const isCorrect = Boolean(detail?.is_correct);
+
+                    return (
+                      <Card key={idx} className={isCorrect ? 'border-green-500/50' : 'border-red-500/50'}>
+                        <CardContent className="pt-4">
+                          <div className="flex items-start gap-3">
+                            <Badge variant={isCorrect ? 'default' : 'destructive'}>
+                              {idx + 1}
+                            </Badge>
+                            <div className="flex-1 space-y-2">
+                              <p 
+                                className={`font-medium bidi-content ${containsArabic(detail.question || '') ? 'font-arabic' : ''}`}
+                                dir="auto"
+                                style={containsArabic(detail.question || '') ? {
+                                  fontFamily: "'Scheherazade New', 'Amiri', serif",
+                                  fontSize: '1.3em',
+                                  lineHeight: 2,
+                                } : undefined}
+                              >{detail.question}</p>
+                              <div className="grid grid-cols-2 gap-4 text-sm">
+                                <div>
+                                  <span className="text-muted-foreground">Jawaban Anda:</span>
+                                  <p 
+                                    className={`bidi-content ${isCorrect ? 'text-green-600' : 'text-red-600'} ${containsArabic(formatAnswer(detail.user_answer)) ? 'font-arabic' : ''}`}
+                                    dir="auto"
+                                    style={containsArabic(formatAnswer(detail.user_answer)) ? {
+                                      fontFamily: "'Scheherazade New', 'Amiri', serif",
+                                      fontSize: '1.2em',
+                                      lineHeight: 1.8,
+                                    } : undefined}
+                                  >
+                                    {formatAnswer(detail.user_answer)}
+                                  </p>
+                                </div>
+                                <div>
+                                  <span className="text-muted-foreground flex items-center justify-between mb-1">
+                                    Jawaban Benar:
+                                    {originalQuestion && (
+                                      <Badge variant="outline" className="text-xs bg-green-50 dark:bg-green-950/30 text-green-700">
+                                        +{originalQuestion.points} poin
+                                      </Badge>
+                                    )}
+                                  </span>
+                                  <p 
+                                    className={`text-green-600 bidi-content ${containsArabic(formatAnswer(detail.correct_answer)) ? 'font-arabic' : ''}`}
+                                    dir="auto"
+                                    style={containsArabic(formatAnswer(detail.correct_answer)) ? {
+                                      fontFamily: "'Scheherazade New', 'Amiri', serif",
+                                      fontSize: '1.2em',
+                                      lineHeight: 1.8,
+                                    } : undefined}
+                                  >{formatAnswer(detail.correct_answer)}</p>
+                                </div>
+                              </div>
+                              {detail.feedback && (
+                                <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                                  💡 {detail.feedback}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
 
