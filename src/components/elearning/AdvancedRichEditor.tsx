@@ -7,13 +7,15 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
   Bold, Italic, Underline, Strikethrough, List, ListOrdered, 
   Link, Image, Video, AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Heading1, Heading2, Heading3, Type, Table, Undo, Redo,
   Palette, FileVideo, ImageIcon, Quote, Code, Minus, Music,
-  PilcrowLeft, PilcrowRight, Presentation
+  PilcrowLeft, PilcrowRight, Presentation, MonitorPlay
 } from 'lucide-react';
+import { InteractiveVideoEditor, type InteractiveVideo } from './InteractiveVideoEditor';
 
 // Google Fonts list
 const GOOGLE_FONTS = [
@@ -73,6 +75,11 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
   const [selectedFont, setSelectedFont] = useState('inherit');
   const [selectedFontSize, setSelectedFontSize] = useState('16px');
 
+  // Interactive Video State
+  const [showInteractiveVideoDialog, setShowInteractiveVideoDialog] = useState(false);
+  const [editingVideoData, setEditingVideoData] = useState<InteractiveVideo | null>(null);
+  const [editingVideoElement, setEditingVideoElement] = useState<HTMLElement | null>(null);
+
   // Only update innerHTML when value changes externally (not from user input)
   useEffect(() => {
     if (editorRef.current && !isInternalChange.current) {
@@ -83,6 +90,33 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
     }
     isInternalChange.current = false;
   }, [value]);
+
+  // Handle clicking on interactive video embed to edit it
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor) return;
+
+    const handleClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const embed = target.closest('.interactive-video-embed');
+      if (embed) {
+        const dataStr = embed.getAttribute('data-interactive-video');
+        if (dataStr) {
+          try {
+            const data = JSON.parse(decodeURIComponent(dataStr));
+            setEditingVideoData(data);
+            setEditingVideoElement(embed as HTMLElement);
+            setShowInteractiveVideoDialog(true);
+          } catch (e) {
+            console.error("Failed to parse interactive video data for editing", e);
+          }
+        }
+      }
+    };
+
+    editor.addEventListener('click', handleClick);
+    return () => editor.removeEventListener('click', handleClick);
+  }, []);
 
   // Load Google Fonts dynamically
   const loadGoogleFont = useCallback((fontName: string) => {
@@ -147,13 +181,36 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
       }
     }
     
-    // Trigger update
-    setTimeout(() => {
-      if (editorRef.current) {
-        onChange(editorRef.current.innerHTML);
-      }
-    }, 10);
-  }, [onChange]);
+    handleInput();
+  }, [handleInput]);
+
+  const handleSaveInteractiveVideo = (data: InteractiveVideo | null) => {
+    if (!data || !data.url) {
+       // If no data, meaning they just close or empty it, maybe we delete? No, just close.
+       setShowInteractiveVideoDialog(false);
+       setEditingVideoData(null);
+       setEditingVideoElement(null);
+       return;
+    }
+    
+    const jsonStr = encodeURIComponent(JSON.stringify(data));
+    
+    if (editingVideoElement) {
+       // Update existing
+       editingVideoElement.setAttribute('data-interactive-video', jsonStr);
+       handleInput(); // Trigger save
+    } else {
+       // Insert new
+       const html = `<div contenteditable="false" class="interactive-video-embed" data-interactive-video="${jsonStr}" style="background: #f1f5f9; padding: 2rem; text-align: center; border-radius: 0.5rem; margin: 1rem 0; border: 2px dashed #3b82f6; cursor: pointer; user-select: none;">
+         <span style="font-weight: 600; color: #3b82f6; pointer-events: none;">🎥 Video Interaktif (Klik untuk Edit)</span>
+       </div><br/>`;
+       insertHtmlAtCursor(html);
+    }
+    
+    setShowInteractiveVideoDialog(false);
+    setEditingVideoData(null);
+    setEditingVideoElement(null);
+  };
 
   const insertLink = () => {
     if (!linkUrl) {
@@ -653,6 +710,21 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
             </PopoverContent>
           </Popover>
 
+          {/* Interactive Video */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-8 w-8 text-primary" 
+            title="Video Interaktif"
+            onClick={() => {
+              setEditingVideoData(null);
+              setEditingVideoElement(null);
+              setShowInteractiveVideoDialog(true);
+            }}
+          >
+            <MonitorPlay className="h-4 w-4" />
+          </Button>
+
           {/* Table */}
           <Popover>
             <PopoverTrigger asChild>
@@ -710,6 +782,30 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
           data-placeholder={placeholder || 'Mulai menulis konten...'}
         />
       </CardContent>
+
+      {/* Interactive Video Editor Dialog */}
+      <Dialog open={showInteractiveVideoDialog} onOpenChange={setShowInteractiveVideoDialog}>
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingVideoElement ? 'Edit Video Interaktif' : 'Tambah Video Interaktif'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <InteractiveVideoEditor
+              value={editingVideoData}
+              onChange={(v) => {
+                // If it's a direct state update from inside, we capture it.
+                setEditingVideoData(v);
+              }}
+            />
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setShowInteractiveVideoDialog(false)}>Batal</Button>
+            <Button onClick={() => handleSaveInteractiveVideo(editingVideoData)}>Simpan Video</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <style>{`
         [contenteditable]:empty:before {

@@ -33,6 +33,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import type { MaterialSection } from './MaterialSectionEditor';
 import type { SectionFile } from './SectionFileUploader';
 import { InteractiveVideoPlayer } from './InteractiveVideoPlayer';
+import { createRoot, type Root } from 'react-dom/client';
 
 interface MaterialFullViewerProps {
   material: {
@@ -60,11 +61,54 @@ export function MaterialFullViewer({ material, onClose }: MaterialFullViewerProp
   const [sidebarOpen, setSidebarOpen] = useState(!isMobile);
   const [activeItemId, setActiveItemId] = useState<string>('');
   const [completedItems, setCompletedItems] = useState<Set<string>>(new Set());
+  const interactiveVideoRoots = useRef<Root[]>([]);
   
   // Update sidebar state when switching between mobile/desktop
   useEffect(() => {
     setSidebarOpen(!isMobile);
   }, [isMobile]);
+
+  // Render embedded interactive videos
+  useEffect(() => {
+    // Cleanup previous roots
+    interactiveVideoRoots.current.forEach(root => {
+      try { root.unmount(); } catch (e) {}
+    });
+    interactiveVideoRoots.current = [];
+
+    // Find all embedded interactive video placeholders
+    const embeds = document.querySelectorAll('.interactive-video-embed');
+    embeds.forEach((el) => {
+      if (el.hasAttribute('data-rendered')) return; // skip if already rendered by something else?
+      
+      const dataStr = el.getAttribute('data-interactive-video');
+      if (dataStr) {
+        try {
+          const data = JSON.parse(decodeURIComponent(dataStr));
+          el.setAttribute('data-rendered', 'true');
+          
+          // Render the player inside this container
+          const root = createRoot(el);
+          interactiveVideoRoots.current.push(root);
+          root.render(
+            <InteractiveVideoPlayer 
+              data={data} 
+              title="Video Interaktif" 
+            />
+          );
+        } catch (e) {
+          console.error("Failed to parse interactive video data", e);
+        }
+      }
+    });
+
+    return () => {
+      interactiveVideoRoots.current.forEach(root => {
+        try { root.unmount(); } catch (e) {}
+      });
+      interactiveVideoRoots.current = [];
+    };
+  }, [material, activeItemId]); // Re-run when material content or active section changes
 
   // Build navigation items from sections
   const navigationItems: NavigationItem[] = [];
@@ -368,6 +412,7 @@ export function MaterialFullViewer({ material, onClose }: MaterialFullViewerProp
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">{activeItem.title}</h1>
 
+                {/* Legacy Interactive Video Support */}
                 {getActiveSection()?.interactiveVideo?.url && (
                   <div className="mb-6">
                     <InteractiveVideoPlayer

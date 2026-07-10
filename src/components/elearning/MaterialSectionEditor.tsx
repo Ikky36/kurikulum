@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, BookOpen, HelpCircle, X, Paperclip } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, Sparkles, BookOpen, HelpCircle, X, Paperclip, MonitorPlay } from 'lucide-react';
 import { AdvancedRichEditor } from './AdvancedRichEditor';
 import { AIContentGenerator } from './AIContentGenerator';
 import { SectionFileUploader, type SectionFile } from './SectionFileUploader';
@@ -308,11 +308,24 @@ export function MaterialSectionEditor({
                       onChange={(content) => updateSection(section.id, { content })} 
                     />
 
-                    {/* Interactive Video */}
-                    <InteractiveVideoEditor
-                      value={section.interactiveVideo}
-                      onChange={(iv) => updateSection(section.id, { interactiveVideo: iv })}
-                    />
+                    {/* Legacy Interactive Video Support */}
+                    {section.interactiveVideo?.url && (
+                      <div className="p-4 border rounded-lg bg-orange-500/10 border-orange-500/30 space-y-4">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-orange-600 flex items-center gap-2">
+                            <MonitorPlay className="h-4 w-4" />
+                            Video Interaktif (Versi Lama)
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Fitur ini telah dipindahkan ke <strong>toolbar teks editor</strong>. Video lama Anda tetap akan ditampilkan, namun disarankan untuk menghapusnya dan membuatnya ulang melalui ikon Video Interaktif di teks editor di atas agar lebih fleksibel.
+                          </p>
+                        </div>
+                        <InteractiveVideoEditor
+                          value={section.interactiveVideo}
+                          onChange={(iv) => updateSection(section.id, { interactiveVideo: iv })}
+                        />
+                      </div>
+                    )}
 
                     {/* File Uploader for Section */}
                     <div className="space-y-2 p-3 bg-muted/50 rounded-lg border border-border">

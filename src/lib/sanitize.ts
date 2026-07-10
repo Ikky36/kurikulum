@@ -7,7 +7,7 @@ import DOMPurify from 'dompurify';
 export function sanitizeHtml(html: string): string {
   if (!html) return '';
   return DOMPurify.sanitize(html, {
-    ADD_TAGS: ['iframe'],
-    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'rel'],
+    ADD_TAGS: ['iframe', 'div', 'span'],
+    ADD_ATTR: ['allow', 'allowfullscreen', 'frameborder', 'scrolling', 'target', 'rel', 'data-interactive-video', 'contenteditable', 'style', 'class'],
   });
 }
