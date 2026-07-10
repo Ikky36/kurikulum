@@ -283,7 +283,7 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
 
       {/* Material Viewer Dialog */}
       <Dialog open={!!viewingMaterial} onOpenChange={() => setViewingMaterial(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-full sm:w-[90vw] sm:max-w-[90vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">
               <div className="p-2 bg-primary/10 rounded-lg">
