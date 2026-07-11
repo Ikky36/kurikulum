@@ -13,6 +13,7 @@ import { MaterialEditor } from './MaterialEditor';
 import { H5PViewer } from './H5PViewer';
 import { MaterialQuiz } from './MaterialQuiz';
 import { MaterialFullViewer } from './MaterialFullViewer';
+import { RichTextDisplay } from './RichTextDisplay';
 import { containsArabic } from '@/components/ui/arabic-text';
 import type { MaterialSection } from './MaterialSectionEditor';
 
@@ -330,10 +331,9 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
                             <h4 className="font-medium mb-2">
                               Section {idx + 1}: {section.title}
                             </h4>
-                            <div 
-                              className="prose prose-sm max-w-none dark:prose-invert bidi-content line-clamp-3"
-                              dir="auto"
-                              dangerouslySetInnerHTML={{ __html: sanitizeHtml(section.content?.substring(0, 200) + '...' || '') }}
+                            <RichTextDisplay 
+                              className="line-clamp-3"
+                              content={section.content?.substring(0, 200) + '...' || ''} 
                             />
                           </CardContent>
                         </Card>
@@ -341,10 +341,9 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
                     </div>
                   ) : (
                     <>
-                      <div 
-                        className="prose prose-sm max-w-none dark:prose-invert p-4 bg-muted/30 rounded-lg bidi-content"
-                        dir="auto"
-                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(viewingMaterial.content?.replace(/<!-- EMBEDDED_QUIZ:.+? -->/g, '') || '') }}
+                      <RichTextDisplay 
+                        className="p-4 bg-muted/30 rounded-lg"
+                        content={viewingMaterial.content?.replace(/<!-- EMBEDDED_QUIZ:.+? -->/g, '') || ''} 
                       />
                       {/* Embedded Quiz */}
                       {getEmbeddedQuizId(viewingMaterial.content) && (
