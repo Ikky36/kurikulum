@@ -68,7 +68,9 @@ function parseTime(input: string): number {
 export function InteractiveVideoEditor({ value, onChange }: Props) {
   const data: InteractiveVideo = value || { url: '', markers: [] };
   const [newKind, setNewKind] = useState<InteractiveMarkerKind>('bookmark');
-  const [collapsedMarkers, setCollapsedMarkers] = useState<Set<string>>(new Set());
+  const [collapsedMarkers, setCollapsedMarkers] = useState<Set<string>>(() => {
+    return new Set((value?.markers || []).map(m => m.id));
+  });
 
   const toggleCollapse = (id: string) => {
     setCollapsedMarkers(prev => {
