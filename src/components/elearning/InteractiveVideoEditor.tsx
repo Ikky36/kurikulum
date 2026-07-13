@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Bookmark, HelpCircle, Type, Image as ImageIcon, Video } from 'lucide-react';
+import { Plus, Trash2, Bookmark, HelpCircle, Type, Image as ImageIcon, Video, ChevronUp, ChevronDown } from 'lucide-react';
 
 export type InteractiveMarkerKind = 'bookmark' | 'text' | 'image' | 'question';
 
@@ -68,6 +68,16 @@ function parseTime(input: string): number {
 export function InteractiveVideoEditor({ value, onChange }: Props) {
   const data: InteractiveVideo = value || { url: '', markers: [] };
   const [newKind, setNewKind] = useState<InteractiveMarkerKind>('bookmark');
+  const [collapsedMarkers, setCollapsedMarkers] = useState<Set<string>>(new Set());
+
+  const toggleCollapse = (id: string) => {
+    setCollapsedMarkers(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const update = (patch: Partial<InteractiveVideo>) => {
     onChange({ ...data, ...patch });
@@ -145,7 +155,9 @@ export function InteractiveVideoEditor({ value, onChange }: Props) {
             {data.markers.length === 0 ? (
               <p className="text-xs text-muted-foreground italic">Belum ada marker.</p>
             ) : (
-              data.markers.map((m) => (
+              data.markers.map((m) => {
+                const isCollapsed = collapsedMarkers.has(m.id);
+                return (
                 <Card key={m.id} className="border">
                   <CardContent className="p-3 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -175,12 +187,26 @@ export function InteractiveVideoEditor({ value, onChange }: Props) {
                         type="button"
                         variant="ghost"
                         size="icon"
+                        className="h-7 w-7 text-muted-foreground"
+                        onClick={() => toggleCollapse(m.id)}
+                        title={isCollapsed ? "Buka detail" : "Tutup detail"}
+                      >
+                        {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         className="h-7 w-7 text-destructive"
                         onClick={() => removeMarker(m.id)}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
+
+                    {!isCollapsed && (
+                      <>
+
 
                     {m.kind === 'text' && (
                       <div className="space-y-1">
@@ -296,9 +322,11 @@ export function InteractiveVideoEditor({ value, onChange }: Props) {
                         />
                       </div>
                     )}
+                      </>
+                    )}
                   </CardContent>
                 </Card>
-              ))
+              )})
             )}
           </div>
         </>
