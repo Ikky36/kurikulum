@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -86,7 +86,9 @@ export function InteractiveVideoPlayer({ data, title }: Props) {
   const firedRef = useRef<Set<string>>(new Set());
   const passedQuestionsRef = useRef<Set<string>>(new Set());
 
-  const sortedMarkers = [...(data.markers || [])].sort((a, b) => a.time - b.time);
+  const sortedMarkers = useMemo(() => {
+    return [...(data.markers || [])].sort((a, b) => a.time - b.time);
+  }, [data.markers]);
 
   const ytId = getYouTubeId(data.url);
   const vimeoId = getVimeoId(data.url);
