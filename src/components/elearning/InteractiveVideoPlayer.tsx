@@ -18,10 +18,7 @@ function formatTime(sec: number): string {
   return `${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
 }
 
-interface ActiveOverlay {
-  marker: InteractiveMarker;
-  expiresAt: number;
-}
+// Removed ActiveOverlay interface
 
 // ---------- URL helpers ----------
 function getYouTubeId(url: string): string | null {
@@ -79,7 +76,7 @@ export function InteractiveVideoPlayer({ data, title }: Props) {
   const ytContainerRef = useRef<HTMLDivElement>(null);
   const ytPlayerRef = useRef<any>(null);
   const [currentTime, setCurrentTime] = useState(0);
-  const [overlay, setOverlay] = useState<ActiveOverlay | null>(null);
+  const [dismissedOverlays, setDismissedOverlays] = useState<Set<string>>(new Set());
   const [activeQuestion, setActiveQuestion] = useState<InteractiveMarker | null>(null);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [questionResult, setQuestionResult] = useState<'correct' | 'wrong' | null>(null);
@@ -117,18 +114,44 @@ export function InteractiveVideoPlayer({ data, title }: Props) {
     }
   }, [isYouTube]);
 
-  // Process time updates: triggers markers + expires overlay
+  // Compute active overlay based on currentTime
+  const activeOverlayMarker = useMemo(() => {
+    for (const m of sortedMarkers) {
+      if (m.kind === 'text' || m.kind === 'image') {
+        const duration = m.durationSec || 5;
+        if (currentTime >= m.time && currentTime < m.time + duration) {
+          if (!dismissedOverlays.has(m.id)) {
+            return m;
+          }
+        }
+      }
+    }
+    return null;
+  }, [sortedMarkers, currentTime, dismissedOverlays]);
+
+  // Process time updates: triggers markers
   const processTime = useCallback((t: number) => {
     setCurrentTime(t);
-    setOverlay((prev) => (prev && Date.now() > prev.expiresAt ? null : prev));
+
+    // If time jumps backward, clear dismissed overlays that are ahead so they can show again
+    setDismissedOverlays(prev => {
+      let changed = false;
+      const next = new Set(prev);
+      for (const id of prev) {
+        const m = sortedMarkers.find(x => x.id === id);
+        if (m && t < m.time) {
+          next.delete(id);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
 
     for (const m of sortedMarkers) {
-      if (firedRef.current.has(m.id)) continue;
-      if (t >= m.time && t < m.time + 1.2) {
-        firedRef.current.add(m.id);
-        if (m.kind === 'text' || m.kind === 'image') {
-          setOverlay({ marker: m, expiresAt: Date.now() + (m.durationSec || 5) * 1000 });
-        } else if (m.kind === 'question') {
+      if (m.kind === 'question') {
+        if (firedRef.current.has(m.id)) continue;
+        if (t >= m.time && t < m.time + 1.2) {
+          firedRef.current.add(m.id);
           if (!passedQuestionsRef.current.has(m.id)) {
             pause();
             setActiveQuestion(m);
@@ -261,21 +284,24 @@ export function InteractiveVideoPlayer({ data, title }: Props) {
             )}
 
             {/* Overlay text/image */}
-            {overlay && (
+            {activeOverlayMarker && (
               <div className="absolute inset-x-0 top-0 flex justify-center p-3 pointer-events-none animate-in fade-in slide-in-from-top-2 z-10">
                 <div className="bg-background/95 backdrop-blur border rounded-lg shadow-lg px-4 py-3 max-w-[90%] pointer-events-auto">
                   <div className="flex items-start gap-2">
                     <div className="flex-1">
-                      {overlay.marker.label && (
-                        <p className="text-xs font-semibold text-primary mb-1">{overlay.marker.label}</p>
+                      {activeOverlayMarker.label && (
+                        <p className="text-xs font-semibold text-primary mb-1">{activeOverlayMarker.label}</p>
                       )}
-                      {overlay.marker.kind === 'text' && (
-                        <p className="text-sm whitespace-pre-wrap">{overlay.marker.content}</p>
+                      {activeOverlayMarker.kind === 'text' && activeOverlayMarker.content && (
+                        <p className="text-sm whitespace-pre-wrap">{activeOverlayMarker.content}</p>
                       )}
-                      {overlay.marker.kind === 'image' && overlay.marker.imageUrl && (
+                      {activeOverlayMarker.kind === 'text' && !activeOverlayMarker.content && (
+                        <p className="text-sm italic text-muted-foreground">(Teks kosong)</p>
+                      )}
+                      {activeOverlayMarker.kind === 'image' && activeOverlayMarker.imageUrl && (
                         <img
-                          src={overlay.marker.imageUrl}
-                          alt={overlay.marker.label || 'overlay'}
+                          src={activeOverlayMarker.imageUrl}
+                          alt={activeOverlayMarker.label || 'overlay'}
                           className="max-h-48 rounded"
                         />
                       )}
@@ -283,7 +309,7 @@ export function InteractiveVideoPlayer({ data, title }: Props) {
                     <button
                       type="button"
                       className="text-muted-foreground hover:text-foreground"
-                      onClick={() => setOverlay(null)}
+                      onClick={() => setDismissedOverlays(prev => new Set(prev).add(activeOverlayMarker.id))}
                     >
                       <X className="h-4 w-4" />
                     </button>
