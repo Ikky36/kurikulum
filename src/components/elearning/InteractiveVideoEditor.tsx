@@ -159,7 +159,10 @@ export function InteractiveVideoEditor({ value, onChange }: Props) {
                           className="h-7 w-24"
                           placeholder="mm:ss"
                           defaultValue={formatTime(m.time)}
-                          onBlur={(e) => updateMarker(m.id, { time: parseTime(e.target.value) })}
+                          onBlur={(e) => {
+                            const val = e.target.value;
+                            setTimeout(() => updateMarker(m.id, { time: parseTime(val) }), 0);
+                          }}
                         />
                       </div>
                       <Input
@@ -279,7 +282,10 @@ export function InteractiveVideoEditor({ value, onChange }: Props) {
                             className="h-7 w-24"
                             placeholder="mm:ss"
                             defaultValue={formatTime(m.question.rewindTo ?? Math.max(0, m.time - 10))}
-                            onBlur={(e) => updateQuestion(m.id, { rewindTo: parseTime(e.target.value) })}
+                            onBlur={(e) => {
+                              const val = e.target.value;
+                              setTimeout(() => updateQuestion(m.id, { rewindTo: parseTime(val) }), 0);
+                            }}
                           />
                         </div>
                         <Input
