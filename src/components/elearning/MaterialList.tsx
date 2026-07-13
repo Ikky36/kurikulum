@@ -283,7 +283,7 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
       </Dialog>
 
       {/* Material Viewer Dialog */}
-      <Dialog open={!!viewingMaterial} onOpenChange={() => setViewingMaterial(null)}>
+      <Dialog open={!!viewingMaterial} modal={false} onOpenChange={() => setViewingMaterial(null)}>
         <DialogContent className="w-full max-w-full sm:w-[90vw] sm:max-w-[90vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3">

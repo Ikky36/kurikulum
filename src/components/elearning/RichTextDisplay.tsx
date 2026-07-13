@@ -33,6 +33,8 @@ export function RichTextDisplay({ content, className, title = 'Video Interaktif'
         try {
           const data = JSON.parse(decodeURIComponent(dataStr));
           el.setAttribute('data-rendered', 'true');
+          el.removeAttribute('style');
+          el.className = 'interactive-video-container my-6 relative';
           
           const root = createRoot(el);
           interactiveVideoRoots.current.push(root);
