@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Navigate, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { BookOpen, ClipboardList, FileText, BarChart3, Scale, ArrowLeft, LogIn, Info } from 'lucide-react';
 import { ElearningKelas } from '@/components/elearning/ElearningKelas';
 import { ElearningPresensi } from '@/components/elearning/ElearningPresensi';
@@ -28,22 +28,26 @@ export default function ELearning() {
   const { user, loading, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const classIdParam = searchParams.get('class');
+  const tabParam = searchParams.get('tab');
+
   const [selectedClass, setSelectedClass] = useState<SelectedClassInfo | null>(null);
-  const [activeTab, setActiveTab] = useState('materi');
+  const [activeTab, setActiveTab] = useState(tabParam || 'materi');
 
   const canViewRecap = profile?.role === 'admin' || profile?.role === 'sub_admin' || profile?.role === 'dosen';
   const canViewPresensi = profile?.role === 'admin' || profile?.role === 'sub_admin' || profile?.role === 'dosen';
 
-  // Handle navigation state from quiz completion
+  // Handle navigation state from URL params or quiz completion
   useEffect(() => {
-    const state = location.state as { classId?: string; tab?: string } | null;
-    if (state?.classId) {
+    const classIdToLoad = classIdParam || (location.state as any)?.classId;
+    if (classIdToLoad && (!selectedClass || selectedClass.id !== classIdToLoad)) {
       // Fetch class info and auto-select
       const fetchClass = async () => {
         const { data } = await supabase
           .from('elearning_classes')
           .select('id, title, course_id, courses(name), class_group_id, class_groups(name)')
-          .eq('id', state.classId)
+          .eq('id', classIdToLoad)
           .single();
         if (data) {
           setSelectedClass({
@@ -53,16 +57,20 @@ export default function ELearning() {
             courseName: (data.courses as any)?.name || '',
             classGroupName: (data.class_groups as any)?.name || '',
           });
-          if (state.tab) {
-            setActiveTab(state.tab);
+          const tabToLoad = tabParam || (location.state as any)?.tab;
+          if (tabToLoad) {
+            setActiveTab(tabToLoad);
           }
         }
       };
       fetchClass();
-      // Clear the state so refresh doesn't re-trigger
-      window.history.replaceState({}, '');
+      if ((location.state as any)?.classId) {
+        // If it came from location state (quiz completion), move it to search params
+        setSearchParams({ class: classIdToLoad, tab: (location.state as any)?.tab || 'materi' }, { replace: true });
+        window.history.replaceState({}, '');
+      }
     }
-  }, [location.state]);
+  }, [classIdParam, tabParam, location.state, selectedClass?.id, setSearchParams]);
 
 
   if (loading) {
@@ -82,11 +90,20 @@ export default function ELearning() {
   const handleEnterClass = (classInfo: SelectedClassInfo) => {
     setSelectedClass(classInfo);
     setActiveTab('materi');
+    setSearchParams({ class: classInfo.id, tab: 'materi' });
   };
 
   const handleBackToClassList = () => {
     setSelectedClass(null);
     setActiveTab('materi');
+    setSearchParams({}); // Clear params
+  };
+
+  const handleTabChange = (val: string) => {
+    setActiveTab(val);
+    if (selectedClass) {
+      setSearchParams({ class: selectedClass.id, tab: val });
+    }
   };
 
   return (
@@ -155,7 +172,7 @@ export default function ELearning() {
         {/* Content */}
         {selectedClass ? (
           // Class Detail View with Tabs
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className={`grid w-full max-w-2xl h-12 ${canViewPresensi ? 'grid-cols-5' : 'grid-cols-4'}`}>
               {canViewPresensi && (
                 <TabsTrigger value="presensi" className="gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
