@@ -83,14 +83,12 @@ export function InteractiveVideoEditor({ value, onChange }: Props) {
         ? { question: { text: '', options: ['', ''], correctIndex: 0 } }
         : {}),
     };
-    update({ markers: [...data.markers, m].sort((a, b) => a.time - b.time) });
+    update({ markers: [...data.markers, m] });
   };
 
   const updateMarker = (id: string, patch: Partial<InteractiveMarker>) => {
     update({
-      markers: data.markers
-        .map(m => (m.id === id ? { ...m, ...patch } : m))
-        .sort((a, b) => a.time - b.time),
+      markers: data.markers.map(m => (m.id === id ? { ...m, ...patch } : m)),
     });
   };
 
