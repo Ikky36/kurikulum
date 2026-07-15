@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { CourseScoreCard } from '@/components/charts/CourseScoreCard';
 import { PLOAchievementChart } from '@/components/charts/PLOAchievementChart';
