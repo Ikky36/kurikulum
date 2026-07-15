@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { CourseScoreCard } from '@/components/charts/CourseScoreCard';
 import { PLOAchievementChart } from '@/components/charts/PLOAchievementChart';
-import { DashboardScoreRecap } from '@/components/dashboard/DashboardScoreRecap';
 import { useCoursesWithStats } from '@/hooks/useCourses';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useAllStudents } from '@/hooks/useStudents';
@@ -256,11 +255,6 @@ export default function Index() {
               ))}
             </div>
           )}
-        </section>
-
-        {/* Laporan Rekap Skor Kelas (E-Learning) */}
-        <section className="container py-8 border-t">
-          <DashboardScoreRecap />
         </section>
       </Layout>
     </TooltipProvider>
