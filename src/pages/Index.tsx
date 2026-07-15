@@ -22,8 +22,8 @@ export default function Index() {
   const { data: courses, isLoading, error } = useCoursesWithStats();
   const { data: settings } = useAppSettings();
   const { data: allStudents } = useAllStudents();
-  const [curriculumId, setCurriculumId] = useState<string>('');
-  const [academicYearId, setAcademicYearId] = useState<string>('');
+  const [curriculumId, setCurriculumId] = useState<string | undefined>();
+  const [academicYearId, setAcademicYearId] = useState<string | undefined>();
 
   const { data: curricula } = useQuery({
     queryKey: ['curricula-for-index'],
@@ -137,36 +137,40 @@ export default function Index() {
         {/* Filters Row: Kurikulum + Tahun Akademik */}
         <section className="container py-8 border-b bg-muted/20">
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-3xl mx-auto">
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Kurikulum:</span>
-              <Select value={curriculumId} onValueChange={setCurriculumId}>
-                <SelectTrigger className="w-full sm:w-[220px] bg-background">
-                  <SelectValue placeholder="Pilih Kurikulum" />
-                </SelectTrigger>
-                <SelectContent>
-                  {curricula?.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                  <SelectItem value="none">Tanpa Kurikulum</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {curricula && curricula.length > 0 && (
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Kurikulum:</span>
+                <Select value={curriculumId} onValueChange={setCurriculumId}>
+                  <SelectTrigger className="w-full sm:w-[220px] bg-background">
+                    <SelectValue placeholder="Pilih Kurikulum" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {curricula.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                    <SelectItem value="none">Tanpa Kurikulum</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
-            <div className="flex items-center gap-3 w-full sm:w-auto">
-              <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Tahun Akademik:</span>
-              <Select value={academicYearId} onValueChange={setAcademicYearId}>
-                <SelectTrigger className="w-full sm:w-[220px] bg-background">
-                  <SelectValue placeholder="Pilih Tahun Akademik" />
-                </SelectTrigger>
-                <SelectContent>
-                  {academicYears?.map(ay => (
-                    <SelectItem key={ay.id} value={ay.id}>
-                      {ay.name} {ay.is_active ? '(Aktif)' : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {academicYears && academicYears.length > 0 && (
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Tahun Akademik:</span>
+                <Select value={academicYearId} onValueChange={setAcademicYearId}>
+                  <SelectTrigger className="w-full sm:w-[220px] bg-background">
+                    <SelectValue placeholder="Pilih Tahun Akademik" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {academicYears.map(ay => (
+                      <SelectItem key={ay.id} value={ay.id}>
+                        {ay.name} {ay.is_active ? '(Aktif)' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </section>
 
@@ -204,7 +208,7 @@ export default function Index() {
 
         {/* PLO Achievement Chart */}
         <section className="container pb-8">
-          <PLOAchievementChart curriculumFilter={curriculumId} />
+          <PLOAchievementChart curriculumFilter={curriculumId || 'all'} />
         </section>
 
         {/* Courses Grid */}
