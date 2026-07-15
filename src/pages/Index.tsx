@@ -22,9 +22,8 @@ export default function Index() {
   const { data: courses, isLoading, error } = useCoursesWithStats();
   const { data: settings } = useAppSettings();
   const { data: allStudents } = useAllStudents();
-  const [curriculumFilter, setCurriculumFilter] = useState<string>('all');
-  const [academicYearIds, setAcademicYearIds] = useState<string[]>([]);
-  const [ayPopoverOpen, setAyPopoverOpen] = useState(false);
+  const [curriculumId, setCurriculumId] = useState<string>('');
+  const [academicYearId, setAcademicYearId] = useState<string>('');
 
   const { data: curricula } = useQuery({
     queryKey: ['curricula-for-index'],
@@ -52,34 +51,50 @@ export default function Index() {
     },
   });
 
-  // When academic years selected, find course IDs linked via elearning_classes
+  // Set default values when data loads
+  useEffect(() => {
+    if (curricula && curricula.length > 0 && !curriculumId) {
+      const active = curricula.find(c => c.is_active);
+      setCurriculumId(active ? active.id : curricula[0].id);
+    }
+  }, [curricula, curriculumId]);
+
+  useEffect(() => {
+    if (academicYears && academicYears.length > 0 && !academicYearId) {
+      const active = academicYears.find(ay => ay.is_active);
+      setAcademicYearId(active ? active.id : academicYears[0].id);
+    }
+  }, [academicYears, academicYearId]);
+
+  // When academic year selected, find course IDs linked via elearning_classes
   const { data: ayCourseIds } = useQuery({
-    queryKey: ['courses-by-academic-year', academicYearIds],
+    queryKey: ['courses-by-academic-year', academicYearId],
     queryFn: async () => {
-      if (academicYearIds.length === 0) return null;
+      if (!academicYearId) return null;
       const { data, error } = await supabase
         .from('elearning_classes')
         .select('course_id')
-        .in('academic_year_id', academicYearIds);
+        .eq('academic_year_id', academicYearId);
       if (error) throw error;
       return new Set((data || []).map(c => c.course_id));
     },
-    enabled: academicYearIds.length > 0,
+    enabled: !!academicYearId,
   });
 
   const filteredCourses = useMemo(() => {
     if (!courses) return [];
     let result = courses;
-    if (curriculumFilter === 'none') {
+    if (curriculumId && curriculumId !== 'none') {
+      result = result.filter(c => c.curriculum_id === curriculumId);
+    } else if (curriculumId === 'none') {
       result = result.filter(c => !c.curriculum_id);
-    } else if (curriculumFilter !== 'all') {
-      result = result.filter(c => c.curriculum_id === curriculumFilter);
     }
-    if (academicYearIds.length > 0 && ayCourseIds) {
+    
+    if (academicYearId && ayCourseIds) {
       result = result.filter(c => ayCourseIds.has(c.id));
     }
     return result;
-  }, [courses, curriculumFilter, academicYearIds, ayCourseIds]);
+  }, [courses, curriculumId, academicYearId, ayCourseIds]);
 
   const appTitle = settings?.app_title || 'Student Achievement Tracker';
   const appTagline = settings?.app_tagline || 'Pantau dan kelola nilai mahasiswa Program Bahasa Arab dengan mudah. Visualisasi data yang jelas untuk hasil pembelajaran yang lebih baik.';
@@ -91,15 +106,7 @@ export default function Index() {
   const totalWeightedSum = filteredCourses.reduce((sum, c) => sum + (c.average_score * c.total_students), 0);
   const averageAllCourses = totalEnrollments > 0 ? totalWeightedSum / totalEnrollments : 0;
 
-  const toggleAy = (id: string) => {
-    setAcademicYearIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-  };
 
-  const ayLabel = academicYearIds.length === 0
-    ? 'Semua Tahun Akademik'
-    : academicYearIds.length === 1
-      ? academicYears?.find(a => a.id === academicYearIds[0])?.name || '1 dipilih'
-      : `${academicYearIds.length} dipilih`;
 
   return (
     <TooltipProvider>
@@ -128,86 +135,47 @@ export default function Index() {
         </section>
 
         {/* Filters Row: Kurikulum + Tahun Akademik */}
-        <section className="container -mt-8 relative z-10 mb-4">
-          <div className="flex flex-wrap justify-end gap-2">
-            <Select value={curriculumFilter} onValueChange={setCurriculumFilter}>
-              <SelectTrigger className="w-[220px] bg-background shadow-sm">
-                <SelectValue placeholder="Semua Kurikulum" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Kurikulum</SelectItem>
-                {curricula?.map(c => (
-                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                ))}
-                <SelectItem value="none">Tanpa Kurikulum</SelectItem>
-              </SelectContent>
-            </Select>
+        <section className="container py-8 border-b bg-muted/20">
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-3xl mx-auto">
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Kurikulum:</span>
+              <Select value={curriculumId} onValueChange={setCurriculumId}>
+                <SelectTrigger className="w-full sm:w-[220px] bg-background">
+                  <SelectValue placeholder="Pilih Kurikulum" />
+                </SelectTrigger>
+                <SelectContent>
+                  {curricula?.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                  <SelectItem value="none">Tanpa Kurikulum</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-            <Popover open={ayPopoverOpen} onOpenChange={setAyPopoverOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[240px] justify-between bg-background shadow-sm font-normal">
-                  <span className="truncate">{ayLabel}</span>
-                  {academicYearIds.length > 0 && (
-                    <Badge variant="secondary" className="ml-2">{academicYearIds.length}</Badge>
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[260px] p-0" align="end">
-                <div className="max-h-64 overflow-y-auto p-1">
-                  {(academicYears || []).length === 0 && (
-                    <div className="p-3 text-sm text-muted-foreground">Belum ada tahun akademik</div>
-                  )}
-                  {academicYears?.map(ay => {
-                    const checked = academicYearIds.includes(ay.id);
-                    return (
-                      <button
-                        key={ay.id}
-                        type="button"
-                        onClick={() => toggleAy(ay.id)}
-                        className={cn(
-                          "flex w-full items-center justify-between rounded px-2 py-2 text-sm hover:bg-accent",
-                          checked && "bg-accent"
-                        )}
-                      >
-                        <span className="flex items-center gap-2">
-                          <span className={cn(
-                            "flex h-4 w-4 items-center justify-center rounded border",
-                            checked ? "bg-primary border-primary text-primary-foreground" : "border-input"
-                          )}>
-                            {checked && <Check className="h-3 w-3" />}
-                          </span>
-                          {ay.name}
-                        </span>
-                        {!ay.is_active && (
-                          <Badge variant="outline" className="text-[10px]">Non-aktif</Badge>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-                {academicYearIds.length > 0 && (
-                  <div className="border-t p-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full"
-                      onClick={() => setAcademicYearIds([])}
-                    >
-                      <X className="h-3 w-3 mr-1" /> Reset
-                    </Button>
-                  </div>
-                )}
-              </PopoverContent>
-            </Popover>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Tahun Akademik:</span>
+              <Select value={academicYearId} onValueChange={setAcademicYearId}>
+                <SelectTrigger className="w-full sm:w-[220px] bg-background">
+                  <SelectValue placeholder="Pilih Tahun Akademik" />
+                </SelectTrigger>
+                <SelectContent>
+                  {academicYears?.map(ay => (
+                    <SelectItem key={ay.id} value={ay.id}>
+                      {ay.name} {ay.is_active ? '(Aktif)' : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </section>
 
         {/* Stats Section */}
-        <section className="container relative z-10">
+        <section className="container pt-8 pb-4 relative z-10">
           <div className="flex justify-center">
             <div className="grid gap-4 sm:grid-cols-3 max-w-3xl w-full">
               {[
-                { icon: BookOpen, label: 'Mata Kuliah', value: filteredCourses.length, color: 'text-primary', tooltip: curriculumFilter === 'all' ? 'Total mata kuliah yang tersedia' : 'Total mata kuliah berdasarkan filter kurikulum' },
+                { icon: BookOpen, label: 'Mata Kuliah', value: filteredCourses.length, color: 'text-primary', tooltip: 'Total mata kuliah berdasarkan filter' },
                 { icon: Users, label: 'Total Mahasiswa', value: totalStudents, color: 'text-secondary-foreground', tooltip: 'Total seluruh mahasiswa' },
                 { icon: TrendingUp, label: 'Rata-rata Nilai', value: averageAllCourses.toFixed(1), color: 'text-success', tooltip: 'Rata-rata nilai akhir dari semua mahasiswa' },
               ].map((stat, i) => (
@@ -235,8 +203,8 @@ export default function Index() {
         </section>
 
         {/* PLO Achievement Chart */}
-        <section className="container py-8">
-          <PLOAchievementChart curriculumFilter={curriculumFilter} />
+        <section className="container pb-8">
+          <PLOAchievementChart curriculumFilter={curriculumId} />
         </section>
 
         {/* Courses Grid */}
