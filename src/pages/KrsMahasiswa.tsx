@@ -108,7 +108,7 @@ export default function KrsMahasiswa() {
         .select(`
           *,
           curricula(name),
-          course_prerequisites(prerequisite_course_id)
+          course_prerequisites!course_prerequisites_course_id_fkey(prerequisite_course_id)
         `)
         .order('semester', { ascending: true })
         .order('name', { ascending: true });
