@@ -237,13 +237,13 @@ export function MahasiswaBimbinganTab() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead rowSpan={2} className="align-middle border-r border-b border-primary-foreground/20">NIM</TableHead>
-                <TableHead rowSpan={2} className="align-middle border-r border-b border-primary-foreground/20">Nama Mahasiswa</TableHead>
+                <TableHead rowSpan={2} className="align-middle border-r border-b border-primary-foreground/20 text-center">NIM</TableHead>
+                <TableHead rowSpan={2} className="align-middle border-r border-b border-primary-foreground/20 text-center">Nama Mahasiswa</TableHead>
                 <TableHead rowSpan={2} className="align-middle border-r border-b border-primary-foreground/20 text-center">Status KRS</TableHead>
                 <TableHead rowSpan={2} className="align-middle border-r border-b border-primary-foreground/20 text-center">Nilai</TableHead>
                 <TableHead colSpan={4} className="text-center border-b border-r border-primary-foreground/20">PRESENSI</TableHead>
                 <TableHead rowSpan={2} className="align-middle border-r border-b border-primary-foreground/20 text-center">Bimbingan</TableHead>
-                <TableHead rowSpan={2} className="text-right align-middle border-b border-primary-foreground/20">Aksi</TableHead>
+                <TableHead rowSpan={2} className="text-center align-middle border-b border-primary-foreground/20">Aksi</TableHead>
               </TableRow>
               <TableRow>
                 <TableHead className="text-center border-r border-primary-foreground/20 font-bold h-8">H</TableHead>
