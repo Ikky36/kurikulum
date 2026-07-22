@@ -218,3 +218,38 @@ export interface AppSetting {
   created_at?: string;
   updated_at?: string;
 }
+// KRS & Prerequisites
+export interface CoursePrerequisite {
+  id: string;
+  course_id: string;
+  prerequisite_course_id: string;
+  created_at: string;
+  course?: Course;
+  prerequisite_course?: Course;
+}
+
+export interface KRS {
+  id: string;
+  student_id: string;
+  academic_year_id: string;
+  semester_id: string;
+  status: 'draft' | 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  updated_at: string;
+  student?: Profile;
+  academic_year?: AcademicYear;
+  semester?: Semester;
+}
+
+export interface KRSItem {
+  id: string;
+  krs_id: string;
+  course_id: string;
+  elearning_class_id?: string | null;
+  is_retake: boolean;
+  status: 'pending' | 'approved' | 'rejected';
+  created_at: string;
+  krs?: KRS;
+  course?: Course;
+  elearning_class?: ElearningClass;
+}

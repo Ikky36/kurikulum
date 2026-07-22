@@ -246,7 +246,7 @@ function KurikulumContent() {
     queryKey: ['semesters', 'active'],
     queryFn: async () => {
       const { data } = await supabase.from('semesters').select('*').eq('is_active', true).order('order_index');
-      return (data || []) as { id: string; name: string; order_index: number }[];
+      return (data || []) as { id: string; name: string; order_index: number; max_sks: number }[];
     },
   });
 
@@ -299,7 +299,7 @@ function KurikulumContent() {
   const { data: courses = [] } = useQuery({
     queryKey: ['courses_kurikulum'],
     queryFn: async () => {
-      const { data } = await supabase.from('courses').select('*, curricula:curriculum_id(*), course_plos(plo_id, plos(*)), course_profil_lulusan(profil_lulusan_id, profil_lulusan:profil_lulusan_id(*))').order('code');
+      const { data } = await supabase.from('courses').select('*, curricula:curriculum_id(*), course_plos(plo_id, plos(*)), course_profil_lulusan(profil_lulusan_id, profil_lulusan:profil_lulusan_id(*)), course_prerequisites(prerequisite_course_id)').order('code');
       return data || [];
     },
   });
@@ -1329,7 +1329,7 @@ function KurikulumContent() {
             />
             {canEdit && (
               <div className="flex flex-wrap items-center gap-2">
-                <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', sks: '0', ploIds: [], plIds: [] }, true)}>
+                <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', sks: '0', ploIds: [], plIds: [], has_prerequisite: 'false', prerequisiteIds: [] }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
                 <KurikulumImportExport tableConfig={tableConfig} data={filteredCourses} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
@@ -1453,6 +1453,7 @@ function KurikulumContent() {
                               size="icon"
                               onClick={() => {
                                 const existingPlIds = course.course_profil_lulusan?.map((cpl: any) => cpl.profil_lulusan_id) || [];
+                                const existingPrerequisites = course.course_prerequisites?.map((cp: any) => cp.prerequisite_course_id) || [];
                                 openEdit('courses', {
                                   id: course.id,
                                   code: course.code,
@@ -1463,6 +1464,8 @@ function KurikulumContent() {
                                   sks: course.sks?.toString() || '0',
                                   ploIds: course.course_plos?.map((cp: any) => cp.plo_id) || [],
                                   plIds: existingPlIds,
+                                  has_prerequisite: existingPrerequisites.length > 0 ? 'true' : 'false',
+                                  prerequisiteIds: existingPrerequisites,
                                 }, false);
                               }}
                             >
@@ -1770,6 +1773,51 @@ function KurikulumContent() {
                   })}
                 </div>
               </div>
+              <div>
+                <label className="text-sm font-medium">Prasyarat Kelulusan</label>
+                <Select
+                  value={formData.has_prerequisite === 'true' ? 'true' : 'false'}
+                  onValueChange={(v) => {
+                    setFormData({ ...formData, has_prerequisite: v });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Jenis Prasyarat" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="false">Tidak Bersyarat</SelectItem>
+                    <SelectItem value="true">Bersyarat</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formData.has_prerequisite === 'true' && (
+                <div>
+                  <label className="text-sm font-medium">Pilih Mata Kuliah Prasyarat (Multi-select)</label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto border rounded p-2">
+                    {courses.filter((c: any) => {
+                      const currId = formData.curriculum_id;
+                      return (currId ? c.curriculum_id === currId : true) && c.id !== formData.id;
+                    }).map((c: any) => {
+                      const selectedPrerequisiteIds = (formData.prerequisiteIds as unknown as string[]) || [];
+                      return (
+                        <label key={c.id} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedPrerequisiteIds.includes(c.id)}
+                            onChange={(e) => {
+                              const newIds = e.target.checked
+                                ? [...selectedPrerequisiteIds, c.id]
+                                : selectedPrerequisiteIds.filter((id) => id !== c.id);
+                              setFormData({ ...formData, prerequisiteIds: newIds as any });
+                            }}
+                          />
+                          <span className="text-sm">{c.code} - {c.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
             <DialogFooter className="flex-shrink-0 pt-4">
               <Button variant="outline" onClick={() => setEditDialog(null)}>
@@ -1778,6 +1826,22 @@ function KurikulumContent() {
               <Button 
                 onClick={async () => {
                   const { id, code, name, semester, curriculum_id, passing_score, sks } = formData;
+                  const newSks = parseInt(sks) || 0;
+                  
+                  // Validasi SKS Limit
+                  if (semester) {
+                    const targetSemesterObj = activeSemesters.find(s => s.name === semester);
+                    if (targetSemesterObj) {
+                      const maxSks = (targetSemesterObj as any).max_sks || 24;
+                      const currentSemesterCourses = courses.filter((c: any) => c.curriculum_id === curriculum_id && c.semester === semester && c.id !== id);
+                      const currentTotalSks = currentSemesterCourses.reduce((sum: number, c: any) => sum + (c.sks || 0), 0);
+                      if (currentTotalSks + newSks > maxSks) {
+                        toast.error(`Gagal: Total SKS untuk Semester ${semester} akan menjadi ${currentTotalSks + newSks}, melebihi batas maksimal (${maxSks} SKS).`);
+                        return;
+                      }
+                    }
+                  }
+
                   if (isNew) {
                     const { data: newCourse, error } = await supabase
                       .from('courses')
@@ -1787,7 +1851,7 @@ function KurikulumContent() {
                         semester: semester || null, 
                         curriculum_id: curriculum_id || null,
                         passing_score: parseInt(passing_score) || 60,
-                        sks: parseInt(sks) || 0
+                        sks: newSks
                       })
                       .select()
                       .single();
@@ -1807,6 +1871,14 @@ function KurikulumContent() {
                       const plInserts = selectedPlIdsList.map(profil_lulusan_id => ({ course_id: newCourse.id, profil_lulusan_id }));
                       await supabase.from('course_profil_lulusan').insert(plInserts);
                     }
+
+                    if (formData.has_prerequisite === 'true') {
+                      const prerequisiteIdsList = (formData.prerequisiteIds as unknown as string[]) || [];
+                      if (prerequisiteIdsList.length > 0) {
+                        const prqInserts = prerequisiteIdsList.map(prq_id => ({ course_id: newCourse.id, prerequisite_course_id: prq_id }));
+                        await supabase.from('course_prerequisites').insert(prqInserts);
+                      }
+                    }
                     
                     queryClient.invalidateQueries();
                     toast.success('Mata kuliah berhasil ditambahkan');
@@ -1820,7 +1892,7 @@ function KurikulumContent() {
                         semester: semester || null, 
                         curriculum_id: curriculum_id || null,
                         passing_score: parseInt(passing_score) || 60,
-                        sks: parseInt(sks) || 0
+                        sks: newSks
                       })
                       .eq('id', id);
                     
@@ -1840,6 +1912,15 @@ function KurikulumContent() {
                     if (selectedPlIdsList.length > 0) {
                       const plInserts = selectedPlIdsList.map(profil_lulusan_id => ({ course_id: id, profil_lulusan_id }));
                       await supabase.from('course_profil_lulusan').insert(plInserts);
+                    }
+
+                    await supabase.from('course_prerequisites').delete().eq('course_id', id);
+                    if (formData.has_prerequisite === 'true') {
+                      const prerequisiteIdsList = (formData.prerequisiteIds as unknown as string[]) || [];
+                      if (prerequisiteIdsList.length > 0) {
+                        const prqInserts = prerequisiteIdsList.map(prq_id => ({ course_id: id, prerequisite_course_id: prq_id }));
+                        await supabase.from('course_prerequisites').insert(prqInserts);
+                      }
                     }
                     
                     queryClient.invalidateQueries();
