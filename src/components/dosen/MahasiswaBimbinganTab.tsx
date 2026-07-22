@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { UserSearch, FileText, CheckCircle, XCircle, TrendingUp, CalendarDays, MessageSquare, Save } from 'lucide-react';
 import { Profile } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 export function MahasiswaBimbinganTab() {
   const { user } = useAuth();
@@ -68,6 +69,53 @@ export function MahasiswaBimbinganTab() {
       return data as Profile[];
     },
     enabled: isDPA
+  });
+
+  // Collective query for Smart Table Stats
+  const { data: studentsStats, isLoading: loadingStats } = useQuery({
+    queryKey: ['dpa_students_stats', students.map(s => s.id)],
+    queryFn: async () => {
+      if (students.length === 0) return {};
+      
+      const studentIds = students.map(s => s.id);
+      
+      const { data: krsData } = await supabase
+        .from('krs')
+        .select('student_id, status')
+        .in('student_id', studentIds)
+        .order('created_at', { ascending: false });
+        
+      const { data: gradesData } = await supabase
+        .from('grades')
+        .select('student_profile_id, final_score')
+        .in('student_profile_id', studentIds);
+        
+      const { data: logsData } = await supabase
+        .from('academic_guidance_logs')
+        .select('student_id, created_at')
+        .in('student_id', studentIds)
+        .order('created_at', { ascending: false });
+
+      const stats: Record<string, any> = {};
+      
+      studentIds.forEach(id => {
+        const studentKrs = krsData?.find(k => k.student_id === id);
+        const studentGrades = gradesData?.filter(g => g.student_profile_id === id) || [];
+        const avgScore = studentGrades.length > 0 
+          ? studentGrades.reduce((sum, g) => sum + g.final_score, 0) / studentGrades.length 
+          : null;
+        const studentLog = logsData?.find(l => l.student_id === id);
+        
+        stats[id] = {
+          krsStatus: studentKrs?.status || 'belum isi',
+          averageScore: avgScore,
+          lastLogDate: studentLog?.created_at || null,
+        };
+      });
+      
+      return stats;
+    },
+    enabled: students.length > 0
   });
 
   // Fetch KRS for selected student
@@ -189,30 +237,72 @@ export function MahasiswaBimbinganTab() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>NIM</TableHead>
-                <TableHead>Nama Mahasiswa</TableHead>
-                <TableHead>Angkatan</TableHead>
-                <TableHead className="text-right">Aksi</TableHead>
+                <TableHead rowSpan={2} className="align-middle border-r border-b">NIM</TableHead>
+                <TableHead rowSpan={2} className="align-middle border-r border-b">Nama Mahasiswa</TableHead>
+                <TableHead rowSpan={2} className="align-middle border-r border-b text-center">Status KRS</TableHead>
+                <TableHead rowSpan={2} className="align-middle border-r border-b text-center">Nilai</TableHead>
+                <TableHead colSpan={4} className="text-center border-b border-r bg-muted/20">PRESENSI</TableHead>
+                <TableHead rowSpan={2} className="align-middle border-r border-b text-center">Bimbingan</TableHead>
+                <TableHead rowSpan={2} className="text-right align-middle border-b">Aksi</TableHead>
+              </TableRow>
+              <TableRow className="bg-muted/10">
+                <TableHead className="text-center border-r font-bold h-8">H</TableHead>
+                <TableHead className="text-center border-r font-bold h-8">I</TableHead>
+                <TableHead className="text-center border-r font-bold h-8">S</TableHead>
+                <TableHead className="text-center border-r font-bold text-destructive h-8">A</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loadingStudents ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-4">Memuat...</TableCell></TableRow>
+              {loadingStudents || loadingStats ? (
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Memuat data akademik...</TableCell></TableRow>
               ) : students.length === 0 ? (
-                <TableRow><TableCell colSpan={4} className="text-center py-4">Belum ada mahasiswa di kelompok ini.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={10} className="text-center py-8 text-muted-foreground">Belum ada mahasiswa di kelompok ini.</TableCell></TableRow>
               ) : (
-                students.map((student) => (
-                  <TableRow key={student.id}>
-                    <TableCell className="font-medium">{student.nim || '-'}</TableCell>
-                    <TableCell>{student.full_name}</TableCell>
-                    <TableCell>{student.enrollment_year}</TableCell>
-                    <TableCell className="text-right">
-                      <Button size="sm" onClick={() => { setSelectedStudent(student); setActiveTab('krs'); }}>
-                        <UserSearch className="h-4 w-4 mr-1" /> Panel DPA
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
+                students.map((student) => {
+                  const stat = studentsStats?.[student.id];
+                  return (
+                    <TableRow key={student.id} className="hover:bg-muted/30">
+                      <TableCell className="font-medium border-r">{student.nim || '-'}</TableCell>
+                      <TableCell className="border-r">{student.full_name}</TableCell>
+                      <TableCell className="text-center border-r">
+                        <Badge variant={
+                          stat?.krsStatus === 'approved' ? 'default' : 
+                          stat?.krsStatus === 'pending' ? 'secondary' : 
+                          stat?.krsStatus === 'rejected' ? 'destructive' : 'outline'
+                        } className="capitalize font-medium">
+                          {stat?.krsStatus === 'approved' ? 'Disetujui' : 
+                           stat?.krsStatus === 'pending' ? 'Menunggu' : 
+                           stat?.krsStatus === 'rejected' ? 'Ditolak' : 'Belum Isi'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-center border-r">
+                        {stat?.averageScore !== null ? (
+                          <span className={cn("font-bold", stat.averageScore >= 60 ? "text-success" : "text-destructive")}>
+                            {stat.averageScore.toFixed(1)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center border-r text-muted-foreground">0</TableCell>
+                      <TableCell className="text-center border-r text-muted-foreground">0</TableCell>
+                      <TableCell className="text-center border-r text-muted-foreground">0</TableCell>
+                      <TableCell className="text-center border-r text-muted-foreground">0</TableCell>
+                      <TableCell className="text-center border-r">
+                        {stat?.lastLogDate ? (
+                          <span className="text-sm font-medium">{new Date(stat.lastLogDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
+                        ) : (
+                          <Badge variant="destructive" className="bg-destructive/10 text-destructive hover:bg-destructive/20 border-0">Belum Pernah</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button size="sm" onClick={() => { setSelectedStudent(student); setActiveTab('krs'); }} className="shadow-sm">
+                          <UserSearch className="h-4 w-4 mr-1" /> Panel DPA
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
