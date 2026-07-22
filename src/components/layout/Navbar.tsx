@@ -39,6 +39,9 @@ export function Navbar() {
   ];
 
   if (user) {
+    if (profile?.role === 'mahasiswa') {
+      navLinks.push({ href: '/krs', label: 'KRS', icon: FileText });
+    }
     navLinks.push({ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard });
   }
 

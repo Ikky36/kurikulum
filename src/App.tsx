@@ -18,6 +18,7 @@ import DashboardDosen from "./pages/dashboard/DashboardDosen";
 import DashboardAdmin from "./pages/dashboard/DashboardAdmin";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
+import KrsMahasiswa from "./pages/KrsMahasiswa";
 import Kurikulum from "./pages/Kurikulum";
 import ELearning from "./pages/ELearning";
 import QuizTaking from "./pages/QuizTaking";
@@ -47,6 +48,7 @@ function AppContent() {
           <Route path="/e-learning" element={<ELearning />} />
           <Route path="/e-learning/recap" element={<ElearningRecap />} />
           <Route path="/quiz/:assignmentId" element={<QuizTaking />} />
+          <Route path="/krs" element={<KrsMahasiswa />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
           <Route path="/dashboard/dosen" element={<DashboardDosen />} />

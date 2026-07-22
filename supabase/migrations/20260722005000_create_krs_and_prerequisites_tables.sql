@@ -35,21 +35,21 @@ ALTER TABLE public.krs_items ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Enable read access for all authenticated users" ON public.course_prerequisites FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Enable all access for admins" ON public.course_prerequisites FOR ALL TO authenticated USING (
-  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'superadmin'))
+  EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'sub_admin'))
 );
 
 CREATE POLICY "Enable read access for all authenticated users" ON public.krs FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Enable insert for students and admins" ON public.krs FOR INSERT TO authenticated WITH CHECK (student_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'superadmin')));
-CREATE POLICY "Enable update for students and admins" ON public.krs FOR UPDATE TO authenticated USING (student_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'superadmin', 'teacher')));
-CREATE POLICY "Enable delete for admins" ON public.krs FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'superadmin')));
+CREATE POLICY "Enable insert for students and admins" ON public.krs FOR INSERT TO authenticated WITH CHECK (student_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'sub_admin')));
+CREATE POLICY "Enable update for students and admins" ON public.krs FOR UPDATE TO authenticated USING (student_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'sub_admin', 'dosen')));
+CREATE POLICY "Enable delete for admins" ON public.krs FOR DELETE TO authenticated USING (EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'sub_admin')));
 
 CREATE POLICY "Enable read access for all authenticated users" ON public.krs_items FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Enable insert for students and admins" ON public.krs_items FOR INSERT TO authenticated WITH CHECK (
-  EXISTS (SELECT 1 FROM krs WHERE krs.id = krs_id AND (krs.student_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'superadmin'))))
+  EXISTS (SELECT 1 FROM krs WHERE krs.id = krs_id AND (krs.student_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'sub_admin'))))
 );
 CREATE POLICY "Enable update for students and admins" ON public.krs_items FOR UPDATE TO authenticated USING (
-  EXISTS (SELECT 1 FROM krs WHERE krs.id = krs_id AND (krs.student_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'superadmin', 'teacher'))))
+  EXISTS (SELECT 1 FROM krs WHERE krs.id = krs_id AND (krs.student_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'sub_admin', 'dosen'))))
 );
 CREATE POLICY "Enable delete for students and admins" ON public.krs_items FOR DELETE TO authenticated USING (
-  EXISTS (SELECT 1 FROM krs WHERE krs.id = krs_id AND (krs.student_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'superadmin'))))
+  EXISTS (SELECT 1 FROM krs WHERE krs.id = krs_id AND (krs.student_id = auth.uid() OR EXISTS (SELECT 1 FROM profiles WHERE profiles.id = auth.uid() AND profiles.role IN ('admin', 'sub_admin'))))
 );
