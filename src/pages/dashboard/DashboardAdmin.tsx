@@ -29,6 +29,7 @@ import { UserImportExport } from '@/components/admin/UserImportExport';
 import { UserPagination } from '@/components/admin/UserPagination';
 import { KurikulumTab } from '@/components/admin/KurikulumTab';
 import { KrsApprovalTab } from '@/components/admin/KrsApprovalTab';
+import { DpaManagerTab } from '@/components/admin/DpaManagerTab';
 import { DashboardScoreRecap } from '@/components/dashboard/DashboardScoreRecap';
 import { TableFilterHeader } from '@/components/ui/table-column-filter';
 import { TableSortHeader, SortConfig, sortData } from '@/components/ui/table-sort-header';
@@ -940,6 +941,10 @@ export default function DashboardAdmin() {
               <Target className="h-4 w-4" />
               <span className="hidden sm:inline">Kelas</span>
             </TabsTrigger>
+            <TabsTrigger value="dpa" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <UserCog className="h-4 w-4" />
+              <span className="hidden sm:inline">Manajemen DPA</span>
+            </TabsTrigger>
             <TabsTrigger value="krs" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Validasi KRS</span>
@@ -955,7 +960,15 @@ export default function DashboardAdmin() {
 
           {/* Kelas Tab */}
           <TabsContent value="kelas">
-            <KurikulumTab />
+            <SistemKuliahManager />
+          </TabsContent>
+
+          <TabsContent value="dpa">
+            <DpaManagerTab />
+          </TabsContent>
+
+          <TabsContent value="krs">
+            <KrsApprovalTab />
           </TabsContent>
 
           {/* Rekap Skor Tab */}
