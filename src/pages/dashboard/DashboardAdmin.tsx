@@ -936,7 +936,7 @@ export default function DashboardAdmin() {
         </div>
 
         <Tabs defaultValue="kelas" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="flex flex-wrap w-full h-auto gap-1 md:grid md:grid-cols-4 lg:grid-cols-7">
             <TabsTrigger value="kelas" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Target className="h-4 w-4" />
               <span className="hidden sm:inline">Kelas</span>
