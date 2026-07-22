@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { toast } from 'sonner';
 import { MessageSquare, CalendarDays, Clock, Send, Info, FileText } from 'lucide-react';
 import { Profile } from '@/lib/types';
@@ -206,9 +207,9 @@ export function BimbinganAkademikTab() {
                 <p className="text-sm mt-1 max-w-sm">Anda belum pernah melakukan bimbingan akademik, atau DPA belum memberikan catatan.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <Accordion type="multiple" className="space-y-4">
                 {logs.map((log: any) => (
-                  <div key={log.id} className="border rounded-xl p-5 bg-card shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+                  <AccordionItem value={log.id} key={log.id} className="border rounded-xl px-5 py-2 bg-card shadow-sm hover:shadow-md transition-shadow relative overflow-hidden data-[state=open]:pb-5">
                     {/* Status accent line */}
                     <div className={`absolute left-0 top-0 bottom-0 w-1 \${
                       log.status === 'completed' ? 'bg-success' : 
@@ -216,54 +217,60 @@ export function BimbinganAkademikTab() {
                       log.status === 'rejected' ? 'bg-destructive' : 'bg-primary'
                     }`} />
                     
-                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
-                      <div>
-                        <h4 className="font-bold text-lg">{log.topic}</h4>
-                        <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
-                          <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3"/> {new Date(log.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                          <span className="flex items-center gap-1"><Clock className="h-3 w-3"/> {log.media}</span>
+                    <AccordionTrigger className="hover:no-underline py-3">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full pr-4 text-left">
+                        <div>
+                          <h4 className="font-bold text-lg">{log.topic}</h4>
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                            <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3"/> {new Date(log.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                            <span className="flex items-center gap-1"><Clock className="h-3 w-3"/> {log.media}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant={
+                            log.status === 'completed' ? 'default' : 
+                            log.status === 'pending' ? 'secondary' : 
+                            log.status === 'rejected' ? 'destructive' : 'outline'
+                          } className="capitalize px-3 py-1">
+                            {log.status === 'completed' ? 'Selesai' : 
+                             log.status === 'pending' ? 'Menunggu' : 
+                             log.status === 'approved' ? 'Disetujui (Terjadwal)' : 'Ditolak'}
+                          </Badge>
+                          {log.status === 'completed' && log.is_read_by_student === false && (
+                            <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white animate-pulse border-0 shadow-sm">
+                              Baru Dibalas!
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                      <Badge variant={
-                        log.status === 'completed' ? 'default' : 
-                        log.status === 'pending' ? 'secondary' : 
-                        log.status === 'rejected' ? 'destructive' : 'outline'
-                      } className="capitalize px-3 py-1">
-                        {log.status === 'completed' ? 'Selesai' : 
-                         log.status === 'pending' ? 'Menunggu' : 
-                         log.status === 'approved' ? 'Disetujui (Terjadwal)' : 'Ditolak'}
-                      </Badge>
-                      {log.status === 'completed' && log.is_read_by_student === false && (
-                          <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white animate-pulse border-0 shadow-sm ml-2">
-                            Baru Dibalas!
-                          </Badge>
-                        )}
-                    </div>
+                    </AccordionTrigger>
 
-                    <div className="space-y-4 text-sm mt-4">
-                      {log.student_message && (
-                        <div className="bg-muted/30 p-3 rounded-lg border">
-                          <p className="font-semibold mb-1 text-xs text-muted-foreground">Pesan Anda:</p>
-                          <p className="whitespace-pre-wrap">{log.student_message}</p>
-                        </div>
-                      )}
-                      
-                      {log.dosen_notes && (
-                        <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
-                          <p className="font-semibold mb-2 flex items-center gap-2 text-primary">
-                            <Info className="h-4 w-4" /> Catatan & Rekomendasi DPA ({log.dosen?.full_name}):
-                          </p>
-                          <p className="whitespace-pre-wrap text-foreground/90">{log.dosen_notes}</p>
-                        </div>
-                      )}
-                      
-                      {!log.dosen_notes && log.status !== 'pending' && (
-                        <p className="text-muted-foreground italic text-xs">DPA belum memberikan catatan tertulis untuk sesi ini.</p>
-                      )}
-                    </div>
-                  </div>
+                    <AccordionContent>
+                      <div className="space-y-4 text-sm mt-2 pt-4 border-t">
+                        {log.student_message && (
+                          <div className="bg-muted/30 p-3 rounded-lg border">
+                            <p className="font-semibold mb-1 text-xs text-muted-foreground">Pesan Anda:</p>
+                            <p className="whitespace-pre-wrap">{log.student_message}</p>
+                          </div>
+                        )}
+                        
+                        {log.dosen_notes && (
+                          <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
+                            <p className="font-semibold mb-2 flex items-center gap-2 text-primary">
+                              <Info className="h-4 w-4" /> Catatan & Rekomendasi DPA ({log.dosen?.full_name}):
+                            </p>
+                            <p className="whitespace-pre-wrap text-foreground/90">{log.dosen_notes}</p>
+                          </div>
+                        )}
+                        
+                        {!log.dosen_notes && log.status !== 'pending' && (
+                          <p className="text-muted-foreground italic text-xs">DPA belum memberikan catatan tertulis untuk sesi ini.</p>
+                        )}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
                 ))}
-              </div>
+              </Accordion>
             )}
           </CardContent>
         </Card>
