@@ -208,7 +208,7 @@ export function MahasiswaBimbinganTab() {
     mutationFn: async ({ logId, notes }: { logId: string; notes: string }) => {
       const { error } = await supabase
         .from('academic_guidance_logs')
-        .update({ dosen_notes: notes, status: 'completed' })
+        .update({ dosen_notes: notes, status: 'completed', is_read_by_student: false })
         .eq('id', logId);
       if (error) throw error;
     },

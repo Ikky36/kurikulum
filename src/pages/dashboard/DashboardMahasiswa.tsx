@@ -53,6 +53,7 @@ export default function DashboardMahasiswa() {
   const [gradeCodeFilter, setGradeCodeFilter] = useState('');
   const [gradeCourseFilter, setGradeCourseFilter] = useState('');
   const [gradeStatusFilter, setGradeStatusFilter] = useState('');
+  
   const { data: sistemKuliahOptions } = useQuery({
     queryKey: ['sistem-kuliah'],
     queryFn: async () => {
@@ -64,6 +65,28 @@ export default function DashboardMahasiswa() {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Query unread guidance logs
+  const { data: unreadGuidanceCount = 0 } = useQuery({
+    queryKey: ['student_unread_guidance', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return 0;
+      const { count, error } = await supabase
+        .from('academic_guidance_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('student_id', user.id)
+        .eq('status', 'completed')
+        .eq('is_read_by_student', false);
+      
+      if (error) {
+        console.error("Error fetching unread guidance:", error);
+        return 0;
+      }
+      return count || 0;
+    },
+    enabled: !!user?.id,
+    refetchInterval: 30000 // Poll every 30s just in case
   });
 
   if (loading) {
@@ -177,9 +200,14 @@ export default function DashboardMahasiswa() {
               <BookOpen className="h-4 w-4 mr-2" />
               Akademik & KRS
             </TabsTrigger>
-            <TabsTrigger value="bimbingan" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <TabsTrigger value="bimbingan" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
               <User className="h-4 w-4 mr-2" />
               Bimbingan Akademik
+              {unreadGuidanceCount > 0 && (
+                <Badge variant="destructive" className="absolute -top-2 -right-2 px-1.5 min-w-[20px] h-5 flex items-center justify-center animate-pulse">
+                  {unreadGuidanceCount}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 

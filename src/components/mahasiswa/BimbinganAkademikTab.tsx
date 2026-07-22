@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -82,6 +82,35 @@ export function BimbinganAkademikTab() {
       toast.error('Gagal mengajukan bimbingan: ' + err.message);
     }
   });
+
+  const markAsReadMutation = useMutation({
+    mutationFn: async (unreadLogIds: string[]) => {
+      const { error } = await supabase
+        .from('academic_guidance_logs')
+        .update({ is_read_by_student: true })
+        .in('id', unreadLogIds);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      // Invalidate the unread count in DashboardMahasiswa so the red dot disappears
+      queryClient.invalidateQueries({ queryKey: ['student_unread_guidance'] });
+      // We purposefully DO NOT invalidate 'my_guidance_logs' here so the "Baru Dibalas!" badge stays visible 
+      // until the student manually refreshes or navigates away.
+    }
+  });
+
+  // Automatically mark unread logs as read when this tab mounts and logs are fetched
+  useEffect(() => {
+    if (logs && logs.length > 0) {
+      const unreadLogIds = logs
+        .filter(log => log.status === 'completed' && log.is_read_by_student === false)
+        .map(log => log.id);
+      
+      if (unreadLogIds.length > 0) {
+        markAsReadMutation.mutate(unreadLogIds);
+      }
+    }
+  }, [logs]);
 
   if (loadingDpa) return <div>Memuat informasi DPA...</div>;
 
@@ -204,6 +233,11 @@ export function BimbinganAkademikTab() {
                          log.status === 'pending' ? 'Menunggu' : 
                          log.status === 'approved' ? 'Disetujui (Terjadwal)' : 'Ditolak'}
                       </Badge>
+                      {log.status === 'completed' && log.is_read_by_student === false && (
+                          <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white animate-pulse border-0 shadow-sm ml-2">
+                            Baru Dibalas!
+                          </Badge>
+                        )}
                     </div>
 
                     <div className="space-y-4 text-sm mt-4">
