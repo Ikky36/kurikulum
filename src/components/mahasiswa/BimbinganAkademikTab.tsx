@@ -181,11 +181,11 @@ export function BimbinganAkademikTab() {
                 {logs.map((log: any) => (
                   <div key={log.id} className="border rounded-xl p-5 bg-card shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
                     {/* Status accent line */}
-                    <div className={\`absolute left-0 top-0 bottom-0 w-1 \${
+                    <div className={`absolute left-0 top-0 bottom-0 w-1 \${
                       log.status === 'completed' ? 'bg-success' : 
                       log.status === 'pending' ? 'bg-warning' : 
                       log.status === 'rejected' ? 'bg-destructive' : 'bg-primary'
-                    }\`} />
+                    }`} />
                     
                     <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-4">
                       <div>
