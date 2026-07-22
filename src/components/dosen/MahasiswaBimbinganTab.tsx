@@ -204,6 +204,25 @@ export function MahasiswaBimbinganTab() {
     }
   });
 
+  const replyLogMutation = useMutation({
+    mutationFn: async ({ logId, notes }: { logId: string; notes: string }) => {
+      const { error } = await supabase
+        .from('academic_guidance_logs')
+        .update({ dosen_notes: notes, status: 'completed' })
+        .eq('id', logId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Balasan bimbingan berhasil disimpan');
+      queryClient.invalidateQueries({ queryKey: ['dpa_student_logs'] });
+      queryClient.invalidateQueries({ queryKey: ['dpa_pending_count'] });
+      queryClient.invalidateQueries({ queryKey: ['dpa_students_stats'] });
+      setRespondingLogId(null);
+      setReplyNotes('');
+      refetchLogs();
+    }
+  });
+
   if (loadingAssignments) return <div>Memuat data DPA...</div>;
 
   if (!isDPA) {
