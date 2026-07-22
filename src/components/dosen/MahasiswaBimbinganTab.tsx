@@ -237,19 +237,19 @@ export function MahasiswaBimbinganTab() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead rowSpan={2} className="align-middle border-r border-b">NIM</TableHead>
-                <TableHead rowSpan={2} className="align-middle border-r border-b">Nama Mahasiswa</TableHead>
-                <TableHead rowSpan={2} className="align-middle border-r border-b text-center">Status KRS</TableHead>
-                <TableHead rowSpan={2} className="align-middle border-r border-b text-center">Nilai</TableHead>
-                <TableHead colSpan={4} className="text-center border-b border-r bg-muted/20">PRESENSI</TableHead>
-                <TableHead rowSpan={2} className="align-middle border-r border-b text-center">Bimbingan</TableHead>
-                <TableHead rowSpan={2} className="text-right align-middle border-b">Aksi</TableHead>
+                <TableHead rowSpan={2} className="align-middle border-r border-b border-primary-foreground/20">NIM</TableHead>
+                <TableHead rowSpan={2} className="align-middle border-r border-b border-primary-foreground/20">Nama Mahasiswa</TableHead>
+                <TableHead rowSpan={2} className="align-middle border-r border-b border-primary-foreground/20 text-center">Status KRS</TableHead>
+                <TableHead rowSpan={2} className="align-middle border-r border-b border-primary-foreground/20 text-center">Nilai</TableHead>
+                <TableHead colSpan={4} className="text-center border-b border-r border-primary-foreground/20">PRESENSI</TableHead>
+                <TableHead rowSpan={2} className="align-middle border-r border-b border-primary-foreground/20 text-center">Bimbingan</TableHead>
+                <TableHead rowSpan={2} className="text-right align-middle border-b border-primary-foreground/20">Aksi</TableHead>
               </TableRow>
-              <TableRow className="bg-muted/10">
-                <TableHead className="text-center border-r font-bold h-8">H</TableHead>
-                <TableHead className="text-center border-r font-bold h-8">I</TableHead>
-                <TableHead className="text-center border-r font-bold h-8">S</TableHead>
-                <TableHead className="text-center border-r font-bold text-destructive h-8">A</TableHead>
+              <TableRow>
+                <TableHead className="text-center border-r border-primary-foreground/20 font-bold h-8">H</TableHead>
+                <TableHead className="text-center border-r border-primary-foreground/20 font-bold h-8">I</TableHead>
+                <TableHead className="text-center border-r border-primary-foreground/20 font-bold h-8">S</TableHead>
+                <TableHead className="text-center border-r border-primary-foreground/20 font-bold text-red-200 h-8">A</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
