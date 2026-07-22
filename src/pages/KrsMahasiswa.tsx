@@ -322,11 +322,21 @@ export default function KrsMahasiswa() {
           <Alert className="mb-6 bg-yellow-500/10 text-yellow-700 border-yellow-500/20">
             <Info className="h-4 w-4" color="#a16207" />
             <AlertTitle>KRS Sedang Diproses</AlertTitle>
-            <AlertDescription className="flex items-center justify-between">
+            <AlertDescription className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-2">
               <span>Menunggu persetujuan Dosen Pembimbing Akademik / Admin. Anda masih bisa membatalkan pengajuan jika ingin mengubah mata kuliah.</span>
               <Button variant="outline" size="sm" onClick={() => cancelKrsMutation.mutate()} disabled={cancelKrsMutation.isPending}>
                 Tarik/Batal Ajukan
               </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {(krs?.status === 'draft' || krs?.status === 'rejected') && krs?.notes && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>KRS Dikembalikan / Ditolak</AlertTitle>
+            <AlertDescription className="mt-2 font-medium">
+              Catatan Admin: "{krs.notes}"
             </AlertDescription>
           </Alert>
         )}

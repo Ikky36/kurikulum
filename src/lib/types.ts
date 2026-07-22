@@ -234,6 +234,7 @@ export interface KRS {
   academic_year_id: string;
   semester_id: string;
   status: 'draft' | 'pending' | 'approved' | 'rejected';
+  notes?: string;
   created_at: string;
   updated_at: string;
   student?: Profile;
