@@ -1,0 +1,1 @@
+ALTER TABLE public.semesters ADD COLUMN IF NOT EXISTS max_sks integer NOT NULL DEFAULT 24;

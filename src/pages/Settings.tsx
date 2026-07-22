@@ -49,6 +49,7 @@ export default function Settings() {
   const [editingSemester, setEditingSemester] = useState<any>(null);
   const [semesterName, setSemesterName] = useState('');
   const [semesterOrder, setSemesterOrder] = useState('');
+  const [semesterMaxSks, setSemesterMaxSks] = useState('24');
 
   // Program state
   const [showProgramDialog, setShowProgramDialog] = useState(false);
@@ -427,13 +428,6 @@ export default function Settings() {
     setShowAcademicYearDialog(false);
   };
 
-  const resetSemesterForm = () => {
-    setSemesterName('');
-    setSemesterOrder('');
-    setEditingSemester(null);
-    setShowSemesterDialog(false);
-  };
-
   const resetProgramForm = () => {
     setProgramCode('');
     setProgramName('');
@@ -551,7 +545,7 @@ export default function Settings() {
   };
 
   const handleToggleAcademicYear = async (id: string, isActive: boolean) => {
-    const { error } = await supabase.from('academic_years').update({ is_active: isActive }).eq('id', id);
+const { error } = await supabase.from('academic_years').update({ is_active: isActive }).eq('id', id);
     if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
     queryClient.invalidateQueries({ queryKey: ['academic-years'] });
   };
@@ -559,12 +553,13 @@ export default function Settings() {
   // Semester handlers
   const handleSaveSemester = async () => {
     const orderIdx = parseInt(semesterOrder) || 0;
+    const maxSks = parseInt(semesterMaxSks) || 24;
     if (editingSemester) {
-      const { error } = await supabase.from('semesters').update({ name: semesterName, order_index: orderIdx }).eq('id', editingSemester.id);
+      const { error } = await supabase.from('semesters').update({ name: semesterName, order_index: orderIdx, max_sks: maxSks }).eq('id', editingSemester.id);
       if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
       toast({ title: 'Berhasil', description: 'Semester berhasil diperbarui' });
     } else {
-      const { error } = await supabase.from('semesters').insert([{ name: semesterName, order_index: orderIdx }]);
+      const { error } = await supabase.from('semesters').insert([{ name: semesterName, order_index: orderIdx, max_sks: maxSks }]);
       if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
       toast({ title: 'Berhasil', description: 'Semester berhasil ditambahkan' });
     }
@@ -576,7 +571,16 @@ export default function Settings() {
     setEditingSemester(sem);
     setSemesterName(sem.name);
     setSemesterOrder(sem.order_index?.toString() || '0');
+    setSemesterMaxSks(sem.max_sks?.toString() || '24');
     setShowSemesterDialog(true);
+  };
+
+  const resetSemesterForm = () => {
+    setSemesterName('');
+    setSemesterOrder('');
+    setSemesterMaxSks('24');
+    setEditingSemester(null);
+    setShowSemesterDialog(false);
   };
 
   const handleDeleteSemester = async (id: string) => {
@@ -1335,6 +1339,15 @@ export default function Settings() {
                               placeholder="0" 
                             />
                           </div>
+                          <div className="space-y-2">
+                            <Label>Jumlah SKS</Label>
+                            <Input 
+                              type="number"
+                              value={semesterMaxSks} 
+                              onChange={(e) => setSemesterMaxSks(e.target.value)} 
+                              placeholder="24" 
+                            />
+                          </div>
                         </div>
                         <DialogFooter>
                           <Button onClick={handleSaveSemester} disabled={!semesterName}>
@@ -1365,6 +1378,7 @@ export default function Settings() {
                               {sem.name}
                             </Badge>
                           </TableCell>
+                          <TableCell>{sem.max_sks || 24}</TableCell>
                           <TableCell>{sem.order_index}</TableCell>
                           <TableCell className="text-center">
                             <Switch 
