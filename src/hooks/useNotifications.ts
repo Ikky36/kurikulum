@@ -5,7 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export interface NotificationItem {
   id: string;
-  type: 'unread_material' | 'pending_assignment' | 'ungraded_submission';
+  type: 'unread_material' | 'pending_assignment' | 'ungraded_submission' | 'pending_krs';
   title: string;
   subtitle: string;
   classTitle: string;
@@ -114,75 +114,121 @@ async function fetchStudentNotifications(profileId: string): Promise<Notificatio
 async function fetchDosenNotifications(profileId: string): Promise<NotificationItem[]> {
   const notifications: NotificationItem[] = [];
 
-  // 1. Get classes taught by this instructor
-  const { data: eClasses } = await supabase
-    .from('elearning_classes')
-    .select('id, title')
-    .eq('instructor_profile_id', profileId)
-    .eq('is_active', true);
+  // --- 1. E-Learning Notifications ---
+  try {
+    const { data: eClasses } = await supabase
+      .from('elearning_classes')
+      .select('id, title')
+      .eq('instructor_profile_id', profileId)
+      .eq('is_active', true);
 
-  if (!eClasses || eClasses.length === 0) return notifications;
+    if (eClasses && eClasses.length > 0) {
+      const classIds = eClasses.map(c => c.id);
+      const classMap = new Map(eClasses.map(c => [c.id, c]));
 
-  const classIds = eClasses.map(c => c.id);
-  const classMap = new Map(eClasses.map(c => [c.id, c]));
+      const { data: assignments } = await supabase
+        .from('elearning_assignments')
+        .select('id, title, elearning_class_id, assignment_type')
+        .in('elearning_class_id', classIds)
+        .eq('is_published', true);
 
-  // 2. Get assignments for these classes
-  const { data: assignments } = await supabase
-    .from('elearning_assignments')
-    .select('id, title, elearning_class_id, assignment_type')
-    .in('elearning_class_id', classIds)
-    .eq('is_published', true);
+      if (assignments && assignments.length > 0) {
+        const assignmentIds = assignments.map(a => a.id);
+        const assignmentMap = new Map(assignments.map(a => [a.id, a]));
 
-  if (!assignments || assignments.length === 0) return notifications;
+        const { data: ungradedSubmissions } = await supabase
+          .from('elearning_submissions')
+          .select('id, assignment_id, student_profile_id, submitted_at, score')
+          .in('assignment_id', assignmentIds)
+          .is('graded_at', null)
+          .order('submitted_at', { ascending: false });
 
-  const assignmentIds = assignments.map(a => a.id);
-  const assignmentMap = new Map(assignments.map(a => [a.id, a]));
+        if (ungradedSubmissions && ungradedSubmissions.length > 0) {
+          const studentIds = [...new Set(ungradedSubmissions.map(s => s.student_profile_id))];
+          const { data: students } = await supabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('id', studentIds);
 
-  // 3. Get ungraded submissions
-  const { data: ungradedSubmissions } = await supabase
-    .from('elearning_submissions')
-    .select('id, assignment_id, student_profile_id, submitted_at, score')
-    .in('assignment_id', assignmentIds)
-    .is('graded_at', null)
-    .order('submitted_at', { ascending: false });
+          const studentMap = new Map((students || []).map(s => [s.id, s.full_name]));
 
-  if (!ungradedSubmissions || ungradedSubmissions.length === 0) return notifications;
+          const ungradedByAssignment = new Map<string, typeof ungradedSubmissions>();
+          for (const sub of ungradedSubmissions) {
+            const assignment = assignmentMap.get(sub.assignment_id);
+            if (assignment?.assignment_type === 'quiz' && sub.score !== null) continue;
+            
+            if (!ungradedByAssignment.has(sub.assignment_id)) {
+              ungradedByAssignment.set(sub.assignment_id, []);
+            }
+            ungradedByAssignment.get(sub.assignment_id)!.push(sub);
+          }
 
-  // Get student names
-  const studentIds = [...new Set(ungradedSubmissions.map(s => s.student_profile_id))];
-  const { data: students } = await supabase
-    .from('profiles')
-    .select('id, full_name')
-    .in('id', studentIds);
+          for (const [assignmentId, subs] of ungradedByAssignment.entries()) {
+            const assignment = assignmentMap.get(assignmentId)!;
+            const cls = classMap.get(assignment.elearning_class_id);
 
-  const studentMap = new Map((students || []).map(s => [s.id, s.full_name]));
-
-  // Group by assignment for cleaner notifications
-  const ungradedByAssignment = new Map<string, typeof ungradedSubmissions>();
-  for (const sub of ungradedSubmissions) {
-    // Skip quiz submissions that already have auto-graded scores
-    const assignment = assignmentMap.get(sub.assignment_id);
-    if (assignment?.assignment_type === 'quiz' && sub.score !== null) continue;
-
-    const existing = ungradedByAssignment.get(sub.assignment_id) || [];
-    existing.push(sub);
-    ungradedByAssignment.set(sub.assignment_id, existing);
+            notifications.push({
+              id: `ungraded-${assignmentId}`,
+              type: 'ungraded_submission',
+              title: assignment.title,
+              subtitle: `${subs.length} pengumpulan belum diperiksa`,
+              classTitle: cls?.title || '',
+              createdAt: subs[0]?.submitted_at || '',
+              classId: assignment.elearning_class_id,
+            });
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching e-learning notifications:", error);
   }
 
-  for (const [assignmentId, subs] of ungradedByAssignment) {
-    const assignment = assignmentMap.get(assignmentId);
-    if (!assignment) continue;
-    const cls = classMap.get(assignment.elearning_class_id);
-
-    notifications.push({
-      id: `ungraded-${assignmentId}`,
-      type: 'ungraded_submission',
-      title: assignment.title,
-      subtitle: `${subs.length} pengumpulan belum diperiksa`,
-      classTitle: cls?.title || '',
-      createdAt: subs[0]?.submitted_at || '',
-      classId: assignment.elearning_class_id,
-    });
+  // --- 2. DPA Notifications (KRS) ---
+  try {
+    const { data: assignments } = await supabase
+      .from('dpa_assignments')
+      .select('enrollment_year, sistem_kuliah_id')
+      .eq('dosen_id', profileId);
+      
+    if (assignments && assignments.length > 0) {
+      const orQuery = assignments.map(a => 
+        `and(enrollment_year.eq.${a.enrollment_year},sistem_kuliah_id.eq.${a.sistem_kuliah_id})`
+      ).join(',');
+      
+      const { data: students } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .eq('role', 'mahasiswa')
+        .or(orQuery);
+        
+      if (students && students.length > 0) {
+        const studentIds = students.map(s => s.id);
+        const studentMap = new Map(students.map(s => [s.id, s.full_name]));
+        
+        const { data: pendingKrs } = await supabase
+          .from('krs')
+          .select('id, student_id, created_at')
+          .in('student_id', studentIds)
+          .eq('status', 'pending');
+          
+        if (pendingKrs && pendingKrs.length > 0) {
+          for (const krs of pendingKrs) {
+            notifications.push({
+              id: `pending-krs-${krs.id}`,
+              type: 'pending_krs',
+              title: 'Persetujuan KRS',
+              subtitle: `${studentMap.get(krs.student_id)} mengajukan KRS baru`,
+              classTitle: 'Bimbingan Akademik',
+              createdAt: krs.created_at || new Date().toISOString(),
+              classId: 'dpa',
+            });
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching DPA notifications:", error);
   }
 
   return notifications;

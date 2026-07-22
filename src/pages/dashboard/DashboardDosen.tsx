@@ -50,6 +50,52 @@ export default function DashboardDosen() {
     enabled: !!user?.id
   });
 
+  // Fetch pending KRS count for DPA
+  const { data: pendingKrsCount = 0 } = useQuery({
+    queryKey: ['dpa_pending_krs_count', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return 0;
+      
+      // 1. Get DPA assignments
+      const { data: assignments } = await supabase
+        .from('dpa_assignments')
+        .select('enrollment_year, sistem_kuliah_id')
+        .eq('dosen_id', user.id);
+        
+      if (!assignments || assignments.length === 0) return 0;
+      
+      const orQuery = assignments.map(a => 
+        `and(enrollment_year.eq.${a.enrollment_year},sistem_kuliah_id.eq.${a.sistem_kuliah_id})`
+      ).join(',');
+      
+      // 2. Get students
+      const { data: students } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'mahasiswa')
+        .or(orQuery);
+        
+      if (!students || students.length === 0) return 0;
+      const studentIds = students.map(s => s.id);
+      
+      // 3. Count pending KRS
+      const { count, error } = await supabase
+        .from('krs')
+        .select('*', { count: 'exact', head: true })
+        .in('student_id', studentIds)
+        .eq('status', 'pending');
+        
+      if (error) {
+        console.error("Error fetching pending KRS count:", error);
+        return 0;
+      }
+      return count || 0;
+    },
+    enabled: !!user?.id
+  });
+
+  const totalPending = pendingGuidanceCount + pendingKrsCount;
+
   // Enable realtime for dosen dashboard
   useMultiTableRealtimeSubscription([
     { table: 'grades', queryKeys: [['course-grades'], ['grades']] },
@@ -381,9 +427,9 @@ export default function DashboardDosen() {
             </TabsTrigger>
             <TabsTrigger value="bimbingan" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
               Mahasiswa Bimbingan (DPA)
-              {pendingGuidanceCount > 0 && (
+              {totalPending > 0 && (
                 <Badge variant="destructive" className="absolute -top-2 -right-2 px-1.5 min-w-[20px] h-5 flex items-center justify-center animate-pulse">
-                  {pendingGuidanceCount}
+                  {totalPending}
                 </Badge>
               )}
             </TabsTrigger>

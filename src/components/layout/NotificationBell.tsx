@@ -22,6 +22,8 @@ function NotificationIcon({ type }: { type: NotificationItem['type'] }) {
       return <FileText className="h-4 w-4 text-amber-500" />;
     case 'ungraded_submission':
       return <ClipboardCheck className="h-4 w-4 text-emerald-500" />;
+    case 'pending_krs':
+      return <FileText className="h-4 w-4 text-blue-500" />;
   }
 }
 

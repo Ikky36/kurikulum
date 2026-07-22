@@ -240,15 +240,26 @@ export function MahasiswaBimbinganTab() {
 
   // Calculate total pending requests for the alert
   const totalPending = studentsStats ? Object.values(studentsStats).filter(stat => stat.lastLogStatus === 'pending').length : 0;
+  const totalPendingKrs = studentsStats ? Object.values(studentsStats).filter(stat => stat.krsStatus === 'pending').length : 0;
 
   return (
     <div className="space-y-6">
       {totalPending > 0 && (
         <Alert className="bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-400">
           <BellRing className="h-4 w-4 stroke-amber-600 dark:stroke-amber-400 animate-bounce" />
-          <AlertTitle className="font-bold">Perhatian: Ada Pengajuan Baru!</AlertTitle>
+          <AlertTitle className="font-bold">Perhatian: Ada Log Bimbingan Baru!</AlertTitle>
           <AlertDescription>
-            Anda memiliki <strong>{totalPending}</strong> permintaan bimbingan akademik baru yang menunggu balasan. Silakan cek tabel di bawah ini yang berstatus <span className="font-semibold bg-amber-500 text-white px-1 py-0.5 rounded text-xs ml-1">Pengajuan Baru!</span>
+            Anda memiliki <strong>{totalPending}</strong> log bimbingan akademik baru yang menunggu balasan. Silakan cek tabel di bawah ini.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {totalPendingKrs > 0 && (
+        <Alert className="bg-blue-500/10 border-blue-500/50 text-blue-700 dark:text-blue-400">
+          <FileText className="h-4 w-4 stroke-blue-600 dark:stroke-blue-400 animate-pulse" />
+          <AlertTitle className="font-bold">Perhatian: Ada Pengajuan KRS Baru!</AlertTitle>
+          <AlertDescription>
+            Terdapat <strong>{totalPendingKrs}</strong> mahasiswa bimbingan Anda yang telah mengajukan KRS dan menunggu persetujuan. Silakan cek status "Menunggu" pada tabel di bawah ini.
           </AlertDescription>
         </Alert>
       )}
