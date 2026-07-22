@@ -866,11 +866,12 @@ function KurikulumContent() {
                               variant="ghost"
                               size="icon"
                               onClick={() => openEdit('plos', { 
-                                id: item.id, 
-                                code: item.code, 
-                                description: item.description, 
-                                profil_lulusan_ids: item.plo_profil_lulusan?.map((ppl: any) => ppl.profil_lulusan_id) || []
-                              }, false)}
+                                  id: item.id, 
+                                  code: item.code, 
+                                  description: item.description,
+                                  curriculum_id: item.curriculum_id || '',
+                                  profil_lulusan_ids: item.plo_profil_lulusan?.map((ppl: any) => ppl.profil_lulusan_id) || []
+                                }, false)}
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
