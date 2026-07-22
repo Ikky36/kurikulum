@@ -43,14 +43,16 @@ export function KrsApprovalTab() {
   });
 
   // Calculate SKS per KRS
-  const krsWithSks = krsList.map(krs => {
+  const krsWithSks = (krsList || []).map(krs => {
     const totalSks = krs.krs_items?.reduce((sum: number, item: any) => sum + (item.courses?.sks || 0), 0) || 0;
     return { ...krs, total_sks: totalSks };
   });
 
-  const filteredKrs = krsWithSks.filter(krs => {
-    const matchesSearch = krs.profiles?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          krs.profiles?.nim?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredKrs = (krsWithSks || []).filter(krs => {
+    const fullName = krs.profiles?.full_name || '';
+    const nim = krs.profiles?.nim || '';
+    const matchesSearch = fullName.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          nim.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || krs.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
