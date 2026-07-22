@@ -39,9 +39,6 @@ export function Navbar() {
   ];
 
   if (user) {
-    if (profile?.role === 'mahasiswa') {
-      navLinks.push({ href: '/krs', label: 'KRS', icon: FileText });
-    }
     navLinks.push({ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard });
   }
 
@@ -115,6 +112,12 @@ export function Navbar() {
                   <KeyRound className="mr-2 h-4 w-4" />
                   Profil & Password
                 </DropdownMenuItem>
+                {profile?.role === 'mahasiswa' && (
+                  <DropdownMenuItem onClick={() => navigate('/krs')}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    KRS
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
