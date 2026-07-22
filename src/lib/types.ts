@@ -1,5 +1,32 @@
 export type AppRole = 'mahasiswa' | 'dosen' | 'admin' | 'sub_admin';
 
+export interface AcademicAdvisor {
+  id: string;
+  dosen_id: string;
+  enrollment_year: number;
+  sistem_kuliah_id: string;
+  created_at: string;
+  dosen?: Profile;
+}
+
+export interface AcademicGuidanceLog {
+  id: string;
+  student_id: string;
+  dosen_id: string;
+  semester_id?: string | null;
+  topic: string;
+  media: string;
+  requested_time?: string | null;
+  student_message?: string | null;
+  dosen_notes?: string | null;
+  status: 'pending' | 'approved' | 'completed' | 'rejected';
+  created_at: string;
+  updated_at: string;
+  student?: Profile;
+  dosen?: Profile;
+  semester?: Semester;
+}
+
 export interface UserRole {
   id: string;
   user_id: string;
