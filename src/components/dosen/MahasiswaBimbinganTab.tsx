@@ -29,6 +29,10 @@ export function MahasiswaBimbinganTab() {
   const [logTopic, setLogTopic] = useState('');
   const [logMedia, setLogMedia] = useState('Tatap Muka');
   const [logNotes, setLogNotes] = useState('');
+  
+  // Inline Reply state
+  const [respondingLogId, setRespondingLogId] = useState<string | null>(null);
+  const [replyNotes, setReplyNotes] = useState('');
 
   // Fetch DPA assignments for current dosen
   const { data: myAssignments = [], isLoading: loadingAssignments } = useQuery({
@@ -464,25 +468,72 @@ export function MahasiswaBimbinganTab() {
                 </Card>
 
                 {/* History */}
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-sm">Riwayat Bimbingan Sebelumnya</h4>
-                  {logs.length === 0 ? (
-                    <p className="text-sm text-muted-foreground italic">Belum ada riwayat bimbingan.</p>
-                  ) : (
-                    logs.map((log: any) => (
-                      <div key={log.id} className="p-4 border rounded-lg bg-card space-y-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <p className="font-medium">{log.topic}</p>
-                            <p className="text-xs text-muted-foreground">{new Date(log.created_at).toLocaleString('id-ID')} • {log.media}</p>
+                  <div className="space-y-4">
+                    <h4 className="font-semibold text-sm">Riwayat Bimbingan Sebelumnya</h4>
+                    {logs.length === 0 ? (
+                      <p className="text-sm text-muted-foreground italic">Belum ada riwayat bimbingan.</p>
+                    ) : (
+                      logs.map((log: any) => (
+                        <div key={log.id} className="p-4 border rounded-lg bg-card space-y-3 shadow-sm relative overflow-hidden">
+                          {log.status === 'pending' && <div className="absolute left-0 top-0 bottom-0 w-1 bg-amber-500" />}
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <p className="font-medium">{log.topic}</p>
+                              <p className="text-xs text-muted-foreground">{new Date(log.created_at).toLocaleString('id-ID')} • {log.media}</p>
+                            </div>
+                            <Badge variant="outline" className={cn(log.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-300' : 'bg-primary/5')}>
+                              {log.status === 'pending' ? 'Menunggu Balasan' : 'Selesai'}
+                            </Badge>
                           </div>
-                          <Badge variant="outline" className="bg-primary/5">{log.status}</Badge>
+                          
+                          {/* Student Message */}
+                          {log.student_message && (
+                            <div className="bg-muted/50 p-3 rounded-md text-sm mt-2 border border-border/50">
+                              <span className="font-semibold text-xs text-muted-foreground block mb-1">Pesan dari Mahasiswa:</span>
+                              {log.student_message}
+                            </div>
+                          )}
+
+                          {/* Dosen Notes if completed */}
+                          {log.status === 'completed' && log.dosen_notes && (
+                            <div className="pt-2 mt-2">
+                              <span className="font-semibold text-xs text-primary block mb-1">Catatan Kesimpulan DPA:</span>
+                              <p className="text-sm whitespace-pre-wrap leading-relaxed">{log.dosen_notes}</p>
+                            </div>
+                          )}
+
+                          {/* Reply Action for pending */}
+                          {log.status === 'pending' && (
+                            <div className="pt-3 mt-3 border-t border-amber-200">
+                              {respondingLogId === log.id ? (
+                                <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                                  <div>
+                                    <span className="font-semibold text-xs text-primary block mb-2">Tuliskan Kesimpulan & Balasan Anda:</span>
+                                    <Textarea 
+                                      placeholder="Tuliskan solusi, saran, atau persetujuan jadwal..." 
+                                      value={replyNotes}
+                                      onChange={(e) => setReplyNotes(e.target.value)}
+                                      className="min-h-[100px] border-amber-300 focus-visible:ring-amber-500"
+                                    />
+                                  </div>
+                                  <div className="flex justify-end gap-2">
+                                    <Button size="sm" variant="outline" onClick={() => { setRespondingLogId(null); setReplyNotes(''); }}>Batal</Button>
+                                    <Button size="sm" onClick={() => replyLogMutation.mutate({ logId: log.id, notes: replyNotes })} disabled={!replyNotes || replyLogMutation.isPending} className="bg-amber-600 hover:bg-amber-700 text-white">
+                                      <Save className="h-4 w-4 mr-2" /> Simpan Kesimpulan & Tutup Topik
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <Button size="sm" variant="secondary" className="w-full bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 border border-amber-500/30" onClick={() => setRespondingLogId(log.id)}>
+                                  <MessageSquare className="h-4 w-4 mr-2" /> Beri Kesimpulan & Tutup Topik
+                                </Button>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <p className="text-sm whitespace-pre-wrap pt-2 border-t mt-2">{log.dosen_notes}</p>
-                      </div>
-                    ))
-                  )}
-                </div>
+                      ))
+                    )}
+                  </div>
               </TabsContent>
             </Tabs>
 
