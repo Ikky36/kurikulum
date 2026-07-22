@@ -23,6 +23,7 @@ import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 import * as XLSX from 'xlsx';
 import { TableFilterHeader } from '@/components/ui/table-column-filter';
 import { DashboardScoreRecap } from '@/components/dashboard/DashboardScoreRecap';
+import { MahasiswaBimbinganTab } from '@/components/dosen/MahasiswaBimbinganTab';
 
 export default function DashboardDosen() {
   const { user, profile, role, refreshProfile, loading } = useAuth();
@@ -354,8 +355,19 @@ export default function DashboardDosen() {
           </p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-4 mb-8">
-          {/* Profile Card */}
+        <Tabs defaultValue="matakuliah" className="space-y-6">
+          <TabsList className="bg-muted/50 p-1">
+            <TabsTrigger value="matakuliah" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Mata Kuliah Diampu
+            </TabsTrigger>
+            <TabsTrigger value="bimbingan" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Mahasiswa Bimbingan (DPA)
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="matakuliah">
+            <div className="grid gap-6 lg:grid-cols-4 mb-8">
+              {/* Profile Card */}
           <Card className="animate-slide-up">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -656,6 +668,12 @@ export default function DashboardDosen() {
         <div className="mt-12">
           <DashboardScoreRecap />
         </div>
+          </TabsContent>
+
+          <TabsContent value="bimbingan">
+            <MahasiswaBimbinganTab />
+          </TabsContent>
+        </Tabs>
       </div>
     </Layout>
   );
