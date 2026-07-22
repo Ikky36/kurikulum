@@ -14,20 +14,49 @@ export default function KrsMahasiswa() {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
 
-  // Ambil semester aktif
+  // Ambil semester aktif berdasarkan angkatan mahasiswa dan tahun akademik aktif
   const { data: activeSemester, isLoading: isLoadingSemester } = useQuery({
-    queryKey: ['semesters', 'active', 'single'],
+    queryKey: ['semesters', 'calculated_active_semester', profile?.enrollment_year],
+    enabled: !!profile,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('semesters')
+      // Fetch active academic year
+      const { data: academicYear } = await supabase
+        .from('academic_years')
         .select('*')
         .eq('is_active', true)
-        .order('order_index', { ascending: false })
-        .limit(1)
-        .single();
+        .maybeSingle();
+
+      // Fetch active semester type (ganjil/genap)
+      const { data: setting } = await supabase
+        .from('app_settings')
+        .select('setting_value')
+        .eq('setting_key', 'active_semester_type')
+        .maybeSingle();
+
+      const activeSemesterType = setting?.setting_value || 'ganjil';
+
+      // Calculate student's current semester
+      const { calculateSemester } = await import('@/utils/academicHelpers');
+      let calculatedSemesterNum = 1;
+      if (academicYear && profile?.enrollment_year) {
+        calculatedSemesterNum = calculateSemester(profile.enrollment_year, academicYear.name, activeSemesterType) || 1;
+      }
+
+      // Fetch the corresponding semester row
+      const { data: semester, error } = await supabase
+        .from('semesters')
+        .select('*')
+        .eq('order_index', calculatedSemesterNum)
+        .maybeSingle();
       
       if (error && error.code !== 'PGRST116') throw error; // ignore no rows
-      return data;
+      
+      // Attach academic_year_id to be used when creating KRS
+      if (semester && academicYear) {
+         (semester as any).academic_year_id = academicYear.id;
+      }
+
+      return semester;
     },
   });
 
@@ -36,12 +65,17 @@ export default function KrsMahasiswa() {
     queryKey: ['krs', user?.id, activeSemester?.id],
     enabled: !!user?.id && !!activeSemester?.id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('krs')
         .select('*, krs_items(*)')
         .eq('student_id', user!.id)
-        .eq('semester_id', activeSemester!.id)
-        .maybeSingle();
+        .eq('semester_id', activeSemester!.id);
+        
+      if ((activeSemester as any).academic_year_id) {
+         query = query.eq('academic_year_id', (activeSemester as any).academic_year_id);
+      }
+      
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(1).maybeSingle();
       
       if (error) throw error;
       return data;
