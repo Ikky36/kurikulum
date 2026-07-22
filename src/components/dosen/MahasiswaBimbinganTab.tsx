@@ -10,9 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { UserSearch, FileText, CheckCircle, XCircle, TrendingUp, CalendarDays, MessageSquare, Save } from 'lucide-react';
+import { UserSearch, FileText, CheckCircle, XCircle, TrendingUp, CalendarDays, MessageSquare, Save, BellRing } from 'lucide-react';
 import { Profile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -92,7 +93,7 @@ export function MahasiswaBimbinganTab() {
         
       const { data: logsData } = await supabase
         .from('academic_guidance_logs')
-        .select('student_id, created_at')
+        .select('student_id, created_at, status')
         .in('student_id', studentIds)
         .order('created_at', { ascending: false });
 
@@ -110,6 +111,7 @@ export function MahasiswaBimbinganTab() {
           krsStatus: studentKrs?.status || 'belum isi',
           averageScore: avgScore,
           lastLogDate: studentLog?.created_at || null,
+          lastLogStatus: studentLog?.status || null,
         };
       });
       
@@ -212,8 +214,21 @@ export function MahasiswaBimbinganTab() {
     );
   }
 
+  // Calculate total pending requests for the alert
+  const totalPending = studentsStats ? Object.values(studentsStats).filter(stat => stat.lastLogStatus === 'pending').length : 0;
+
   return (
     <div className="space-y-6">
+      {totalPending > 0 && (
+        <Alert className="bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-400">
+          <BellRing className="h-4 w-4 stroke-amber-600 dark:stroke-amber-400 animate-bounce" />
+          <AlertTitle className="font-bold">Perhatian: Ada Pengajuan Baru!</AlertTitle>
+          <AlertDescription>
+            Anda memiliki <strong>{totalPending}</strong> permintaan bimbingan akademik baru yang menunggu balasan. Silakan cek tabel di bawah ini yang berstatus <span className="font-semibold bg-amber-500 text-white px-1 py-0.5 rounded text-xs ml-1">Pengajuan Baru!</span>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {myAssignments.map((a: any) => (
           <Card key={a.id} className="bg-primary/5 border-primary/20">
@@ -289,7 +304,9 @@ export function MahasiswaBimbinganTab() {
                       <TableCell className="text-center border-r text-muted-foreground">0</TableCell>
                       <TableCell className="text-center border-r text-muted-foreground">0</TableCell>
                       <TableCell className="text-center border-r">
-                        {stat?.lastLogDate ? (
+                        {stat?.lastLogStatus === 'pending' ? (
+                          <Badge variant="default" className="bg-amber-500 hover:bg-amber-600 text-white animate-pulse border-0">Pengajuan Baru!</Badge>
+                        ) : stat?.lastLogDate ? (
                           <span className="text-sm font-medium">{new Date(stat.lastLogDate).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: '2-digit' })}</span>
                         ) : (
                           <Badge variant="destructive" className="bg-destructive/10 text-destructive hover:bg-destructive/20 border-0">Belum Pernah</Badge>

@@ -31,6 +31,25 @@ export default function DashboardDosen() {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Fetch pending guidance logs count
+  const { data: pendingGuidanceCount = 0 } = useQuery({
+    queryKey: ['dpa_pending_count', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return 0;
+      const { count, error } = await supabase
+        .from('academic_guidance_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('dosen_id', user.id)
+        .eq('status', 'pending');
+      if (error) {
+        console.error("Error fetching pending guidance count:", error);
+        return 0;
+      }
+      return count || 0;
+    },
+    enabled: !!user?.id
+  });
+
   // Enable realtime for dosen dashboard
   useMultiTableRealtimeSubscription([
     { table: 'grades', queryKeys: [['course-grades'], ['grades']] },
@@ -360,8 +379,13 @@ export default function DashboardDosen() {
             <TabsTrigger value="matakuliah" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Mata Kuliah Diampu
             </TabsTrigger>
-            <TabsTrigger value="bimbingan" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <TabsTrigger value="bimbingan" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
               Mahasiswa Bimbingan (DPA)
+              {pendingGuidanceCount > 0 && (
+                <Badge variant="destructive" className="absolute -top-2 -right-2 px-1.5 min-w-[20px] h-5 flex items-center justify-center animate-pulse">
+                  {pendingGuidanceCount}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
