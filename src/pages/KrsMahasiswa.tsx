@@ -107,9 +107,10 @@ export default function KrsMahasiswa() {
         .from('courses')
         .select(`
           *,
-          curricula(name),
+          curricula!inner(name, is_active),
           course_prerequisites!course_prerequisites_course_id_fkey(prerequisite_course_id)
         `)
+        .eq('curricula.is_active', true)
         .order('semester', { ascending: true })
         .order('name', { ascending: true });
         
@@ -135,6 +136,9 @@ export default function KrsMahasiswa() {
       // Deteksi semester mata kuliah
       const courseSemNum = parseInt(course.semester.replace(/[^0-9]/g, ''));
       if (isNaN(courseSemNum)) return true;
+      
+      // Jangan tampilkan mata kuliah yang belum saatnya diambil (misal semester 7 padahal mahasiswa masih semester 5)
+      if (activeSemester.order_index && courseSemNum > activeSemester.order_index) return false;
       
       const isCourseEven = courseSemNum % 2 === 0;
       return isCourseEven === isActiveSemesterEven;
