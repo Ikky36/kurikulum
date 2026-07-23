@@ -498,7 +498,7 @@ export function KurikulumTab() {
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{editingClass ? 'Edit Kelas' : 'Tambah Kelas Baru'}</DialogTitle>
+                  <DialogTitle>{editingClass ? 'Edit Kelas (V2)' : 'Tambah Kelas Baru (V2)'}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div className="space-y-2">
