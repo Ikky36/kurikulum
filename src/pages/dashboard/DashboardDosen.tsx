@@ -58,7 +58,7 @@ export default function DashboardDosen() {
       
       // 1. Get DPA assignments
       const { data: assignments } = await supabase
-        .from('dpa_assignments')
+        .from('academic_advisors')
         .select('enrollment_year, sistem_kuliah_id')
         .eq('dosen_id', user.id);
         

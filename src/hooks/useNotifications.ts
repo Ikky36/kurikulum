@@ -187,7 +187,7 @@ async function fetchDosenNotifications(profileId: string): Promise<NotificationI
   // --- 2. DPA Notifications (KRS) ---
   try {
     const { data: assignments } = await supabase
-      .from('dpa_assignments')
+      .from('academic_advisors')
       .select('enrollment_year, sistem_kuliah_id')
       .eq('dosen_id', profileId);
       
