@@ -64,8 +64,23 @@ export function KurikulumTab() {
     },
   });
 
-  // Available semesters for dropdown
-  const availableSemesters = ['1', '2', '3', '4', '5', '6', '7', '8'];
+  // Fetch Active Semesters for dropdown
+  const { data: availableSemestersData } = useQuery({
+    queryKey: ['active-semesters'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('semesters')
+        .select('name')
+        .eq('is_active', true)
+        .order('order_index');
+      if (error) throw error;
+      return data.map(s => s.name) as string[];
+    },
+  });
+
+  const availableSemesters = availableSemestersData && availableSemestersData.length > 0 
+    ? availableSemestersData 
+    : ['1', '2', '3', '4', '5', '6', '7', '8'];
 
   // Fetch Students (mahasiswa only)
   const { data: students, refetch: refetchStudents } = useQuery({
@@ -226,7 +241,12 @@ export function KurikulumTab() {
     const classData = {
       name: className,
       description: classDescription || undefined,
-      semester: classSemesters.length > 0 ? classSemesters.sort((a, b) => parseInt(a) - parseInt(b)).join(',') : null,
+      semester: classSemesters.length > 0 ? classSemesters.sort((a, b) => {
+        const idxA = availableSemesters.indexOf(a);
+        const idxB = availableSemesters.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        return a.localeCompare(b);
+      }).join(',') : null,
       sistem_kuliah_id: classSistemKuliahId !== 'none' ? classSistemKuliahId : null,
       program_studi_id: classProgramStudiId !== 'none' ? classProgramStudiId : null,
       gender_type: classGenderType !== 'none' ? classGenderType : null,
@@ -526,13 +546,20 @@ export function KurikulumTab() {
                             onCheckedChange={() => toggleSemester(sem)}
                             className={classSemesters.includes(sem) ? 'border-primary-foreground' : ''}
                           />
-                          <span className="text-sm">Semester {sem}</span>
+                          <span className="text-sm">
+                            {sem.toLowerCase().startsWith('sem') ? sem : `Semester ${sem}`}
+                          </span>
                         </label>
                       ))}
                     </div>
                     {classSemesters.length > 0 && (
                       <p className="text-xs text-muted-foreground">
-                        Terpilih: {classSemesters.sort((a, b) => parseInt(a) - parseInt(b)).map(s => `Semester ${s}`).join(', ')}
+                        Terpilih: {classSemesters.sort((a, b) => {
+                          const idxA = availableSemesters.indexOf(a);
+                          const idxB = availableSemesters.indexOf(b);
+                          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                          return a.localeCompare(b);
+                        }).map(s => s.toLowerCase().startsWith('sem') ? s : `Semester ${s}`).join(', ')}
                       </p>
                     )}
                   </div>
