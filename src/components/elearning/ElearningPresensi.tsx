@@ -479,7 +479,7 @@ export function ElearningPresensi({ selectedClassId: propSelectedClassId, isActi
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead className="w-12">#</TableHead>
+                          <TableHead className="w-12">No</TableHead>
                           <TableHead>Mahasiswa</TableHead>
                           <TableHead className="w-40">Status</TableHead>
                           <TableHead>Catatan</TableHead>
