@@ -313,6 +313,46 @@ export default function DashboardAdmin() {
       }));
       const { error } = await supabase.from('course_instructors').insert(insertData);
       if (error) throw error;
+      
+      // Auto-create E-learning classes if classGroupId is provided
+      if (classGroupId && academicYearId) {
+        try {
+          // Fetch course and class group names
+          const { data: courseData } = await supabase.from('courses').select('name').eq('id', courseId).single();
+          const { data: classGroupData } = await supabase.from('class_groups').select('name').eq('id', classGroupId).single();
+          
+          if (courseData && classGroupData) {
+            const classTitle = `${courseData.name} - Kelas ${classGroupData.name}`;
+            
+            for (const instructorId of instructorIds) {
+              // Check if e-learning class already exists
+              const { data: existingClass } = await supabase
+                .from('elearning_classes')
+                .select('id')
+                .eq('course_id', courseId)
+                .eq('class_group_id', classGroupId)
+                .eq('academic_year_id', academicYearId)
+                .eq('instructor_profile_id', instructorId)
+                .maybeSingle();
+                
+              if (!existingClass) {
+                // Create new e-learning class
+                await supabase.from('elearning_classes').insert({
+                  course_id: courseId,
+                  class_group_id: classGroupId,
+                  academic_year_id: academicYearId,
+                  instructor_profile_id: instructorId,
+                  title: classTitle,
+                  is_active: true,
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Failed to auto-create e-learning classes:", e);
+          // We don't throw here because the primary assignment succeeded
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-course-instructors'] });
