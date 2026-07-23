@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { AlertCircle, CheckCircle2, Clock, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 export default function KrsMahasiswa() {
   const { user, profile } = useAuth();
@@ -77,6 +78,35 @@ export default function KrsMahasiswa() {
       
       const { data, error } = await query.order('created_at', { ascending: false }).limit(1).maybeSingle();
       
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Ambil riwayat KRS selain semester aktif
+  const { data: krsHistory = [] } = useQuery({
+    queryKey: ['krs_history', user?.id, activeSemester?.id],
+    enabled: !!user?.id && !!activeSemester?.id,
+    queryFn: async () => {
+      const query = supabase
+        .from('krs')
+        .select(`
+          id,
+          status,
+          semester_id,
+          academic_year_id,
+          semesters (name),
+          academic_years (name),
+          krs_items(
+            id,
+            courses(id, code, name, sks)
+          )
+        `)
+        .eq('student_id', user!.id)
+        .neq('semester_id', activeSemester!.id)
+        .order('created_at', { ascending: false });
+        
+      const { data, error } = await query;
       if (error) throw error;
       return data;
     },
@@ -221,7 +251,7 @@ export default function KrsMahasiswa() {
       if (!krsId) {
         // Kita butuh academic_year_id dari suatu tempat, atau activeSemester sudah cukup (tapi krs butuh academic_year_id)
         // Jika krs tabel butuh academic_year_id, kita cari dari activeSemester (asumsi ada)
-        const academic_year_id = activeSemester.academic_year_id;
+        const academic_year_id = (activeSemester as any).academic_year_id;
         
         const { data: newKrs, error: krsError } = await supabase
           .from('krs')
@@ -485,6 +515,77 @@ export default function KrsMahasiswa() {
               </CardFooter>
             </Card>
           </div>
+          
+          {krsHistory && krsHistory.length > 0 && (
+            <div className="mt-12 lg:col-span-3">
+              <h2 className="text-2xl font-bold tracking-tight mb-4">Riwayat KRS</h2>
+              <Accordion type="single" collapsible className="w-full">
+                {krsHistory.map((history) => {
+                  const semesterName = history.semesters?.name || '';
+                  const academicYearName = history.academic_years?.name || '';
+                  const isGanjil = parseInt(semesterName) % 2 !== 0;
+                  const ganjilGenap = isGanjil ? 'Ganjil' : 'Genap';
+                  
+                  const headerTitle = `Semester ${semesterName} / ${ganjilGenap} ${academicYearName}`;
+                  
+                  // Hitung total SKS
+                  const totalSks = history.krs_items?.reduce((sum: number, item: any) => {
+                    return sum + (item.courses?.sks || 0);
+                  }, 0) || 0;
+
+                  return (
+                    <AccordionItem key={history.id} value={history.id} className="bg-card border rounded-lg mb-2 px-4 shadow-sm">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex flex-col sm:flex-row sm:items-center w-full gap-2 sm:gap-4 text-left">
+                          <span className="font-semibold">{headerTitle}</span>
+                          <div className="flex gap-2 mt-1 sm:mt-0">
+                            <Badge variant={history.status === 'approved' ? 'default' : history.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize">
+                              {history.status === 'approved' ? 'Disetujui' : history.status === 'rejected' ? 'Ditolak' : 'Menunggu'}
+                            </Badge>
+                            <Badge variant="outline" className="font-normal text-muted-foreground bg-background">
+                              {totalSks} SKS
+                            </Badge>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="pt-2 pb-4">
+                          {(!history.krs_items || history.krs_items.length === 0) ? (
+                            <p className="text-sm text-muted-foreground italic text-center py-4">Belum ada mata kuliah yang diambil</p>
+                          ) : (
+                            <div className="rounded-md border overflow-hidden">
+                              <table className="w-full text-sm">
+                                <thead className="bg-muted/50 border-b">
+                                  <tr>
+                                    <th className="h-10 px-4 text-left font-medium text-muted-foreground w-24">Kode</th>
+                                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Mata Kuliah</th>
+                                    <th className="h-10 px-4 text-right font-medium text-muted-foreground w-20">SKS</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                  {history.krs_items.map((item: any) => (
+                                    <tr key={item.id} className="hover:bg-muted/30 transition-colors">
+                                      <td className="p-4 align-middle text-muted-foreground">{item.courses?.code}</td>
+                                      <td className="p-4 align-middle font-medium">{item.courses?.name}</td>
+                                      <td className="p-4 align-middle text-right">{item.courses?.sks}</td>
+                                    </tr>
+                                  ))}
+                                  <tr className="bg-muted/10 font-semibold">
+                                    <td colSpan={2} className="p-4 align-middle text-right">Total SKS:</td>
+                                    <td className="p-4 align-middle text-right">{totalSks}</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  );
+                })}
+              </Accordion>
+            </div>
+          )}
         </div>
       </div>
     </Layout>
