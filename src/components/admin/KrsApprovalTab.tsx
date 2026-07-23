@@ -28,7 +28,7 @@ export function KrsApprovalTab() {
         .from('krs')
         .select(`
           *,
-          profiles:student_id(full_name, nim, program_studi),
+          profiles:student_id(full_name, nim, program),
           semesters:semester_id(name, max_sks),
           krs_items(
             id,
@@ -195,7 +195,7 @@ export function KrsApprovalTab() {
                   <TableRow key={krs.id}>
                     <TableCell>
                       <div className="font-medium">{krs.profiles?.full_name}</div>
-                      <div className="text-xs text-muted-foreground">{krs.profiles?.nim || '-'} • {krs.profiles?.program_studi || '-'}</div>
+                      <div className="text-xs text-muted-foreground">{krs.profiles?.nim || '-'} • {krs.profiles?.program || '-'}</div>
                     </TableCell>
                     <TableCell>{krs.semesters?.name}</TableCell>
                     <TableCell>
