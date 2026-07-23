@@ -431,8 +431,8 @@ export function MahasiswaBimbinganTab() {
                       {studentKrs.status === 'pending' && (
                         <div className="flex gap-2 justify-end mt-4 pt-4 border-t">
                           <Button variant="destructive" onClick={() => {
-                            const note = window.prompt('Masukkan alasan penolakan KRS:');
-                            if (note) rejectKrsMutation.mutate({ krsId: studentKrs.id, notes: note });
+                            const note = window.prompt('Masukkan alasan penolakan KRS (Opsional):');
+                            if (note !== null) rejectKrsMutation.mutate({ krsId: studentKrs.id, notes: note });
                           }}>
                             <XCircle className="h-4 w-4 mr-2" /> Tolak KRS
                           </Button>
@@ -444,8 +444,8 @@ export function MahasiswaBimbinganTab() {
                       {studentKrs.status === 'approved' && (
                         <div className="flex gap-2 justify-end mt-4 pt-4 border-t">
                           <Button variant="destructive" onClick={() => {
-                            const note = window.prompt('Masukkan alasan pembatalan/reset KRS:');
-                            if (note) rejectKrsMutation.mutate({ krsId: studentKrs.id, notes: note });
+                            const note = window.prompt('Masukkan alasan pembatalan/reset KRS (Opsional):');
+                            if (note !== null) rejectKrsMutation.mutate({ krsId: studentKrs.id, notes: note });
                           }}>
                             <AlertCircle className="h-4 w-4 mr-2" /> Batalkan Persetujuan (Reset)
                           </Button>

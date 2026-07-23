@@ -318,27 +318,27 @@ export function KrsApprovalTab() {
             <DialogHeader>
               <DialogTitle>Tolak KRS</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Catatan / Alasan Penolakan (Wajib)</label>
-                <Textarea 
-                  placeholder="Misal: SKS terlalu banyak, kurangi mata kuliah pilihan..."
-                  value={rejectNotes}
-                  onChange={(e) => setRejectNotes(e.target.value)}
-                  className="min-h-[100px]"
-                />
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Catatan / Alasan (Opsional)</label>
+                  <Textarea 
+                    placeholder="Misal: SKS terlalu banyak, kurangi mata kuliah pilihan..."
+                    value={rejectNotes}
+                    onChange={(e) => setRejectNotes(e.target.value)}
+                    className="min-h-[100px]"
+                  />
+                </div>
               </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setRejectDialog(false)}>Batal</Button>
-              <Button 
-                variant="destructive" 
-                disabled={!rejectNotes.trim() || rejectMutation.isPending}
-                onClick={() => rejectMutation.mutate({ id: selectedKrs?.id, notes: rejectNotes })}
-              >
-                Kirim Penolakan
-              </Button>
-            </DialogFooter>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setRejectDialog(false)}>Batal</Button>
+                <Button 
+                  variant="destructive" 
+                  disabled={rejectMutation.isPending}
+                  onClick={() => rejectMutation.mutate({ id: selectedKrs?.id, notes: rejectNotes })}
+                >
+                  Kirim
+                </Button>
+              </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
