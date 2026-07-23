@@ -154,17 +154,21 @@ export function MahasiswaBimbinganTab() {
     },
     onSuccess: () => {
       toast.success('KRS Mahasiswa disetujui');
+      queryClient.invalidateQueries({ queryKey: ['dpa_students_stats'] });
+      queryClient.invalidateQueries({ queryKey: ['dpa_pending_krs_count'] });
       refetchKrs();
     }
   });
 
   const rejectKrsMutation = useMutation({
     mutationFn: async ({ krsId, notes }: { krsId: string, notes: string }) => {
-      const { error } = await supabase.from('krs').update({ status: 'draft', notes }).eq('id', krsId);
+      const { error } = await supabase.from('krs').update({ status: 'rejected', notes }).eq('id', krsId);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success('KRS ditolak dan dikembalikan ke mahasiswa');
+      queryClient.invalidateQueries({ queryKey: ['dpa_students_stats'] });
+      queryClient.invalidateQueries({ queryKey: ['dpa_pending_krs_count'] });
       refetchKrs();
     }
   });
