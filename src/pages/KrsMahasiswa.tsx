@@ -413,58 +413,60 @@ export default function KrsMahasiswa() {
           <div className="lg:col-span-2 space-y-6">
             <h2 className="text-xl font-semibold">Mata Kuliah Tersedia</h2>
             
-            {Object.keys(groupedCourses).sort().map(semesterName => (
-              <Card key={semesterName}>
-                <CardHeader className="py-4">
-                  <CardTitle className="text-lg">Semester {semesterName}</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0">
-                  <div className="divide-y">
-                    {groupedCourses[semesterName].map(course => {
-                      const isSelected = selectedCourseIds.includes(course.id);
-                      return (
-                        <div key={course.id} className={`p-4 flex items-center justify-between hover:bg-muted/50 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}>
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <h3 className="font-medium">{course.code} - {course.name}</h3>
-                              {course.isRetake && (
-                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Mengulang</Badge>
+            <Accordion type="multiple" defaultValue={Object.keys(groupedCourses)} className="w-full space-y-4">
+              {Object.keys(groupedCourses).sort().map(semesterName => (
+                <AccordionItem key={semesterName} value={semesterName} className="bg-card border rounded-lg shadow-sm">
+                  <AccordionTrigger className="px-6 py-4 hover:no-underline font-semibold text-lg hover:bg-muted/30 transition-colors rounded-t-lg data-[state=open]:rounded-b-none data-[state=closed]:rounded-b-lg">
+                    Semester {semesterName}
+                  </AccordionTrigger>
+                  <AccordionContent className="p-0 border-t">
+                    <div className="divide-y">
+                      {groupedCourses[semesterName].map(course => {
+                        const isSelected = selectedCourseIds.includes(course.id);
+                        return (
+                          <div key={course.id} className={`p-4 flex items-center justify-between hover:bg-muted/50 transition-colors ${isSelected ? 'bg-primary/5' : ''}`}>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-medium">{course.code} - {course.name}</h3>
+                                {course.isRetake && (
+                                  <Badge variant="destructive" className="text-[10px] px-1.5 py-0">Mengulang</Badge>
+                                )}
+                              </div>
+                              <div className="text-sm text-muted-foreground flex gap-4">
+                                <span>SKS: <strong className="text-foreground">{course.sks}</strong></span>
+                                <span>Prasyarat: {course.course_prerequisites?.length > 0 ? (
+                                  course.canTake ? (
+                                    <span className="text-green-600 dark:text-green-400">Terpenuhi</span>
+                                  ) : (
+                                    <span className="text-red-500">Belum Terpenuhi</span>
+                                  )
+                                ) : '-'}</span>
+                              </div>
+                              
+                              {!course.canTake && course.unmetPrerequisites?.length > 0 && (
+                                <p className="text-xs text-red-500 mt-1">
+                                  * Anda belum lulus prasyarat untuk mata kuliah ini.
+                                </p>
                               )}
                             </div>
-                            <div className="text-sm text-muted-foreground flex gap-4">
-                              <span>SKS: <strong className="text-foreground">{course.sks}</strong></span>
-                              <span>Prasyarat: {course.course_prerequisites?.length > 0 ? (
-                                course.canTake ? (
-                                  <span className="text-green-600 dark:text-green-400">Terpenuhi</span>
-                                ) : (
-                                  <span className="text-red-500">Belum Terpenuhi</span>
-                                )
-                              ) : '-'}</span>
+                            <div className="ml-4">
+                              <Button
+                                variant={isSelected ? "destructive" : "default"}
+                                size="sm"
+                                disabled={isLocked || (!isSelected && !course.canTake) || (!isSelected && currentSks + course.sks > maxSks)}
+                                onClick={() => toggleCourse(course.id)}
+                              >
+                                {isSelected ? "Batal Ambil" : "Ambil"}
+                              </Button>
                             </div>
-                            
-                            {!course.canTake && course.unmetPrerequisites?.length > 0 && (
-                              <p className="text-xs text-red-500 mt-1">
-                                * Anda belum lulus prasyarat untuk mata kuliah ini.
-                              </p>
-                            )}
                           </div>
-                          <div className="ml-4">
-                            <Button
-                              variant={isSelected ? "destructive" : "default"}
-                              size="sm"
-                              disabled={isLocked || (!isSelected && !course.canTake) || (!isSelected && currentSks + course.sks > maxSks)}
-                              onClick={() => toggleCourse(course.id)}
-                            >
-                              {isSelected ? "Batal Ambil" : "Ambil"}
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                        );
+                      })}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
 
             {Object.keys(groupedCourses).length === 0 && (
               <div className="text-center py-12 border rounded-lg text-muted-foreground">
