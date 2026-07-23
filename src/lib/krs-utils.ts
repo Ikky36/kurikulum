@@ -2,67 +2,100 @@ import { SupabaseClient } from '@supabase/supabase-js';
 
 export async function syncStudentElearningClasses(supabase: SupabaseClient<any, "public", any>, studentId: string, krsId: string, action: 'approve' | 'reset') {
   try {
-    // 1. Get student profile to get their class_group name (e.g. "Reguler Ikhwan")
-    const { data: profile, error: pError } = await supabase
+    // 1. Dapatkan profil mahasiswa untuk mengetahui nama Rombel (class_group) mereka
+    const { data: profile } = await supabase
       .from('profiles')
       .select('class_group')
       .eq('id', studentId)
       .single();
       
-    if (pError || !profile?.class_group) return;
-    
-    // 2. Fetch the krs_items to know which courses they are taking
-    const { data: krsItems, error: kError } = await supabase
+    // 2. Ambil semua item KRS (mata kuliah yang diambil)
+    const { data: krsItems } = await supabase
       .from('krs_items')
-      .select('course_id')
+      .select('id, course_id')
       .eq('krs_id', krsId);
       
-    if (kError || !krsItems || krsItems.length === 0) return;
+    if (!krsItems || krsItems.length === 0) return;
     
     const courseIds = krsItems.map((item: any) => item.course_id);
     
-    // 3. Find matching E-learning class_groups for these courses and the student's class_group name
-    const { data: matchingClasses, error: mcError } = await supabase
-      .from('class_groups')
-      .select('id')
-      .eq('name', profile.class_group)
-      .in('course_id', courseIds);
-      
-    if (mcError) return;
-    
-    const matchedClassIds = matchingClasses.map((c: any) => c.id);
-    
-    // 4. Find all class_groups for these courses (regardless of name) to know which ones to remove from
-    const { data: allCourseClasses, error: acError } = await supabase
+    // 3. Bersihkan data lama di class_students (keluarkan dari semua kelas untuk mata kuliah ini)
+    const { data: allCourseClasses } = await supabase
       .from('class_groups')
       .select('id')
       .in('course_id', courseIds);
       
-    if (acError) return;
-    
-    const allCourseClassIds = allCourseClasses.map((c: any) => c.id);
-    
-    // 5. Delete existing class_students records for this student in ANY class of these courses
-    if (allCourseClassIds.length > 0) {
+    if (allCourseClasses && allCourseClasses.length > 0) {
+      const allCourseClassIds = allCourseClasses.map((c: any) => c.id);
       await supabase
         .from('class_students')
         .delete()
         .eq('student_profile_id', studentId)
         .in('class_group_id', allCourseClassIds);
     }
-    
-    // 6. If action is 'approve' and we have matches, insert them!
-    if (action === 'approve' && matchedClassIds.length > 0) {
-      const inserts = matchedClassIds.map((classId: string) => ({
-        class_group_id: classId,
-        student_profile_id: studentId
-      }));
-      
+
+    if (action === 'reset') {
+      // Jika reset, hapus juga relasi elearning_class_id di krs_items
       await supabase
-        .from('class_students')
-        .insert(inserts);
+        .from('krs_items')
+        .update({ elearning_class_id: null })
+        .eq('krs_id', krsId);
+      return;
     }
-    
+
+    // 4. Jika approve, cari Rombel yang cocok (class_groups)
+    if (action === 'approve') {
+      let matchedClassGroupIds: string[] = [];
+
+      for (const item of krsItems) {
+        if (!item.course_id) continue;
+
+        // Cari class_group untuk mata kuliah ini
+        const { data: cgs } = await supabase
+          .from('class_groups')
+          .select('id, name')
+          .eq('course_id', item.course_id);
+
+        if (cgs && cgs.length > 0) {
+          // Coba cari yang namanya sama persis dengan rombel mahasiswa
+          let matchedCg = cgs.find((c: any) => c.name === profile?.class_group);
+          
+          // Jika tidak ada yang sama persis, ambil yang pertama sebagai fallback
+          if (!matchedCg) {
+            matchedCg = cgs[0];
+          }
+
+          matchedClassGroupIds.push(matchedCg.id);
+
+          // Cari elearning_classes yang terhubung dengan class_group ini
+          const { data: eClasses } = await supabase
+            .from('elearning_classes')
+            .select('id')
+            .eq('class_group_id', matchedCg.id)
+            .limit(1);
+
+          if (eClasses && eClasses.length > 0) {
+            // Update krs_items agar mengarah ke elearning_class_id yang benar
+            await supabase
+              .from('krs_items')
+              .update({ elearning_class_id: eClasses[0].id })
+              .eq('id', item.id);
+          }
+        }
+      }
+
+      // Masukkan mahasiswa ke class_students agar dosen bisa melihat di presensi
+      if (matchedClassGroupIds.length > 0) {
+        const inserts = matchedClassGroupIds.map((classId: string) => ({
+          class_group_id: classId,
+          student_profile_id: studentId
+        }));
+        
+        await supabase
+          .from('class_students')
+          .insert(inserts);
+      }
+    }
   } catch (err) {
     console.error('Error syncing elearning classes:', err);
   }
