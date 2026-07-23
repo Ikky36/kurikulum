@@ -173,35 +173,7 @@ export default function DashboardAdmin() {
     },
   });
 
-  // Fetch all instructors (dosen) - users who have dosen role
-  const { data: allDosen } = useQuery({
-    queryKey: ['admin-dosen'],
-    queryFn: async () => {
-      // Get all user_ids that have dosen role
-      const { data: dosenRoles, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id')
-        .eq('role', 'dosen');
-      if (rolesError) throw rolesError;
-      
-      const dosenUserIds = dosenRoles?.map(r => r.user_id) || [];
-      
-      if (dosenUserIds.length === 0) {
-        // Fallback to profile role if no user_roles entries
-        const { data, error } = await supabase.from('profiles').select('*').eq('role', 'dosen').order('full_name');
-        if (error) throw error;
-        return data as Profile[];
-      }
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .in('id', dosenUserIds)
-        .order('full_name');
-      if (error) throw error;
-      return data as Profile[];
-    },
-  });
+  const allDosen = allUsers?.filter(u => u.role === 'dosen') || [];
 
   // Fetch all course instructors with class groups
   const { data: courseInstructors, refetch: refetchInstructors } = useQuery({
@@ -240,12 +212,15 @@ export default function DashboardAdmin() {
     
     const courseSemester = selectedCourse.semester.trim();
     
-    return classGroups.filter(cg => {
+    const filtered = classGroups.filter(cg => {
       if (!cg.semester) return false;
       // Handle comma-separated semester values (e.g., "1, 2, 3")
       const classSemesters = cg.semester.split(',').map(s => s.trim());
       return classSemesters.includes(courseSemester);
     });
+    
+    // If strict filtering results in empty, return all classes to allow manual override
+    return filtered.length > 0 ? filtered : classGroups;
   };
 
   // Fetch curricula for filtering courses in assignment
