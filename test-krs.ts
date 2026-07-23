@@ -6,8 +6,12 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 async function run() {
-  const { data, error } = await supabase.rpc('get_policies' as any).select('*');
-  console.log('Policies:', data);
+  const { data: cgs } = await supabase
+    .from('class_groups')
+    .select('*, courses(code, name)')
+    .eq('id', 'e0d79b84-88b2-4bc2-b5d9-df51cd7ccc2c');
+    
+  console.log('Class Group Info:', JSON.stringify(cgs, null, 2));
 }
 
 run();
