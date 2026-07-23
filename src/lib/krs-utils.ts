@@ -75,6 +75,17 @@ export async function syncStudentElearningClasses(supabase: SupabaseClient<any, 
             matchedCg = cgs[0];
           }
 
+          // Simpan nama rombel ke profil mahasiswa jika profilnya belum punya atau berbeda (auto-fill)
+          if (matchedCg && matchedCg.name !== profile?.class_group) {
+            await supabase
+              .from('profiles')
+              .update({ class_group: matchedCg.name })
+              .eq('id', studentId);
+              
+            // Update objek profile lokal agar iterasi berikutnya tidak perlu update db lagi
+            if (profile) profile.class_group = matchedCg.name;
+          }
+
           matchedClassGroupIds.push(matchedCg.id);
 
           // Cari elearning_classes yang terhubung dengan class_group ini
