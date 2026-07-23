@@ -952,9 +952,13 @@ export default function DashboardAdmin() {
 
         <Tabs defaultValue="kelas" className="space-y-6">
           <TabsList className="flex flex-wrap w-full h-auto gap-1 md:grid md:grid-cols-4 lg:grid-cols-7">
-            <TabsTrigger value="kelas" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <TabsTrigger value="sistem_kuliah" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Target className="h-4 w-4" />
-              <span className="hidden sm:inline">Kelas</span>
+              <span className="hidden sm:inline">Sistem Kuliah</span>
+            </TabsTrigger>
+            <TabsTrigger value="kelas" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Users className="h-4 w-4" />
+              <span className="hidden sm:inline">Kelas / Rombel</span>
             </TabsTrigger>
             <TabsTrigger value="dpa" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <UserCog className="h-4 w-4" />
@@ -964,7 +968,7 @@ export default function DashboardAdmin() {
               <FileText className="h-4 w-4" />
               <span className="hidden sm:inline">Validasi KRS</span>
             </TabsTrigger>
-            <TabsTrigger value="rekap" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <TabsTrigger value="scores" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <CheckSquare className="h-4 w-4" />
               <span className="hidden sm:inline">Rekap Skor</span>
             </TabsTrigger>
@@ -973,9 +977,14 @@ export default function DashboardAdmin() {
             <TabsTrigger value="roles" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Role</TabsTrigger>
           </TabsList>
 
+          {/* Sistem Kuliah Tab */}
+          <TabsContent value="sistem_kuliah">
+            <SistemKuliahManager />
+          </TabsContent>
+
           {/* Kelas Tab */}
           <TabsContent value="kelas">
-            <SistemKuliahManager />
+            <KurikulumTab />
           </TabsContent>
 
           <TabsContent value="dpa">
