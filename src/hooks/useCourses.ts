@@ -79,53 +79,38 @@ export function useCoursesWithStats() {
       
       if (instructorsError) throw instructorsError;
 
-      // Get enrollment counts from enrollments table
-      const { data: enrollments, error: enrollmentsError } = await supabase
-        .from('enrollments')
-        .select('course_id');
-      
-      if (enrollmentsError) throw enrollmentsError;
+      if (instructorsError) throw instructorsError;
 
-      // Get class groups with semester to count students from class_students
-      const { data: classGroups, error: classGroupsError } = await supabase
-        .from('class_groups')
-        .select('id, semester');
+      // Get approved KRS and their items to count enrolled students
+      const { data: approvedKrs, error: krsError } = await supabase
+        .from('krs')
+        .select(`
+          id,
+          student_id,
+          krs_items(course_id)
+        `)
+        .eq('status', 'approved');
       
-      if (classGroupsError) throw classGroupsError;
-
-      // Get all class_students to count students per class
-      const { data: classStudents, error: classStudentsError } = await supabase
-        .from('class_students')
-        .select('class_group_id, student_profile_id');
-      
-      if (classStudentsError) throw classStudentsError;
+      if (krsError) throw krsError;
 
       // Calculate stats for each course
       const coursesWithStats: CourseWithStats[] = courses.map((course) => {
         const courseGrades = grades?.filter(g => g.course_id === course.id) || [];
-        const courseEnrollments = enrollments?.filter(e => e.course_id === course.id) || [];
         const courseInstructors = instructors
           ?.filter(i => i.course_id === course.id)
           .map(i => i.profiles as unknown as Profile)
           .filter(Boolean) || [];
 
-        // Count students from class_students (via class_groups with matching semester)
-        // Match course semester with class_group semester (class_group semester can be comma-separated like "1,2,3")
-        const courseSemester = course.semester; // e.g., "Semester 1" or "1"
-        const courseSemNum = courseSemester?.replace(/\D/g, '') || '';
-        const semesterClassGroups = classGroups?.filter(cg => {
-          if (!courseSemNum || !cg.semester) return false;
-          // class_group semester can be comma-separated like "1,2,3"
-          const classSemesters = cg.semester.split(',').map(s => s.trim());
-          return classSemesters.includes(courseSemNum);
-        }) || [];
-        const semesterClassGroupIds = semesterClassGroups.map(cg => cg.id);
-        const classStudentProfiles = classStudents?.filter(cs => semesterClassGroupIds.includes(cs.class_group_id)) || [];
-        // Use unique student IDs in case student is in multiple classes
-        const uniqueClassStudents = new Set(classStudentProfiles.map(cs => cs.student_profile_id));
+        // Count students from approved KRS
+        const enrolledStudents = new Set<string>();
+        approvedKrs?.forEach(krs => {
+          const hasCourse = krs.krs_items?.some((item: any) => item.course_id === course.id);
+          if (hasCourse && krs.student_id) {
+            enrolledStudents.add(krs.student_id);
+          }
+        });
         
-        // Total students = students from class_groups with matching semester
-        const totalStudents = uniqueClassStudents.size;
+        const totalStudents = enrolledStudents.size;
 
         const totalScore = courseGrades.reduce((sum, g) => sum + (g.final_score || 0), 0);
         const averageScore = courseGrades.length > 0 ? totalScore / courseGrades.length : 0;
@@ -234,62 +219,42 @@ export function useCourseEnrollments(courseId: string) {
         .maybeSingle();
       
       if (courseError) throw courseError;
+      // Get enrolled students from approved KRS
+      const { data: krsItems, error: krsError } = await supabase
+        .from('krs_items')
+        .select(`
+          id,
+          course_id,
+          created_at,
+          krs:krs_id!inner(
+            status,
+            student_id,
+            profiles:student_id (*)
+          )
+        `)
+        .eq('course_id', courseId)
+        .eq('krs.status', 'approved');
       
-      const courseSemester = course?.semester;
-      
-      if (courseSemester) {
-        // Normalize semester for comparison
-        const courseSemNum = courseSemester.replace(/\D/g, '');
-        
-        // Get class_groups with matching semester
-        const { data: classGroups, error: cgError } = await supabase
-          .from('class_groups')
-          .select('id, name, semester');
-        
-        if (cgError) throw cgError;
-        
-        // Filter class groups with matching semester (class_group semester can be comma-separated like "1,2,3")
-        const matchingClassGroups = classGroups?.filter(cg => {
-          if (!cg.semester) return false;
-          const classSemesters = cg.semester.split(',').map(s => s.trim());
-          return classSemesters.includes(courseSemNum);
-        }) || [];
+      if (krsError) throw krsError;
 
-        if (matchingClassGroups.length > 0) {
-          const classGroupIds = matchingClassGroups.map(cg => cg.id);
-          const classGroupMap = Object.fromEntries(matchingClassGroups.map(cg => [cg.id, cg.name]));
-          
-          // Get students from class_students
-          const { data: classStudents, error: csError } = await supabase
-            .from('class_students')
-            .select(`
-              *,
-              profiles:student_profile_id (*)
-            `)
-            .in('class_group_id', classGroupIds);
-          
-          if (csError) throw csError;
-
-          if (classStudents && classStudents.length > 0) {
-            // Transform class_students to match enrollment format
-            // Use unique students (in case same student is in multiple classes)
-            const uniqueStudentMap = new Map();
-            classStudents.forEach(cs => {
-              if (!uniqueStudentMap.has(cs.student_profile_id)) {
-                uniqueStudentMap.set(cs.student_profile_id, {
-                  id: cs.id,
-                  course_id: courseId,
-                  student_profile_id: cs.student_profile_id,
-                  created_at: cs.created_at,
-                  student: cs.profiles as unknown as Profile,
-                  class_group_id: cs.class_group_id,
-                  class_group_name: classGroupMap[cs.class_group_id],
-                });
-              }
+      if (krsItems && krsItems.length > 0) {
+        // Use unique students (in case of data duplication)
+        const uniqueStudentMap = new Map();
+        krsItems.forEach(item => {
+          const krsData = item.krs as any;
+          if (krsData && krsData.student_id && !uniqueStudentMap.has(krsData.student_id)) {
+            uniqueStudentMap.set(krsData.student_id, {
+              id: item.id,
+              course_id: courseId,
+              student_profile_id: krsData.student_id,
+              created_at: item.created_at,
+              student: krsData.profiles as unknown as Profile,
+              class_group_id: null, // No longer bound to a physical Rombel in this context
+              class_group_name: null,
             });
-            return Array.from(uniqueStudentMap.values());
           }
-        }
+        });
+        return Array.from(uniqueStudentMap.values());
       }
 
       // Fallback to enrollments table if no class_students data

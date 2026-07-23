@@ -33,7 +33,6 @@ export function KurikulumTab() {
   const [editingClass, setEditingClass] = useState<ClassGroup | null>(null);
   const [className, setClassName] = useState('');
   const [classDescription, setClassDescription] = useState('');
-  const [classSemesters, setClassSemesters] = useState<string[]>([]);
   const [classSistemKuliahId, setClassSistemKuliahId] = useState<string>('none');
   const [classProgramStudiId, setClassProgramStudiId] = useState<string>('none');
   const [classGenderType, setClassGenderType] = useState<string>('none');
@@ -60,27 +59,9 @@ export function KurikulumTab() {
         .select('*, sistem_kuliah(name), programs(name)')
         .order('name');
       if (error) throw error;
-      return data as (ClassGroup & { semester?: string, sistem_kuliah_id?: string, program_studi_id?: string, gender_type?: string, sistem_kuliah?: any, programs?: any })[];
+      return data as (ClassGroup & { sistem_kuliah_id?: string, program_studi_id?: string, gender_type?: string, sistem_kuliah?: any, programs?: any })[];
     },
   });
-
-  // Fetch Active Semesters for dropdown
-  const { data: availableSemestersData } = useQuery({
-    queryKey: ['active-semesters'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('semesters')
-        .select('name')
-        .eq('is_active', true)
-        .order('order_index');
-      if (error) throw error;
-      return data.map(s => s.name) as string[];
-    },
-  });
-
-  const availableSemesters = availableSemestersData && availableSemestersData.length > 0 
-    ? availableSemestersData 
-    : ['1', '2', '3', '4', '5', '6', '7', '8'];
 
   // Fetch Students (mahasiswa only)
   const { data: students, refetch: refetchStudents } = useQuery({
@@ -216,7 +197,6 @@ export function KurikulumTab() {
   const resetClassForm = () => {
     setClassName('');
     setClassDescription('');
-    setClassSemesters([]);
     setClassSistemKuliahId('none');
     setClassProgramStudiId('none');
     setClassGenderType('none');
@@ -228,9 +208,6 @@ export function KurikulumTab() {
     setEditingClass(classItem);
     setClassName(classItem.name);
     setClassDescription(classItem.description || '');
-    // Parse semester - bisa berupa "1,2,3" atau "1"
-    const semesterValue = classItem.semester || '';
-    setClassSemesters(semesterValue ? semesterValue.split(',').map((s: string) => s.trim()) : []);
     setClassSistemKuliahId(classItem.sistem_kuliah_id || 'none');
     setClassProgramStudiId(classItem.program_studi_id || 'none');
     setClassGenderType(classItem.gender_type || 'none');
@@ -241,12 +218,6 @@ export function KurikulumTab() {
     const classData = {
       name: className,
       description: classDescription || undefined,
-      semester: classSemesters.length > 0 ? classSemesters.sort((a, b) => {
-        const idxA = availableSemesters.indexOf(a);
-        const idxB = availableSemesters.indexOf(b);
-        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-        return a.localeCompare(b);
-      }).join(',') : null,
       sistem_kuliah_id: classSistemKuliahId !== 'none' ? classSistemKuliahId : null,
       program_studi_id: classProgramStudiId !== 'none' ? classProgramStudiId : null,
       gender_type: classGenderType !== 'none' ? classGenderType : null,
@@ -256,14 +227,6 @@ export function KurikulumTab() {
     } else {
       createClassMutation.mutate(classData);
     }
-  };
-
-  const toggleSemester = (sem: string) => {
-    setClassSemesters(prev => 
-      prev.includes(sem) 
-        ? prev.filter(s => s !== sem) 
-        : [...prev, sem]
-    );
   };
 
   // Get students in a class
@@ -530,40 +493,6 @@ export function KurikulumTab() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Semester (dapat pilih lebih dari 1)</Label>
-                    <div className="flex flex-wrap gap-2 p-3 border rounded-md">
-                      {availableSemesters.map(sem => (
-                        <label 
-                          key={sem} 
-                          className={`flex items-center gap-2 px-3 py-1.5 rounded-md border cursor-pointer transition-colors ${
-                            classSemesters.includes(sem) 
-                              ? 'bg-primary text-primary-foreground border-primary' 
-                              : 'bg-background hover:bg-muted'
-                          }`}
-                        >
-                          <Checkbox 
-                            checked={classSemesters.includes(sem)}
-                            onCheckedChange={() => toggleSemester(sem)}
-                            className={classSemesters.includes(sem) ? 'border-primary-foreground' : ''}
-                          />
-                          <span className="text-sm">
-                            {sem.toLowerCase().startsWith('sem') ? sem : `Semester ${sem}`}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                    {classSemesters.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        Terpilih: {classSemesters.sort((a, b) => {
-                          const idxA = availableSemesters.indexOf(a);
-                          const idxB = availableSemesters.indexOf(b);
-                          if (idxA !== -1 && idxB !== -1) return idxA - idxB;
-                          return a.localeCompare(b);
-                        }).map(s => s.toLowerCase().startsWith('sem') ? s : `Semester ${s}`).join(', ')}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-2">
                     <Label>Sistem Kuliah</Label>
                     <Select value={classSistemKuliahId} onValueChange={setClassSistemKuliahId}>
                       <SelectTrigger>
@@ -630,7 +559,6 @@ export function KurikulumTab() {
               <TableRow className="bg-primary hover:bg-primary">
                 <TableHead className="w-12 text-primary-foreground">No</TableHead>
                 <TableHead className="text-primary-foreground">Nama Kelas</TableHead>
-                <TableHead className="text-primary-foreground">Semester</TableHead>
                 <TableHead className="text-primary-foreground">Deskripsi</TableHead>
                 <TableHead className="text-primary-foreground">Jumlah Mahasiswa</TableHead>
                 <TableHead className="w-56 text-primary-foreground">Aksi</TableHead>
@@ -651,17 +579,6 @@ export function KurikulumTab() {
                           {(classItem as any).gender_type && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">{ (classItem as any).gender_type }</Badge>}
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {(classItem as any).semester ? (
-                        <div className="flex flex-wrap gap-1">
-                          {(classItem as any).semester.split(',').map((sem: string) => (
-                            <Badge key={sem.trim()} variant="secondary">Semester {sem.trim()}</Badge>
-                          ))}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">-</span>
-                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground">{classItem.description || '-'}</TableCell>
                     <TableCell>{studentCount} mahasiswa</TableCell>
