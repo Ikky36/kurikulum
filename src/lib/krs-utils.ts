@@ -2,10 +2,10 @@ import { SupabaseClient } from '@supabase/supabase-js';
 
 export async function syncStudentElearningClasses(supabase: SupabaseClient<any, "public", any>, studentId: string, krsId: string, action: 'approve' | 'reset') {
   try {
-    // 1. Dapatkan profil mahasiswa untuk mengetahui nama Rombel (class_group) mereka
+    // 1. Dapatkan profil mahasiswa untuk mengetahui nama Rombel (class_group) mereka, dan data pendukung (fallback)
     const { data: profile } = await supabase
       .from('profiles')
-      .select('class_group')
+      .select('class_group, sistem_kuliah_id, gender, program')
       .eq('id', studentId)
       .single();
       
@@ -53,14 +53,24 @@ export async function syncStudentElearningClasses(supabase: SupabaseClient<any, 
         // Cari class_group untuk mata kuliah ini
         const { data: cgs } = await supabase
           .from('class_groups')
-          .select('id, name')
+          .select('id, name, sistem_kuliah_id, gender_type, programs(name)')
           .eq('course_id', item.course_id);
 
         if (cgs && cgs.length > 0) {
           // Coba cari yang namanya sama persis dengan rombel mahasiswa
-          let matchedCg = cgs.find((c: any) => c.name === profile?.class_group);
+          let matchedCg = cgs.find((c: any) => profile?.class_group && c.name === profile?.class_group);
           
-          // Jika tidak ada yang sama persis, ambil yang pertama sebagai fallback
+          // Jika tidak ada yang sama persis, gunakan fallback cerdas (cocokkan sistem, gender, program)
+          if (!matchedCg) {
+            matchedCg = cgs.find((c: any) => {
+               const matchSistem = c.sistem_kuliah_id ? c.sistem_kuliah_id === profile?.sistem_kuliah_id : true;
+               const matchGender = c.gender_type ? (c.gender_type === 'Campuran' || c.gender_type === profile?.gender) : true;
+               const matchProgram = c.programs?.name ? c.programs.name === profile?.program : true;
+               return matchSistem && matchGender && matchProgram;
+            });
+          }
+
+          // Jika masih tidak ada yang cocok, ambil yang pertama sebagai fallback terakhir
           if (!matchedCg) {
             matchedCg = cgs[0];
           }
