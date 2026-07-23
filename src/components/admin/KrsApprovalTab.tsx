@@ -294,6 +294,19 @@ export function KrsApprovalTab() {
                 </Button>
               </DialogFooter>
             )}
+
+            {selectedKrs.status === 'approved' && (
+              <DialogFooter className="mt-4">
+                <Button 
+                  variant="destructive" 
+                  onClick={() => {
+                    setRejectDialog(true);
+                  }}
+                >
+                  <AlertCircle className="h-4 w-4 mr-1" /> Batalkan Persetujuan (Reset)
+                </Button>
+              </DialogFooter>
+            )}
           </DialogContent>
         </Dialog>
       )}

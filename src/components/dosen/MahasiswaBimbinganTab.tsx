@@ -14,7 +14,7 @@ import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { toast } from 'sonner';
-import { UserSearch, FileText, CheckCircle, XCircle, TrendingUp, CalendarDays, MessageSquare, Save, BellRing } from 'lucide-react';
+import { UserSearch, FileText, CheckCircle, XCircle, TrendingUp, CalendarDays, MessageSquare, Save, BellRing, AlertCircle } from 'lucide-react';
 import { Profile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -428,19 +428,29 @@ export function MahasiswaBimbinganTab() {
                       </TableBody>
                     </Table>
 
-                    {studentKrs.status === 'pending' && (
-                      <div className="flex gap-2 justify-end mt-4 pt-4 border-t">
-                        <Button variant="destructive" onClick={() => {
-                          const note = window.prompt('Masukkan alasan penolakan KRS:');
-                          if (note) rejectKrsMutation.mutate({ krsId: studentKrs.id, notes: note });
-                        }}>
-                          <XCircle className="h-4 w-4 mr-2" /> Tolak KRS
-                        </Button>
-                        <Button onClick={() => approveKrsMutation.mutate(studentKrs.id)} disabled={approveKrsMutation.isPending}>
-                          <CheckCircle className="h-4 w-4 mr-2" /> Setujui KRS
-                        </Button>
-                      </div>
-                    )}
+                      {studentKrs.status === 'pending' && (
+                        <div className="flex gap-2 justify-end mt-4 pt-4 border-t">
+                          <Button variant="destructive" onClick={() => {
+                            const note = window.prompt('Masukkan alasan penolakan KRS:');
+                            if (note) rejectKrsMutation.mutate({ krsId: studentKrs.id, notes: note });
+                          }}>
+                            <XCircle className="h-4 w-4 mr-2" /> Tolak KRS
+                          </Button>
+                          <Button onClick={() => approveKrsMutation.mutate(studentKrs.id)} disabled={approveKrsMutation.isPending}>
+                            <CheckCircle className="h-4 w-4 mr-2" /> Setujui KRS
+                          </Button>
+                        </div>
+                      )}
+                      {studentKrs.status === 'approved' && (
+                        <div className="flex gap-2 justify-end mt-4 pt-4 border-t">
+                          <Button variant="destructive" onClick={() => {
+                            const note = window.prompt('Masukkan alasan pembatalan/reset KRS:');
+                            if (note) rejectKrsMutation.mutate({ krsId: studentKrs.id, notes: note });
+                          }}>
+                            <AlertCircle className="h-4 w-4 mr-2" /> Batalkan Persetujuan (Reset)
+                          </Button>
+                        </div>
+                      )}
                   </div>
                 )}
               </TabsContent>
