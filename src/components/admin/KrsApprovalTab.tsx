@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner';
 import { Check, X, Search, FileText, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { syncStudentElearningClasses } from '@/lib/krs-utils';
 
 export function KrsApprovalTab() {
   const queryClient = useQueryClient();
@@ -76,50 +77,10 @@ export function KrsApprovalTab() {
       if (error) throw error;
 
       // 3. Jalankan logika Auto-Allocation Kelas E-Learning
-      if (krsData.krs_items && krsData.krs_items.length > 0) {
-        for (const item of krsData.krs_items) {
-          const courseId = item.courses?.id;
-          if (!courseId) continue;
-          
-          // Cari kelas e-learning untuk mata kuliah ini
-          const { data: eClasses } = await supabase
-            .from('elearning_classes')
-            .select('id, class_groups(id, sistem_kuliah_id, gender_type, programs(name))')
-            .eq('course_id', courseId)
-            .eq('is_active', true);
-            
-          if (eClasses && eClasses.length > 0) {
-             let matchedId = null;
-             
-             // Cari kelas yang paling cocok dengan profil mahasiswa
-             const exactMatch = eClasses.find(ec => {
-               const cg = ec.class_groups as any;
-               if (!cg) return false;
-               const matchSistem = cg.sistem_kuliah_id ? cg.sistem_kuliah_id === profile.sistem_kuliah_id : true;
-               const matchGender = cg.gender_type ? (cg.gender_type === 'Campuran' || cg.gender_type === profile.gender) : true;
-               const matchProgram = cg.programs?.name ? cg.programs.name === profile.program : true;
-               return matchSistem && matchGender && matchProgram;
-             });
-             
-             if (exactMatch) {
-               matchedId = exactMatch.id;
-             } else {
-               // Fallback: titipkan ke kelas pertama yang tersedia
-               matchedId = eClasses[0].id;
-             }
-             
-             if (matchedId) {
-               await supabase
-                 .from('krs_items')
-                 .update({ elearning_class_id: matchedId })
-                 .eq('id', item.id);
-             }
-          }
-        }
-      }
+      await syncStudentElearningClasses(supabase, krsData.student_id, krsData.id, 'approve');
     },
     onSuccess: () => {
-      toast.success('KRS disetujui & Mahasiswa otomatis dialokasikan ke kelas');
+      toast.success('KRS disetujui');
       queryClient.invalidateQueries({ queryKey: ['admin_krs_approvals'] });
       setSelectedKrs(null);
     },
@@ -133,6 +94,10 @@ export function KrsApprovalTab() {
         .update({ status: 'draft', notes })
         .eq('id', id);
       if (error) throw error;
+      
+      if (selectedKrs?.student_id) {
+        await syncStudentElearningClasses(supabase, selectedKrs.student_id, id, 'reset');
+      }
     },
     onSuccess: () => {
       toast.success('KRS ditolak dan dikembalikan ke mahasiswa');

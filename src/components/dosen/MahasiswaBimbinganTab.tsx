@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@/components/ui/accordion';
 import { toast } from 'sonner';
 import { UserSearch, FileText, CheckCircle, XCircle, TrendingUp, CalendarDays, MessageSquare, Save, BellRing, AlertCircle } from 'lucide-react';
+import { syncStudentElearningClasses } from '@/lib/krs-utils';
 import { Profile } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -151,6 +152,10 @@ export function MahasiswaBimbinganTab() {
     mutationFn: async (krsId: string) => {
       const { error } = await supabase.from('krs').update({ status: 'approved', notes: null }).eq('id', krsId);
       if (error) throw error;
+      
+      if (selectedStudent?.id) {
+        await syncStudentElearningClasses(supabase, selectedStudent.id, krsId, 'approve');
+      }
     },
     onSuccess: () => {
       toast.success('KRS Mahasiswa disetujui');
@@ -164,6 +169,10 @@ export function MahasiswaBimbinganTab() {
     mutationFn: async ({ krsId, notes }: { krsId: string, notes: string }) => {
       const { error } = await supabase.from('krs').update({ status: 'rejected', notes }).eq('id', krsId);
       if (error) throw error;
+      
+      if (selectedStudent?.id) {
+        await syncStudentElearningClasses(supabase, selectedStudent.id, krsId, 'reset');
+      }
     },
     onSuccess: () => {
       toast.success('KRS ditolak dan dikembalikan ke mahasiswa');
