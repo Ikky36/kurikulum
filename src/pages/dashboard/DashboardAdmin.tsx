@@ -292,9 +292,9 @@ export default function DashboardAdmin() {
       // Auto-create E-learning classes if classGroupId is provided
       if (classGroupId && academicYearId) {
         try {
-          // Fetch course and class group names
+          // Fetch course and class group names and rules
           const { data: courseData } = await supabase.from('courses').select('name').eq('id', courseId).single();
-          const { data: classGroupData } = await supabase.from('class_groups').select('name').eq('id', classGroupId).single();
+          const { data: classGroupData } = await supabase.from('class_groups').select('name, sistem_kuliah_id, gender_type, programs(name)').eq('id', classGroupId).single();
           
           if (courseData && classGroupData) {
             const classTitle = `${courseData.name} - Kelas ${classGroupData.name}`;
@@ -312,14 +312,54 @@ export default function DashboardAdmin() {
                 
               if (!existingClass) {
                 // Create new e-learning class
-                await supabase.from('elearning_classes').insert({
+                const { data: newClass } = await supabase.from('elearning_classes').insert({
                   course_id: courseId,
                   class_group_id: classGroupId,
                   academic_year_id: academicYearId,
                   instructor_profile_id: instructorId,
                   title: classTitle,
                   is_active: true,
-                });
+                }).select().single();
+
+                // Auto-allocation (Fallback): If there are students who already approved their KRS but had no e-learning class yet
+                if (newClass) {
+                  const { data: pendingItems } = await supabase
+                    .from('krs_items')
+                    .select('id, krs!inner(status, student_id)')
+                    .eq('course_id', courseId)
+                    .eq('krs.status', 'approved')
+                    .is('elearning_class_id', null);
+                    
+                  if (pendingItems && pendingItems.length > 0) {
+                    const studentIds = pendingItems.map((item: any) => item.krs.student_id);
+                    const { data: profiles } = await supabase
+                      .from('profiles')
+                      .select('id, sistem_kuliah_id, gender, program')
+                      .in('id', studentIds);
+                      
+                    if (profiles) {
+                      const itemsToUpdate = pendingItems.filter((item: any) => {
+                        const profile = profiles.find(p => p.id === item.krs.student_id);
+                        if (!profile) return false;
+                        
+                        const cg = classGroupData as any;
+                        const matchSistem = cg.sistem_kuliah_id ? cg.sistem_kuliah_id === profile.sistem_kuliah_id : true;
+                        const matchGender = cg.gender_type ? (cg.gender_type === 'Campuran' || cg.gender_type === profile.gender) : true;
+                        const matchProgram = cg.programs?.name ? cg.programs.name === profile.program : true;
+                        
+                        return matchSistem && matchGender && matchProgram;
+                      });
+                      
+                      if (itemsToUpdate.length > 0) {
+                        const itemIdsToUpdate = itemsToUpdate.map(i => i.id);
+                        await supabase
+                          .from('krs_items')
+                          .update({ elearning_class_id: newClass.id })
+                          .in('id', itemIdsToUpdate);
+                      }
+                    }
+                  }
+                }
               }
             }
           }

@@ -34,6 +34,9 @@ export function KurikulumTab() {
   const [className, setClassName] = useState('');
   const [classDescription, setClassDescription] = useState('');
   const [classSemesters, setClassSemesters] = useState<string[]>([]);
+  const [classSistemKuliahId, setClassSistemKuliahId] = useState<string>('none');
+  const [classProgramStudiId, setClassProgramStudiId] = useState<string>('none');
+  const [classGenderType, setClassGenderType] = useState<string>('none');
   const [selectedClassForManage, setSelectedClassForManage] = useState<ClassGroup | null>(null);
   const [showManageStudentsDialog, setShowManageStudentsDialog] = useState(false);
   
@@ -54,10 +57,10 @@ export function KurikulumTab() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('class_groups')
-        .select('*')
+        .select('*, sistem_kuliah(name), programs(name)')
         .order('name');
       if (error) throw error;
-      return data as (ClassGroup & { semester?: string })[];
+      return data as (ClassGroup & { semester?: string, sistem_kuliah_id?: string, program_studi_id?: string, gender_type?: string, sistem_kuliah?: any, programs?: any })[];
     },
   });
 
@@ -104,9 +107,22 @@ export function KurikulumTab() {
     },
   });
 
+  // Fetch Program Studi
+  const { data: programsList } = useQuery({
+    queryKey: ['programs'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('programs')
+        .select('*')
+        .order('name');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Class mutations
   const createClassMutation = useMutation({
-    mutationFn: async (classData: { name: string; description?: string; semester?: string | null }) => {
+    mutationFn: async (classData: any) => {
       const { error } = await supabase.from('class_groups').insert([classData]);
       if (error) throw error;
     },
@@ -186,17 +202,23 @@ export function KurikulumTab() {
     setClassName('');
     setClassDescription('');
     setClassSemesters([]);
+    setClassSistemKuliahId('none');
+    setClassProgramStudiId('none');
+    setClassGenderType('none');
     setEditingClass(null);
     setShowClassDialog(false);
   };
 
-  const openEditClass = (classItem: ClassGroup & { semester?: string }) => {
+  const openEditClass = (classItem: any) => {
     setEditingClass(classItem);
     setClassName(classItem.name);
     setClassDescription(classItem.description || '');
     // Parse semester - bisa berupa "1,2,3" atau "1"
-    const semesterValue = (classItem as any).semester || '';
+    const semesterValue = classItem.semester || '';
     setClassSemesters(semesterValue ? semesterValue.split(',').map((s: string) => s.trim()) : []);
+    setClassSistemKuliahId(classItem.sistem_kuliah_id || 'none');
+    setClassProgramStudiId(classItem.program_studi_id || 'none');
+    setClassGenderType(classItem.gender_type || 'none');
     setShowClassDialog(true);
   };
 
@@ -205,6 +227,9 @@ export function KurikulumTab() {
       name: className,
       description: classDescription || undefined,
       semester: classSemesters.length > 0 ? classSemesters.sort((a, b) => parseInt(a) - parseInt(b)).join(',') : null,
+      sistem_kuliah_id: classSistemKuliahId !== 'none' ? classSistemKuliahId : null,
+      program_studi_id: classProgramStudiId !== 'none' ? classProgramStudiId : null,
+      gender_type: classGenderType !== 'none' ? classGenderType : null,
     };
     if (editingClass) {
       updateClassMutation.mutate({ id: editingClass.id, ...classData });
@@ -512,6 +537,48 @@ export function KurikulumTab() {
                     )}
                   </div>
                   <div className="space-y-2">
+                    <Label>Sistem Kuliah</Label>
+                    <Select value={classSistemKuliahId} onValueChange={setClassSistemKuliahId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Sistem Kuliah" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">-- Belum Diatur --</SelectItem>
+                        {sistemKuliahList?.map(sk => (
+                          <SelectItem key={sk.id} value={sk.id}>{sk.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Program Studi</Label>
+                    <Select value={classProgramStudiId} onValueChange={setClassProgramStudiId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Program Studi" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">-- Belum Diatur --</SelectItem>
+                        {programsList?.map((p: any) => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Jenis Kelamin</Label>
+                    <Select value={classGenderType} onValueChange={setClassGenderType}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Jenis Kelamin" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">-- Belum Diatur --</SelectItem>
+                        <SelectItem value="Pria">Khusus Pria</SelectItem>
+                        <SelectItem value="Wanita">Khusus Wanita</SelectItem>
+                        <SelectItem value="Campuran">Campuran</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <Label>Deskripsi (opsional)</Label>
                     <Textarea 
                       value={classDescription} 
@@ -549,7 +616,14 @@ export function KurikulumTab() {
                   <TableRow key={classItem.id}>
                     <TableCell className="text-center">{index + 1}</TableCell>
                     <TableCell>
-                      <Badge variant="secondary">{classItem.name}</Badge>
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="secondary" className="w-fit">{classItem.name}</Badge>
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {(classItem as any).programs?.name && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">{ (classItem as any).programs.name }</Badge>}
+                          {(classItem as any).sistem_kuliah?.name && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">{ (classItem as any).sistem_kuliah.name }</Badge>}
+                          {(classItem as any).gender_type && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">{ (classItem as any).gender_type }</Badge>}
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {(classItem as any).semester ? (

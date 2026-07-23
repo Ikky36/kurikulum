@@ -58,15 +58,68 @@ export function KrsApprovalTab() {
   });
 
   const approveMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async (krsData: any) => {
+      // 1. Dapatkan profil mahasiswa
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', krsData.student_id)
+        .single();
+        
+      if (!profile) throw new Error('Profil mahasiswa tidak ditemukan');
+
+      // 2. Update status KRS menjadi approved
       const { error } = await supabase
         .from('krs')
         .update({ status: 'approved', notes: null })
-        .eq('id', id);
+        .eq('id', krsData.id);
       if (error) throw error;
+
+      // 3. Jalankan logika Auto-Allocation Kelas E-Learning
+      if (krsData.krs_items && krsData.krs_items.length > 0) {
+        for (const item of krsData.krs_items) {
+          const courseId = item.courses?.id;
+          if (!courseId) continue;
+          
+          // Cari kelas e-learning untuk mata kuliah ini
+          const { data: eClasses } = await supabase
+            .from('elearning_classes')
+            .select('id, class_groups(id, sistem_kuliah_id, gender_type, programs(name))')
+            .eq('course_id', courseId)
+            .eq('is_active', true);
+            
+          if (eClasses && eClasses.length > 0) {
+             let matchedId = null;
+             
+             // Cari kelas yang paling cocok dengan profil mahasiswa
+             const exactMatch = eClasses.find(ec => {
+               const cg = ec.class_groups as any;
+               if (!cg) return false;
+               const matchSistem = cg.sistem_kuliah_id ? cg.sistem_kuliah_id === profile.sistem_kuliah_id : true;
+               const matchGender = cg.gender_type ? (cg.gender_type === 'Campuran' || cg.gender_type === profile.gender) : true;
+               const matchProgram = cg.programs?.name ? cg.programs.name === profile.program : true;
+               return matchSistem && matchGender && matchProgram;
+             });
+             
+             if (exactMatch) {
+               matchedId = exactMatch.id;
+             } else {
+               // Fallback: titipkan ke kelas pertama yang tersedia
+               matchedId = eClasses[0].id;
+             }
+             
+             if (matchedId) {
+               await supabase
+                 .from('krs_items')
+                 .update({ elearning_class_id: matchedId })
+                 .eq('id', item.id);
+             }
+          }
+        }
+      }
     },
     onSuccess: () => {
-      toast.success('KRS berhasil disetujui');
+      toast.success('KRS disetujui & Mahasiswa otomatis dialokasikan ke kelas');
       queryClient.invalidateQueries({ queryKey: ['admin_krs_approvals'] });
       setSelectedKrs(null);
     },
@@ -234,7 +287,7 @@ export function KrsApprovalTab() {
                   <X className="h-4 w-4 mr-1" /> Tolak & Kembalikan
                 </Button>
                 <Button 
-                  onClick={() => approveMutation.mutate(selectedKrs.id)}
+                  onClick={() => approveMutation.mutate(selectedKrs)}
                   disabled={approveMutation.isPending}
                 >
                   <Check className="h-4 w-4 mr-1" /> Setujui KRS

@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 // Types
@@ -13,10 +14,12 @@ export type ElearningSubmission = Tables<'elearning_submissions'>;
 
 // Fetch all elearning classes with related data
 export function useElearningClasses() {
+  const { profile } = useAuth();
+
   return useQuery({
-    queryKey: ['elearning-classes'],
+    queryKey: ['elearning-classes', profile?.id, profile?.role],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('elearning_classes')
         .select(`
           *,
@@ -26,9 +29,30 @@ export function useElearningClasses() {
         `)
         .order('created_at', { ascending: false });
 
+      // Jika role mahasiswa, hanya ambil kelas dari KRS yang disetujui
+      if (profile?.role === 'mahasiswa') {
+        const { data: krsItems } = await supabase
+          .from('krs_items')
+          .select('elearning_class_id, krs!inner(status, student_id)')
+          .eq('krs.student_id', profile.id)
+          .eq('krs.status', 'approved')
+          .not('elearning_class_id', 'is', null);
+
+        const allowedClassIds = krsItems?.map(item => item.elearning_class_id) || [];
+        
+        if (allowedClassIds.length === 0) {
+          return []; // Mahasiswa tidak punya kelas E-Learning
+        }
+        
+        query = query.in('id', allowedClassIds);
+      }
+
+      const { data, error } = await query;
+
       if (error) throw error;
       return data;
     },
+    enabled: !!profile,
   });
 }
 
