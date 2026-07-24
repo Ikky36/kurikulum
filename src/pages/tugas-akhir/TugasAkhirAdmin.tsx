@@ -19,7 +19,7 @@ export default function TugasAkhirAdmin() {
         .from('ta_submissions')
         .select(`
           *,
-          profiles:student_id(full_name, id_number),
+          profiles:student_id(full_name, nim),
           ta_types(name),
           ta_advisors(profiles(full_name))
         `)
@@ -85,7 +85,7 @@ export default function TugasAkhirAdmin() {
                           <TableRow key={sub.id}>
                             <TableCell>
                               <div className="font-medium">{sub.profiles?.full_name}</div>
-                              <div className="text-xs text-muted-foreground">{sub.profiles?.id_number}</div>
+                              <div className="text-xs text-muted-foreground">{sub.profiles?.nim}</div>
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline" className="mb-1">{sub.ta_types?.name}</Badge>
