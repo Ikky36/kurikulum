@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Plus, Filter } from 'lucide-react';
+import { Trash2, Plus, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -19,9 +19,11 @@ export const TugasAkhirSettingsTab = () => {
   const [newTypeName, setNewTypeName] = useState('');
   const [newTypeDesc, setNewTypeDesc] = useState('');
   const [isTypeDialogOpen, setIsTypeDialogOpen] = useState(false);
+  const [editingType, setEditingType] = useState<any>(null);
 
   const [activeTab, setActiveTab] = useState('umum');
   const [isReqDialogOpen, setIsReqDialogOpen] = useState(false);
+  const [editingReq, setEditingReq] = useState<any>(null);
   
   // Requirement Form State
   const [reqName, setReqName] = useState('');
@@ -35,6 +37,60 @@ export const TugasAkhirSettingsTab = () => {
   const [reqValuePredicateLimit, setReqValuePredicateLimit] = useState(2);
   const [reqValueCourseId, setReqValueCourseId] = useState('');
   const [reqIsRequired, setReqIsRequired] = useState(true);
+
+  const resetReqForm = () => {
+    setEditingReq(null);
+    setReqName('');
+    setReqPhase('umum');
+    setReqIsGeneral(true);
+    setReqTypeId('all');
+    setReqType('document');
+    setReqValueSks(140);
+    setReqValueSemester(7);
+    setReqValuePredicateId('');
+    setReqValuePredicateLimit(2);
+    setReqValueCourseId('');
+    setReqIsRequired(true);
+  };
+
+  const openEditReq = (req: any) => {
+    setEditingReq(req);
+    setReqName(req.name);
+    setReqPhase(req.phase);
+    setReqIsGeneral(req.is_general);
+    setReqTypeId(req.type_id || 'all');
+    setReqType(req.req_type);
+    
+    if (req.req_type === 'min_sks') setReqValueSks(req.req_value?.min || 140);
+    if (req.req_type === 'min_semester') setReqValueSemester(req.req_value?.min || 7);
+    if (req.req_type === 'predicate') {
+      setReqValuePredicateId(req.req_value?.predicate_id || '');
+      setReqValuePredicateLimit(req.req_value?.max_count || 2);
+    }
+    if (req.req_type === 'course') setReqValueCourseId(req.req_value?.course_ids?.[0] || '');
+    
+    setReqIsRequired(req.is_required);
+    setIsReqDialogOpen(true);
+  };
+
+  const openAddReq = () => {
+    resetReqForm();
+    setIsReqDialogOpen(true);
+  };
+
+  const openAddType = () => {
+    setEditingType(null);
+    setNewTypeName('');
+    setNewTypeDesc('');
+    setIsTypeDialogOpen(true);
+  };
+
+  const openEditType = (type: any) => {
+    setEditingType(type);
+    setNewTypeName(type.name);
+    setNewTypeDesc(type.description || '');
+    setIsTypeDialogOpen(true);
+  };
 
   const { data: taTypes, isLoading: typesLoading } = useQuery({
     queryKey: ['ta_types'],
@@ -72,23 +128,28 @@ export const TugasAkhirSettingsTab = () => {
     }
   });
 
-  const addTypeMutation = useMutation({
+  const saveTypeMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.from('ta_types').insert({
-        name: newTypeName,
-        description: newTypeDesc
-      }).select().single();
-      if (error) throw error;
-      return data;
+      if (editingType) {
+        const { error } = await supabase.from('ta_types').update({
+          name: newTypeName,
+          description: newTypeDesc
+        }).eq('id', editingType.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('ta_types').insert({
+          name: newTypeName,
+          description: newTypeDesc
+        });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ta_types'] });
-      toast.success('Jenis Tugas Akhir berhasil ditambahkan');
-      setNewTypeName('');
-      setNewTypeDesc('');
+      toast.success(`Jenis Tugas Akhir berhasil ${editingType ? 'diperbarui' : 'ditambahkan'}`);
       setIsTypeDialogOpen(false);
     },
-    onError: (error) => toast.error('Gagal menambahkan: ' + error.message)
+    onError: (error) => toast.error('Gagal menyimpan: ' + error.message)
   });
 
   const deleteTypeMutation = useMutation({
@@ -104,7 +165,7 @@ export const TugasAkhirSettingsTab = () => {
     onError: (error) => toast.error('Gagal menghapus: ' + error.message)
   });
 
-  const addReqMutation = useMutation({
+  const saveReqMutation = useMutation({
     mutationFn: async () => {
       let req_value = {};
       if (reqType === 'min_sks') req_value = { min: reqValueSks };
@@ -112,7 +173,7 @@ export const TugasAkhirSettingsTab = () => {
       else if (reqType === 'predicate') req_value = { predicate_id: reqValuePredicateId, max_count: reqValuePredicateLimit };
       else if (reqType === 'course') req_value = { course_ids: [reqValueCourseId] };
 
-      const { data, error } = await supabase.from('ta_requirements').insert({
+      const payload = {
         name: reqName,
         phase: reqPhase,
         is_general: reqPhase === 'umum' ? true : reqIsGeneral,
@@ -120,17 +181,22 @@ export const TugasAkhirSettingsTab = () => {
         req_type: reqType,
         req_value: req_value,
         is_required: reqIsRequired
-      }).select().single();
-      if (error) throw error;
-      return data;
+      };
+
+      if (editingReq) {
+        const { error } = await supabase.from('ta_requirements').update(payload).eq('id', editingReq.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('ta_requirements').insert(payload);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ta_requirements'] });
-      toast.success('Persyaratan berhasil ditambahkan');
-      setReqName('');
+      toast.success(`Persyaratan berhasil ${editingReq ? 'diperbarui' : 'ditambahkan'}`);
       setIsReqDialogOpen(false);
     },
-    onError: (error) => toast.error('Gagal menambahkan: ' + error.message)
+    onError: (error) => toast.error('Gagal menyimpan: ' + error.message)
   });
 
   const deleteReqMutation = useMutation({
@@ -145,14 +211,14 @@ export const TugasAkhirSettingsTab = () => {
     onError: (error) => toast.error('Gagal menghapus: ' + error.message)
   });
 
-  const updateReqMutation = useMutation({
+  const updateReqInlineMutation = useMutation({
     mutationFn: async ({ id, field, value }: { id: string, field: string, value: any }) => {
       const { error } = await supabase.from('ta_requirements').update({ [field]: value }).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ta_requirements'] });
-      toast.success('Persyaratan diperbarui');
+      toast.success('Status Wajib diperbarui');
     }
   });
 
@@ -168,11 +234,11 @@ export const TugasAkhirSettingsTab = () => {
           </div>
           <Dialog open={isTypeDialogOpen} onOpenChange={setIsTypeDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm"><Plus className="w-4 h-4 mr-2"/> Tambah Jenis TA</Button>
+              <Button size="sm" onClick={openAddType}><Plus className="w-4 h-4 mr-2"/> Tambah Jenis TA</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Tambah Jenis Tugas Akhir</DialogTitle>
+                <DialogTitle>{editingType ? 'Edit Jenis Tugas Akhir' : 'Tambah Jenis Tugas Akhir'}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
@@ -186,7 +252,7 @@ export const TugasAkhirSettingsTab = () => {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsTypeDialogOpen(false)}>Batal</Button>
-                <Button onClick={() => addTypeMutation.mutate()} disabled={!newTypeName || addTypeMutation.isPending}>Simpan</Button>
+                <Button onClick={() => saveTypeMutation.mutate()} disabled={!newTypeName || saveTypeMutation.isPending}>Simpan</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -198,7 +264,7 @@ export const TugasAkhirSettingsTab = () => {
                 <TableRow>
                   <TableHead>Jenis Tugas Akhir</TableHead>
                   <TableHead>Keterangan</TableHead>
-                  <TableHead className="w-24">Aksi</TableHead>
+                  <TableHead className="w-32">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -212,6 +278,9 @@ export const TugasAkhirSettingsTab = () => {
                     <TableCell className="font-medium">{type.name}</TableCell>
                     <TableCell>{type.description || '-'}</TableCell>
                     <TableCell>
+                      <Button variant="outline" size="icon" className="mr-2" onClick={() => openEditType(type)}>
+                        <Edit className="w-4 h-4" />
+                      </Button>
                       <Button variant="destructive" size="icon" onClick={() => {
                         if (confirm('Yakin ingin menghapus jenis TA ini?')) deleteTypeMutation.mutate(type.id);
                       }}>
@@ -234,11 +303,11 @@ export const TugasAkhirSettingsTab = () => {
           </div>
           <Dialog open={isReqDialogOpen} onOpenChange={setIsReqDialogOpen}>
             <DialogTrigger asChild>
-              <Button size="sm"><Plus className="w-4 h-4 mr-2"/> Tambah Syarat</Button>
+              <Button size="sm" onClick={openAddReq}><Plus className="w-4 h-4 mr-2"/> Tambah Syarat</Button>
             </DialogTrigger>
             <DialogContent className="max-w-xl">
               <DialogHeader>
-                <DialogTitle>Tambah Syarat Baru</DialogTitle>
+                <DialogTitle>{editingReq ? 'Edit Syarat' : 'Tambah Syarat Baru'}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
                 <div className="space-y-2">
@@ -348,7 +417,7 @@ export const TugasAkhirSettingsTab = () => {
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsReqDialogOpen(false)}>Batal</Button>
-                <Button onClick={() => addReqMutation.mutate()} disabled={!reqName || addReqMutation.isPending}>Simpan Syarat</Button>
+                <Button onClick={() => saveReqMutation.mutate()} disabled={!reqName || saveReqMutation.isPending}>Simpan Syarat</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -372,7 +441,7 @@ export const TugasAkhirSettingsTab = () => {
                       <TableHead>Jenis Validasi</TableHead>
                       <TableHead>Parameter</TableHead>
                       <TableHead className="w-24">Wajib</TableHead>
-                      <TableHead className="w-16">Aksi</TableHead>
+                      <TableHead className="w-32">Aksi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -408,10 +477,13 @@ export const TugasAkhirSettingsTab = () => {
                         <TableCell>
                           <Switch 
                             checked={req.is_required} 
-                            onCheckedChange={(checked) => updateReqMutation.mutate({ id: req.id, field: 'is_required', value: checked })}
+                            onCheckedChange={(checked) => updateReqInlineMutation.mutate({ id: req.id, field: 'is_required', value: checked })}
                           />
                         </TableCell>
                         <TableCell>
+                          <Button variant="outline" size="icon" className="mr-2" onClick={() => openEditReq(req)}>
+                            <Edit className="w-4 h-4" />
+                          </Button>
                           <Button variant="destructive" size="icon" onClick={() => {
                             if (confirm('Hapus persyaratan ini?')) deleteReqMutation.mutate(req.id);
                           }}>
