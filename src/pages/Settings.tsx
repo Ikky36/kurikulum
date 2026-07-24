@@ -22,6 +22,7 @@ import { Curriculum, Program, AppSetting, InstrumenPenilaian } from '@/lib/types
 import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SistemKuliahManager } from '@/components/admin/SistemKuliahManager';
+import { TugasAkhirSettingsTab } from '@/components/admin/TugasAkhirSettingsTab';
 import { useAppSettings, useUpdateAppSetting } from '@/hooks/useAppSettings';
 import { getVmtsAcronym } from '@/lib/utils';
 
@@ -785,6 +786,11 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
               <span className="hidden md:inline">Sistem Kuliah</span>
               <span className="md:hidden">Sistem</span>
             </TabsTrigger>
+            <TabsTrigger value="tugas-akhir" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <BookOpen className="h-4 w-4" />
+              <span className="hidden md:inline">Tugas Akhir</span>
+              <span className="md:hidden">TA</span>
+            </TabsTrigger>
             {canAccessTheme && (
               <TabsTrigger value="instrumen" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Scale className="h-4 w-4" />
@@ -1522,6 +1528,11 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
             {/* Sistem Kuliah Tab */}
             <TabsContent value="sistem-kuliah" className="mt-0">
               <SistemKuliahManager />
+            </TabsContent>
+
+            {/* Tugas Akhir Tab */}
+            <TabsContent value="tugas-akhir" className="mt-0">
+              <TugasAkhirSettingsTab />
             </TabsContent>
 
             {/* AI & Prompts Tab - Only for admin */}

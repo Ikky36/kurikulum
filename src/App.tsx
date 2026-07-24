@@ -23,6 +23,7 @@ import Kurikulum from "./pages/Kurikulum";
 import ELearning from "./pages/ELearning";
 import QuizTaking from "./pages/QuizTaking";
 import ElearningRecap from "./pages/ElearningRecap";
+import TugasAkhir from "./pages/TugasAkhir";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ function AppContent() {
           <Route path="/dashboard/dosen" element={<DashboardDosen />} />
           <Route path="/dashboard/admin" element={<DashboardAdmin />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/tugas-akhir" element={<TugasAkhir />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
