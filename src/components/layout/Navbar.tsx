@@ -39,6 +39,7 @@ export function Navbar() {
   ];
 
   if (user) {
+    navLinks.push({ href: '/tugas-akhir', label: 'Tugas Akhir', icon: GraduationCap });
     navLinks.push({ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard });
   }
 
@@ -107,6 +108,10 @@ export function Navbar() {
                 <DropdownMenuItem onClick={() => navigate('/dashboard')}>
                   <LayoutDashboard className="mr-2 h-4 w-4" />
                   Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/tugas-akhir')}>
+                  <GraduationCap className="mr-2 h-4 w-4" />
+                  Tugas Akhir
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <KeyRound className="mr-2 h-4 w-4" />
