@@ -5,11 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Plus, Edit2, Check, X, FileText } from 'lucide-react';
+import { Trash2, Plus, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 
@@ -24,6 +24,12 @@ export const TugasAkhirSettingsTab = () => {
   const [newReqIsRequired, setNewReqIsRequired] = useState(true);
   const [isReqDialogOpen, setIsReqDialogOpen] = useState(false);
 
+  // Batas Predikat State
+  const [isLimitDialogOpen, setIsLimitDialogOpen] = useState(false);
+  const [selectedSettingId, setSelectedSettingId] = useState<string | null>(null);
+  const [selectedTypeName, setSelectedTypeName] = useState<string>('');
+  const [predicateLimits, setPredicateLimits] = useState<Record<string, number>>({});
+
   const { data: taTypes, isLoading: typesLoading } = useQuery({
     queryKey: ['ta_types'],
     queryFn: async () => {
@@ -37,6 +43,15 @@ export const TugasAkhirSettingsTab = () => {
     queryKey: ['ta_settings'],
     queryFn: async () => {
       const { data, error } = await supabase.from('ta_settings').select('*, ta_types(name)').order('created_at', { ascending: true });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: instrumenPenilaian, isLoading: instrumenLoading } = useQuery({
+    queryKey: ['instrumen_penilaian'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('instrumen_penilaian').select('*').order('rentang_max', { ascending: false });
       if (error) throw error;
       return data;
     }
@@ -64,8 +79,8 @@ export const TugasAkhirSettingsTab = () => {
       await supabase.from('ta_settings').insert({
         type_id: data.id,
         min_semester: 7,
-        max_bad_grades_count: 2,
-        required_course_ids: []
+        required_course_ids: [],
+        predicate_limits: {}
       });
 
       return data;
@@ -162,7 +177,24 @@ export const TugasAkhirSettingsTab = () => {
     }
   });
 
-  if (typesLoading || settingsLoading || reqsLoading) return <div>Memuat pengaturan...</div>;
+  const openLimitDialog = (setting: any) => {
+    setSelectedSettingId(setting.id);
+    setSelectedTypeName(setting.ta_types?.name || '');
+    setPredicateLimits(setting.predicate_limits || {});
+    setIsLimitDialogOpen(true);
+  };
+
+  const handleSavePredicateLimits = () => {
+    if (!selectedSettingId) return;
+    updateSettingMutation.mutate({ 
+      id: selectedSettingId, 
+      field: 'predicate_limits', 
+      value: predicateLimits 
+    });
+    setIsLimitDialogOpen(false);
+  };
+
+  if (typesLoading || settingsLoading || reqsLoading || instrumenLoading) return <div>Memuat pengaturan...</div>;
 
   return (
     <div className="space-y-6">
@@ -204,7 +236,7 @@ export const TugasAkhirSettingsTab = () => {
                 <TableRow>
                   <TableHead>Jenis Tugas Akhir</TableHead>
                   <TableHead>Minimal Semester</TableHead>
-                  <TableHead>Max Nilai C/D/E</TableHead>
+                  <TableHead>Syarat Batas Predikat</TableHead>
                   <TableHead className="w-24">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
@@ -236,20 +268,22 @@ export const TugasAkhirSettingsTab = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Input 
-                          type="number" 
-                          min={0} 
-                          max={10} 
-                          className="w-20"
-                          defaultValue={setting.max_bad_grades_count}
-                          onBlur={(e) => {
-                            if (e.target.value !== String(setting.max_bad_grades_count)) {
-                              updateSettingMutation.mutate({ id: setting.id, field: 'max_bad_grades_count', value: parseInt(e.target.value) });
-                            }
-                          }}
-                        />
-                      </div>
+                      <Button variant="outline" size="sm" onClick={() => openLimitDialog(setting)}>
+                        <Settings className="w-4 h-4 mr-2" /> Atur Batas Nilai
+                      </Button>
+                      {setting.predicate_limits && Object.keys(setting.predicate_limits).length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {Object.entries(setting.predicate_limits).map(([predId, limit]: [string, any]) => {
+                            const pred = instrumenPenilaian?.find((p: any) => p.id === predId);
+                            if (!pred || limit === null || limit === undefined || limit === '') return null;
+                            return (
+                              <Badge key={predId} variant="secondary" className="text-xs">
+                                Max {pred.predikat}: {limit}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Button variant="destructive" size="icon" onClick={() => {
@@ -268,6 +302,55 @@ export const TugasAkhirSettingsTab = () => {
         </CardContent>
       </Card>
       
+      {/* Dialog for Predicate Limits */}
+      <Dialog open={isLimitDialogOpen} onOpenChange={setIsLimitDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Atur Batas Mata Kuliah Berdasarkan Predikat</DialogTitle>
+            <DialogDescription>
+              Tentukan maksimal jumlah mata kuliah dengan predikat tertentu agar mahasiswa bisa mengajukan {selectedTypeName}. (Kosongkan jika tidak ada batas)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
+            {instrumenPenilaian?.map((instrumen: any) => (
+              <div key={instrumen.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: instrumen.color || '#ccc' }} />
+                  <span className="font-semibold text-lg">{instrumen.predikat}</span>
+                  <span className="text-xs text-muted-foreground">({instrumen.rentang_min} - {instrumen.rentang_max})</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Label>Max:</Label>
+                  <Input 
+                    type="number"
+                    min="0"
+                    placeholder="Tak Terbatas"
+                    className="w-24"
+                    value={predicateLimits[instrumen.id] ?? ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setPredicateLimits(prev => {
+                        const newLimits = { ...prev };
+                        if (val === '') {
+                          delete newLimits[instrumen.id];
+                        } else {
+                          newLimits[instrumen.id] = parseInt(val);
+                        }
+                        return newLimits;
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsLimitDialogOpen(false)}>Batal</Button>
+            <Button onClick={handleSavePredicateLimits} disabled={updateSettingMutation.isPending}>Simpan Pengaturan</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>

@@ -44,7 +44,7 @@ export type Database = {
             type_id: string
             min_semester: number
             required_course_ids: string[]
-            max_bad_grades_count: number
+            predicate_limits: Json | null
             created_at: string
             updated_at: string
           }
