@@ -11,8 +11,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAcademicPeriod } from '@/hooks/useAcademicPeriod';
 import { calculateSemester } from '@/utils/academicHelpers';
 
@@ -29,6 +32,12 @@ export default function TugasAkhirMahasiswa() {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [generalErrors, setGeneralErrors] = useState<string[]>([]);
 
+  // Add Log State
+  const [isAddLogOpen, setIsAddLogOpen] = useState(false);
+  const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
+  const [logDosenId, setLogDosenId] = useState('');
+  const [logProblem, setLogProblem] = useState('');
+
   const { data: myProfile } = useQuery({
     queryKey: ['my_profile', user?.id],
     queryFn: async () => {
@@ -44,7 +53,7 @@ export default function TugasAkhirMahasiswa() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ta_submissions')
-        .select('*, ta_types(name), ta_advisors(profiles(full_name))')
+        .select('*, ta_types(name), ta_advisors(role, profiles(id, full_name))')
         .eq('student_id', user?.id)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -53,6 +62,20 @@ export default function TugasAkhirMahasiswa() {
       return data;
     },
     enabled: !!user?.id
+  });
+
+  const { data: consultationLogs, isLoading: logsLoading } = useQuery({
+    queryKey: ['my_ta_logs', mySubmission?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ta_consultation_logs')
+        .select('*, profiles:dosen_id(full_name)')
+        .eq('submission_id', mySubmission.id)
+        .order('date', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!mySubmission?.id && mySubmission?.status === 'approved'
   });
 
   const { data: taTypes, isLoading: typesLoading } = useQuery({
@@ -95,7 +118,6 @@ export default function TugasAkhirMahasiswa() {
   const validateRequirements = (phase: string, typeId: string | null) => {
     if (!taRequirements || !instrumenPenilaian || !myGrades || !myProfile) return [];
 
-    // Filter requirements
     const reqsToEval = taRequirements.filter(req => {
       if (req.phase !== phase) return false;
       if (req.is_general) return true;
@@ -106,10 +128,8 @@ export default function TugasAkhirMahasiswa() {
     const errors: string[] = [];
     const mySemester = calculateSemester(myProfile?.enrollment_year, activeAcademicYear?.name, activeSemester?.name) || 1;
 
-    // Calculate SKS (only if grade > 0, assume passed for simple logic)
     const totalSKS = myGrades.reduce((sum, g) => sum + (g.final_score > 50 ? (g.courses?.sks || 0) : 0), 0);
 
-    // Hitung jumlah nilai per predikat
     const predicateCounts: Record<string, number> = {};
     myGrades.forEach(grade => {
       const instrumen = instrumenPenilaian.find(i => grade.final_score >= i.rentang_min && grade.final_score <= i.rentang_max);
@@ -150,11 +170,9 @@ export default function TugasAkhirMahasiswa() {
   };
 
   useEffect(() => {
-    // Validate General Phase
     const genErrs = validateRequirements('umum', null);
     setGeneralErrors(genErrs);
 
-    // Validate Specific Phase if Type is selected
     if (selectedType) {
       const specErrs = validateRequirements('pengajuan_judul', selectedType);
       setValidationErrors(specErrs);
@@ -187,12 +205,35 @@ export default function TugasAkhirMahasiswa() {
     }
   });
 
+  const addLogMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from('ta_consultation_logs')
+        .insert({
+          submission_id: mySubmission.id,
+          dosen_id: logDosenId,
+          date: logDate,
+          problem: logProblem,
+          status: 'pending'
+        });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Log bimbingan berhasil dikirim.');
+      queryClient.invalidateQueries({ queryKey: ['my_ta_logs'] });
+      setIsAddLogOpen(false);
+      setLogProblem('');
+      setLogDosenId('');
+    },
+    onError: (e: any) => toast.error('Gagal menambahkan log: ' + e.message)
+  });
+
   if (subLoading || typesLoading) return <Layout><div className="container py-8 text-center">Memuat data...</div></Layout>;
 
   return (
     <Layout>
-      <div className="container py-8 max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Tugas Akhir</h1>
+      <div className="container py-8 max-w-5xl mx-auto">
+        <h1 className="text-3xl font-bold mb-6 tracking-tight">Tugas Akhir</h1>
         
         {generalErrors.length > 0 && !mySubmission && (
           <Alert variant="destructive" className="mb-6">
@@ -207,159 +248,341 @@ export default function TugasAkhirMahasiswa() {
           </Alert>
         )}
 
-        {mySubmission ? (
-          <div className="space-y-6">
+        <Tabs defaultValue="bimbingan" className="space-y-6">
+          <TabsList className="w-full sm:w-auto grid grid-cols-3">
+            <TabsTrigger value="bimbingan">Judul & Bimbingan</TabsTrigger>
+            <TabsTrigger value="seminar" disabled={!mySubmission || mySubmission.status !== 'approved'}>Seminar Proposal</TabsTrigger>
+            <TabsTrigger value="sidang" disabled={!mySubmission || mySubmission.status !== 'approved'}>Sidang Akhir</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="bimbingan" className="space-y-6">
+            {mySubmission ? (
+              <div className="space-y-6">
+                <Card>
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="text-2xl">{mySubmission.title}</CardTitle>
+                        <CardDescription className="text-base mt-1">Jenis: {mySubmission.ta_types?.name}</CardDescription>
+                      </div>
+                      <Badge className="text-sm px-3 py-1" variant={
+                        mySubmission.status === 'approved' ? 'default' :
+                        mySubmission.status === 'rejected' ? 'destructive' :
+                        mySubmission.status === 'revision' ? 'secondary' : 'outline'
+                      }>
+                        {mySubmission.status === 'approved' && <CheckCircle2 className="w-4 h-4 mr-2 inline" />}
+                        {mySubmission.status === 'rejected' && <XCircle className="w-4 h-4 mr-2 inline" />}
+                        {mySubmission.status === 'revision' && <RefreshCw className="w-4 h-4 mr-2 inline" />}
+                        {mySubmission.status === 'pending' && <Clock className="w-4 h-4 mr-2 inline" />}
+                        {mySubmission.status === 'approved' ? 'Disetujui' :
+                         mySubmission.status === 'rejected' ? 'Ditolak' :
+                         mySubmission.status === 'revision' ? 'Revisi' : 'Menunggu Review'}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  
+                  <CardContent className="space-y-6">
+                    {/* Status Alerts */}
+                    {mySubmission.status === 'rejected' && (
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertTitle>Pengajuan Ditolak</AlertTitle>
+                        <AlertDescription className="mt-2">
+                          Mohon maaf, pengajuan judul Anda ditolak. Silakan ajukan judul baru dengan menghubungi Kaprodi.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {mySubmission.status === 'revision' && (
+                      <Alert variant="default" className="border-secondary bg-secondary/10">
+                        <RefreshCw className="h-4 w-4 text-secondary-foreground" />
+                        <AlertTitle>Perlu Revisi</AlertTitle>
+                        <AlertDescription className="mt-2">
+                          Pengajuan Anda dikembalikan untuk direvisi. Silakan perbaiki dokumen atau judul sesuai catatan.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* Admin Comments */}
+                    {mySubmission.comments && mySubmission.comments.includes('[Catatan Admin]') && (
+                      <div className="p-4 bg-muted rounded-lg border">
+                        <h3 className="text-sm font-semibold mb-2 flex items-center">
+                          <MessageSquare className="w-4 h-4 mr-2" /> Catatan Admin / Prodi
+                        </h3>
+                        <p className="text-sm whitespace-pre-wrap">{mySubmission.comments}</p>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
+                      <div>
+                        <h3 className="font-semibold mb-2 text-sm text-muted-foreground">Dosen Pembimbing</h3>
+                        {mySubmission.ta_advisors?.length > 0 ? (
+                          <ul className="space-y-2">
+                            {mySubmission.ta_advisors.map((adv: any, i: number) => (
+                              <li key={i} className="flex flex-col">
+                                <span className="font-medium">{adv.profiles?.full_name}</span>
+                                <span className="text-xs text-muted-foreground">{adv.role}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="text-sm italic">Belum ada pembimbing yang diplot.</p>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <h3 className="font-semibold mb-2 text-sm text-muted-foreground">Dokumen Pengajuan</h3>
+                        <a href={mySubmission.document_link.startsWith('http') ? mySubmission.document_link : `https://${mySubmission.document_link}`} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center">
+                          <FileText className="w-4 h-4 mr-2" /> Buka Dokumen Proposal
+                        </a>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {mySubmission.status === 'approved' && (
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <div>
+                        <CardTitle>Riwayat Bimbingan</CardTitle>
+                        <CardDescription>Catat dan pantau histori konsultasi Anda dengan dosen pembimbing.</CardDescription>
+                      </div>
+                      <Button onClick={() => setIsAddLogOpen(true)} size="sm">
+                        <Plus className="w-4 h-4 mr-2" /> Tambah Log
+                      </Button>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="rounded-md border">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Tanggal</TableHead>
+                              <TableHead>Pembimbing</TableHead>
+                              <TableHead>Pembahasan & Masalah</TableHead>
+                              <TableHead>Solusi / Feedback Dosen</TableHead>
+                              <TableHead>Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {logsLoading ? (
+                              <TableRow>
+                                <TableCell colSpan={5} className="text-center py-6">Memuat log...</TableCell>
+                              </TableRow>
+                            ) : !consultationLogs || consultationLogs.length === 0 ? (
+                              <TableRow>
+                                <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                                  Belum ada log bimbingan yang tercatat.
+                                </TableCell>
+                              </TableRow>
+                            ) : (
+                              consultationLogs.map((log: any) => (
+                                <TableRow key={log.id}>
+                                  <TableCell className="whitespace-nowrap text-sm">
+                                    {new Date(log.date).toLocaleDateString('id-ID')}
+                                  </TableCell>
+                                  <TableCell className="text-sm font-medium">
+                                    {log.profiles?.full_name}
+                                  </TableCell>
+                                  <TableCell>
+                                    <p className="text-sm line-clamp-3">{log.problem}</p>
+                                  </TableCell>
+                                  <TableCell>
+                                    {log.solution ? (
+                                      <p className="text-sm line-clamp-3 text-primary">{log.solution}</p>
+                                    ) : (
+                                      <span className="text-xs italic text-muted-foreground">Menunggu tanggapan</span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant={
+                                      log.status === 'approved' ? 'default' :
+                                      log.status === 'rejected' ? 'destructive' :
+                                      log.status === 'revision' ? 'secondary' : 'outline'
+                                    }>
+                                      {log.status === 'approved' ? 'Disetujui' :
+                                       log.status === 'rejected' ? 'Ditolak' :
+                                       log.status === 'revision' ? 'Revisi' : 'Menunggu'}
+                                    </Badge>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            ) : (
+              <Card className={generalErrors.length > 0 ? "opacity-50 pointer-events-none" : ""}>
+                <CardHeader>
+                  <CardTitle>Pengajuan Judul Tugas Akhir</CardTitle>
+                  <CardDescription>Pilih jenis tugas akhir dan masukkan judul yang akan diajukan.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Jenis Tugas Akhir</Label>
+                    <Select value={selectedType} onValueChange={setSelectedType} disabled={generalErrors.length > 0}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih Jenis..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {taTypes?.map((type: any) => (
+                          <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {validationErrors.length > 0 && (
+                    <Alert variant="destructive" className="mt-4">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertTitle>Tidak Memenuhi Syarat Pengajuan {taTypes?.find((t:any) => t.id === selectedType)?.name}</AlertTitle>
+                      <AlertDescription>
+                        <ul className="list-disc list-inside mt-2">
+                          {validationErrors.map((err, i) => <li key={i}>{err}</li>)}
+                        </ul>
+                      </AlertDescription>
+                    </Alert>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label>Topik / Judul</Label>
+                    <Textarea 
+                      placeholder="Ketikkan judul tugas akhir Anda..." 
+                      value={title} 
+                      onChange={(e) => setTitle(e.target.value)}
+                      className="min-h-[80px]"
+                      disabled={validationErrors.length > 0 || generalErrors.length > 0}
+                    />
+                  </div>
+                  
+                  {taRequirements?.filter(r => r.phase === 'pengajuan_judul' && (r.is_general || r.type_id === selectedType) && r.req_type === 'document').map(req => (
+                    <div className="space-y-2" key={req.id}>
+                      <Label>{req.name} {req.is_required && <span className="text-destructive">*</span>}</Label>
+                      <Input 
+                        placeholder="Link Dokumen / Google Drive..." 
+                        value={documentLink} 
+                        onChange={(e) => setDocumentLink(e.target.value)}
+                        disabled={validationErrors.length > 0 || generalErrors.length > 0}
+                      />
+                      <p className="text-xs text-muted-foreground">Pastikan link dapat diakses oleh publik atau Dosen/Admin.</p>
+                    </div>
+                  ))}
+
+                  {taRequirements?.filter(r => r.phase === 'pengajuan_judul' && (r.is_general || r.type_id === selectedType) && r.req_type === 'document').length === 0 && (
+                     <div className="space-y-2">
+                       <Label>Link Dokumen Proposal (Google Drive, dll)</Label>
+                       <Input 
+                         placeholder="https://..." 
+                         value={documentLink} 
+                         onChange={(e) => setDocumentLink(e.target.value)}
+                         disabled={validationErrors.length > 0 || generalErrors.length > 0}
+                       />
+                       <p className="text-xs text-muted-foreground">Pastikan link dapat diakses oleh publik atau Dosen/Admin.</p>
+                     </div>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label>Catatan Tambahan (Opsional)</Label>
+                    <Textarea 
+                      placeholder="Pesan untuk Kaprodi..." 
+                      value={comments} 
+                      onChange={(e) => setComments(e.target.value)}
+                      disabled={validationErrors.length > 0 || generalErrors.length > 0}
+                    />
+                  </div>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    onClick={() => submitMutation.mutate()} 
+                    disabled={!selectedType || !title || !documentLink || submitMutation.isPending || validationErrors.length > 0 || generalErrors.length > 0}
+                    className="w-full"
+                  >
+                    {submitMutation.isPending ? 'Mengirim...' : 'Kirim Pengajuan'}
+                  </Button>
+                </CardFooter>
+              </Card>
+            )}
+          </TabsContent>
+
+          <TabsContent value="seminar">
             <Card>
               <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-2xl">{mySubmission.title}</CardTitle>
-                    <CardDescription className="text-base mt-1">Jenis: {mySubmission.ta_types?.name}</CardDescription>
-                  </div>
-                  <Badge className="text-sm px-3 py-1" variant={
-                    mySubmission.status === 'approved' ? 'default' :
-                    mySubmission.status === 'rejected' ? 'destructive' :
-                    mySubmission.status === 'revision' ? 'secondary' : 'outline'
-                  }>
-                    {mySubmission.status === 'approved' && <CheckCircle2 className="w-4 h-4 mr-2 inline" />}
-                    {mySubmission.status === 'rejected' && <XCircle className="w-4 h-4 mr-2 inline" />}
-                    {mySubmission.status === 'revision' && <RefreshCw className="w-4 h-4 mr-2 inline" />}
-                    {mySubmission.status === 'pending' && <Clock className="w-4 h-4 mr-2 inline" />}
-                    {mySubmission.status === 'approved' ? 'Disetujui' :
-                     mySubmission.status === 'rejected' ? 'Ditolak' :
-                     mySubmission.status === 'revision' ? 'Revisi' : 'Menunggu Review'}
-                  </Badge>
-                </div>
+                <CardTitle>Pendaftaran Seminar Proposal</CardTitle>
+                <CardDescription>Ajukan jadwal seminar proposal Anda di sini.</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {mySubmission.status === 'rejected' && (
-                  <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Pengajuan Ditolak</AlertTitle>
-                    <AlertDescription>
-                      Mohon maaf, pengajuan judul Anda ditolak. Silakan ajukan judul baru dengan menghubungi Kaprodi.
-                    </AlertDescription>
-                  </Alert>
-                )}
-                
-                {mySubmission.ta_advisors?.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold mb-2">Dosen Pembimbing</h3>
-                    <ul className="list-disc list-inside">
-                      {mySubmission.ta_advisors.map((adv: any, i: number) => (
-                        <li key={i}>{adv.profiles?.full_name}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                
-                <div>
-                  <h3 className="font-semibold mb-1">Dokumen Pengajuan</h3>
-                  <a href={mySubmission.document_link} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center">
-                    <FileText className="w-4 h-4 mr-2" /> Buka Dokumen
-                  </a>
-                </div>
+              <CardContent className="py-10 text-center text-muted-foreground">
+                <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                <p>Fitur pendaftaran seminar sedang dalam pengembangan.</p>
               </CardContent>
-              {mySubmission.status === 'approved' && (
-                <CardFooter>
-                  <Button className="w-full sm:w-auto">Buka Log Bimbingan</Button>
-                </CardFooter>
-              )}
             </Card>
-          </div>
-        ) : (
-          <Card className={generalErrors.length > 0 ? "opacity-50 pointer-events-none" : ""}>
-            <CardHeader>
-              <CardTitle>Pengajuan Judul Tugas Akhir</CardTitle>
-              <CardDescription>Pilih jenis tugas akhir dan masukkan judul yang akan diajukan.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          </TabsContent>
+
+          <TabsContent value="sidang">
+            <Card>
+              <CardHeader>
+                <CardTitle>Pendaftaran Sidang Akhir</CardTitle>
+                <CardDescription>Ajukan jadwal sidang akhir setelah bimbingan Anda selesai.</CardDescription>
+              </CardHeader>
+              <CardContent className="py-10 text-center text-muted-foreground">
+                <CheckCircle2 className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                <p>Fitur pendaftaran sidang sedang dalam pengembangan.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* Modal Tambah Log Bimbingan */}
+        <Dialog open={isAddLogOpen} onOpenChange={setIsAddLogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Tambah Log Bimbingan</DialogTitle>
+              <DialogDescription>Catat hasil konsultasi dengan dosen pembimbing Anda.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label>Jenis Tugas Akhir</Label>
-                <Select value={selectedType} onValueChange={setSelectedType} disabled={generalErrors.length > 0}>
+                <Label>Tanggal Konsultasi</Label>
+                <Input type="date" value={logDate} onChange={(e) => setLogDate(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Dosen Pembimbing</Label>
+                <Select value={logDosenId} onValueChange={setLogDosenId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Pilih Jenis..." />
+                    <SelectValue placeholder="Pilih dosen..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {taTypes?.map((type: any) => (
-                      <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                    {mySubmission?.ta_advisors?.map((adv: any) => (
+                      <SelectItem key={adv.profiles.id} value={adv.profiles.id}>
+                        {adv.profiles.full_name} ({adv.role})
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-              
-              {validationErrors.length > 0 && (
-                <Alert variant="destructive" className="mt-4">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Tidak Memenuhi Syarat Pengajuan {taTypes?.find((t:any) => t.id === selectedType)?.name}</AlertTitle>
-                  <AlertDescription>
-                    <ul className="list-disc list-inside mt-2">
-                      {validationErrors.map((err, i) => <li key={i}>{err}</li>)}
-                    </ul>
-                  </AlertDescription>
-                </Alert>
-              )}
-
               <div className="space-y-2">
-                <Label>Topik / Judul</Label>
+                <Label>Laporan Kemajuan / Pertanyaan</Label>
                 <Textarea 
-                  placeholder="Ketikkan judul tugas akhir Anda..." 
-                  value={title} 
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="min-h-[80px]"
-                  disabled={validationErrors.length > 0 || generalErrors.length > 0}
+                  placeholder="Apa saja yang dibahas pada pertemuan ini?"
+                  value={logProblem}
+                  onChange={(e) => setLogProblem(e.target.value)}
+                  className="min-h-[100px]"
                 />
               </div>
-              
-              {/* Check if there are any document requirements for 'pengajuan_judul' */}
-              {taRequirements?.filter(r => r.phase === 'pengajuan_judul' && (r.is_general || r.type_id === selectedType) && r.req_type === 'document').map(req => (
-                <div className="space-y-2" key={req.id}>
-                  <Label>{req.name} {req.is_required && <span className="text-destructive">*</span>}</Label>
-                  <Input 
-                    placeholder="Link Dokumen / Google Drive..." 
-                    value={documentLink} 
-                    onChange={(e) => setDocumentLink(e.target.value)}
-                    disabled={validationErrors.length > 0 || generalErrors.length > 0}
-                  />
-                  <p className="text-xs text-muted-foreground">Pastikan link dapat diakses oleh publik atau Dosen/Admin.</p>
-                </div>
-              ))}
-
-              {/* If no dynamic document requirements but we still want a general one, we just show standard: */}
-              {taRequirements?.filter(r => r.phase === 'pengajuan_judul' && (r.is_general || r.type_id === selectedType) && r.req_type === 'document').length === 0 && (
-                 <div className="space-y-2">
-                   <Label>Link Dokumen Proposal (Google Drive, dll)</Label>
-                   <Input 
-                     placeholder="https://..." 
-                     value={documentLink} 
-                     onChange={(e) => setDocumentLink(e.target.value)}
-                     disabled={validationErrors.length > 0 || generalErrors.length > 0}
-                   />
-                   <p className="text-xs text-muted-foreground">Pastikan link dapat diakses oleh publik atau Dosen/Admin.</p>
-                 </div>
-              )}
-
-              <div className="space-y-2">
-                <Label>Catatan Tambahan (Opsional)</Label>
-                <Textarea 
-                  placeholder="Pesan untuk Kaprodi..." 
-                  value={comments} 
-                  onChange={(e) => setComments(e.target.value)}
-                  disabled={validationErrors.length > 0 || generalErrors.length > 0}
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddLogOpen(false)}>Batal</Button>
               <Button 
-                onClick={() => submitMutation.mutate()} 
-                disabled={!selectedType || !title || !documentLink || submitMutation.isPending || validationErrors.length > 0 || generalErrors.length > 0}
-                className="w-full"
+                onClick={() => addLogMutation.mutate()} 
+                disabled={addLogMutation.isPending || !logDosenId || !logProblem.trim()}
               >
-                Kirim Pengajuan
+                {addLogMutation.isPending ? 'Menyimpan...' : <><Save className="w-4 h-4 mr-2" /> Simpan Log</>}
               </Button>
-            </CardFooter>
-          </Card>
-        )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </Layout>
   );
