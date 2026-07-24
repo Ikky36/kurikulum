@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, CheckCircle2, XCircle, Users, ExternalLink } from 'lucide-react';
+import { Eye, CheckCircle2, XCircle, Users, ExternalLink, Plus, Trash2, Save } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +18,65 @@ export default function TugasAkhirAdmin() {
   const [activeTab, setActiveTab] = useState('pengajuan');
   const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+
+  const queryClient = useQueryClient();
+  const [formStatus, setFormStatus] = useState<string>('approved');
+  const [formComments, setFormComments] = useState<string>('');
+  const [formAdvisors, setFormAdvisors] = useState<Array<{ id: string, role: string }>>([{ id: '', role: 'Pembimbing 1' }]);
+
+  const { data: dosenList } = useQuery({
+    queryKey: ['admin_dosen_list'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, nim')
+        .eq('role', 'dosen')
+        .order('full_name');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const processMutation = useMutation({
+    mutationFn: async () => {
+      let finalComments = selectedSubmission.comments || '';
+      if (formComments) {
+        finalComments = `[Catatan Admin]: ${formComments}\n\n[Catatan Mahasiswa]: ${selectedSubmission.comments || '-'}`;
+      }
+
+      const { error: updateError } = await supabase
+        .from('ta_submissions')
+        .update({ 
+          status: formStatus,
+          comments: finalComments
+        })
+        .eq('id', selectedSubmission.id);
+      
+      if (updateError) throw updateError;
+
+      if (formStatus === 'approved') {
+        await supabase.from('ta_advisors').delete().eq('submission_id', selectedSubmission.id);
+        const validAdvisors = formAdvisors.filter(a => a.id !== '');
+        if (validAdvisors.length > 0) {
+          const insertData = validAdvisors.map(adv => ({
+            submission_id: selectedSubmission.id,
+            dosen_id: adv.id,
+            role: adv.role
+          }));
+          const { error: advisorError } = await supabase.from('ta_advisors').insert(insertData);
+          if (advisorError) throw advisorError;
+        }
+      }
+    },
+    onSuccess: () => {
+      toast.success('Pengajuan berhasil diproses');
+      queryClient.invalidateQueries({ queryKey: ['admin_ta_submissions'] });
+      setIsDetailOpen(false);
+    },
+    onError: (error: any) => {
+      toast.error('Gagal memproses pengajuan: ' + error.message);
+    }
+  });
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['admin_ta_submissions'],
@@ -26,7 +87,7 @@ export default function TugasAkhirAdmin() {
           *,
           profiles:student_id(full_name, nim),
           ta_types(name),
-          ta_advisors(profiles(full_name))
+          ta_advisors(role, dosen_id, profiles(full_name))
         `)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -121,6 +182,13 @@ export default function TugasAkhirAdmin() {
                             <TableCell className="text-right">
                               <Button variant="outline" size="sm" onClick={() => {
                                 setSelectedSubmission(sub);
+                                setFormStatus(sub.status === 'pending' ? 'approved' : sub.status);
+                                setFormComments('');
+                                if (sub.ta_advisors && sub.ta_advisors.length > 0) {
+                                  setFormAdvisors(sub.ta_advisors.map((a: any) => ({ id: a.dosen_id || '', role: a.role })));
+                                } else {
+                                  setFormAdvisors([{ id: '', role: 'Pembimbing 1' }]);
+                                }
                                 setIsDetailOpen(true);
                               }}>
                                 <Eye className="w-4 h-4 mr-2" /> Detail
@@ -186,33 +254,108 @@ export default function TugasAkhirAdmin() {
                       <p className="text-sm mt-1 whitespace-pre-wrap">{selectedSubmission.comments || '-'}</p>
                     </div>
                     
-                    <div className="pt-4 border-t border-border mt-4 flex items-center justify-between">
-                      <div>
-                        <Label className="text-muted-foreground text-xs">Status Saat Ini</Label>
-                        <div className="mt-1">
-                          <Badge variant={
-                            selectedSubmission.status === 'approved' ? 'default' :
-                            selectedSubmission.status === 'rejected' ? 'destructive' :
-                            selectedSubmission.status === 'revision' ? 'secondary' : 'outline'
-                          }>
-                            {selectedSubmission.status === 'approved' ? 'Diterima' :
-                             selectedSubmission.status === 'rejected' ? 'Ditolak' :
-                             selectedSubmission.status === 'revision' ? 'Revisi' : 'Menunggu Review'}
-                          </Badge>
-                        </div>
-                      </div>
+                    <div className="pt-4 border-t border-border mt-4">
+                      <h4 className="text-sm font-semibold mb-3">Tindakan Admin</h4>
                       
-                      <div className="text-right">
-                         <span className="text-xs text-muted-foreground italic block mb-1">
-                           Fitur persetujuan & plotting dosen masih dalam pengembangan.
-                         </span>
+                      <div className="space-y-4">
+                        <div>
+                          <Label>Status Pengajuan</Label>
+                          <Select value={formStatus} onValueChange={setFormStatus}>
+                            <SelectTrigger className="w-full mt-1">
+                              <SelectValue placeholder="Pilih status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="approved">Setujui (Diterima)</SelectItem>
+                              <SelectItem value="revision">Revisi</SelectItem>
+                              <SelectItem value="rejected">Tolak</SelectItem>
+                              <SelectItem value="pending">Kembalikan ke Menunggu</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {formStatus === 'approved' && (
+                          <div className="p-4 bg-muted/30 border rounded-md space-y-3">
+                            <div className="flex justify-between items-center">
+                              <Label>Plotting Dosen Pembimbing</Label>
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setFormAdvisors([...formAdvisors, { id: '', role: `Pembimbing ${formAdvisors.length + 1}` }])}
+                              >
+                                <Plus className="w-3 h-3 mr-1" /> Tambah Pembimbing
+                              </Button>
+                            </div>
+                            
+                            {formAdvisors.map((adv, index) => (
+                              <div key={index} className="flex gap-2 items-end">
+                                <div className="flex-1">
+                                  <Label className="text-xs text-muted-foreground">{adv.role}</Label>
+                                  <Select 
+                                    value={adv.id} 
+                                    onValueChange={(val) => {
+                                      const newAdvisors = [...formAdvisors];
+                                      newAdvisors[index].id = val;
+                                      setFormAdvisors(newAdvisors);
+                                    }}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Pilih dosen pembimbing" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {dosenList?.map((dosen) => (
+                                        <SelectItem key={dosen.id} value={dosen.id}>
+                                          {dosen.full_name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <Button 
+                                  type="button" 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    const newAdvisors = [...formAdvisors];
+                                    newAdvisors.splice(index, 1);
+                                    setFormAdvisors(newAdvisors);
+                                  }}
+                                  disabled={formAdvisors.length === 1}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        <div>
+                          <Label>Catatan Admin {formStatus !== 'approved' && <span className="text-destructive">*</span>}</Label>
+                          <Textarea 
+                            className="mt-1" 
+                            placeholder={formStatus === 'approved' ? "Catatan opsional..." : "Berikan alasan mengapa direvisi atau ditolak..."}
+                            value={formComments}
+                            onChange={(e) => setFormComments(e.target.value)}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
                 
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Tutup</Button>
+                <DialogFooter className="mt-4">
+                  <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Batal</Button>
+                  <Button 
+                    onClick={() => processMutation.mutate()} 
+                    disabled={processMutation.isPending || (formStatus !== 'approved' && !formComments.trim())}
+                  >
+                    {processMutation.isPending ? 'Menyimpan...' : (
+                      <>
+                        <Save className="w-4 h-4 mr-2" /> Simpan Perubahan
+                      </>
+                    )}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
