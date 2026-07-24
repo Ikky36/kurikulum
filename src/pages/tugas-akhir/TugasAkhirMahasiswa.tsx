@@ -13,10 +13,13 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useAcademicPeriod } from '@/hooks/useAcademicPeriod';
+import { calculateSemester } from '@/utils/academicHelpers';
 
 export default function TugasAkhirMahasiswa() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { activeAcademicYear, activeSemester } = useAcademicPeriod();
   
   const [selectedType, setSelectedType] = useState('');
   const [title, setTitle] = useState('');
@@ -101,7 +104,7 @@ export default function TugasAkhirMahasiswa() {
     });
 
     const errors: string[] = [];
-    const mySemester = myProfile.semester || 1;
+    const mySemester = calculateSemester(myProfile?.enrollment_year, activeAcademicYear?.name, activeSemester?.name) || 1;
 
     // Calculate SKS (only if grade > 0, assume passed for simple logic)
     const totalSKS = myGrades.reduce((sum, g) => sum + (g.final_score > 50 ? (g.courses?.sks || 0) : 0), 0);
