@@ -65,6 +65,24 @@ export function BimbinganTugasAkhirTab() {
     enabled: !!selectedAdvisorship?.ta_submissions?.id && !!user?.id
   });
 
+  const { data: allPendingLogs } = useQuery({
+    queryKey: ['dosen_all_pending_ta_logs', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ta_consultation_logs')
+        .select('submission_id')
+        .eq('dosen_id', user?.id)
+        .eq('status', 'pending');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
+
+  const hasPendingLog = (submissionId: string) => {
+    return allPendingLogs?.some(log => log.submission_id === submissionId);
+  };
+
   const respondMutation = useMutation({
     mutationFn: async () => {
       const { error } = await supabase
@@ -181,11 +199,17 @@ export function BimbinganTugasAkhirTab() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="outline" size="sm" onClick={() => {
+                        <Button variant="outline" size="sm" className="relative" onClick={() => {
                           setSelectedAdvisorship(adv);
                           setIsDetailOpen(true);
                         }}>
                           <BookOpen className="w-4 h-4 mr-2" /> Kelola Bimbingan
+                          {hasPendingLog(adv.ta_submissions?.id) && (
+                            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-3 w-3 bg-destructive"></span>
+                            </span>
+                          )}
                         </Button>
                       </TableCell>
                     </TableRow>

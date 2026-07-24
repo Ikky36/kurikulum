@@ -95,13 +95,30 @@ export default function DashboardDosen() {
     enabled: !!user?.id
   });
 
-  const totalPending = pendingGuidanceCount + pendingKrsCount;
+  const { data: pendingTaLogsCount = 0 } = useQuery({
+    queryKey: ['dosen_pending_ta_logs_count', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return 0;
+      const { count, error } = await supabase
+        .from('ta_consultation_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('dosen_id', user.id)
+        .eq('status', 'pending');
+      if (error) {
+        console.error("Error fetching pending TA logs count:", error);
+        return 0;
+      }
+      return count || 0;
+    },
+    enabled: !!user?.id
+  });
 
-  // Enable realtime for dosen dashboard
+  const totalPending = pendingGuidanceCount + pendingKrsCount;
   useMultiTableRealtimeSubscription([
     { table: 'grades', queryKeys: [['course-grades'], ['grades']] },
     { table: 'enrollments', queryKeys: [['course-enrollments-dosen']] },
     { table: 'course_instructors', queryKeys: [['dosen-courses', user?.id || '']] },
+    { table: 'ta_consultation_logs', queryKeys: [['dosen_pending_ta_logs_count', user?.id || ''], ['dosen_all_pending_ta_logs', user?.id || '']] },
   ], !!user?.id);
   
   const [editMode, setEditMode] = useState(false);
@@ -440,8 +457,13 @@ export default function DashboardDosen() {
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="bimbingan_ta" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+            <TabsTrigger value="bimbingan_ta" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
               Bimbingan Tugas Akhir
+              {pendingTaLogsCount > 0 && (
+                <Badge variant="destructive" className="absolute -top-2 -right-2 px-1.5 min-w-[20px] h-5 flex items-center justify-center animate-pulse">
+                  {pendingTaLogsCount}
+                </Badge>
+              )}
             </TabsTrigger>
           </TabsList>
 
