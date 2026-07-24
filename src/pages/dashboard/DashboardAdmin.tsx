@@ -649,7 +649,18 @@ export default function DashboardAdmin() {
       });
       
       if (error) {
-        throw new Error(error.message || 'Gagal login sebagai user');
+        // Try to extract detailed error from Edge Function response
+        let detailedError = error.message;
+        if (error.context && typeof error.context.json === 'function') {
+          try {
+            const errData = await error.context.json();
+            if (errData?.error) detailedError = errData.error;
+            else if (errData?.details) detailedError = errData.details;
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+        throw new Error(detailedError || 'Gagal memanggil Edge Function admin-login-as');
       }
       
       if (data?.error) {

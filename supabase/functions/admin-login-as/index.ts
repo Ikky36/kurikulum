@@ -26,7 +26,7 @@ serve(async (req) => {
     if (!authHeader) {
       console.log("No Authorization header provided");
       return new Response(JSON.stringify({ error: "No authorization header" }), {
-        status: 401,
+        status: 200, // Changed to 200 so client can read body
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -42,7 +42,7 @@ serve(async (req) => {
     if (authError || !requestingUser) {
       console.log("Auth failed:", authError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized", details: authError?.message }), {
-        status: 401,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -56,7 +56,7 @@ serve(async (req) => {
 
     if (adminProfile?.role !== "admin") {
       return new Response(JSON.stringify({ error: "Forbidden: Only admin can use Login As feature" }), {
-        status: 403,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -66,7 +66,7 @@ serve(async (req) => {
 
     if (!target_user_id) {
       return new Response(JSON.stringify({ error: "Missing target_user_id" }), {
-        status: 400,
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -76,7 +76,14 @@ serve(async (req) => {
     
     if (targetUserError || !targetUser) {
       return new Response(JSON.stringify({ error: "Target user not found" }), {
-        status: 404,
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!targetUser.user.email) {
+      return new Response(JSON.stringify({ error: "Target user tidak memiliki alamat email, fitur Login As membutuhkan email." }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -84,13 +91,20 @@ serve(async (req) => {
     // Generate a magic link for the target user
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
-      email: targetUser.user.email!,
+      email: targetUser.user.email,
     });
 
     if (linkError || !linkData) {
       console.error("Failed to generate magic link:", linkError);
-      return new Response(JSON.stringify({ error: "Failed to generate login link" }), {
-        status: 500,
+      
+      // Handle rate limit specifically
+      let errorMsg = "Gagal membuat sesi login: " + (linkError?.message || "Kesalahan tidak diketahui");
+      if (linkError?.status === 429) {
+        errorMsg = "Terlalu banyak percobaan Login As untuk pengguna ini. Harap tunggu beberapa saat karena batas limit rate Supabase (default 3 email/jam per user).";
+      }
+
+      return new Response(JSON.stringify({ error: errorMsg, details: linkError }), {
+        status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -111,7 +125,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error("Error:", error);
     return new Response(JSON.stringify({ error: error.message || "Unknown error" }), {
-      status: 500,
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
