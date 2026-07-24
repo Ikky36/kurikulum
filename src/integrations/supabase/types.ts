@@ -38,70 +38,50 @@ export type Database = {
           }
           Relationships: []
         }
-        ta_settings: {
+        ta_requirements: {
           Row: {
             id: string
-            type_id: string
-            min_semester: number
-            required_course_ids: string[]
-            predicate_limits: Json | null
-            created_at: string
-            updated_at: string
-          }
-          Insert: {
-            id?: string
-            type_id: string
-            min_semester?: number
-            required_course_ids?: string[]
-            max_bad_grades_count?: number
-            created_at?: string
-            updated_at?: string
-          }
-          Update: {
-            id?: string
-            type_id?: string
-            min_semester?: number
-            required_course_ids?: string[]
-            max_bad_grades_count?: number
-            created_at?: string
-            updated_at?: string
-          }
-          Relationships: [
-            {
-              foreignKeyName: 'ta_settings_type_id_fkey'
-              columns: ['type_id']
-              isOneToOne: false
-              referencedRelation: 'ta_types'
-              referencedColumns: ['id']
-            }
-          ]
-        }
-        ta_seminar_requirements: {
-          Row: {
-            id: string
-            type: string
             name: string
+            phase: string
+            is_general: boolean
+            type_id: string | null
+            req_type: string
+            req_value: Json | null
             is_required: boolean
             created_at: string
             updated_at: string
           }
           Insert: {
             id?: string
-            type: string
             name: string
+            phase: string
+            is_general?: boolean
+            type_id?: string | null
+            req_type: string
+            req_value?: Json | null
             is_required?: boolean
             created_at?: string
             updated_at?: string
           }
           Update: {
-            id?: string
-            type?: string
             name?: string
+            phase?: string
+            is_general?: boolean
+            type_id?: string | null
+            req_type?: string
+            req_value?: Json | null
             is_required?: boolean
-            created_at?: string
             updated_at?: string
           }
-          Relationships: []
+          Relationships: [
+            {
+              foreignKeyName: "ta_requirements_type_id_fkey"
+              columns: ["type_id"]
+              isOneToOne: false
+              referencedRelation: "ta_types"
+              referencedColumns: ["id"]
+            }
+          ]
         }
         ta_submissions: {
           Row: {

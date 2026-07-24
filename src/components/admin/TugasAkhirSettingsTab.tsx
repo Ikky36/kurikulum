@@ -5,13 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Plus, Settings } from 'lucide-react';
+import { Trash2, Plus, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export const TugasAkhirSettingsTab = () => {
   const queryClient = useQueryClient();
@@ -19,16 +20,21 @@ export const TugasAkhirSettingsTab = () => {
   const [newTypeDesc, setNewTypeDesc] = useState('');
   const [isTypeDialogOpen, setIsTypeDialogOpen] = useState(false);
 
-  const [newReqName, setNewReqName] = useState('');
-  const [newReqType, setNewReqType] = useState('sempro');
-  const [newReqIsRequired, setNewReqIsRequired] = useState(true);
+  const [activeTab, setActiveTab] = useState('umum');
   const [isReqDialogOpen, setIsReqDialogOpen] = useState(false);
-
-  // Batas Predikat State
-  const [isLimitDialogOpen, setIsLimitDialogOpen] = useState(false);
-  const [selectedSettingId, setSelectedSettingId] = useState<string | null>(null);
-  const [selectedTypeName, setSelectedTypeName] = useState<string>('');
-  const [predicateLimits, setPredicateLimits] = useState<Record<string, number>>({});
+  
+  // Requirement Form State
+  const [reqName, setReqName] = useState('');
+  const [reqPhase, setReqPhase] = useState('umum');
+  const [reqIsGeneral, setReqIsGeneral] = useState(true);
+  const [reqTypeId, setReqTypeId] = useState('all');
+  const [reqType, setReqType] = useState('document');
+  const [reqValueSks, setReqValueSks] = useState(140);
+  const [reqValueSemester, setReqValueSemester] = useState(7);
+  const [reqValuePredicateId, setReqValuePredicateId] = useState('');
+  const [reqValuePredicateLimit, setReqValuePredicateLimit] = useState(2);
+  const [reqValueCourseId, setReqValueCourseId] = useState('');
+  const [reqIsRequired, setReqIsRequired] = useState(true);
 
   const { data: taTypes, isLoading: typesLoading } = useQuery({
     queryKey: ['ta_types'],
@@ -39,16 +45,16 @@ export const TugasAkhirSettingsTab = () => {
     }
   });
 
-  const { data: taSettings, isLoading: settingsLoading } = useQuery({
-    queryKey: ['ta_settings'],
+  const { data: taRequirements, isLoading: reqsLoading } = useQuery({
+    queryKey: ['ta_requirements'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('ta_settings').select('*, ta_types(name)').order('created_at', { ascending: true });
+      const { data, error } = await supabase.from('ta_requirements').select('*, ta_types(name)').order('created_at', { ascending: true });
       if (error) throw error;
       return data;
     }
   });
 
-  const { data: instrumenPenilaian, isLoading: instrumenLoading } = useQuery({
+  const { data: instrumenPenilaian } = useQuery({
     queryKey: ['instrumen_penilaian'],
     queryFn: async () => {
       const { data, error } = await supabase.from('instrumen_penilaian').select('*').order('rentang_max', { ascending: false });
@@ -57,10 +63,10 @@ export const TugasAkhirSettingsTab = () => {
     }
   });
 
-  const { data: seminarRequirements, isLoading: reqsLoading } = useQuery({
-    queryKey: ['ta_seminar_requirements'],
+  const { data: courses } = useQuery({
+    queryKey: ['courses'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('ta_seminar_requirements').select('*').order('created_at', { ascending: true });
+      const { data, error } = await supabase.from('courses').select('id, name, code').order('name');
       if (error) throw error;
       return data;
     }
@@ -72,44 +78,17 @@ export const TugasAkhirSettingsTab = () => {
         name: newTypeName,
         description: newTypeDesc
       }).select().single();
-      
       if (error) throw error;
-
-      // Auto create settings for this type
-      await supabase.from('ta_settings').insert({
-        type_id: data.id,
-        min_semester: 7,
-        required_course_ids: [],
-        predicate_limits: {}
-      });
-
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ta_types'] });
-      queryClient.invalidateQueries({ queryKey: ['ta_settings'] });
       toast.success('Jenis Tugas Akhir berhasil ditambahkan');
       setNewTypeName('');
       setNewTypeDesc('');
       setIsTypeDialogOpen(false);
     },
-    onError: (error) => {
-      toast.error('Gagal menambahkan: ' + error.message);
-    }
-  });
-
-  const updateSettingMutation = useMutation({
-    mutationFn: async ({ id, field, value }: { id: string, field: string, value: any }) => {
-      const { error } = await supabase.from('ta_settings').update({ [field]: value }).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ta_settings'] });
-      toast.success('Pengaturan berhasil diperbarui');
-    },
-    onError: (error) => {
-      toast.error('Gagal memperbarui: ' + error.message);
-    }
+    onError: (error) => toast.error('Gagal menambahkan: ' + error.message)
   });
 
   const deleteTypeMutation = useMutation({
@@ -119,90 +98,73 @@ export const TugasAkhirSettingsTab = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ta_types'] });
-      queryClient.invalidateQueries({ queryKey: ['ta_settings'] });
+      queryClient.invalidateQueries({ queryKey: ['ta_requirements'] });
       toast.success('Jenis Tugas Akhir berhasil dihapus');
     },
-    onError: (error) => {
-      toast.error('Gagal menghapus: ' + error.message);
-    }
+    onError: (error) => toast.error('Gagal menghapus: ' + error.message)
   });
 
   const addReqMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.from('ta_seminar_requirements').insert({
-        name: newReqName,
-        type: newReqType,
-        is_required: newReqIsRequired
+      let req_value = {};
+      if (reqType === 'min_sks') req_value = { min: reqValueSks };
+      else if (reqType === 'min_semester') req_value = { min: reqValueSemester };
+      else if (reqType === 'predicate') req_value = { predicate_id: reqValuePredicateId, max_count: reqValuePredicateLimit };
+      else if (reqType === 'course') req_value = { course_ids: [reqValueCourseId] };
+
+      const { data, error } = await supabase.from('ta_requirements').insert({
+        name: reqName,
+        phase: reqPhase,
+        is_general: reqPhase === 'umum' ? true : reqIsGeneral,
+        type_id: (reqPhase !== 'umum' && !reqIsGeneral && reqTypeId !== 'all') ? reqTypeId : null,
+        req_type: reqType,
+        req_value: req_value,
+        is_required: reqIsRequired
       }).select().single();
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ta_seminar_requirements'] });
-      toast.success('Syarat Seminar berhasil ditambahkan');
-      setNewReqName('');
-      setNewReqIsRequired(true);
+      queryClient.invalidateQueries({ queryKey: ['ta_requirements'] });
+      toast.success('Persyaratan berhasil ditambahkan');
+      setReqName('');
       setIsReqDialogOpen(false);
     },
-    onError: (error) => {
-      toast.error('Gagal menambahkan: ' + error.message);
-    }
-  });
-
-  const updateReqMutation = useMutation({
-    mutationFn: async ({ id, field, value }: { id: string, field: string, value: any }) => {
-      const { error } = await supabase.from('ta_seminar_requirements').update({ [field]: value }).eq('id', id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ta_seminar_requirements'] });
-      toast.success('Syarat Seminar berhasil diperbarui');
-    },
-    onError: (error) => {
-      toast.error('Gagal memperbarui: ' + error.message);
-    }
+    onError: (error) => toast.error('Gagal menambahkan: ' + error.message)
   });
 
   const deleteReqMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('ta_seminar_requirements').delete().eq('id', id);
+      const { error } = await supabase.from('ta_requirements').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ta_seminar_requirements'] });
-      toast.success('Syarat Seminar berhasil dihapus');
+      queryClient.invalidateQueries({ queryKey: ['ta_requirements'] });
+      toast.success('Persyaratan berhasil dihapus');
     },
-    onError: (error) => {
-      toast.error('Gagal menghapus: ' + error.message);
+    onError: (error) => toast.error('Gagal menghapus: ' + error.message)
+  });
+
+  const updateReqMutation = useMutation({
+    mutationFn: async ({ id, field, value }: { id: string, field: string, value: any }) => {
+      const { error } = await supabase.from('ta_requirements').update({ [field]: value }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ta_requirements'] });
+      toast.success('Persyaratan diperbarui');
     }
   });
 
-  const openLimitDialog = (setting: any) => {
-    setSelectedSettingId(setting.id);
-    setSelectedTypeName(setting.ta_types?.name || '');
-    setPredicateLimits(setting.predicate_limits || {});
-    setIsLimitDialogOpen(true);
-  };
-
-  const handleSavePredicateLimits = () => {
-    if (!selectedSettingId) return;
-    updateSettingMutation.mutate({ 
-      id: selectedSettingId, 
-      field: 'predicate_limits', 
-      value: predicateLimits 
-    });
-    setIsLimitDialogOpen(false);
-  };
-
-  if (typesLoading || settingsLoading || reqsLoading || instrumenLoading) return <div>Memuat pengaturan...</div>;
+  if (typesLoading || reqsLoading) return <div>Memuat pengaturan...</div>;
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Jenis & Persyaratan Tugas Akhir</CardTitle>
-            <CardDescription>Atur jenis tugas akhir (Skripsi, Jurnal) dan batas persyaratannya.</CardDescription>
+            <CardTitle>Jenis Tugas Akhir</CardTitle>
+            <CardDescription>Kelola jenis tugas akhir seperti Skripsi, Tesis, Jurnal, atau Portofolio.</CardDescription>
           </div>
           <Dialog open={isTypeDialogOpen} onOpenChange={setIsTypeDialogOpen}>
             <DialogTrigger asChild>
@@ -214,7 +176,7 @@ export const TugasAkhirSettingsTab = () => {
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
-                  <Label>Nama Jenis (Contoh: Skripsi / Jurnal)</Label>
+                  <Label>Nama Jenis (Contoh: Skripsi)</Label>
                   <Input value={newTypeName} onChange={(e) => setNewTypeName(e.target.value)} placeholder="Masukkan nama..." />
                 </div>
                 <div className="space-y-2">
@@ -235,61 +197,23 @@ export const TugasAkhirSettingsTab = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Jenis Tugas Akhir</TableHead>
-                  <TableHead>Minimal Semester</TableHead>
-                  <TableHead>Syarat Batas Predikat</TableHead>
+                  <TableHead>Keterangan</TableHead>
                   <TableHead className="w-24">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {taSettings?.length === 0 && (
+                {taTypes?.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-6">Belum ada pengaturan jenis Tugas Akhir.</TableCell>
+                    <TableCell colSpan={3} className="text-center text-muted-foreground py-6">Belum ada jenis Tugas Akhir.</TableCell>
                   </TableRow>
                 )}
-                {taSettings?.map((setting: any) => (
-                  <TableRow key={setting.id}>
-                    <TableCell className="font-medium">
-                      {setting.ta_types?.name}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Input 
-                          type="number" 
-                          min={1} 
-                          max={14} 
-                          className="w-20"
-                          defaultValue={setting.min_semester}
-                          onBlur={(e) => {
-                            if (e.target.value !== String(setting.min_semester)) {
-                              updateSettingMutation.mutate({ id: setting.id, field: 'min_semester', value: parseInt(e.target.value) });
-                            }
-                          }}
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="outline" size="sm" onClick={() => openLimitDialog(setting)}>
-                        <Settings className="w-4 h-4 mr-2" /> Atur Batas Nilai
-                      </Button>
-                      {setting.predicate_limits && Object.keys(setting.predicate_limits).length > 0 && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {Object.entries(setting.predicate_limits).map(([predId, limit]: [string, any]) => {
-                            const pred = instrumenPenilaian?.find((p: any) => p.id === predId);
-                            if (!pred || limit === null || limit === undefined || limit === '') return null;
-                            return (
-                              <Badge key={predId} variant="secondary" className="text-xs">
-                                Max {pred.predikat}: {limit}
-                              </Badge>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </TableCell>
+                {taTypes?.map((type: any) => (
+                  <TableRow key={type.id}>
+                    <TableCell className="font-medium">{type.name}</TableCell>
+                    <TableCell>{type.description || '-'}</TableCell>
                     <TableCell>
                       <Button variant="destructive" size="icon" onClick={() => {
-                        if (confirm('Yakin ingin menghapus jenis Tugas Akhir ini? Semua data pengajuan terkait juga akan terhapus.')) {
-                          deleteTypeMutation.mutate(setting.type_id);
-                        }
+                        if (confirm('Yakin ingin menghapus jenis TA ini?')) deleteTypeMutation.mutate(type.id);
                       }}>
                         <Trash2 className="w-4 h-4" />
                       </Button>
@@ -301,149 +225,206 @@ export const TugasAkhirSettingsTab = () => {
           </div>
         </CardContent>
       </Card>
-      
-      {/* Dialog for Predicate Limits */}
-      <Dialog open={isLimitDialogOpen} onOpenChange={setIsLimitDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Atur Batas Mata Kuliah Berdasarkan Predikat</DialogTitle>
-            <DialogDescription>
-              Tentukan maksimal jumlah mata kuliah dengan predikat tertentu agar mahasiswa bisa mengajukan {selectedTypeName}. (Kosongkan jika tidak ada batas)
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            {instrumenPenilaian?.map((instrumen: any) => (
-              <div key={instrumen.id} className="flex items-center justify-between border-b pb-2 last:border-0 last:pb-0">
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 rounded-full" style={{ backgroundColor: instrumen.color || '#ccc' }} />
-                  <span className="font-semibold text-lg">{instrumen.predikat}</span>
-                  <span className="text-xs text-muted-foreground">({instrumen.rentang_min} - {instrumen.rentang_max})</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Label>Max:</Label>
-                  <Input 
-                    type="number"
-                    min="0"
-                    placeholder="Tak Terbatas"
-                    className="w-24"
-                    value={predicateLimits[instrumen.id] ?? ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setPredicateLimits(prev => {
-                        const newLimits = { ...prev };
-                        if (val === '') {
-                          delete newLimits[instrumen.id];
-                        } else {
-                          newLimits[instrumen.id] = parseInt(val);
-                        }
-                        return newLimits;
-                      });
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsLimitDialogOpen(false)}>Batal</Button>
-            <Button onClick={handleSavePredicateLimits} disabled={updateSettingMutation.isPending}>Simpan Pengaturan</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle>Persyaratan Berkas Seminar & Sidang</CardTitle>
-            <CardDescription>Daftar berkas/syarat yang harus diunggah mahasiswa saat mendaftar Seminar Proposal atau Sidang Akhir.</CardDescription>
+            <CardTitle>Persyaratan Tugas Akhir</CardTitle>
+            <CardDescription>Manajemen persyaratan dinamis untuk mahasiswa.</CardDescription>
           </div>
           <Dialog open={isReqDialogOpen} onOpenChange={setIsReqDialogOpen}>
             <DialogTrigger asChild>
               <Button size="sm"><Plus className="w-4 h-4 mr-2"/> Tambah Syarat</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-xl">
               <DialogHeader>
-                <DialogTitle>Tambah Syarat Pendaftaran</DialogTitle>
+                <DialogTitle>Tambah Syarat Baru</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 py-4">
+              <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-2">
                 <div className="space-y-2">
-                  <Label>Tahap Ujian</Label>
-                  <Select value={newReqType} onValueChange={setNewReqType}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih tahap ujian" />
-                    </SelectTrigger>
+                  <Label>Nama Persyaratan</Label>
+                  <Input value={reqName} onChange={(e) => setReqName(e.target.value)} placeholder="Contoh: Lulus TOEFL 500" />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Fase Validasi</Label>
+                    <Select value={reqPhase} onValueChange={(val) => { setReqPhase(val); if(val === 'umum') setReqIsGeneral(true); }}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="umum">Persyaratan Umum Awal</SelectItem>
+                        <SelectItem value="pengajuan_judul">Pengajuan Judul</SelectItem>
+                        <SelectItem value="sempro">Seminar Proposal</SelectItem>
+                        <SelectItem value="sidang">Sidang Akhir</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {reqPhase !== 'umum' && (
+                    <div className="space-y-2">
+                      <Label>Cakupan Jenis TA</Label>
+                      <Select 
+                        value={reqIsGeneral ? 'all' : reqTypeId} 
+                        onValueChange={(val) => {
+                          if (val === 'all') setReqIsGeneral(true);
+                          else { setReqIsGeneral(false); setReqTypeId(val); }
+                        }}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Semua Jenis TA</SelectItem>
+                          {taTypes?.map(t => <SelectItem key={t.id} value={t.id}>Khusus: {t.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Jenis Validasi</Label>
+                  <Select value={reqType} onValueChange={setReqType}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="sempro">Seminar Proposal</SelectItem>
-                      <SelectItem value="sidang">Sidang Akhir</SelectItem>
+                      <SelectItem value="document">Unggah Dokumen / Link (Mahasiswa)</SelectItem>
+                      <SelectItem value="min_sks">Batas Minimal SKS (Otomatis)</SelectItem>
+                      <SelectItem value="min_semester">Batas Minimal Semester (Otomatis)</SelectItem>
+                      <SelectItem value="predicate">Batas Maksimal Predikat (Otomatis)</SelectItem>
+                      <SelectItem value="course">Lulus Mata Kuliah (Otomatis)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>Nama Syarat (Misal: Bukti Bebas Pustaka, Bukti Lulus TOEFL)</Label>
-                  <Input value={newReqName} onChange={(e) => setNewReqName(e.target.value)} placeholder="Masukkan nama syarat..." />
-                </div>
-                <div className="flex flex-row items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-0.5">
-                    <Label className="text-base">Wajib (Required)</Label>
-                    <p className="text-sm text-muted-foreground">Mahasiswa tidak bisa mendaftar jika berkas ini belum diunggah.</p>
+
+                {reqType === 'min_sks' && (
+                  <div className="space-y-2">
+                    <Label>Minimal Jumlah SKS Lulus</Label>
+                    <Input type="number" min={1} value={reqValueSks} onChange={(e) => setReqValueSks(parseInt(e.target.value))} />
                   </div>
-                  <Switch checked={newReqIsRequired} onCheckedChange={setNewReqIsRequired} />
+                )}
+
+                {reqType === 'min_semester' && (
+                  <div className="space-y-2">
+                    <Label>Minimal Semester</Label>
+                    <Input type="number" min={1} max={14} value={reqValueSemester} onChange={(e) => setReqValueSemester(parseInt(e.target.value))} />
+                  </div>
+                )}
+
+                {reqType === 'predicate' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Predikat</Label>
+                      <Select value={reqValuePredicateId} onValueChange={setReqValuePredicateId}>
+                        <SelectTrigger><SelectValue placeholder="Pilih..." /></SelectTrigger>
+                        <SelectContent>
+                          {instrumenPenilaian?.map(i => <SelectItem key={i.id} value={i.id}>{i.predikat}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Maksimal Jumlah MK</Label>
+                      <Input type="number" min={0} value={reqValuePredicateLimit} onChange={(e) => setReqValuePredicateLimit(parseInt(e.target.value))} />
+                    </div>
+                  </div>
+                )}
+
+                {reqType === 'course' && (
+                  <div className="space-y-2">
+                    <Label>Mata Kuliah Prasyarat</Label>
+                    <Select value={reqValueCourseId} onValueChange={setReqValueCourseId}>
+                      <SelectTrigger><SelectValue placeholder="Pilih matkul..." /></SelectTrigger>
+                      <SelectContent>
+                        {courses?.map(c => <SelectItem key={c.id} value={c.id}>{c.code} - {c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="flex flex-row items-center justify-between rounded-lg border p-4 mt-2">
+                  <div className="space-y-0.5">
+                    <Label className="text-base">Wajib Dipenuhi (Required)</Label>
+                    <p className="text-sm text-muted-foreground">Jika aktif, sistem akan menolak pendaftaran jika syarat ini gagal.</p>
+                  </div>
+                  <Switch checked={reqIsRequired} onCheckedChange={setReqIsRequired} />
                 </div>
               </div>
               <DialogFooter>
                 <Button variant="outline" onClick={() => setIsReqDialogOpen(false)}>Batal</Button>
-                <Button onClick={() => addReqMutation.mutate()} disabled={!newReqName || addReqMutation.isPending}>Simpan</Button>
+                <Button onClick={() => addReqMutation.mutate()} disabled={!reqName || addReqMutation.isPending}>Simpan Syarat</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nama Berkas / Syarat</TableHead>
-                  <TableHead>Tahap Ujian</TableHead>
-                  <TableHead>Status Wajib</TableHead>
-                  <TableHead className="w-24">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {seminarRequirements?.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-6">Belum ada persyaratan yang ditambahkan.</TableCell>
-                  </TableRow>
-                )}
-                {seminarRequirements?.map((req: any) => (
-                  <TableRow key={req.id}>
-                    <TableCell className="font-medium">
-                      {req.name}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={req.type === 'sempro' ? 'secondary' : 'default'}>
-                        {req.type === 'sempro' ? 'Sem. Proposal' : 'Sidang Akhir'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Switch 
-                        checked={req.is_required} 
-                        onCheckedChange={(checked) => updateReqMutation.mutate({ id: req.id, field: 'is_required', value: checked })}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="destructive" size="icon" onClick={() => {
-                        if (confirm('Yakin ingin menghapus syarat ini?')) {
-                          deleteReqMutation.mutate(req.id);
-                        }
-                      }}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="mb-4">
+              <TabsTrigger value="umum">Pra-Syarat Umum</TabsTrigger>
+              <TabsTrigger value="pengajuan_judul">Pengajuan Judul</TabsTrigger>
+              <TabsTrigger value="sempro">Seminar Proposal</TabsTrigger>
+              <TabsTrigger value="sidang">Sidang Akhir</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value={activeTab} className="m-0">
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nama Persyaratan</TableHead>
+                      <TableHead>Cakupan</TableHead>
+                      <TableHead>Jenis Validasi</TableHead>
+                      <TableHead>Parameter</TableHead>
+                      <TableHead className="w-24">Wajib</TableHead>
+                      <TableHead className="w-16">Aksi</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {taRequirements?.filter(r => r.phase === activeTab).length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Belum ada persyaratan di fase ini.</TableCell>
+                      </TableRow>
+                    )}
+                    {taRequirements?.filter(r => r.phase === activeTab).map((req: any) => (
+                      <TableRow key={req.id}>
+                        <TableCell className="font-medium">{req.name}</TableCell>
+                        <TableCell>
+                          <Badge variant={req.is_general ? 'default' : 'outline'}>
+                            {req.is_general ? 'Semua Jenis' : `Khusus: ${req.ta_types?.name}`}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="capitalize">
+                            {req.req_type === 'document' ? 'Unggah Berkas' : 
+                             req.req_type === 'min_sks' ? 'Syarat SKS' : 
+                             req.req_type === 'min_semester' ? 'Syarat Semester' :
+                             req.req_type === 'predicate' ? 'Syarat Nilai (Predikat)' :
+                             req.req_type === 'course' ? 'Lulus Matkul' : req.req_type}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {req.req_type === 'min_sks' && `Min ${req.req_value?.min} SKS`}
+                          {req.req_type === 'min_semester' && `Min Sem ${req.req_value?.min}`}
+                          {req.req_type === 'predicate' && `Max ${req.req_value?.max_count} MK (${instrumenPenilaian?.find((i:any) => i.id === req.req_value?.predicate_id)?.predikat})`}
+                          {req.req_type === 'course' && `Matkul ID: ${req.req_value?.course_ids?.[0]}`}
+                          {req.req_type === 'document' && '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Switch 
+                            checked={req.is_required} 
+                            onCheckedChange={(checked) => updateReqMutation.mutate({ id: req.id, field: 'is_required', value: checked })}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="destructive" size="icon" onClick={() => {
+                            if (confirm('Hapus persyaratan ini?')) deleteReqMutation.mutate(req.id);
+                          }}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          </Tabs>
         </CardContent>
       </Card>
     </div>
