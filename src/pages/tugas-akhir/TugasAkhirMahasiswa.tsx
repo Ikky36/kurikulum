@@ -38,6 +38,10 @@ export default function TugasAkhirMahasiswa() {
   const [logDosenId, setLogDosenId] = useState('');
   const [logProblem, setLogProblem] = useState('');
 
+  // Revision & Rejection State
+  const [isCreatingNew, setIsCreatingNew] = useState(false);
+  const [isReviseOpen, setIsReviseOpen] = useState(false);
+
   const { data: myProfile } = useQuery({
     queryKey: ['my_profile', user?.id],
     queryFn: async () => {
@@ -199,9 +203,38 @@ export default function TugasAkhirMahasiswa() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my_ta_submission', user?.id] });
       toast.success('Berhasil mengajukan Tugas Akhir');
+      setIsCreatingNew(false);
     },
     onError: (error: any) => {
       toast.error('Gagal mengajukan: ' + error.message);
+    }
+  });
+
+  const reviseMutation = useMutation({
+    mutationFn: async () => {
+      if (!mySubmission) throw new Error('Tidak ada pengajuan yang direvisi');
+
+      const { data, error } = await supabase
+        .from('ta_submissions')
+        .update({
+          title,
+          document_link: documentLink,
+          comments,
+          status: 'pending' // Reset status
+        })
+        .eq('id', mySubmission.id)
+        .select().single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my_ta_submission', user?.id] });
+      toast.success('Berhasil mengirim perbaikan pengajuan');
+      setIsReviseOpen(false);
+    },
+    onError: (error: any) => {
+      toast.error('Gagal mengirim perbaikan: ' + error.message);
     }
   });
 
@@ -228,6 +261,22 @@ export default function TugasAkhirMahasiswa() {
     onError: (e: any) => toast.error('Gagal menambahkan log: ' + e.message)
   });
 
+  const openReviseModal = () => {
+    setTitle(mySubmission.title);
+    setDocumentLink(mySubmission.document_link || '');
+    setComments(mySubmission.comments || '');
+    setSelectedType(mySubmission.type_id || '');
+    setIsReviseOpen(true);
+  };
+
+  const openNewSubmission = () => {
+    setIsCreatingNew(true);
+    setTitle('');
+    setDocumentLink('');
+    setComments('');
+    setSelectedType('');
+  };
+
   if (subLoading || typesLoading) return <Layout><div className="container py-8 text-center">Memuat data...</div></Layout>;
 
   return (
@@ -251,12 +300,12 @@ export default function TugasAkhirMahasiswa() {
         <Tabs defaultValue="bimbingan" className="space-y-6">
           <TabsList className="w-full sm:w-auto grid grid-cols-3">
             <TabsTrigger value="bimbingan">Judul & Bimbingan</TabsTrigger>
-            <TabsTrigger value="seminar" disabled={!mySubmission || mySubmission.status !== 'approved'}>Seminar Proposal</TabsTrigger>
-            <TabsTrigger value="sidang" disabled={!mySubmission || mySubmission.status !== 'approved'}>Sidang Akhir</TabsTrigger>
+            <TabsTrigger value="seminar" disabled={!mySubmission || mySubmission.status !== 'approved' || isCreatingNew}>Seminar Proposal</TabsTrigger>
+            <TabsTrigger value="sidang" disabled={!mySubmission || mySubmission.status !== 'approved' || isCreatingNew}>Sidang Akhir</TabsTrigger>
           </TabsList>
 
           <TabsContent value="bimbingan" className="space-y-6">
-            {mySubmission ? (
+            {(mySubmission && !isCreatingNew) ? (
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
@@ -287,8 +336,11 @@ export default function TugasAkhirMahasiswa() {
                       <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Pengajuan Ditolak</AlertTitle>
-                        <AlertDescription className="mt-2">
-                          Mohon maaf, pengajuan judul Anda ditolak. Silakan ajukan judul baru dengan menghubungi Kaprodi.
+                        <AlertDescription className="mt-2 space-y-4">
+                          <p>Mohon maaf, pengajuan judul Anda ditolak. Silakan ajukan judul baru dengan menghubungi Kaprodi atau membuat pengajuan baru.</p>
+                          <Button variant="outline" size="sm" onClick={openNewSubmission}>
+                            Buat Pengajuan Judul Baru
+                          </Button>
                         </AlertDescription>
                       </Alert>
                     )}
@@ -297,8 +349,11 @@ export default function TugasAkhirMahasiswa() {
                       <Alert variant="default" className="border-secondary bg-secondary/10">
                         <RefreshCw className="h-4 w-4 text-secondary-foreground" />
                         <AlertTitle>Perlu Revisi</AlertTitle>
-                        <AlertDescription className="mt-2">
-                          Pengajuan Anda dikembalikan untuk direvisi. Silakan perbaiki dokumen atau judul sesuai catatan.
+                        <AlertDescription className="mt-2 space-y-4">
+                          <p>Pengajuan Anda dikembalikan untuk direvisi. Silakan perbaiki dokumen atau judul sesuai catatan.</p>
+                          <Button variant="secondary" size="sm" onClick={openReviseModal}>
+                            Perbaiki & Ajukan Ulang
+                          </Button>
                         </AlertDescription>
                       </Alert>
                     )}
@@ -332,9 +387,13 @@ export default function TugasAkhirMahasiswa() {
                       
                       <div>
                         <h3 className="font-semibold mb-2 text-sm text-muted-foreground">Dokumen Pengajuan</h3>
-                        <a href={mySubmission.document_link.startsWith('http') ? mySubmission.document_link : `https://${mySubmission.document_link}`} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center">
-                          <FileText className="w-4 h-4 mr-2" /> Buka Dokumen Proposal
-                        </a>
+                        {mySubmission.document_link ? (
+                          <a href={mySubmission.document_link.startsWith('http') ? mySubmission.document_link : `https://${mySubmission.document_link}`} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center">
+                            <FileText className="w-4 h-4 mr-2" /> Buka Dokumen Proposal
+                          </a>
+                        ) : (
+                          <p className="text-sm italic text-muted-foreground">Tidak ada dokumen dilampirkan.</p>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -417,7 +476,7 @@ export default function TugasAkhirMahasiswa() {
             ) : (
               <Card className={generalErrors.length > 0 ? "opacity-50 pointer-events-none" : ""}>
                 <CardHeader>
-                  <CardTitle>Pengajuan Judul Tugas Akhir</CardTitle>
+                  <CardTitle>{isCreatingNew ? 'Pengajuan Judul Baru' : 'Pengajuan Judul Tugas Akhir'}</CardTitle>
                   <CardDescription>Pilih jenis tugas akhir dan masukkan judul yang akan diajukan.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -494,11 +553,14 @@ export default function TugasAkhirMahasiswa() {
                     />
                   </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex gap-2">
+                  {isCreatingNew && (
+                    <Button variant="outline" onClick={() => setIsCreatingNew(false)} className="w-full sm:w-auto">Batal</Button>
+                  )}
                   <Button 
                     onClick={() => submitMutation.mutate()} 
                     disabled={!selectedType || !title || !documentLink || submitMutation.isPending || validationErrors.length > 0 || generalErrors.length > 0}
-                    className="w-full"
+                    className="flex-1"
                   >
                     {submitMutation.isPending ? 'Mengirim...' : 'Kirim Pengajuan'}
                   </Button>
@@ -533,6 +595,64 @@ export default function TugasAkhirMahasiswa() {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Modal Perbaiki Pengajuan (Revisi) */}
+        <Dialog open={isReviseOpen} onOpenChange={setIsReviseOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Perbaiki Pengajuan Judul</DialogTitle>
+              <DialogDescription>Perbaiki judul atau perbarui link dokumen berdasarkan catatan yang diberikan.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Jenis Tugas Akhir</Label>
+                <Select value={selectedType} onValueChange={setSelectedType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih Jenis..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {taTypes?.map((type: any) => (
+                      <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Topik / Judul</Label>
+                <Textarea 
+                  value={title} 
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="min-h-[80px]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Link Dokumen (Proposal/Draft)</Label>
+                <Input 
+                  value={documentLink} 
+                  onChange={(e) => setDocumentLink(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Pesan Balasan / Catatan</Label>
+                <Textarea 
+                  value={comments} 
+                  onChange={(e) => setComments(e.target.value)}
+                  placeholder="Ketik balasan Anda di sini..."
+                  className="min-h-[60px]"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsReviseOpen(false)}>Batal</Button>
+              <Button 
+                onClick={() => reviseMutation.mutate()} 
+                disabled={reviseMutation.isPending || !title.trim() || !documentLink.trim()}
+              >
+                {reviseMutation.isPending ? 'Menyimpan...' : <><Save className="w-4 h-4 mr-2" /> Kirim Perbaikan</>}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Modal Tambah Log Bimbingan */}
         <Dialog open={isAddLogOpen} onOpenChange={setIsAddLogOpen}>
