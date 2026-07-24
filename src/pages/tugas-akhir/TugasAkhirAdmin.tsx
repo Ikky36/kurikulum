@@ -7,10 +7,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, CheckCircle2, XCircle, Users } from 'lucide-react';
+import { Eye, CheckCircle2, XCircle, Users, ExternalLink } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 export default function TugasAkhirAdmin() {
   const [activeTab, setActiveTab] = useState('pengajuan');
+  const [selectedSubmission, setSelectedSubmission] = useState<any>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ['admin_ta_submissions'],
@@ -114,7 +119,10 @@ export default function TugasAkhirAdmin() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button variant="outline" size="sm">
+                              <Button variant="outline" size="sm" onClick={() => {
+                                setSelectedSubmission(sub);
+                                setIsDetailOpen(true);
+                              }}>
                                 <Eye className="w-4 h-4 mr-2" /> Detail
                               </Button>
                             </TableCell>
@@ -126,6 +134,88 @@ export default function TugasAkhirAdmin() {
                 </div>
               </CardContent>
             </Card>
+
+            <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Detail Pengajuan Tugas Akhir</DialogTitle>
+                  <DialogDescription>
+                    Informasi lengkap mengenai pengajuan mahasiswa.
+                  </DialogDescription>
+                </DialogHeader>
+                
+                {selectedSubmission && (
+                  <div className="space-y-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Nama Mahasiswa</Label>
+                        <p className="font-medium">{selectedSubmission.profiles?.full_name}</p>
+                        <p className="text-sm text-muted-foreground">{selectedSubmission.profiles?.nim}</p>
+                      </div>
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Jenis Tugas Akhir</Label>
+                        <p className="font-medium"><Badge variant="outline">{selectedSubmission.ta_types?.name}</Badge></p>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Topik / Judul</Label>
+                      <p className="font-medium mt-1 p-3 bg-muted rounded-md">{selectedSubmission.title}</p>
+                    </div>
+
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Link Dokumen</Label>
+                      {selectedSubmission.document_link ? (
+                        <div className="mt-1">
+                          <a 
+                            href={selectedSubmission.document_link.startsWith('http') ? selectedSubmission.document_link : `https://${selectedSubmission.document_link}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center text-primary hover:underline text-sm font-medium"
+                          >
+                            <ExternalLink className="w-4 h-4 mr-1" /> Buka Dokumen Pengajuan
+                          </a>
+                        </div>
+                      ) : (
+                        <p className="text-sm italic mt-1">Tidak ada dokumen yang dilampirkan.</p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Catatan Mahasiswa</Label>
+                      <p className="text-sm mt-1 whitespace-pre-wrap">{selectedSubmission.comments || '-'}</p>
+                    </div>
+                    
+                    <div className="pt-4 border-t border-border mt-4 flex items-center justify-between">
+                      <div>
+                        <Label className="text-muted-foreground text-xs">Status Saat Ini</Label>
+                        <div className="mt-1">
+                          <Badge variant={
+                            selectedSubmission.status === 'approved' ? 'default' :
+                            selectedSubmission.status === 'rejected' ? 'destructive' :
+                            selectedSubmission.status === 'revision' ? 'secondary' : 'outline'
+                          }>
+                            {selectedSubmission.status === 'approved' ? 'Diterima' :
+                             selectedSubmission.status === 'rejected' ? 'Ditolak' :
+                             selectedSubmission.status === 'revision' ? 'Revisi' : 'Menunggu Review'}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="text-right">
+                         <span className="text-xs text-muted-foreground italic block mb-1">
+                           Fitur persetujuan & plotting dosen masih dalam pengembangan.
+                         </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Tutup</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           <TabsContent value="seminar" className="mt-0">
