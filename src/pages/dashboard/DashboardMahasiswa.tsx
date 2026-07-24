@@ -185,13 +185,23 @@ export default function DashboardMahasiswa() {
   return (
     <Layout>
       <div className="container py-8 lg:py-12 px-4 sm:px-6 lg:px-10 xl:px-16">
-        <div className="mb-8 animate-fade-in">
-          <h1 className="font-display text-3xl font-bold lg:text-4xl mb-2">
-            Dashboard Mahasiswa
-          </h1>
-          <p className="text-muted-foreground">
-            Selamat datang, {profile?.full_name}
-          </p>
+        <div className="mb-8 animate-fade-in flex items-center justify-between">
+          <div>
+            <h1 className="font-display text-3xl font-bold lg:text-4xl mb-2">
+              Dashboard Mahasiswa
+            </h1>
+            <p className="text-muted-foreground">
+              Selamat datang, {profile?.full_name}
+            </p>
+          </div>
+          <div>
+            <Link to="/tugas-akhir">
+              <Button variant="outline" size="sm">
+                <BookOpen className="h-4 w-4 mr-2" />
+                Tugas Akhir
+              </Button>
+            </Link>
+          </div>
         </div>
 
         <Tabs defaultValue="akademik" className="space-y-6">
