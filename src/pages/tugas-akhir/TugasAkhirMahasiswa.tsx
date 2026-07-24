@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -22,6 +22,8 @@ export default function TugasAkhirMahasiswa() {
   const [title, setTitle] = useState('');
   const [documentLink, setDocumentLink] = useState('');
   const [comments, setComments] = useState('');
+  
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const { data: mySubmission, isLoading: subLoading } = useQuery({
     queryKey: ['my_ta_submission', user?.id],
@@ -33,7 +35,7 @@ export default function TugasAkhirMahasiswa() {
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (error) throw error;
+      if (error && error.code !== 'PGRST116') throw error;
       return data;
     },
     enabled: !!user?.id
@@ -47,6 +49,70 @@ export default function TugasAkhirMahasiswa() {
       return data;
     }
   });
+  
+  const { data: taSettings } = useQuery({
+    queryKey: ['ta_settings_student'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('ta_settings').select('*');
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: instrumenPenilaian } = useQuery({
+    queryKey: ['instrumen_penilaian_student'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('instrumen_penilaian').select('*').order('rentang_max', { ascending: false });
+      if (error) throw error;
+      return data;
+    }
+  });
+
+  const { data: myGrades } = useQuery({
+    queryKey: ['my_grades_student', user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('grades').select('*').eq('student_profile_id', user?.id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user?.id
+  });
+
+  useEffect(() => {
+    if (selectedType && taSettings && instrumenPenilaian && myGrades) {
+      const setting = taSettings.find(s => s.type_id === selectedType);
+      if (setting && setting.predicate_limits) {
+        // Hitung jumlah nilai per predikat
+        const predicateCounts: Record<string, number> = {};
+        
+        myGrades.forEach(grade => {
+          const instrumen = instrumenPenilaian.find(i => grade.final_score >= i.rentang_min && grade.final_score <= i.rentang_max);
+          if (instrumen) {
+            predicateCounts[instrumen.id] = (predicateCounts[instrumen.id] || 0) + 1;
+          }
+        });
+
+        // Validasi dengan batas
+        const limits = setting.predicate_limits as Record<string, number>;
+        let errorMsg = null;
+
+        for (const [predId, limit] of Object.entries(limits)) {
+          const count = predicateCounts[predId] || 0;
+          if (count > limit) {
+            const predName = instrumenPenilaian.find(i => i.id === predId)?.predikat || 'Unknown';
+            errorMsg = `Anda memiliki ${count} mata kuliah dengan nilai ${predName}. Batas maksimal untuk mendaftar Tugas Akhir ini adalah ${limit} mata kuliah.`;
+            break;
+          }
+        }
+
+        setValidationError(errorMsg);
+      } else {
+        setValidationError(null);
+      }
+    } else {
+      setValidationError(null);
+    }
+  }, [selectedType, taSettings, instrumenPenilaian, myGrades]);
 
   const submitMutation = useMutation({
     mutationFn: async () => {
@@ -159,6 +225,17 @@ export default function TugasAkhirMahasiswa() {
                   </SelectContent>
                 </Select>
               </div>
+              
+              {validationError && (
+                <Alert variant="destructive" className="mt-4">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Tidak Memenuhi Syarat</AlertTitle>
+                  <AlertDescription>
+                    {validationError}
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <div className="space-y-2">
                 <Label>Topik / Judul</Label>
                 <Textarea 
@@ -166,6 +243,7 @@ export default function TugasAkhirMahasiswa() {
                   value={title} 
                   onChange={(e) => setTitle(e.target.value)}
                   className="min-h-[80px]"
+                  disabled={!!validationError}
                 />
               </div>
               <div className="space-y-2">
@@ -174,6 +252,7 @@ export default function TugasAkhirMahasiswa() {
                   placeholder="https://..." 
                   value={documentLink} 
                   onChange={(e) => setDocumentLink(e.target.value)}
+                  disabled={!!validationError}
                 />
                 <p className="text-xs text-muted-foreground">Pastikan link dapat diakses oleh publik atau Dosen/Admin.</p>
               </div>
@@ -183,13 +262,14 @@ export default function TugasAkhirMahasiswa() {
                   placeholder="Pesan untuk Kaprodi..." 
                   value={comments} 
                   onChange={(e) => setComments(e.target.value)}
+                  disabled={!!validationError}
                 />
               </div>
             </CardContent>
             <CardFooter>
               <Button 
                 onClick={() => submitMutation.mutate()} 
-                disabled={!selectedType || !title || !documentLink || submitMutation.isPending}
+                disabled={!selectedType || !title || !documentLink || submitMutation.isPending || !!validationError}
                 className="w-full"
               >
                 Kirim Pengajuan
