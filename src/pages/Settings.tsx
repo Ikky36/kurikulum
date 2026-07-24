@@ -747,8 +747,8 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
           </p>
         </div>
 
-        <Tabs defaultValue={canAccessTheme ? "theme" : "curriculum"} orientation="vertical" className="flex flex-col md:flex-row gap-6">
-          <TabsList className="flex md:flex-col h-auto w-full md:w-56 shrink-0 bg-card border rounded-lg p-1">
+        <Tabs defaultValue={canAccessTheme ? "theme" : "curriculum"} orientation="vertical" className="flex flex-col md:flex-row gap-6 items-start">
+          <TabsList className="flex md:flex-col h-auto w-full md:w-56 shrink-0 bg-card border rounded-lg p-1 md:sticky md:top-24">
             {canAccessTheme && (
               <TabsTrigger value="theme" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <Palette className="h-4 w-4" />
