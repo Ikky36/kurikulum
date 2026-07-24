@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Layout } from '@/components/layout/Layout';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -36,7 +36,7 @@ export default function TugasAkhir() {
   }
 
   if (profile.role === 'dosen') {
-    return <TugasAkhirDosen />;
+    return <Navigate to="/dashboard#bimbingan_ta" replace />;
   }
 
   return <TugasAkhirMahasiswa />;

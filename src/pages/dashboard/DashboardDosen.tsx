@@ -24,6 +24,7 @@ import * as XLSX from 'xlsx';
 import { TableFilterHeader } from '@/components/ui/table-column-filter';
 import { DashboardScoreRecap } from '@/components/dashboard/DashboardScoreRecap';
 import { MahasiswaBimbinganTab } from '@/components/dosen/MahasiswaBimbinganTab';
+import { BimbinganTugasAkhirTab } from '@/components/dosen/BimbinganTugasAkhirTab';
 
 export default function DashboardDosen() {
   const { user, profile, role, refreshProfile, loading } = useAuth();
@@ -420,8 +421,14 @@ export default function DashboardDosen() {
           </p>
         </div>
 
-        <Tabs defaultValue="matakuliah" className="space-y-6">
-          <TabsList className="bg-muted/50 p-1">
+        <Tabs 
+          defaultValue={window.location.hash.replace('#', '') || "matakuliah"} 
+          onValueChange={(value) => {
+            window.history.pushState(null, '', `#${value}`);
+          }}
+          className="space-y-6"
+        >
+          <TabsList className="bg-muted/50 p-1 flex-wrap">
             <TabsTrigger value="matakuliah" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               Mata Kuliah Diampu
             </TabsTrigger>
@@ -432,6 +439,9 @@ export default function DashboardDosen() {
                   {totalPending}
                 </Badge>
               )}
+            </TabsTrigger>
+            <TabsTrigger value="bimbingan_ta" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              Bimbingan Tugas Akhir
             </TabsTrigger>
           </TabsList>
 
@@ -742,6 +752,10 @@ export default function DashboardDosen() {
 
           <TabsContent value="bimbingan">
             <MahasiswaBimbinganTab />
+          </TabsContent>
+
+          <TabsContent value="bimbingan_ta">
+            <BimbinganTugasAkhirTab />
           </TabsContent>
         </Tabs>
       </div>
