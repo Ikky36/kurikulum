@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -236,6 +236,21 @@ export default function DashboardDosen() {
     },
   });
 
+  // Hash routing for tabs
+  const [activeTab, setActiveTab] = useState(() => window.location.hash.replace('#', '') || 'matakuliah');
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        setActiveTab(hash);
+      }
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
   if (loading) {
     return <Layout><div className="container py-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div></Layout>;
   }
@@ -439,35 +454,13 @@ export default function DashboardDosen() {
         </div>
 
         <Tabs 
-          defaultValue={window.location.hash.replace('#', '') || "matakuliah"} 
+          value={activeTab} 
           onValueChange={(value) => {
+            setActiveTab(value);
             window.history.pushState(null, '', `#${value}`);
           }}
           className="space-y-6"
-        >
-          <TabsList className="bg-muted/50 p-1 flex-wrap">
-            <TabsTrigger value="matakuliah" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              Mata Kuliah Diampu
-            </TabsTrigger>
-            <TabsTrigger value="bimbingan" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
-              Mahasiswa Bimbingan (DPA)
-              {totalPending > 0 && (
-                <Badge variant="destructive" className="absolute -top-2 -right-2 px-1.5 min-w-[20px] h-5 flex items-center justify-center animate-pulse">
-                  {totalPending}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="bimbingan_ta" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
-              Bimbingan Tugas Akhir
-              {pendingTaLogsCount > 0 && (
-                <Badge variant="destructive" className="absolute -top-2 -right-2 px-1.5 min-w-[20px] h-5 flex items-center justify-center animate-pulse">
-                  {pendingTaLogsCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="matakuliah">
+        >          <TabsContent value="matakuliah">
             <div className="grid gap-6 lg:grid-cols-4 mb-8">
               {/* Profile Card */}
           <Card className="animate-slide-up">

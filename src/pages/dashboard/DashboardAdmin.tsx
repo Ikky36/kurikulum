@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -58,6 +58,21 @@ export default function DashboardAdmin() {
   
   const [editMode, setEditMode] = useState(false);
   const [fullName, setFullName] = useState(profile?.full_name || '');
+  
+  // Hash routing for tabs
+  const [activeTab, setActiveTab] = useState(() => window.location.hash.replace('#', '') || 'kelas');
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        setActiveTab(hash);
+      }
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
@@ -1009,34 +1024,14 @@ export default function DashboardAdmin() {
           ))}
         </div>
 
-        <Tabs defaultValue="kelas" className="space-y-6">
-          <TabsList className="flex flex-wrap w-full h-auto gap-1 md:grid md:grid-cols-4 lg:grid-cols-7">
-            <TabsTrigger value="sistem_kuliah" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Target className="h-4 w-4" />
-              <span className="hidden sm:inline">Sistem Kuliah</span>
-            </TabsTrigger>
-            <TabsTrigger value="kelas" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Kelas / Rombel</span>
-            </TabsTrigger>
-            <TabsTrigger value="dpa" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <UserCog className="h-4 w-4" />
-              <span className="hidden sm:inline">Manajemen DPA</span>
-            </TabsTrigger>
-            <TabsTrigger value="krs" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Validasi KRS</span>
-            </TabsTrigger>
-            <TabsTrigger value="scores" className="flex items-center gap-1 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <CheckSquare className="h-4 w-4" />
-              <span className="hidden sm:inline">Rekap Skor</span>
-            </TabsTrigger>
-            <TabsTrigger value="accounts" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Kelola Akun</TabsTrigger>
-            <TabsTrigger value="assignments" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Penugasan</TabsTrigger>
-            <TabsTrigger value="roles" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">Role</TabsTrigger>
-          </TabsList>
-
-          {/* Sistem Kuliah Tab */}
+        <Tabs 
+          value={activeTab} 
+          onValueChange={(value) => {
+            setActiveTab(value);
+            window.history.pushState(null, '', `#${value}`);
+          }} 
+          className="space-y-6"
+        >          {/* Sistem Kuliah Tab */}
           <TabsContent value="sistem_kuliah">
             <SistemKuliahManager />
           </TabsContent>

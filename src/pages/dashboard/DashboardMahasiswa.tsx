@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Layout } from '@/components/layout/Layout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -88,6 +88,21 @@ export default function DashboardMahasiswa() {
     enabled: !!user?.id,
     refetchInterval: 30000 // Poll every 30s just in case
   });
+
+  // Hash routing for tabs
+  const [activeTab, setActiveTab] = useState(() => window.location.hash.replace('#', '') || 'akademik');
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        setActiveTab(hash);
+      }
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   if (loading) {
     return <Layout><div className="container py-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div></Layout>;
@@ -204,22 +219,14 @@ export default function DashboardMahasiswa() {
           </div>
         </div>
 
-        <Tabs defaultValue="akademik" className="space-y-6">
-          <TabsList className="bg-muted/50 p-1 mb-2">
-            <TabsTrigger value="akademik" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <BookOpen className="h-4 w-4 mr-2" />
-              Akademik & KRS
-            </TabsTrigger>
-            <TabsTrigger value="bimbingan" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground relative">
-              <User className="h-4 w-4 mr-2" />
-              Bimbingan Akademik
-              {unreadGuidanceCount > 0 && (
-                <Badge variant="destructive" className="absolute -top-2 -right-2 px-1.5 min-w-[20px] h-5 flex items-center justify-center animate-pulse">
-                  {unreadGuidanceCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
+        <Tabs 
+          value={activeTab} 
+          onValueChange={(value) => {
+            setActiveTab(value);
+            window.history.pushState(null, '', `#${value}`);
+          }}
+          className="space-y-6"
+        >
 
           <TabsContent value="akademik" className="space-y-6">
             <div className="grid gap-6 lg:grid-cols-3 mb-8">

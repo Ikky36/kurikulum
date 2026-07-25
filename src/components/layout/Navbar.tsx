@@ -105,10 +105,47 @@ export function Navbar() {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate('/dashboard')}>
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  Dashboard
-                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                
+                {/* Admin/Sub-Admin Dashboard Tabs */}
+                {(profile?.role === 'admin' || profile?.role === 'sub_admin') && (
+                  <>
+                    <DropdownMenuLabel className="text-xs text-muted-foreground uppercase">Dashboard</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard#sistem_kuliah')}>Sistem Kuliah</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard#kelas')}>Kelas / Rombel</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard#dpa')}>Manajemen DPA</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard#krs')}>Validasi KRS</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard#rekap')}>Rekap Skor</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard#accounts')}>Kelola Akun</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard#assignments')}>Penugasan</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard#roles')}>Role</DropdownMenuItem>
+                  </>
+                )}
+
+                {/* Dosen Dashboard Tabs */}
+                {profile?.role === 'dosen' && (
+                  <>
+                    <DropdownMenuLabel className="text-xs text-muted-foreground uppercase">Dashboard</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard#matakuliah')}>Mata Kuliah Diampu</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard#bimbingan')}>Mahasiswa Bimbingan</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard#bimbingan_ta')}>Bimbingan Tugas Akhir</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard#rekap')}>Rekap Skor</DropdownMenuItem>
+                  </>
+                )}
+
+                {/* Mahasiswa Dashboard Tabs */}
+                {profile?.role === 'mahasiswa' && (
+                  <>
+                    <DropdownMenuLabel className="text-xs text-muted-foreground uppercase">Dashboard</DropdownMenuLabel>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard#akademik')}>Akademik & KRS</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/dashboard#bimbingan')}>Bimbingan Akademik</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/krs')}>KRS (Kartu Rencana Studi)</DropdownMenuItem>
+                  </>
+                )}
+
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuLabel className="text-xs text-muted-foreground uppercase">Menu Lainnya</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => navigate('/tugas-akhir')}>
                   <GraduationCap className="mr-2 h-4 w-4" />
                   Tugas Akhir
@@ -117,12 +154,6 @@ export function Navbar() {
                   <KeyRound className="mr-2 h-4 w-4" />
                   Profil & Password
                 </DropdownMenuItem>
-                {profile?.role === 'mahasiswa' && (
-                  <DropdownMenuItem onClick={() => navigate('/krs')}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    KRS
-                  </DropdownMenuItem>
-                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />
