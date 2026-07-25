@@ -1064,7 +1064,7 @@ export default function DashboardAdmin() {
             <Card>
               <CardHeader>
                 <div className="flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-4">
                     <CardTitle>Kelola Akun Pengguna</CardTitle>
                     <Dialog open={showUserDialog} onOpenChange={(open) => { if (!open) resetUserForm(); setShowUserDialog(open); }}>
                       <DialogTrigger asChild>
@@ -1276,7 +1276,7 @@ export default function DashboardAdmin() {
                     
                     {/* Bulk Actions */}
                     {selectedUserIds.length > 0 && (
-                      <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                      <div className="flex flex-wrap items-center gap-2 p-3 bg-muted rounded-lg">
                         <Checkbox
                           checked={selectedUserIds.length === paginatedUsers.length}
                           onCheckedChange={(checked) => {

@@ -622,7 +622,7 @@ export function UserImportExport({ users, onImportSuccess, onSyncSuccess, select
 
   return (
     <>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" onClick={handleDownloadTemplate}>
           <FileSpreadsheet className="h-4 w-4 mr-2" />
           Template {roleName}
