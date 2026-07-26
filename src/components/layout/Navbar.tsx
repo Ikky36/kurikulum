@@ -48,9 +48,6 @@ export function Navbar() {
   ];
 
   if (user) {
-    if (profile?.role !== 'dosen') {
-      navLinks.push({ href: '/tugas-akhir', label: 'Tugas Akhir', icon: GraduationCap });
-    }
     navLinks.push({ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard });
   }
 
