@@ -62,7 +62,7 @@ export default function TugasAkhirAdmin() {
         .from('ta_submissions')
         .select(`
           *,
-          profiles:student_id(full_name, nim),
+          profiles:student_id(full_name, nim, program),
           ta_types(id, name),
           ta_advisors(role, dosen_id, profiles(full_name)),
           current_phase:ta_master_phases(name)
@@ -215,7 +215,7 @@ export default function TugasAkhirAdmin() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-muted/50 p-1">
             <TabsTrigger value="pengajuan" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6">
-              Pengajuan Judul
+              Pengajuan
             </TabsTrigger>
             <TabsTrigger value="seminar" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6">
               Pendaftaran Seminar & Sidang
@@ -262,6 +262,9 @@ export default function TugasAkhirAdmin() {
                             <TableCell>
                               <div className="font-medium">{sub.profiles?.full_name}</div>
                               <div className="text-xs text-muted-foreground">{sub.profiles?.nim}</div>
+                              {sub.profiles?.program && (
+                                <div className="text-[10px] font-medium text-primary/80 mt-1 uppercase tracking-wider">{sub.profiles.program}</div>
+                              )}
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline" className="mb-1">{sub.ta_types?.name}</Badge>
