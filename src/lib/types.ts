@@ -281,3 +281,62 @@ export interface KRSItem {
   course?: Course;
   elearning_class?: ElearningClass;
 }
+
+// Tugas Akhir Types
+export interface TAType {
+  id: string;
+  name: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TAMasterPhase {
+  id: string;
+  ta_type_id: string;
+  name: string;
+  order_num: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+  ta_type?: TAType;
+}
+
+export interface TAPhaseApproval {
+  id: string;
+  submission_id: string;
+  phase_id: string;
+  dosen_id: string;
+  created_at?: string;
+  dosen?: Profile;
+  phase?: TAMasterPhase;
+}
+
+export interface TASubmission {
+  id: string;
+  student_id: string;
+  type_id: string;
+  title: string;
+  document_link?: string;
+  comments?: string;
+  status: 'pending' | 'revision' | 'approved' | 'rejected';
+  current_phase_id?: string | null;
+  created_at: string;
+  updated_at: string;
+  student?: Profile;
+  type?: TAType;
+  current_phase?: TAMasterPhase;
+}
+
+export interface TAMilestone {
+  id: string;
+  submission_id: string;
+  phase_id?: string | null;
+  title: string;
+  target_date?: string | null;
+  status: 'pending' | 'completed';
+  created_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  phase?: TAMasterPhase;
+}

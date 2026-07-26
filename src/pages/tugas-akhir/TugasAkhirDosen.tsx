@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { TADosenMilestones } from './TADosenMilestones';
 
 export default function TugasAkhirDosen() {
   const { user } = useAuth();
@@ -39,8 +40,8 @@ export default function TugasAkhirDosen() {
         .select(`
           id, role,
           ta_submissions (
-            id, title, status, document_link, comments, created_at,
-            ta_types (name),
+            id, type_id, title, status, document_link, comments, created_at,
+            ta_types (id, name),
             profiles:student_id (id, full_name, nim)
           )
         `)
@@ -247,6 +248,14 @@ export default function TugasAkhirDosen() {
                     )}
                   </div>
                 </div>
+
+                {selectedAdvisorship.ta_submissions && selectedAdvisorship.ta_submissions.status === 'approved' && user?.id && (
+                  <TADosenMilestones 
+                    submissionId={selectedAdvisorship.ta_submissions.id} 
+                    typeId={selectedAdvisorship.ta_submissions.ta_types?.id || selectedAdvisorship.ta_submissions.type_id} 
+                    dosenId={user.id} 
+                  />
+                )}
 
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">

@@ -18,6 +18,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAcademicPeriod } from '@/hooks/useAcademicPeriod';
 import { calculateSemester } from '@/utils/academicHelpers';
+import { TATimeline } from './TATimeline';
 
 export default function TugasAkhirMahasiswa() {
   const { user } = useAuth();
@@ -80,6 +81,51 @@ export default function TugasAkhirMahasiswa() {
       return data;
     },
     enabled: !!mySubmission?.id && mySubmission?.status === 'approved'
+  });
+
+  const { data: phases } = useQuery({
+    queryKey: ['ta_phases', mySubmission?.type_id],
+    queryFn: async () => {
+      if (!mySubmission?.type_id) return [];
+      const { data, error } = await supabase
+        .from('ta_master_phases')
+        .select('*')
+        .eq('ta_type_id', mySubmission.type_id)
+        .eq('is_active', true)
+        .order('order_num');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!mySubmission?.type_id && mySubmission?.status === 'approved'
+  });
+
+  const { data: milestones, isLoading: milestonesLoading } = useQuery({
+    queryKey: ['my_ta_milestones', mySubmission?.id],
+    queryFn: async () => {
+      if (!mySubmission?.id) return [];
+      const { data, error } = await supabase
+        .from('ta_milestones')
+        .select('*, phase:ta_master_phases(name)')
+        .eq('submission_id', mySubmission.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!mySubmission?.id && mySubmission?.status === 'approved'
+  });
+
+  const markMilestoneMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('ta_milestones')
+        .update({ status: 'completed' })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my_ta_milestones'] });
+      toast.success('Sub-target ditandai selesai');
+    }
   });
 
   const { data: taTypes, isLoading: typesLoading } = useQuery({
@@ -398,6 +444,78 @@ export default function TugasAkhirMahasiswa() {
                     </div>
                   </CardContent>
                 </Card>
+
+                {mySubmission.status === 'approved' && phases && phases.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Progres Tugas Akhir</CardTitle>
+                      <CardDescription>Tahapan penyusunan tugas akhir yang harus Anda selesaikan.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <TATimeline phases={phases} currentPhaseId={mySubmission.current_phase_id} />
+                      
+                      <div className="mt-8">
+                        <h3 className="font-semibold text-base mb-4 flex items-center">
+                          <CheckCircle2 className="w-5 h-5 mr-2 text-primary" /> Sub-Target Anda
+                        </h3>
+                        {milestonesLoading ? (
+                          <div className="text-center py-4 text-muted-foreground">Memuat sub-target...</div>
+                        ) : !milestones || milestones.length === 0 ? (
+                          <div className="text-center py-6 bg-muted/30 rounded-lg border border-dashed text-muted-foreground">
+                            Belum ada sub-target yang diberikan oleh dosen pembimbing Anda.
+                          </div>
+                        ) : (
+                          <div className="grid gap-3">
+                            {milestones.map((m: any) => (
+                              <div key={m.id} className="p-4 border rounded-lg bg-card shadow-sm flex items-start gap-4">
+                                <div className="mt-1">
+                                  {m.status === 'completed' ? (
+                                    <CheckCircle2 className="w-5 h-5 text-green-500" />
+                                  ) : (
+                                    <Clock className="w-5 h-5 text-amber-500" />
+                                  )}
+                                </div>
+                                <div className="flex-1">
+                                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                                    <h4 className={`font-medium ${m.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
+                                      {m.title}
+                                    </h4>
+                                    {m.status === 'pending' && (
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline" 
+                                        className="shrink-0"
+                                        onClick={() => {
+                                          if(window.confirm('Tandai target ini sebagai selesai?')) {
+                                            markMilestoneMutation.mutate(m.id);
+                                          }
+                                        }}
+                                        disabled={markMilestoneMutation.isPending}
+                                      >
+                                        <CheckCircle2 className="w-4 h-4 mr-2" /> Tandai Selesai
+                                      </Button>
+                                    )}
+                                  </div>
+                                  <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2 text-xs text-muted-foreground">
+                                    {m.phase && (
+                                      <Badge variant="outline" className="text-[10px] h-5 px-1.5">{m.phase.name}</Badge>
+                                    )}
+                                    {m.target_date && (
+                                      <div className="flex items-center text-red-500 font-medium">
+                                        <Calendar className="w-3 h-3 mr-1" />
+                                        Target: {new Date(m.target_date).toLocaleDateString('id-ID')}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
                 {mySubmission.status === 'approved' && (
                   <Card>

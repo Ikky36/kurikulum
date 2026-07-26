@@ -14,6 +14,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { MasterPhaseAdmin } from './MasterPhaseAdmin';
+import { SubTargetViewer } from './SubTargetViewer';
+import { ListTodo } from 'lucide-react';
 
 export default function TugasAkhirAdmin() {
   const [activeTab, setActiveTab] = useState('pengajuan');
@@ -24,6 +27,10 @@ export default function TugasAkhirAdmin() {
   const [formStatus, setFormStatus] = useState<string>('approved');
   const [formComments, setFormComments] = useState<string>('');
   const [formAdvisors, setFormAdvisors] = useState<Array<{ id: string, role: string }>>([{ id: '', role: 'Pembimbing 1' }]);
+
+  // STATE FOR SUB TARGET VIEWER
+  const [isSubTargetOpen, setIsSubTargetOpen] = useState(false);
+  const [subTargetData, setSubTargetData] = useState<{ id: string, name: string }>({ id: '', name: '' });
 
   // STATE FOR SEMINAR
   const [selectedSeminar, setSelectedSeminar] = useState<any>(null);
@@ -57,7 +64,8 @@ export default function TugasAkhirAdmin() {
           *,
           profiles:student_id(full_name, nim),
           ta_types(name),
-          ta_advisors(role, dosen_id, profiles(full_name))
+          ta_advisors(role, dosen_id, profiles(full_name)),
+          current_phase:ta_master_phases(name)
         `)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -191,6 +199,9 @@ export default function TugasAkhirAdmin() {
             <TabsTrigger value="seminar" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6">
               Pendaftaran Seminar & Sidang
             </TabsTrigger>
+            <TabsTrigger value="fase" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6">
+              Pengaturan Master Fase
+            </TabsTrigger>
           </TabsList>
 
           {/* TAB 1: PENGAJUAN JUDUL */}
@@ -208,6 +219,7 @@ export default function TugasAkhirAdmin() {
                         <TableHead>Mahasiswa</TableHead>
                         <TableHead>Jenis & Judul</TableHead>
                         <TableHead>Dosen Pembimbing</TableHead>
+                        <TableHead>Fase Saat Ini</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
                       </TableRow>
@@ -215,11 +227,11 @@ export default function TugasAkhirAdmin() {
                     <TableBody>
                       {isLoading ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-10">Memuat data...</TableCell>
+                          <TableCell colSpan={6} className="text-center py-10">Memuat data...</TableCell>
                         </TableRow>
                       ) : submissions?.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-10 text-muted-foreground">
+                          <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                             Belum ada data pengajuan
                           </TableCell>
                         </TableRow>
@@ -246,6 +258,15 @@ export default function TugasAkhirAdmin() {
                               )}
                             </TableCell>
                             <TableCell>
+                              {sub.current_phase ? (
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                  {sub.current_phase.name}
+                                </Badge>
+                              ) : (
+                                <span className="text-sm text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
                               <Badge variant={
                                 sub.status === 'approved' ? 'default' :
                                 sub.status === 'rejected' ? 'destructive' :
@@ -257,19 +278,27 @@ export default function TugasAkhirAdmin() {
                               </Badge>
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button variant="outline" size="sm" onClick={() => {
-                                setSelectedSubmission(sub);
-                                setFormStatus(sub.status === 'pending' ? 'approved' : sub.status);
-                                setFormComments('');
-                                if (sub.ta_advisors && sub.ta_advisors.length > 0) {
-                                  setFormAdvisors(sub.ta_advisors.map((a: any) => ({ id: a.dosen_id || '', role: a.role })));
-                                } else {
-                                  setFormAdvisors([{ id: '', role: 'Pembimbing 1' }]);
-                                }
-                                setIsDetailOpen(true);
-                              }}>
-                                <Eye className="w-4 h-4 mr-2" /> Detail
-                              </Button>
+                              <div className="flex justify-end gap-2">
+                                <Button variant="outline" size="sm" onClick={() => {
+                                  setSubTargetData({ id: sub.id, name: sub.profiles?.full_name || 'Mahasiswa' });
+                                  setIsSubTargetOpen(true);
+                                }}>
+                                  <ListTodo className="w-4 h-4 mr-2" /> Target
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => {
+                                  setSelectedSubmission(sub);
+                                  setFormStatus(sub.status === 'pending' ? 'approved' : sub.status);
+                                  setFormComments('');
+                                  if (sub.ta_advisors && sub.ta_advisors.length > 0) {
+                                    setFormAdvisors(sub.ta_advisors.map((a: any) => ({ id: a.dosen_id || '', role: a.role })));
+                                  } else {
+                                    setFormAdvisors([{ id: '', role: 'Pembimbing 1' }]);
+                                  }
+                                  setIsDetailOpen(true);
+                                }}>
+                                  <Eye className="w-4 h-4 mr-2" /> Detail
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))
@@ -660,7 +689,19 @@ export default function TugasAkhirAdmin() {
               </DialogContent>
             </Dialog>
           </TabsContent>
+
+          {/* TAB 3: PENGATURAN FASE */}
+          <TabsContent value="fase" className="mt-0">
+            <MasterPhaseAdmin />
+          </TabsContent>
         </Tabs>
+        
+        <SubTargetViewer 
+          isOpen={isSubTargetOpen} 
+          setIsOpen={setIsSubTargetOpen}
+          submissionId={subTargetData.id}
+          studentName={subTargetData.name}
+        />
       </div>
     </Layout>
   );
