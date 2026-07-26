@@ -108,7 +108,7 @@ export default function TugasAkhirAdmin() {
           .from('ta_master_phases')
           .select('id')
           .eq('ta_type_id', targetTypeId)
-          .order('order_number', { ascending: true })
+          .order('order_num', { ascending: true })
           .limit(1)
           .maybeSingle();
         
