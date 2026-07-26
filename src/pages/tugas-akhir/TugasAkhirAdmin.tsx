@@ -103,16 +103,18 @@ export default function TugasAkhirAdmin() {
 
       if (formStatus === 'approved' && !selectedSubmission.current_phase_id) {
         // Try to assign the first phase automatically
-        const { data: firstPhase } = await supabase
+        const { data: firstPhase, error: phaseError } = await supabase
           .from('ta_master_phases')
           .select('id')
-          .eq('type_id', selectedSubmission.type_id)
+          .eq('ta_type_id', selectedSubmission.type_id)
           .order('order_number', { ascending: true })
           .limit(1)
           .maybeSingle();
         
         if (firstPhase) {
           updateData.current_phase_id = firstPhase.id;
+        } else if (phaseError) {
+          console.error('Error fetching master phases:', phaseError);
         }
       }
 
