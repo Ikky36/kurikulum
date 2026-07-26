@@ -253,7 +253,7 @@ export default function TugasAkhirDosen() {
                   <TADosenMilestones 
                     submissionId={selectedAdvisorship.ta_submissions.id} 
                     typeId={selectedAdvisorship.ta_submissions.ta_types?.id || selectedAdvisorship.ta_submissions.type_id} 
-                    dosenId={user.id} 
+                    dosenId={profile?.id || user.id} 
                   />
                 )}
 
