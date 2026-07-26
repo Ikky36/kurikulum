@@ -94,10 +94,21 @@ export default function DashboardMahasiswa() {
   const [activeTab, setActiveTab] = useState(() => window.location.hash.replace('#', '') || 'akademik');
 
   useEffect(() => {
+    // Listen to react-router location
     const hash = location.hash.replace('#', '');
     if (hash) {
       setActiveTab(hash);
     }
+    
+    // Also listen to native hashchange for direct window.location.hash updates
+    const handleHashChange = () => {
+      const nativeHash = window.location.hash.replace('#', '');
+      if (nativeHash) {
+        setActiveTab(nativeHash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, [location.hash]);
 
   if (loading) {
