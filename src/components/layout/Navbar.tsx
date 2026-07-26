@@ -26,6 +26,14 @@ export function Navbar() {
   const appName = settings?.app_name || 'Tracker PBA';
   const logoUrl = settings?.logo_url;
 
+  const handleNav = (path: string) => {
+    if (path.startsWith('/dashboard#') && window.location.pathname === '/dashboard') {
+      window.location.hash = path.split('#')[1];
+    } else {
+      navigate(path);
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
@@ -111,14 +119,14 @@ export function Navbar() {
                 {(profile?.role === 'admin' || profile?.role === 'sub_admin') && (
                   <>
                     <DropdownMenuLabel className="text-xs text-muted-foreground uppercase">Dashboard</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard#sistem_kuliah')}>Sistem Kuliah</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard#kelas')}>Kelas / Rombel</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard#dpa')}>Manajemen DPA</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard#krs')}>Validasi KRS</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard#rekap')}>Rekap Skor</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard#accounts')}>Kelola Akun</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard#assignments')}>Penugasan</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard#roles')}>Role</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard#sistem_kuliah')}>Sistem Kuliah</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard#kelas')}>Kelas / Rombel</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard#dpa')}>Manajemen DPA</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard#krs')}>Validasi KRS</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard#rekap')}>Rekap Skor</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard#accounts')}>Kelola Akun</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard#assignments')}>Penugasan</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard#roles')}>Role</DropdownMenuItem>
                   </>
                 )}
 
@@ -126,10 +134,10 @@ export function Navbar() {
                 {profile?.role === 'dosen' && (
                   <>
                     <DropdownMenuLabel className="text-xs text-muted-foreground uppercase">Dashboard</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard#matakuliah')}>Mata Kuliah Diampu</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard#bimbingan')}>Mahasiswa Bimbingan</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard#bimbingan_ta')}>Bimbingan Tugas Akhir</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard#rekap')}>Rekap Skor</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard#matakuliah')}>Mata Kuliah Diampu</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard#bimbingan')}>Mahasiswa Bimbingan</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard#bimbingan_ta')}>Bimbingan Tugas Akhir</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard#rekap')}>Rekap Skor</DropdownMenuItem>
                   </>
                 )}
 
@@ -137,8 +145,8 @@ export function Navbar() {
                 {profile?.role === 'mahasiswa' && (
                   <>
                     <DropdownMenuLabel className="text-xs text-muted-foreground uppercase">Dashboard</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard#akademik')}>Akademik & KRS</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate('/dashboard#bimbingan')}>Bimbingan Akademik</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard#akademik')}>Akademik & KRS</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard#bimbingan')}>Bimbingan Akademik</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/krs')}>KRS (Kartu Rencana Studi)</DropdownMenuItem>
                   </>
                 )}
