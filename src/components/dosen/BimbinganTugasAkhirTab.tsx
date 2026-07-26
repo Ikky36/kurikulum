@@ -14,8 +14,10 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
+import { TADosenMilestones } from '@/pages/tugas-akhir/TADosenMilestones';
+
 export function BimbinganTugasAkhirTab() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   
   const [selectedAdvisorship, setSelectedAdvisorship] = useState<any>(null);
@@ -260,6 +262,14 @@ export function BimbinganTugasAkhirTab() {
                   )}
                 </div>
               </div>
+
+              {selectedAdvisorship.ta_submissions && (
+                <TADosenMilestones 
+                  submissionId={selectedAdvisorship.ta_submissions.id} 
+                  typeId={selectedAdvisorship.ta_submissions.ta_types?.id || selectedAdvisorship.ta_submissions.type_id} 
+                  dosenId={profile?.id || user?.id || ''} 
+                />
+              )}
 
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
