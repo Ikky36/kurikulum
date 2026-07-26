@@ -12,7 +12,7 @@ export function TATimeline({ phases, currentPhaseId }: TATimelineProps) {
 
   const currentIndex = currentPhaseId 
     ? phases.findIndex(p => p.id === currentPhaseId) 
-    : 0;
+    : -1;
 
   return (
     <div className="w-full py-4 overflow-x-auto">

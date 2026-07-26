@@ -164,8 +164,28 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
     onError: (e: any) => toast.error('Gagal menyetujui fase: ' + e.message)
   });
 
+  const startPhaseMutation = useMutation({
+    mutationFn: async () => {
+      if (!phases || phases.length === 0) throw new Error("Belum ada master fase");
+      const firstPhase = phases[0];
+      const { error } = await supabase
+        .from('ta_submissions')
+        .update({ current_phase_id: firstPhase.id })
+        .eq('id', submissionId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Berhasil memulai fase pertama');
+      queryClient.invalidateQueries({ queryKey: ['ta_submission', submissionId] });
+    },
+    onError: (e: any) => toast.error('Gagal memulai fase: ' + e.message)
+  });
+
   const iHaveApproved = approvals?.some(a => a.dosen_id === dosenId);
-  const currentPhaseName = phases?.find(p => p.id === submission?.current_phase_id)?.name || 'Belum diatur';
+  const currentPhaseIndex = submission?.current_phase_id ? phases?.findIndex(p => p.id === submission.current_phase_id) : -1;
+  const currentPhaseName = (currentPhaseIndex !== undefined && currentPhaseIndex !== -1 && phases) 
+    ? phases[currentPhaseIndex].name 
+    : 'Belum diatur';
 
   return (
     <div className="space-y-6">
@@ -188,7 +208,7 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
               )}
             </div>
             
-            {submission?.current_phase_id && (
+            {(submission?.current_phase_id && currentPhaseIndex !== -1) && (
               <Button 
                 onClick={() => approvePhase.mutate()} 
                 disabled={iHaveApproved || approvePhase.isPending}
@@ -199,6 +219,15 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
                 ) : (
                   <><CheckCircle2 className="w-4 h-4 mr-2" /> Setujui Lanjut Fase</>
                 )}
+              </Button>
+            )}
+            {(!submission?.current_phase_id || currentPhaseIndex === -1) && phases && phases.length > 0 && (
+              <Button 
+                onClick={() => startPhaseMutation.mutate()} 
+                disabled={startPhaseMutation.isPending}
+              >
+                <CheckCircle2 className="w-4 h-4 mr-2" /> 
+                {startPhaseMutation.isPending ? 'Memproses...' : 'Mulai Fase Pertama'}
               </Button>
             )}
           </div>
