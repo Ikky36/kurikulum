@@ -127,6 +127,7 @@ export function Navbar() {
                     <DropdownMenuItem onClick={() => handleNav('/dashboard/admin#accounts')}>Kelola Akun</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleNav('/dashboard/admin#assignments')}>Penugasan</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleNav('/dashboard/admin#roles')}>Role</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/tugas-akhir')}>Tugas Akhir</DropdownMenuItem>
                   </>
                 )}
 
@@ -148,18 +149,13 @@ export function Navbar() {
                     <DropdownMenuItem onClick={() => handleNav('/dashboard/mahasiswa#akademik')}>Akademik & KRS</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleNav('/dashboard/mahasiswa#bimbingan')}>Bimbingan Akademik</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => navigate('/krs')}>KRS (Kartu Rencana Studi)</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate('/tugas-akhir')}>Tugas Akhir</DropdownMenuItem>
                   </>
                 )}
 
                 <DropdownMenuSeparator />
                 
                 <DropdownMenuLabel className="text-xs text-muted-foreground uppercase">Menu Lainnya</DropdownMenuLabel>
-                {profile?.role !== 'dosen' && (
-                  <DropdownMenuItem onClick={() => navigate('/tugas-akhir')}>
-                    <GraduationCap className="mr-2 h-4 w-4" />
-                    Tugas Akhir
-                  </DropdownMenuItem>
-                )}
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <KeyRound className="mr-2 h-4 w-4" />
                   Profil & Password
