@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { TATimeline } from './TATimeline';
-import { CheckCircle2, Check, Plus, Save, X, Clock, Calendar } from 'lucide-react';
+import { CheckCircle2, Check, Plus, Save, X, Clock, Calendar, Edit2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface TADosenMilestonesProps {
@@ -21,6 +21,9 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
   const [isAdding, setIsAdding] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDate, setNewDate] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDate, setEditDate] = useState('');
 
   // Get current submission to know current_phase_id
   const { data: submission } = useQuery({
@@ -120,6 +123,37 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
       setIsAdding(false);
     },
     onError: (e: any) => toast.error('Gagal menambah target: ' + e.message)
+  });
+
+  const updateMilestone = useMutation({
+    mutationFn: async ({ id, title, target_date }: { id: string, title: string, target_date: string | null }) => {
+      const { error } = await supabase
+        .from('ta_milestones')
+        .update({ title, target_date })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Sub-target berhasil diperbarui');
+      queryClient.invalidateQueries({ queryKey: ['ta_milestones', submissionId] });
+      setEditingId(null);
+    },
+    onError: (e: any) => toast.error('Gagal memperbarui target: ' + e.message)
+  });
+
+  const deleteMilestone = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('ta_milestones')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Sub-target berhasil dihapus');
+      queryClient.invalidateQueries({ queryKey: ['ta_milestones', submissionId] });
+    },
+    onError: (e: any) => toast.error('Gagal menghapus target: ' + e.message)
   });
 
   const approvePhase = useMutation({
@@ -294,24 +328,79 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
                     )}
                   </div>
                   <div className="flex-1">
-                    <div className="flex justify-between">
-                      <h4 className={`font-medium ${m.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
-                        {m.title}
-                      </h4>
-                      <Badge variant={m.status === 'completed' ? 'outline' : 'secondary'}>
-                        {m.status === 'completed' ? 'Selesai' : 'Belum'}
-                      </Badge>
-                    </div>
-                    <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
-                      {m.phase && (
-                        <span>Fase: {m.phase.name}</span>
-                      )}
-                      {m.target_date && (
-                        <span className="flex items-center text-red-500 font-medium">
-                          <Calendar className="w-3 h-3 mr-1" /> {new Date(m.target_date).toLocaleDateString('id-ID')}
-                        </span>
-                      )}
-                    </div>
+                    {editingId === m.id ? (
+                      <div className="space-y-3">
+                        <Input 
+                          value={editTitle} 
+                          onChange={e => setEditTitle(e.target.value)} 
+                          placeholder="Deskripsi Sub-Target"
+                        />
+                        <Input 
+                          type="date"
+                          value={editDate} 
+                          onChange={e => setEditDate(e.target.value)} 
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <Button variant="outline" size="sm" onClick={() => setEditingId(null)}>Batal</Button>
+                          <Button 
+                            size="sm" 
+                            onClick={() => updateMilestone.mutate({ id: m.id, title: editTitle, target_date: editDate || null })} 
+                            disabled={!editTitle.trim() || updateMilestone.isPending}
+                          >
+                            Simpan
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1">
+                          <h4 className={`font-medium ${m.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
+                            {m.title}
+                          </h4>
+                          <div className="flex gap-4 mt-2 text-xs text-muted-foreground">
+                            {m.phase && (
+                              <span>Fase: {m.phase.name}</span>
+                            )}
+                            {m.target_date && (
+                              <span className="flex items-center text-red-500 font-medium">
+                                <Calendar className="w-3 h-3 mr-1" /> {new Date(m.target_date).toLocaleDateString('id-ID')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <Badge variant={m.status === 'completed' ? 'outline' : 'secondary'}>
+                            {m.status === 'completed' ? 'Selesai' : 'Belum'}
+                          </Badge>
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-muted-foreground hover:text-primary" 
+                              onClick={() => {
+                                setEditingId(m.id);
+                                setEditTitle(m.title);
+                                setEditDate(m.target_date || '');
+                              }}
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => {
+                                if (confirm('Yakin ingin menghapus sub-target ini?')) {
+                                  deleteMilestone.mutate(m.id);
+                                }
+                              }}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
