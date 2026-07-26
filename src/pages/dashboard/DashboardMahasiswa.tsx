@@ -23,7 +23,7 @@ import {
 } from 'recharts';
 import { User, Mail, BookOpen, Camera, Loader2, CheckCircle2, XCircle, Calendar, GraduationCap } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { TableFilterHeader } from '@/components/ui/table-column-filter';
 import { BimbinganAkademikTab } from '@/components/mahasiswa/BimbinganAkademikTab';
 
@@ -90,19 +90,15 @@ export default function DashboardMahasiswa() {
   });
 
   // Hash routing for tabs
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => window.location.hash.replace('#', '') || 'akademik');
 
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash) {
-        setActiveTab(hash);
-      }
-    };
-    
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+    const hash = location.hash.replace('#', '');
+    if (hash) {
+      setActiveTab(hash);
+    }
+  }, [location.hash]);
 
   if (loading) {
     return <Layout><div className="container py-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div></Layout>;

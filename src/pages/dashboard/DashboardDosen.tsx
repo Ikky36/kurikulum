@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { User, Mail, Camera, Loader2, Upload, Download, Save, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Navigate, Link, useNavigate } from 'react-router-dom';
+import { Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Course, Profile, Grade } from '@/lib/types';
 import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 import * as XLSX from 'xlsx';
@@ -237,19 +237,15 @@ export default function DashboardDosen() {
   });
 
   // Hash routing for tabs
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => window.location.hash.replace('#', '') || 'matakuliah');
 
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash) {
-        setActiveTab(hash);
-      }
-    };
-    
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+    const hash = location.hash.replace('#', '');
+    if (hash) {
+      setActiveTab(hash);
+    }
+  }, [location.hash]);
 
   if (loading) {
     return <Layout><div className="container py-8 flex justify-center"><Loader2 className="h-8 w-8 animate-spin" /></div></Layout>;

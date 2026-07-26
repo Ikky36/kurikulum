@@ -20,7 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target, Eye, EyeOff, Settings, CheckSquare, LogIn, FileText } from 'lucide-react';
-import { Navigate, Link } from 'react-router-dom';
+import { Navigate, Link, useLocation } from 'react-router-dom';
 import { Course, Profile, AppRole, Program } from '@/lib/types';
 
 import { SistemKuliahManager } from '@/components/admin/SistemKuliahManager';
@@ -60,19 +60,15 @@ export default function DashboardAdmin() {
   const [fullName, setFullName] = useState(profile?.full_name || '');
   
   // Hash routing for tabs
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => window.location.hash.replace('#', '') || 'kelas');
 
   useEffect(() => {
-    const handleHashChange = () => {
-      const hash = window.location.hash.replace('#', '');
-      if (hash) {
-        setActiveTab(hash);
-      }
-    };
-    
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
+    const hash = location.hash.replace('#', '');
+    if (hash) {
+      setActiveTab(hash);
+    }
+  }, [location.hash]);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
 
