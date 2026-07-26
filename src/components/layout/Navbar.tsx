@@ -48,7 +48,9 @@ export function Navbar() {
   ];
 
   if (user) {
-    navLinks.push({ href: '/tugas-akhir', label: 'Tugas Akhir', icon: GraduationCap });
+    if (profile?.role !== 'dosen') {
+      navLinks.push({ href: '/tugas-akhir', label: 'Tugas Akhir', icon: GraduationCap });
+    }
     navLinks.push({ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard });
   }
 
@@ -155,10 +157,12 @@ export function Navbar() {
                 <DropdownMenuSeparator />
                 
                 <DropdownMenuLabel className="text-xs text-muted-foreground uppercase">Menu Lainnya</DropdownMenuLabel>
-                <DropdownMenuItem onClick={() => navigate('/tugas-akhir')}>
-                  <GraduationCap className="mr-2 h-4 w-4" />
-                  Tugas Akhir
-                </DropdownMenuItem>
+                {profile?.role !== 'dosen' && (
+                  <DropdownMenuItem onClick={() => navigate('/tugas-akhir')}>
+                    <GraduationCap className="mr-2 h-4 w-4" />
+                    Tugas Akhir
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
                   <KeyRound className="mr-2 h-4 w-4" />
                   Profil & Password
