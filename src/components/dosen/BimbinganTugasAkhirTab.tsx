@@ -40,8 +40,8 @@ export function BimbinganTugasAkhirTab() {
         .select(`
           id, role,
           ta_submissions (
-            id, title, status, document_link, comments, created_at,
-            ta_types (name),
+            id, title, type_id, status, document_link, comments, created_at,
+            ta_types (id, name),
             profiles:student_id (id, full_name, nim)
           )
         `)
