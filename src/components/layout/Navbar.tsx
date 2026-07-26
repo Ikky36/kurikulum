@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { GraduationCap, BookOpen, LayoutDashboard, LogOut, User, Menu, X, FileText, MonitorPlay, KeyRound } from 'lucide-react';
+import { GraduationCap, BookOpen, LayoutDashboard, LogOut, User, Menu, X, FileText, MonitorPlay, KeyRound, Settings } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { NotificationBell } from './NotificationBell';
@@ -154,6 +154,14 @@ export function Navbar() {
                   <KeyRound className="mr-2 h-4 w-4" />
                   Profil & Password
                 </DropdownMenuItem>
+                
+                {profile?.role === 'admin' && (
+                  <DropdownMenuItem onClick={() => navigate('/settings')}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Pengaturan
+                  </DropdownMenuItem>
+                )}
+
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
                   <LogOut className="mr-2 h-4 w-4" />

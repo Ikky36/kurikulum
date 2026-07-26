@@ -209,14 +209,6 @@ export default function DashboardMahasiswa() {
               Selamat datang, {profile?.full_name}
             </p>
           </div>
-          <div>
-            <Link to="/tugas-akhir">
-              <Button variant="outline" size="sm">
-                <BookOpen className="h-4 w-4 mr-2" />
-                Tugas Akhir
-              </Button>
-            </Link>
-          </div>
         </div>
 
         <Tabs 
