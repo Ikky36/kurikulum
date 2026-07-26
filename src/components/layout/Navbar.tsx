@@ -138,7 +138,7 @@ export function Navbar() {
                   <>
                     <DropdownMenuLabel className="text-xs text-muted-foreground uppercase">Dashboard</DropdownMenuLabel>
                     <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#matakuliah')}>Mata Kuliah Diampu</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#bimbingan')}>Mahasiswa Bimbingan</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#bimbingan')}>Bimbingan Akademik</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#bimbingan_ta')}>Bimbingan Tugas Akhir</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#rekap')}>Rekap Skor</DropdownMenuItem>
                   </>
