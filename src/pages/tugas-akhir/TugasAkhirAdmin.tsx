@@ -96,12 +96,29 @@ export default function TugasAkhirAdmin() {
         finalComments = `[Catatan Admin]: ${formComments}\n\n[Catatan Mahasiswa]: ${selectedSubmission.comments || '-'}`;
       }
 
+      let updateData: any = { 
+        status: formStatus,
+        comments: finalComments
+      };
+
+      if (formStatus === 'approved' && !selectedSubmission.current_phase_id) {
+        // Try to assign the first phase automatically
+        const { data: firstPhase } = await supabase
+          .from('ta_master_phases')
+          .select('id')
+          .eq('type_id', selectedSubmission.type_id)
+          .order('order_number', { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        
+        if (firstPhase) {
+          updateData.current_phase_id = firstPhase.id;
+        }
+      }
+
       const { error: updateError } = await supabase
         .from('ta_submissions')
-        .update({ 
-          status: formStatus,
-          comments: finalComments
-        })
+        .update(updateData)
         .eq('id', selectedSubmission.id);
       
       if (updateError) throw updateError;
