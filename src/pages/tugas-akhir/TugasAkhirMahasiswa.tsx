@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save } from 'lucide-react';
+import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save, Undo2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -114,17 +114,21 @@ export default function TugasAkhirMahasiswa() {
     enabled: !!mySubmission?.id && mySubmission?.status === 'approved'
   });
 
-  const markMilestoneMutation = useMutation({
-    mutationFn: async (id: string) => {
+  const toggleMilestoneMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: string, status: string }) => {
       const { error } = await supabase
         .from('ta_milestones')
-        .update({ status: 'completed' })
+        .update({ status })
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['my_ta_milestones'] });
-      toast.success('Sub-target ditandai selesai');
+      if (variables.status === 'completed') {
+        toast.success('Sub-target ditandai selesai');
+      } else {
+        toast.info('Status sub-target dibatalkan');
+      }
     }
   });
 
@@ -480,19 +484,33 @@ export default function TugasAkhirMahasiswa() {
                                     <h4 className={`font-medium ${m.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
                                       {m.title}
                                     </h4>
-                                    {m.status === 'pending' && (
+                                    {m.status === 'pending' ? (
                                       <Button 
                                         size="sm" 
                                         variant="outline" 
                                         className="shrink-0"
                                         onClick={() => {
                                           if(window.confirm('Tandai target ini sebagai selesai?')) {
-                                            markMilestoneMutation.mutate(m.id);
+                                            toggleMilestoneMutation.mutate({ id: m.id, status: 'completed' });
                                           }
                                         }}
-                                        disabled={markMilestoneMutation.isPending}
+                                        disabled={toggleMilestoneMutation.isPending}
                                       >
                                         <CheckCircle2 className="w-4 h-4 mr-2" /> Tandai Selesai
+                                      </Button>
+                                    ) : (
+                                      <Button 
+                                        size="sm" 
+                                        variant="outline" 
+                                        className="shrink-0 text-muted-foreground hover:text-destructive"
+                                        onClick={() => {
+                                          if(window.confirm('Batalkan status selesai pada target ini?')) {
+                                            toggleMilestoneMutation.mutate({ id: m.id, status: 'pending' });
+                                          }
+                                        }}
+                                        disabled={toggleMilestoneMutation.isPending}
+                                      >
+                                        <Undo2 className="w-4 h-4 mr-2" /> Batalkan Selesai
                                       </Button>
                                     )}
                                   </div>

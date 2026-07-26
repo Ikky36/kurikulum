@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { TATimeline } from './TATimeline';
-import { CheckCircle2, Check, Plus, Save, X, Clock, Calendar, Edit2, Trash2 } from 'lucide-react';
+import { CheckCircle2, Check, Plus, Save, X, Clock, Calendar, Edit2, Trash2, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface TADosenMilestonesProps {
@@ -154,6 +154,25 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
       queryClient.invalidateQueries({ queryKey: ['ta_milestones', submissionId] });
     },
     onError: (e: any) => toast.error('Gagal menghapus target: ' + e.message)
+  });
+
+  const toggleMilestoneStatus = useMutation({
+    mutationFn: async ({ id, status }: { id: string, status: string }) => {
+      const { error } = await supabase
+        .from('ta_milestones')
+        .update({ status })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['ta_milestones', submissionId] });
+      if (variables.status === 'completed') {
+        toast.success('Sub-target ditandai selesai');
+      } else {
+        toast.info('Status sub-target dibatalkan');
+      }
+    },
+    onError: (e: any) => toast.error('Gagal memperbarui status target: ' + e.message)
   });
 
   const approvePhase = useMutation({
@@ -373,6 +392,27 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
                             {m.status === 'completed' ? 'Selesai' : 'Belum'}
                           </Badge>
                           <div className="flex gap-1">
+                            {m.status === 'pending' ? (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 text-muted-foreground hover:text-green-500"
+                                onClick={() => toggleMilestoneStatus.mutate({ id: m.id, status: 'completed' })}
+                                title="Tandai Selesai"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                              </Button>
+                            ) : (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-7 w-7 text-muted-foreground hover:text-amber-500"
+                                onClick={() => toggleMilestoneStatus.mutate({ id: m.id, status: 'pending' })}
+                                title="Batalkan Selesai"
+                              >
+                                <Undo2 className="w-4 h-4" />
+                              </Button>
+                            )}
                             <Button 
                               variant="ghost" 
                               size="icon" 
