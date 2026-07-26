@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import { TADosenMilestones } from './TADosenMilestones';
 
 export default function TugasAkhirDosen() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   
   const [selectedAdvisorship, setSelectedAdvisorship] = useState<any>(null);
@@ -249,11 +249,11 @@ export default function TugasAkhirDosen() {
                   </div>
                 </div>
 
-                {selectedAdvisorship.ta_submissions && selectedAdvisorship.ta_submissions.status === 'approved' && user?.id && (
+                {selectedAdvisorship.ta_submissions && (
                   <TADosenMilestones 
                     submissionId={selectedAdvisorship.ta_submissions.id} 
                     typeId={selectedAdvisorship.ta_submissions.ta_types?.id || selectedAdvisorship.ta_submissions.type_id} 
-                    dosenId={profile?.id || user.id} 
+                    dosenId={profile?.id || user?.id || ''} 
                   />
                 )}
 
