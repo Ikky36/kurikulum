@@ -27,6 +27,10 @@ export default function TugasAkhirAdmin() {
   const [formStatus, setFormStatus] = useState<string>('approved');
   const [formComments, setFormComments] = useState<string>('');
   const [formAdvisors, setFormAdvisors] = useState<Array<{ id: string, role: string }>>([{ id: '', role: 'Pembimbing 1' }]);
+  
+  // FILTERS
+  const [filterProgram, setFilterProgram] = useState<string>('all');
+  const [filterType, setFilterType] = useState<string>('all');
 
   // STATE FOR SUB TARGET VIEWER
   const [isSubTargetOpen, setIsSubTargetOpen] = useState(false);
@@ -87,6 +91,15 @@ export default function TugasAkhirAdmin() {
       if (error) throw error;
       return data;
     }
+  });
+
+  const uniquePrograms = Array.from(new Set(submissions?.map((s: any) => s.profiles?.program).filter(Boolean) || []));
+  const uniqueTypes = Array.from(new Set(submissions?.map((s: any) => s.ta_types?.name).filter(Boolean) || []));
+
+  const filteredSubmissions = submissions?.filter((sub: any) => {
+    if (filterProgram !== 'all' && sub.profiles?.program !== filterProgram) return false;
+    if (filterType !== 'all' && sub.ta_types?.name !== filterType) return false;
+    return true;
   });
 
   const processMutation = useMutation({
@@ -229,8 +242,36 @@ export default function TugasAkhirAdmin() {
           <TabsContent value="pengajuan" className="mt-0">
             <Card>
               <CardHeader>
-                <CardTitle>Daftar Pengajuan Tugas Akhir</CardTitle>
-                <CardDescription>Persetujuan judul dan penugasan dosen pembimbing.</CardDescription>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <CardTitle>Daftar Pengajuan Tugas Akhir</CardTitle>
+                    <CardDescription>Persetujuan judul dan penugasan dosen pembimbing.</CardDescription>
+                  </div>
+                  <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                    <Select value={filterProgram} onValueChange={setFilterProgram}>
+                      <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Semua Prodi" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Program Studi</SelectItem>
+                        {uniquePrograms.map(p => (
+                          <SelectItem key={p as string} value={p as string}>{p as string}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={filterType} onValueChange={setFilterType}>
+                      <SelectTrigger className="w-full sm:w-[150px]">
+                        <SelectValue placeholder="Semua Jenis" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Jenis</SelectItem>
+                        {uniqueTypes.map(t => (
+                          <SelectItem key={t as string} value={t as string}>{t as string}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="rounded-md border">
@@ -250,14 +291,14 @@ export default function TugasAkhirAdmin() {
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-10">Memuat data...</TableCell>
                         </TableRow>
-                      ) : submissions?.length === 0 ? (
+                      ) : filteredSubmissions?.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                            Belum ada data pengajuan
+                            Belum ada data pengajuan yang sesuai filter
                           </TableCell>
                         </TableRow>
                       ) : (
-                        submissions?.map((sub: any) => (
+                        filteredSubmissions?.map((sub: any) => (
                           <TableRow key={sub.id}>
                             <TableCell>
                               <div className="font-medium">{sub.profiles?.full_name}</div>
