@@ -24,17 +24,18 @@ export function calculateIPK(
   let totalPoin = 0;
 
   grades.forEach(grade => {
-    const sks = grade.course?.sks || 0;
-    const score = grade.final_score;
+    if (!grade) return;
+    const sks = Number(grade.course?.sks) || 0;
+    const score = Number(grade.final_score) || 0;
     const curriculumId = grade.course?.curriculum_id;
 
-    const relevantInstrumen = instrumenList.filter(i => 
+    const relevantInstrumen = (instrumenList || []).filter(i => 
       curriculumId ? i.curriculum_id === curriculumId : !i.curriculum_id
     );
     
     const activeInstrumen = relevantInstrumen.length > 0 
       ? relevantInstrumen 
-      : instrumenList.filter(i => !i.curriculum_id);
+      : (instrumenList || []).filter(i => !i.curriculum_id);
 
     const matched = activeInstrumen.find(i => score >= i.rentang_min && score <= i.rentang_max);
     const bobot = matched?.bobot || 0;
@@ -48,6 +49,6 @@ export function calculateIPK(
   return {
     totalSks,
     totalPoin,
-    ipk: Number(ipk.toFixed(2))
+    ipk: Number(ipk.toFixed(2)) || 0
   };
 }
