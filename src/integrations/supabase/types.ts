@@ -1790,6 +1790,7 @@ export type Database = {
           predikat: string
           rentang_max: number
           rentang_min: number
+            bobot?: number | null
           updated_at: string
         }
         Insert: {
@@ -1799,6 +1800,7 @@ export type Database = {
           predikat: string
           rentang_max: number
           rentang_min: number
+            bobot?: number | null
           updated_at?: string
         }
         Update: {

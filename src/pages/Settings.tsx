@@ -88,6 +88,7 @@ export default function Settings() {
   const [instrumenMax, setInstrumenMax] = useState('');
   const [instrumenPredikat, setInstrumenPredikat] = useState('');
   const [instrumenColor, setInstrumenColor] = useState('#22c55e');
+  const [instrumenBobot, setInstrumenBobot] = useState('0');
 
   // Fetch curricula
   const { data: curricula } = useQuery({
@@ -312,7 +313,7 @@ export default function Settings() {
 
   // Instrumen mutations
   const createInstrumenMutation = useMutation({
-    mutationFn: async (data: { rentang_min: number; rentang_max: number; predikat: string; color?: string }) => {
+    mutationFn: async (data: { rentang_min: number; rentang_max: number; predikat: string; color?: string; bobot?: number }) => {
       const { error } = await supabase.from('instrumen_penilaian').insert([data]);
       if (error) throw error;
     },
@@ -442,6 +443,7 @@ export default function Settings() {
     setInstrumenMax('');
     setInstrumenPredikat('');
     setInstrumenColor('#22c55e');
+    setInstrumenBobot('0');
     setEditingInstrumen(null);
     setShowInstrumenDialog(false);
   };
@@ -452,14 +454,20 @@ export default function Settings() {
     setInstrumenMax(instrumen.rentang_max.toString());
     setInstrumenPredikat(instrumen.predikat);
     setInstrumenColor(instrumen.color || '#22c55e');
+    setInstrumenBobot(instrumen.bobot?.toString() || '0');
     setShowInstrumenDialog(true);
   };
 
   const handleSaveInstrumen = () => {
     const min = parseInt(instrumenMin);
     const max = parseInt(instrumenMax);
+    const bobot = parseFloat(instrumenBobot);
     if (isNaN(min) || isNaN(max)) {
       toast({ title: 'Gagal', description: 'Rentang harus berupa angka', variant: 'destructive' });
+      return;
+    }
+    if (isNaN(bobot)) {
+      toast({ title: 'Gagal', description: 'Bobot harus berupa angka desimal valid', variant: 'destructive' });
       return;
     }
     if (min > max) {
@@ -467,9 +475,9 @@ export default function Settings() {
       return;
     }
     if (editingInstrumen) {
-      updateInstrumenMutation.mutate({ id: editingInstrumen.id, rentang_min: min, rentang_max: max, predikat: instrumenPredikat, color: instrumenColor });
+      updateInstrumenMutation.mutate({ id: editingInstrumen.id, rentang_min: min, rentang_max: max, predikat: instrumenPredikat, color: instrumenColor, bobot });
     } else {
-      createInstrumenMutation.mutate({ rentang_min: min, rentang_max: max, predikat: instrumenPredikat, color: instrumenColor });
+      createInstrumenMutation.mutate({ rentang_min: min, rentang_max: max, predikat: instrumenPredikat, color: instrumenColor, bobot });
     }
   };
 
@@ -1775,21 +1783,33 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                                 />
                               </div>
                               <div className="space-y-2">
-                                <Label>Warna Predikat</Label>
-                                <div className="flex items-center gap-2">
-                                  <input 
-                                    type="color" 
-                                    value={instrumenColor} 
-                                    onChange={(e) => setInstrumenColor(e.target.value)}
-                                    className="w-10 h-10 rounded border cursor-pointer"
-                                  />
-                                  <Input 
-                                    value={instrumenColor} 
-                                    onChange={(e) => setInstrumenColor(e.target.value)}
-                                    placeholder="#22c55e"
-                                    className="flex-1"
-                                  />
-                                </div>
+                                <Label>Bobot (1-4)</Label>
+                                <Input 
+                                  type="number" 
+                                  min="0" 
+                                  max="4"
+                                  step="0.01"
+                                  value={instrumenBobot} 
+                                  onChange={(e) => setInstrumenBobot(e.target.value)} 
+                                  placeholder="Contoh: 4.00"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2 mt-4">
+                              <Label>Warna Predikat</Label>
+                              <div className="flex items-center gap-2">
+                                <input 
+                                  type="color" 
+                                  value={instrumenColor} 
+                                  onChange={(e) => setInstrumenColor(e.target.value)}
+                                  className="w-10 h-10 rounded border cursor-pointer"
+                                />
+                                <Input 
+                                  value={instrumenColor} 
+                                  onChange={(e) => setInstrumenColor(e.target.value)}
+                                  placeholder="#22c55e"
+                                  className="flex-1"
+                                />
                               </div>
                             </div>
                           </div>
@@ -1811,6 +1831,7 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                             <TableHead>Rentang Minimal</TableHead>
                             <TableHead>Rentang Maksimal</TableHead>
                             <TableHead>Predikat</TableHead>
+                            <TableHead>Bobot (1-4)</TableHead>
                             <TableHead>Warna</TableHead>
                             <TableHead className="w-24">Aksi</TableHead>
                           </TableRow>
@@ -1832,6 +1853,7 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                                   {instrumen.predikat}
                                 </Badge>
                               </TableCell>
+                              <TableCell>{instrumen.bobot || '0'}</TableCell>
                               <TableCell>
                                 <div 
                                   className="w-6 h-6 rounded border"

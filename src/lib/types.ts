@@ -192,6 +192,7 @@ export interface InstrumenPenilaian {
   rentang_max: number;
   predikat: string;
   color?: string | null;
+  bobot?: number | null;
   created_at?: string;
   updated_at?: string;
 }
