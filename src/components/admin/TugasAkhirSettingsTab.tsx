@@ -36,6 +36,7 @@ export const TugasAkhirSettingsTab = () => {
   const [reqValuePredicateId, setReqValuePredicateId] = useState('');
   const [reqValuePredicateLimit, setReqValuePredicateLimit] = useState(2);
   const [reqValueCourseId, setReqValueCourseId] = useState('');
+  const [reqValueAutoFill, setReqValueAutoFill] = useState('student_name');
   const [reqIsRequired, setReqIsRequired] = useState(true);
 
   const resetReqForm = () => {
@@ -50,6 +51,7 @@ export const TugasAkhirSettingsTab = () => {
     setReqValuePredicateId('');
     setReqValuePredicateLimit(2);
     setReqValueCourseId('');
+    setReqValueAutoFill('student_name');
     setReqIsRequired(true);
   };
 
@@ -68,6 +70,7 @@ export const TugasAkhirSettingsTab = () => {
       setReqValuePredicateLimit(req.req_value?.max_count || 2);
     }
     if (req.req_type === 'course') setReqValueCourseId(req.req_value?.course_ids?.[0] || '');
+    if (req.req_type === 'auto_fill') setReqValueAutoFill(req.req_value?.field || 'student_name');
     
     setReqIsRequired(req.is_required);
     setIsReqDialogOpen(true);
@@ -172,6 +175,7 @@ export const TugasAkhirSettingsTab = () => {
       else if (reqType === 'min_semester') req_value = { min: reqValueSemester };
       else if (reqType === 'predicate') req_value = { predicate_id: reqValuePredicateId, max_count: reqValuePredicateLimit };
       else if (reqType === 'course') req_value = { course_ids: [reqValueCourseId] };
+      else if (reqType === 'auto_fill') req_value = { field: reqValueAutoFill };
 
       const payload = {
         name: reqName,
@@ -355,9 +359,7 @@ export const TugasAkhirSettingsTab = () => {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="document">Input URL/Link (Mahasiswa)</SelectItem>
-                      <SelectItem value="auto_fill_name">Data Otomatis: Nama Mahasiswa</SelectItem>
-                      <SelectItem value="auto_fill_nim">Data Otomatis: NIM Mahasiswa</SelectItem>
-                      <SelectItem value="auto_fill_prodi">Data Otomatis: Program Studi</SelectItem>
+                      <SelectItem value="auto_fill">Data Otomatis (Read-Only)</SelectItem>
                       <SelectItem value="min_sks">Batas Minimal SKS (Otomatis)</SelectItem>
                       <SelectItem value="min_semester">Batas Minimal Semester (Otomatis)</SelectItem>
                       <SelectItem value="predicate">Batas Maksimal Predikat (Otomatis)</SelectItem>
@@ -405,6 +407,25 @@ export const TugasAkhirSettingsTab = () => {
                       <SelectTrigger><SelectValue placeholder="Pilih matkul..." /></SelectTrigger>
                       <SelectContent>
                         {courses?.map(c => <SelectItem key={c.id} value={c.id}>{c.code} - {c.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {reqType === 'auto_fill' && (
+                  <div className="space-y-2">
+                    <Label>Pilih Data Otomatis</Label>
+                    <Select value={reqValueAutoFill} onValueChange={setReqValueAutoFill}>
+                      <SelectTrigger><SelectValue placeholder="Pilih data..." /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="student_name">Profil: Nama Lengkap</SelectItem>
+                        <SelectItem value="student_nim">Profil: NIM / NIK</SelectItem>
+                        <SelectItem value="student_prodi">Profil: Program Studi</SelectItem>
+                        <SelectItem value="student_gender">Profil: Jenis Kelamin</SelectItem>
+                        <SelectItem value="ta_title">Tugas Akhir: Judul</SelectItem>
+                        <SelectItem value="ta_type">Tugas Akhir: Jenis</SelectItem>
+                        <SelectItem value="ta_advisors">Tugas Akhir: Dosen Pembimbing</SelectItem>
+                        <SelectItem value="ta_phase">Tugas Akhir: Fase Saat Ini</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -464,9 +485,7 @@ export const TugasAkhirSettingsTab = () => {
                         <TableCell>
                           <Badge variant="secondary" className="capitalize">
                             {req.req_type === 'document' ? 'Input URL/Link' : 
-                             req.req_type === 'auto_fill_name' ? 'Auto-Fill: Nama' :
-                             req.req_type === 'auto_fill_nim' ? 'Auto-Fill: NIM' :
-                             req.req_type === 'auto_fill_prodi' ? 'Auto-Fill: Prodi' :
+                             req.req_type === 'auto_fill' ? 'Auto-Fill Data' :
                              req.req_type === 'min_sks' ? 'Syarat SKS' : 
                              req.req_type === 'min_semester' ? 'Syarat Semester' :
                              req.req_type === 'predicate' ? 'Syarat Nilai (Predikat)' :
@@ -479,7 +498,7 @@ export const TugasAkhirSettingsTab = () => {
                           {req.req_type === 'predicate' && `Max ${req.req_value?.max_count} MK (${instrumenPenilaian?.find((i:any) => i.id === req.req_value?.predicate_id)?.predikat})`}
                           {req.req_type === 'course' && `Matkul ID: ${req.req_value?.course_ids?.[0]}`}
                           {req.req_type === 'document' && '-'}
-                          {req.req_type?.startsWith('auto_fill_') && 'Read-Only (Auto)'}
+                          {req.req_type === 'auto_fill' && `Field: ${req.req_value?.field}`}
                         </TableCell>
                         <TableCell>
                           <Switch 
