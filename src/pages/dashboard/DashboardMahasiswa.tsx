@@ -103,6 +103,10 @@ export default function DashboardMahasiswa() {
   const location = useLocation();
   const [activeTab, setActiveTab] = useState(() => window.location.hash.replace('#', '') || 'akademik');
 
+  const { totalSks, totalPoin, ipk } = useMemo(() => {
+    return calculateIPK((grades as any) || [], instrumenList || []);
+  }, [grades, instrumenList]);
+
   useEffect(() => {
     // Listen to react-router location
     const hash = location.hash.replace('#', '');
@@ -132,10 +136,6 @@ export default function DashboardMahasiswa() {
   if (role && role !== 'mahasiswa') {
     return <Navigate to={`/dashboard/${role}`} replace />;
   }
-
-  const { totalSks, totalPoin, ipk } = useMemo(() => {
-    return calculateIPK((grades as any) || [], instrumenList || []);
-  }, [grades, instrumenList]);
 
   const chartData = grades?.map(g => ({
     name: g.course?.name?.split(' ')[0] || 'Unknown',
