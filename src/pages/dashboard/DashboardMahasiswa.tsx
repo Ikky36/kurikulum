@@ -22,7 +22,7 @@ import {
   RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
 } from 'recharts';
 import { User, Mail, BookOpen, Camera, Loader2, CheckCircle2, XCircle, Calendar, GraduationCap } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, calculateIPK } from '@/lib/utils';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { TableFilterHeader } from '@/components/ui/table-column-filter';
 import { BimbinganAkademikTab } from '@/components/mahasiswa/BimbinganAkademikTab';
@@ -65,6 +65,16 @@ export default function DashboardMahasiswa() {
       if (error) throw error;
       return data;
     },
+  });
+
+  // Fetch instrumen penilaian for IPK calculation
+  const { data: instrumenList } = useQuery({
+    queryKey: ['instrumen-penilaian-ipk'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('instrumen_penilaian').select('*').order('rentang_min');
+      if (error) throw error;
+      return data as any[];
+    }
   });
 
   // Query unread guidance logs
@@ -123,9 +133,9 @@ export default function DashboardMahasiswa() {
     return <Navigate to={`/dashboard/${role}`} replace />;
   }
 
-  const averageScore = grades && grades.length > 0
-    ? grades.reduce((sum, g) => sum + g.final_score, 0) / grades.length
-    : 0;
+  const { totalSks, totalPoin, ipk } = useMemo(() => {
+    return calculateIPK((grades as any) || [], instrumenList || []);
+  }, [grades, instrumenList]);
 
   const chartData = grades?.map(g => ({
     name: g.course?.name?.split(' ')[0] || 'Unknown',
@@ -377,22 +387,29 @@ export default function DashboardMahasiswa() {
                   )}
 
                   {!editMode && (
-                    <div className="mt-6 pt-6 border-t">
-                      <p className="text-sm text-muted-foreground mb-2">Rata-rata Nilai</p>
-                      <div className="flex items-center gap-3">
-                        <Progress 
-                          value={averageScore} 
-                          className={cn(
-                            "flex-1 h-3",
-                            averageScore >= 60 ? "[&>div]:bg-success" : "[&>div]:bg-destructive"
-                          )}
-                        />
-                        <span className={cn(
-                          "font-bold text-xl",
-                          averageScore >= 60 ? "text-success" : "text-destructive"
-                        )}>
-                          {averageScore.toFixed(1)}
-                        </span>
+                    <div className="mt-6 pt-6 border-t grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">IPK Saat Ini</p>
+                        <div className="flex items-center gap-3">
+                          <Progress 
+                            value={(ipk / 4) * 100} 
+                            className={cn(
+                              "flex-1 h-3",
+                              ipk >= 2.0 ? "[&>div]:bg-success" : "[&>div]:bg-destructive"
+                            )}
+                          />
+                          <span className={cn(
+                            "font-bold text-xl",
+                            ipk >= 2.0 ? "text-success" : "text-destructive"
+                          )}>
+                            {ipk.toFixed(2)}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">Skala 4.00</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm text-muted-foreground mb-1">Total SKS Diambil</p>
+                        <p className="font-bold text-2xl text-primary">{totalSks} <span className="text-sm font-normal text-muted-foreground">SKS</span></p>
                       </div>
                     </div>
                   )}

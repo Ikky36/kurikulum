@@ -13,3 +13,41 @@ export function getVmtsAcronym(level: 'pt' | 'upps' | 'ps', rawSettings: Record<
   if (rawSettings[`show_vmts_${level}_strategi`] !== 'false') acronym += 'S';
   return acronym || 'VMTS'; // Default if everything is off
 }
+
+import { Grade, Course, InstrumenPenilaian } from './types';
+
+export function calculateIPK(
+  grades: (Grade & { course?: Course })[], 
+  instrumenList: InstrumenPenilaian[]
+) {
+  let totalSks = 0;
+  let totalPoin = 0;
+
+  grades.forEach(grade => {
+    const sks = grade.course?.sks || 0;
+    const score = grade.final_score;
+    const curriculumId = grade.course?.curriculum_id;
+
+    const relevantInstrumen = instrumenList.filter(i => 
+      curriculumId ? i.curriculum_id === curriculumId : !i.curriculum_id
+    );
+    
+    const activeInstrumen = relevantInstrumen.length > 0 
+      ? relevantInstrumen 
+      : instrumenList.filter(i => !i.curriculum_id);
+
+    const matched = activeInstrumen.find(i => score >= i.rentang_min && score <= i.rentang_max);
+    const bobot = matched?.bobot || 0;
+
+    totalSks += sks;
+    totalPoin += (sks * bobot);
+  });
+
+  const ipk = totalSks > 0 ? (totalPoin / totalSks) : 0;
+  
+  return {
+    totalSks,
+    totalPoin,
+    ipk: Number(ipk.toFixed(2))
+  };
+}

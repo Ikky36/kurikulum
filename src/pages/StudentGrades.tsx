@@ -17,7 +17,7 @@ import {
 import { ArrowLeft, Mail, User, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { cn } from '@/lib/utils';
+import { cn, calculateIPK } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -88,6 +88,8 @@ export default function StudentGrades() {
           name: grade.course.name,
           code: grade.course.code,
           passing_score: grade.course.passing_score,
+          sks: grade.course.sks,
+          curriculum_id: grade.course.curriculum_id,
         } : null,
         calculated_score: avgScore,
       };
@@ -98,9 +100,16 @@ export default function StudentGrades() {
 
   // Calculate average using calculated scores
   const gradesWithScores = gradesWithCalculatedScore.filter(g => g.calculated_score !== null);
-  const averageScore = gradesWithScores.length > 0
-    ? gradesWithScores.reduce((sum, g) => sum + (g.calculated_score ?? 0), 0) / gradesWithScores.length
-    : 0;
+  
+  // Calculate IPK
+  // Map calculated_score to final_score to match calculateIPK signature
+  const { totalSks, totalPoin, ipk } = useMemo(() => {
+    const gradesForIpk = gradesWithScores.map(g => ({
+      ...g,
+      final_score: g.calculated_score || 0
+    }));
+    return calculateIPK((gradesForIpk as any) || [], instrumenList || []);
+  }, [gradesWithScores, instrumenList]);
 
   // Prepare chart data using calculated scores
   const chartData = gradesWithCalculatedScore.map(g => ({
@@ -211,22 +220,29 @@ export default function StudentGrades() {
                 </div>
               </div>
 
-              <div className="mt-6 pt-6 border-t">
-                <p className="text-sm text-muted-foreground mb-2">Rata-rata Nilai</p>
-                <div className="flex items-center gap-3">
-                  <Progress 
-                    value={averageScore} 
-                    className={cn(
-                      "flex-1 h-3",
-                      averageScore >= 60 ? "[&>div]:bg-success" : "[&>div]:bg-destructive"
-                    )}
-                  />
-                  <span className={cn(
-                    "font-bold text-xl",
-                    averageScore >= 60 ? "text-success" : "text-destructive"
-                  )}>
-                    {averageScore.toFixed(1)}
-                  </span>
+              <div className="mt-6 pt-6 border-t grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">IPK Saat Ini</p>
+                  <div className="flex items-center gap-3">
+                    <Progress 
+                      value={(ipk / 4) * 100} 
+                      className={cn(
+                        "flex-1 h-3",
+                        ipk >= 2.0 ? "[&>div]:bg-success" : "[&>div]:bg-destructive"
+                      )}
+                    />
+                    <span className={cn(
+                      "font-bold text-xl",
+                      ipk >= 2.0 ? "text-success" : "text-destructive"
+                    )}>
+                      {ipk.toFixed(2)}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Skala 4.00</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground mb-1">Total SKS Diambil</p>
+                  <p className="font-bold text-2xl text-primary">{totalSks} <span className="text-sm font-normal text-muted-foreground">SKS</span></p>
                 </div>
               </div>
             </CardContent>
