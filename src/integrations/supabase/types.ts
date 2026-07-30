@@ -1791,6 +1791,7 @@ export type Database = {
           rentang_max: number
           rentang_min: number
             bobot?: number | null
+            curriculum_id?: string | null
           updated_at: string
         }
         Insert: {
@@ -1801,6 +1802,7 @@ export type Database = {
           rentang_max: number
           rentang_min: number
             bobot?: number | null
+            curriculum_id?: string | null
           updated_at?: string
         }
         Update: {

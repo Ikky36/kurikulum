@@ -89,6 +89,7 @@ export default function Settings() {
   const [instrumenPredikat, setInstrumenPredikat] = useState('');
   const [instrumenColor, setInstrumenColor] = useState('#22c55e');
   const [instrumenBobot, setInstrumenBobot] = useState('0');
+  const [instrumenCurriculumId, setInstrumenCurriculumId] = useState<string | null>(null);
 
   // Fetch curricula
   const { data: curricula } = useQuery({
@@ -144,7 +145,7 @@ export default function Settings() {
   const { data: instrumenList } = useQuery({
     queryKey: ['instrumen-penilaian'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('instrumen_penilaian').select('*').order('rentang_min');
+      const { data, error } = await supabase.from('instrumen_penilaian').select('*, curriculum:curricula(name)').order('rentang_min');
       if (error) throw error;
       return data as InstrumenPenilaian[];
     },
@@ -313,7 +314,7 @@ export default function Settings() {
 
   // Instrumen mutations
   const createInstrumenMutation = useMutation({
-    mutationFn: async (data: { rentang_min: number; rentang_max: number; predikat: string; color?: string; bobot?: number }) => {
+    mutationFn: async (data: { rentang_min: number; rentang_max: number; predikat: string; color?: string; bobot?: number; curriculum_id?: string | null }) => {
       const { error } = await supabase.from('instrumen_penilaian').insert([data]);
       if (error) throw error;
     },
@@ -444,6 +445,7 @@ export default function Settings() {
     setInstrumenPredikat('');
     setInstrumenColor('#22c55e');
     setInstrumenBobot('0');
+    setInstrumenCurriculumId(null);
     setEditingInstrumen(null);
     setShowInstrumenDialog(false);
   };
@@ -455,6 +457,7 @@ export default function Settings() {
     setInstrumenPredikat(instrumen.predikat);
     setInstrumenColor(instrumen.color || '#22c55e');
     setInstrumenBobot(instrumen.bobot?.toString() || '0');
+    setInstrumenCurriculumId(instrumen.curriculum_id || null);
     setShowInstrumenDialog(true);
   };
 
@@ -475,9 +478,9 @@ export default function Settings() {
       return;
     }
     if (editingInstrumen) {
-      updateInstrumenMutation.mutate({ id: editingInstrumen.id, rentang_min: min, rentang_max: max, predikat: instrumenPredikat, color: instrumenColor, bobot });
+      updateInstrumenMutation.mutate({ id: editingInstrumen.id, rentang_min: min, rentang_max: max, predikat: instrumenPredikat, color: instrumenColor, bobot, curriculum_id: instrumenCurriculumId });
     } else {
-      createInstrumenMutation.mutate({ rentang_min: min, rentang_max: max, predikat: instrumenPredikat, color: instrumenColor, bobot });
+      createInstrumenMutation.mutate({ rentang_min: min, rentang_max: max, predikat: instrumenPredikat, color: instrumenColor, bobot, curriculum_id: instrumenCurriculumId });
     }
   };
 
@@ -1795,21 +1798,37 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                                 />
                               </div>
                             </div>
-                            <div className="space-y-2 mt-4">
-                              <Label>Warna Predikat</Label>
-                              <div className="flex items-center gap-2">
-                                <input 
-                                  type="color" 
-                                  value={instrumenColor} 
-                                  onChange={(e) => setInstrumenColor(e.target.value)}
-                                  className="w-10 h-10 rounded border cursor-pointer"
-                                />
-                                <Input 
-                                  value={instrumenColor} 
-                                  onChange={(e) => setInstrumenColor(e.target.value)}
-                                  placeholder="#22c55e"
-                                  className="flex-1"
-                                />
+                            <div className="grid grid-cols-2 gap-4 mt-4">
+                              <div className="space-y-2">
+                                <Label>Warna Predikat</Label>
+                                <div className="flex items-center gap-2">
+                                  <input 
+                                    type="color" 
+                                    value={instrumenColor} 
+                                    onChange={(e) => setInstrumenColor(e.target.value)}
+                                    className="w-10 h-10 rounded border cursor-pointer"
+                                  />
+                                  <Input 
+                                    value={instrumenColor} 
+                                    onChange={(e) => setInstrumenColor(e.target.value)}
+                                    placeholder="#22c55e"
+                                    className="flex-1"
+                                  />
+                                </div>
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Kurikulum (Opsional)</Label>
+                                <Select value={instrumenCurriculumId || 'global'} onValueChange={(val) => setInstrumenCurriculumId(val === 'global' ? null : val)}>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Semua Kurikulum (Global)" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="global">Semua Kurikulum (Global)</SelectItem>
+                                    {curricula?.map(c => (
+                                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
                               </div>
                             </div>
                           </div>
@@ -1832,6 +1851,7 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                             <TableHead>Rentang Maksimal</TableHead>
                             <TableHead>Predikat</TableHead>
                             <TableHead>Bobot (1-4)</TableHead>
+                            <TableHead>Kurikulum</TableHead>
                             <TableHead>Warna</TableHead>
                             <TableHead className="w-24">Aksi</TableHead>
                           </TableRow>
@@ -1854,6 +1874,13 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                                 </Badge>
                               </TableCell>
                               <TableCell>{instrumen.bobot || '0'}</TableCell>
+                              <TableCell>
+                                {instrumen.curriculum_id ? (
+                                  <Badge variant="outline">{(instrumen as any).curriculum?.name || 'Unknown'}</Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">Global</span>
+                                )}
+                              </TableCell>
                               <TableCell>
                                 <div 
                                   className="w-6 h-6 rounded border"

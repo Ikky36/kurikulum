@@ -193,6 +193,8 @@ export interface InstrumenPenilaian {
   predikat: string;
   color?: string | null;
   bobot?: number | null;
+  curriculum_id?: string | null;
+  curriculum?: Curriculum;
   created_at?: string;
   updated_at?: string;
 }
