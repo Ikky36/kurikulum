@@ -354,7 +354,10 @@ export const TugasAkhirSettingsTab = () => {
                   <Select value={reqType} onValueChange={setReqType}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="document">Unggah Dokumen / Link (Mahasiswa)</SelectItem>
+                      <SelectItem value="document">Input URL/Link (Mahasiswa)</SelectItem>
+                      <SelectItem value="auto_fill_name">Data Otomatis: Nama Mahasiswa</SelectItem>
+                      <SelectItem value="auto_fill_nim">Data Otomatis: NIM Mahasiswa</SelectItem>
+                      <SelectItem value="auto_fill_prodi">Data Otomatis: Program Studi</SelectItem>
                       <SelectItem value="min_sks">Batas Minimal SKS (Otomatis)</SelectItem>
                       <SelectItem value="min_semester">Batas Minimal Semester (Otomatis)</SelectItem>
                       <SelectItem value="predicate">Batas Maksimal Predikat (Otomatis)</SelectItem>
@@ -460,7 +463,10 @@ export const TugasAkhirSettingsTab = () => {
                         </TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="capitalize">
-                            {req.req_type === 'document' ? 'Unggah Berkas' : 
+                            {req.req_type === 'document' ? 'Input URL/Link' : 
+                             req.req_type === 'auto_fill_name' ? 'Auto-Fill: Nama' :
+                             req.req_type === 'auto_fill_nim' ? 'Auto-Fill: NIM' :
+                             req.req_type === 'auto_fill_prodi' ? 'Auto-Fill: Prodi' :
                              req.req_type === 'min_sks' ? 'Syarat SKS' : 
                              req.req_type === 'min_semester' ? 'Syarat Semester' :
                              req.req_type === 'predicate' ? 'Syarat Nilai (Predikat)' :
@@ -473,6 +479,7 @@ export const TugasAkhirSettingsTab = () => {
                           {req.req_type === 'predicate' && `Max ${req.req_value?.max_count} MK (${instrumenPenilaian?.find((i:any) => i.id === req.req_value?.predicate_id)?.predikat})`}
                           {req.req_type === 'course' && `Matkul ID: ${req.req_value?.course_ids?.[0]}`}
                           {req.req_type === 'document' && '-'}
+                          {req.req_type?.startsWith('auto_fill_') && 'Read-Only (Auto)'}
                         </TableCell>
                         <TableCell>
                           <Switch 
