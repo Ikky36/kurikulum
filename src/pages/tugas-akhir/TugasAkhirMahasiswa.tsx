@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useAcademicPeriod } from '@/hooks/useAcademicPeriod';
 import { calculateSemester } from '@/utils/academicHelpers';
 import { TATimeline } from './TATimeline';
+import { SeminarRegistrationForm } from './SeminarRegistrationForm';
 
 export default function TugasAkhirMahasiswa() {
   const { user } = useAuth();
@@ -144,7 +145,7 @@ export default function TugasAkhirMahasiswa() {
   const { data: taRequirements } = useQuery({
     queryKey: ['ta_requirements_student'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('ta_requirements').select('*').in('phase', ['umum', 'pengajuan_judul']);
+      const { data, error } = await supabase.from('ta_requirements').select('*');
       if (error) throw error;
       return data;
     }
@@ -706,29 +707,53 @@ export default function TugasAkhirMahasiswa() {
           </TabsContent>
 
           <TabsContent value="seminar">
-            <Card>
-              <CardHeader>
-                <CardTitle>Pendaftaran Seminar Proposal</CardTitle>
-                <CardDescription>Ajukan jadwal seminar proposal Anda di sini.</CardDescription>
-              </CardHeader>
-              <CardContent className="py-10 text-center text-muted-foreground">
-                <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                <p>Fitur pendaftaran seminar sedang dalam pengembangan.</p>
-              </CardContent>
-            </Card>
+            {!mySubmission || mySubmission.status !== 'approved' ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pendaftaran Seminar Proposal</CardTitle>
+                  <CardDescription>Ajukan jadwal seminar proposal Anda di sini.</CardDescription>
+                </CardHeader>
+                <CardContent className="py-10 text-center text-muted-foreground">
+                  <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                  <p>Anda belum memiliki pengajuan Tugas Akhir yang disetujui Kaprodi.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <SeminarRegistrationForm 
+                phase="sempro"
+                submission={mySubmission}
+                profile={myProfile}
+                requirements={taRequirements || []}
+                grades={myGrades || []}
+                instrumenPenilaian={instrumenPenilaian || []}
+                semester={calculateSemester(myProfile?.enrollment_year, activeAcademicYear?.name, activeSemester?.name) || 1}
+              />
+            )}
           </TabsContent>
 
           <TabsContent value="sidang">
-            <Card>
-              <CardHeader>
-                <CardTitle>Pendaftaran Sidang Akhir</CardTitle>
-                <CardDescription>Ajukan jadwal sidang akhir setelah bimbingan Anda selesai.</CardDescription>
-              </CardHeader>
-              <CardContent className="py-10 text-center text-muted-foreground">
-                <CheckCircle2 className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                <p>Fitur pendaftaran sidang sedang dalam pengembangan.</p>
-              </CardContent>
-            </Card>
+            {!mySubmission || mySubmission.status !== 'approved' ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pendaftaran Sidang Akhir</CardTitle>
+                  <CardDescription>Ajukan jadwal sidang akhir setelah bimbingan Anda selesai.</CardDescription>
+                </CardHeader>
+                <CardContent className="py-10 text-center text-muted-foreground">
+                  <CheckCircle2 className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                  <p>Anda belum memiliki pengajuan Tugas Akhir yang disetujui Kaprodi.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <SeminarRegistrationForm 
+                phase="sidang"
+                submission={mySubmission}
+                profile={myProfile}
+                requirements={taRequirements || []}
+                grades={myGrades || []}
+                instrumenPenilaian={instrumenPenilaian || []}
+                semester={calculateSemester(myProfile?.enrollment_year, activeAcademicYear?.name, activeSemester?.name) || 1}
+              />
+            )}
           </TabsContent>
         </Tabs>
 
