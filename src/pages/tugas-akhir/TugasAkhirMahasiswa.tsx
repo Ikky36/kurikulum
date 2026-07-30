@@ -145,7 +145,7 @@ export default function TugasAkhirMahasiswa() {
   const { data: taRequirements } = useQuery({
     queryKey: ['ta_requirements_student'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('ta_requirements').select('*');
+      const { data, error } = await supabase.from('ta_requirements').select('*').order('order_num', { ascending: true }).order('created_at', { ascending: true });
       if (error) throw error;
       return data;
     }

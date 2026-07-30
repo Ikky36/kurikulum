@@ -48,6 +48,7 @@ export type Database = {
             req_type: string
             req_value: Json | null
             is_required: boolean
+            order_num: number | null
             created_at: string
             updated_at: string
           }
@@ -60,6 +61,7 @@ export type Database = {
             req_type: string
             req_value?: Json | null
             is_required?: boolean
+            order_num?: number | null
             created_at?: string
             updated_at?: string
           }
@@ -71,6 +73,7 @@ export type Database = {
             req_type?: string
             req_value?: Json | null
             is_required?: boolean
+            order_num?: number | null
             updated_at?: string
           }
           Relationships: [

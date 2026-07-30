@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Trash2, Plus, Edit } from 'lucide-react';
+import { Trash2, Plus, Edit, ArrowUp, ArrowDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
@@ -107,7 +107,7 @@ export const TugasAkhirSettingsTab = () => {
   const { data: taRequirements, isLoading: reqsLoading } = useQuery({
     queryKey: ['ta_requirements'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('ta_requirements').select('*, ta_types(name)').order('created_at', { ascending: true });
+      const { data, error } = await supabase.from('ta_requirements').select('*, ta_types(name)').order('order_num', { ascending: true }).order('created_at', { ascending: true });
       if (error) throw error;
       return data;
     }
@@ -224,6 +224,23 @@ export const TugasAkhirSettingsTab = () => {
       queryClient.invalidateQueries({ queryKey: ['ta_requirements'] });
       toast.success('Status Wajib diperbarui');
     }
+  });
+
+  const moveRequirementMutation = useMutation({
+    mutationFn: async ({ list, index, direction }: { list: any[], index: number, direction: 'up' | 'down' }) => {
+      const newList = [...list];
+      const swapIndex = direction === 'up' ? index - 1 : index + 1;
+      [newList[index], newList[swapIndex]] = [newList[swapIndex], newList[index]];
+
+      for (let i = 0; i < newList.length; i++) {
+        const { error } = await supabase.from('ta_requirements').update({ order_num: i }).eq('id', newList[i].id);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ta_requirements'] });
+    },
+    onError: (error) => toast.error('Gagal mengurutkan: ' + error.message)
   });
 
   if (typesLoading || reqsLoading) return <div>Memuat pengaturan...</div>;
@@ -474,7 +491,7 @@ export const TugasAkhirSettingsTab = () => {
                         <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Belum ada persyaratan di fase ini.</TableCell>
                       </TableRow>
                     )}
-                    {taRequirements?.filter(r => r.phase === activeTab).map((req: any) => (
+                    {taRequirements?.filter(r => r.phase === activeTab).map((req: any, index: number, arr: any[]) => (
                       <TableRow key={req.id}>
                         <TableCell className="font-medium">{req.name}</TableCell>
                         <TableCell>
@@ -507,14 +524,22 @@ export const TugasAkhirSettingsTab = () => {
                           />
                         </TableCell>
                         <TableCell>
-                          <Button variant="outline" size="icon" className="mr-2" onClick={() => openEditReq(req)}>
-                            <Edit className="w-4 h-4" />
-                          </Button>
-                          <Button variant="destructive" size="icon" onClick={() => {
-                            if (confirm('Hapus persyaratan ini?')) deleteReqMutation.mutate(req.id);
-                          }}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={index === 0} onClick={() => moveRequirementMutation.mutate({ list: arr, index, direction: 'up' })}>
+                              <ArrowUp className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={index === arr.length - 1} onClick={() => moveRequirementMutation.mutate({ list: arr, index, direction: 'down' })}>
+                              <ArrowDown className="w-4 h-4" />
+                            </Button>
+                            <Button variant="outline" size="icon" className="h-8 w-8 ml-1 mr-1" onClick={() => openEditReq(req)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => {
+                              if (confirm('Hapus persyaratan ini?')) deleteReqMutation.mutate(req.id);
+                            }}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
