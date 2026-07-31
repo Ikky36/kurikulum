@@ -22,17 +22,19 @@ interface Question {
   correct_answer?: any;
   feedback?: string | null;
   points: number;
+  part_id?: string | null;
 }
 
 interface QuizPreviewProps {
   questions: Question[];
+  quizParts?: any[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: 'single' | 'all';
   initialQuestionIndex?: number;
 }
 
-export function QuizPreview({ questions, open, onOpenChange, mode, initialQuestionIndex = 0 }: QuizPreviewProps) {
+export function QuizPreview({ questions, quizParts, open, onOpenChange, mode, initialQuestionIndex = 0 }: QuizPreviewProps) {
   const [currentIndex, setCurrentIndex] = useState(initialQuestionIndex);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   const [showResults, setShowResults] = useState<Record<string, boolean>>({});

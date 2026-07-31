@@ -545,8 +545,9 @@ export type Database = {
           elearning_class_id: string
           id: string
           title: string
-          updated_at: string
-        }
+            updated_at: string
+            weight_percentage: number | null
+          }
         Insert: {
           assignment_id?: string | null
           created_at?: string
@@ -555,8 +556,9 @@ export type Database = {
           elearning_class_id: string
           id?: string
           title: string
-          updated_at?: string
-        }
+            updated_at?: string
+            weight_percentage?: number | null
+          }
         Update: {
           assignment_id?: string | null
           created_at?: string
@@ -565,8 +567,9 @@ export type Database = {
           elearning_class_id?: string
           id?: string
           title?: string
-          updated_at?: string
-        }
+            updated_at?: string
+            weight_percentage?: number | null
+          }
         Relationships: [
           {
             foreignKeyName: "assessment_rubrics_assignment_id_fkey"
@@ -1184,8 +1187,9 @@ export type Database = {
           submission_type: string | null
           time_limit_minutes: number | null
           title: string
-          updated_at: string
-        }
+            updated_at: string
+            weight_percentage: number | null
+          }
         Insert: {
           assessment_id?: string | null
           assignment_code?: string | null
@@ -1208,8 +1212,9 @@ export type Database = {
           submission_type?: string | null
           time_limit_minutes?: number | null
           title: string
-          updated_at?: string
-        }
+            updated_at?: string
+            weight_percentage?: number | null
+          }
         Update: {
           assessment_id?: string | null
           assignment_code?: string | null
@@ -1232,8 +1237,9 @@ export type Database = {
           submission_type?: string | null
           time_limit_minutes?: number | null
           title?: string
-          updated_at?: string
-        }
+            updated_at?: string
+            weight_percentage?: number | null
+          }
         Relationships: [
           {
             foreignKeyName: "elearning_assignments_assessment_id_fkey"
@@ -1454,8 +1460,9 @@ export type Database = {
           prerequisite_material_id: string | null
           sections: Json | null
           title: string
-          updated_at: string
-        }
+            updated_at: string
+            weight_percentage: number | null
+          }
         Insert: {
           content?: string | null
           content_type: string
@@ -1470,8 +1477,9 @@ export type Database = {
           prerequisite_material_id?: string | null
           sections?: Json | null
           title: string
-          updated_at?: string
-        }
+            updated_at?: string
+            weight_percentage?: number | null
+          }
         Update: {
           content?: string | null
           content_type?: string
@@ -1486,8 +1494,9 @@ export type Database = {
           prerequisite_material_id?: string | null
           sections?: Json | null
           title?: string
-          updated_at?: string
-        }
+            updated_at?: string
+            weight_percentage?: number | null
+          }
         Relationships: [
           {
             foreignKeyName: "elearning_materials_elearning_class_id_fkey"
@@ -1519,7 +1528,45 @@ export type Database = {
           },
         ]
       }
-      elearning_quiz_questions: {
+      elearning_quiz_parts: {
+          Row: {
+            assignment_id: string
+            created_at: string
+            id: string
+            name: string
+            order_index: number | null
+            total_points: number | null
+            updated_at: string
+          }
+          Insert: {
+            assignment_id: string
+            created_at?: string
+            id?: string
+            name: string
+            order_index?: number | null
+            total_points?: number | null
+            updated_at?: string
+          }
+          Update: {
+            assignment_id?: string
+            created_at?: string
+            id?: string
+            name?: string
+            order_index?: number | null
+            total_points?: number | null
+            updated_at?: string
+          }
+          Relationships: [
+            {
+              foreignKeyName: "elearning_quiz_parts_assignment_id_fkey"
+              columns: ["assignment_id"]
+              isOneToOne: false
+              referencedRelation: "elearning_assignments"
+              referencedColumns: ["id"]
+            },
+          ]
+        }
+        elearning_quiz_questions: {
         Row: {
           ai_feedback: string | null
           assignment_id: string
@@ -1528,7 +1575,9 @@ export type Database = {
           feedback: string | null
           id: string
           options: Json | null
-          order_index: number
+            order_index: number
+            part_id: string | null
+            part_id: string | null
           points: number
           question_code: string | null
           question_image_url: string | null
@@ -1544,7 +1593,9 @@ export type Database = {
           feedback?: string | null
           id?: string
           options?: Json | null
-          order_index?: number
+            order_index?: number
+            part_id?: string | null
+            part_id?: string | null
           points?: number
           question_code?: string | null
           question_image_url?: string | null
@@ -1560,7 +1611,9 @@ export type Database = {
           feedback?: string | null
           id?: string
           options?: Json | null
-          order_index?: number
+            order_index?: number
+            part_id?: string | null
+            part_id?: string | null
           points?: number
           question_code?: string | null
           question_image_url?: string | null
@@ -1575,10 +1628,17 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "elearning_assignments"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      elearning_sessions: {
+            },
+            {
+              foreignKeyName: "elearning_quiz_questions_part_id_fkey"
+              columns: ["part_id"]
+              isOneToOne: false
+              referencedRelation: "elearning_quiz_parts"
+              referencedColumns: ["id"]
+            }
+          ]
+        }
+        elearning_sessions: {
         Row: {
           created_at: string
           elearning_class_id: string
@@ -1589,8 +1649,9 @@ export type Database = {
           session_number: number
           start_time: string | null
           title: string
-          updated_at: string
-        }
+            updated_at: string
+            weight_percentage: number | null
+          }
         Insert: {
           created_at?: string
           elearning_class_id: string
@@ -1601,8 +1662,9 @@ export type Database = {
           session_number: number
           start_time?: string | null
           title: string
-          updated_at?: string
-        }
+            updated_at?: string
+            weight_percentage?: number | null
+          }
         Update: {
           created_at?: string
           elearning_class_id?: string
@@ -1613,8 +1675,9 @@ export type Database = {
           session_number?: number
           start_time?: string | null
           title?: string
-          updated_at?: string
-        }
+            updated_at?: string
+            weight_percentage?: number | null
+          }
         Relationships: [
           {
             foreignKeyName: "elearning_sessions_elearning_class_id_fkey"

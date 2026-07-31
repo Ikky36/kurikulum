@@ -11,15 +11,17 @@ interface PointsDistributorProps {
   questionCount: number;
   onDistribute: (pointsPerQuestion: number) => Promise<void>;
   isLoading?: boolean;
+  initialPoints?: number;
 }
 
 export function PointsDistributor({ 
   questionCount, 
   onDistribute,
   isLoading = false,
+  initialPoints = 100,
 }: PointsDistributorProps) {
   const { toast } = useToast();
-  const [totalPoints, setTotalPoints] = useState('100');
+  const [totalPoints, setTotalPoints] = useState(initialPoints.toString());
   const [isDistributing, setIsDistributing] = useState(false);
 
   const totalPointsNum = parseInt(totalPoints) || 0;

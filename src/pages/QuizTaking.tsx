@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuizParts } from '@/hooks/useElearningMaterials';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -150,6 +151,8 @@ export default function QuizTaking() {
   });
 
   // Fetch questions specifically for the result view to ensure options are available
+  const { data: quizParts } = useQuizParts(assignmentId);
+
   const { data: resultQuestions } = useQuery({
     queryKey: ['quiz-questions-result-inline', assignmentId],
     queryFn: async () => {
@@ -556,9 +559,21 @@ export default function QuizTaking() {
               {/* TAMPILKAN PEMBAHASAN LANGSUNG TANPA TOMBOL */}
               {(assignment?.show_answer_mode === 'after_quiz' || assignment?.show_answer_mode === 'after_each') && (
                 <div className="space-y-4 mt-8">
-                  <h3 className="font-semibold text-lg">Pembahasan</h3>
-                  {submissionResult.details.map((detail: any, idx: number) => {
-                    const originalQuestion = questions?.find((q: any) => q.id === detail.question_id || q.question_text === detail.question);
+                  <h3 className="font-semibold text-lg mb-6">Pembahasan</h3>
+                  {(quizParts?.length ? quizParts : [{id: 'default', name: 'Daftar Soal'}]).map((part: any, partIdx: number) => {
+                    const partDetails = submissionResult.details.filter((d: any) => {
+                      const q = questions?.find((q: any) => q.id === d.question_id || q.question_text === d.question);
+                      return q?.part_id === part.id || (part.id === 'default');
+                    });
+                    
+                    if (partDetails.length === 0) return null;
+                    
+                    return (
+                      <div key={part.id} className="mb-8">
+                        <h4 className="font-bold text-md border-b pb-2 mb-4 text-primary">{part.name}</h4>
+                        <div className="space-y-4">
+                          {partDetails.map((detail: any, idx: number) => {
+                            const originalQuestion = questions?.find((q: any) => q.id === detail.question_id || q.question_text === detail.question);
 
                     const parseOptionsArray = (options: any): any[] | null => {
                       try {
@@ -689,6 +704,10 @@ export default function QuizTaking() {
                           </div>
                         </CardContent>
                       </Card>
+                    );
+                  })}
+                        </div>
+                      </div>
                     );
                   })}
                 </div>
@@ -871,6 +890,11 @@ export default function QuizTaking() {
                 <Badge variant="outline" className="text-lg px-3 py-1">
                   {currentQuestionIndex + 1}
                 </Badge>
+                {quizParts?.find((p: any) => p.id === currentQuestion.part_id) && (
+                  <Badge variant="default" className="bg-primary/20 text-primary hover:bg-primary/30">
+                    {quizParts.find((p: any) => p.id === currentQuestion.part_id).name}
+                  </Badge>
+                )}
                 <Badge variant="secondary">{currentQuestion.points} poin</Badge>
               </div>
               <CardTitle 
@@ -1039,20 +1063,29 @@ export default function QuizTaking() {
 
         {/* Question Number Navigation */}
         <Card className="mb-4">
-          <CardContent className="py-3">
-            <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
-              {questions?.map((q, idx) => (
-                <Button
-                  key={idx}
-                  variant={currentQuestionIndex === idx ? 'default' : answers[q.id] ? 'secondary' : 'outline'}
-                  size="sm"
-                  className="w-full h-9 text-sm font-medium"
-                  onClick={() => setCurrentQuestionIndex(idx)}
-                >
-                  {idx + 1}
-                </Button>
-              ))}
-            </div>
+          <CardContent className="py-3 space-y-4">
+            {(quizParts?.length ? quizParts : [{id: 'default', name: 'Daftar Soal'}]).map((part: any) => {
+               const partQuestions = questions?.map((q, idx) => ({...q, idx})).filter(q => q.part_id === part.id || (part.id === 'default' && (!q.part_id || q.part_id === null)));
+               if (!partQuestions?.length) return null;
+               return (
+                 <div key={part.id}>
+                   <h5 className="text-sm font-semibold text-muted-foreground mb-2">{part.name}</h5>
+                   <div className="grid grid-cols-5 sm:grid-cols-8 md:grid-cols-10 gap-2">
+                     {partQuestions.map((q) => (
+                        <Button
+                          key={q.idx}
+                          variant={currentQuestionIndex === q.idx ? 'default' : answers[q.id] ? 'secondary' : 'outline'}
+                          size="sm"
+                          className="w-full h-9 text-sm font-medium"
+                          onClick={() => setCurrentQuestionIndex(q.idx)}
+                        >
+                          {q.idx + 1}
+                        </Button>
+                     ))}
+                   </div>
+                 </div>
+               );
+            })}
           </CardContent>
         </Card>
 

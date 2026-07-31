@@ -44,8 +44,6 @@ const QUESTION_TYPES = [
 ];
 
 // Komponen untuk daftar soal dengan fitur bulk select
-import { QuizPartSection } from './QuizPartSection';
-
 export function QuizManager({ assignmentId, classId, courseId, assignmentTitle = 'Quiz', isSafeExamMode, sebPassword, sebQuitPassword, weightPercentage: initialWeightPercentage }: QuizManagerProps) {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -55,7 +53,6 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
   const { data: quizParts, isLoading: loadingParts } = useQuizParts(assignmentId);
   const createQuizPart = useCreateQuizPart();
   const updateQuizPart = useUpdateQuizPart();
-  const deleteQuizPart = useDeleteQuizPart();
   const updateAssignmentWeight = useUpdateAssignmentWeight();
   
   const [weightPercentage, setWeightPercentage] = useState<number>(initialWeightPercentage || 0);
@@ -186,7 +183,6 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
           feedback: q.feedback || q.explanation || null,
           points: pointsPerQuestion,
           order_index: (questions?.length || 0) + idx + 1,
-          part_id: activePartId,
         };
       });
 
@@ -230,7 +226,6 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
           feedback: q.feedback || null,
           points: Math.max(1, Math.round(q.points || 10)),
           order_index: (questions?.length || 0) + idx + 1,
-          part_id: activePartId,
         };
       });
 
@@ -258,7 +253,6 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
         feedback: q.feedback || null,
         points: q.points,
         order_index: (questions?.length || 0) + idx + 1,
-          part_id: activePartId,
       }));
 
       await batchCreate.mutateAsync(questionsToInsert);
@@ -280,7 +274,6 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
         feedback: q.feedback || null,
         points: q.points,
         order_index: (questions?.length || 0) + idx + 1,
-          part_id: activePartId,
       }));
 
       await batchCreate.mutateAsync(questionsToInsert);
@@ -338,7 +331,6 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
         feedback: manualForm.feedback || null,
         points: manualForm.points,
         order_index: (questions?.length || 0) + 1,
-        part_id: activePartId,
       }]);
 
       // Also save to bank if requested
@@ -611,6 +603,30 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
         </Collapsible>
       )}
 
+      {/* Action Buttons Row */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <Button variant="outline" className="h-12" onClick={() => setShowManualAdd(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Tambah Manual
+        </Button>
+        <Button variant="outline" className="h-12" onClick={() => setShowQuestionBank(true)}>
+          <Database className="h-4 w-4 mr-2" />
+          Bank Soal
+        </Button>
+        <Button variant="outline" className="h-12" onClick={() => setShowImport(!showImport)}>
+          <Upload className="h-4 w-4 mr-2" />
+          Import Excel
+        </Button>
+        <Button variant="outline" className="h-12 border-primary/30 text-primary" onClick={() => { setShowAI(!showAI); setShowMaterialGenerator(false); }}>
+          <Sparkles className="h-4 w-4 mr-2" />
+          Generate AI
+        </Button>
+        <Button variant="outline" className="h-12 border-secondary/50 text-secondary-foreground" onClick={() => { setShowMaterialGenerator(!showMaterialGenerator); setShowAI(false); }}>
+          <BookOpen className="h-4 w-4 mr-2" />
+          Dari Materi
+        </Button>
+      </div>
+
       {/* Import from Template */}
       <Collapsible open={showImport} onOpenChange={setShowImport}>
         <CollapsibleContent>
@@ -710,106 +726,66 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
         </CollapsibleContent>
       </Collapsible>
 
-      
-      {quizParts?.length === 0 ? (
-        <Card className="border-dashed border-2">
-          <CardContent className="py-12 text-center">
-            <h4 className="font-semibold mb-2">Belum Ada Bagian</h4>
-            <p className="text-muted-foreground text-sm max-w-md mx-auto mb-4">
-              Quiz ini membutuhkan setidaknya satu bagian untuk menampung soal.
-            </p>
-            <Button onClick={() => createQuizPart.mutateAsync({ assignment_id: assignmentId, name: "Bagian 1", total_points: 100, order_index: 1 })}>
-              <Plus className="h-4 w-4 mr-2" />
-              Tambah Bagian Pertama
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-8">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-bold">Daftar Bagian Kuis</h2>
-            <Button variant="outline" onClick={() => createQuizPart.mutateAsync({ 
-              assignment_id: assignmentId, 
-              name: `Bagian ${(quizParts?.length || 0) + 1}`, 
-              total_points: 100, 
-              order_index: (quizParts?.length || 0) + 1 
-            })}>
-              <Plus className="h-4 w-4 mr-2" /> Tambah Bagian Baru
-            </Button>
-          </div>
-          
-          {quizParts?.map((part: any) => {
-            const partQuestions = questions?.filter((q: any) => q.part_id === part.id || (q.part_id === null && part.order_index === 1)) || [];
-            
-            return (
-              <QuizPartSection
-                key={part.id}
-                part={part}
-                questions={partQuestions}
-                onAddRequest={(partId, type) => {
-                  setActivePartId(partId);
-                  if (type === "manual") setShowManualAdd(true);
-                  if (type === "bank") setShowQuestionBank(true);
-                  if (type === "import") setShowImport(true);
-                  if (type === "ai") setShowAI(true);
-                  if (type === "material") setShowMaterialGenerator(true);
-                }}
-                onUpdatePartName={(partId, name) => updateQuizPart.mutateAsync({ id: partId, name })}
-                onUpdatePartPoints={(partId, points) => updateQuizPart.mutateAsync({ id: partId, total_points: points })}
-                onDeletePart={(partId) => {
-                    deleteQuizPart.mutateAsync(partId);
-                }}
-                isUpdatingPart={updateQuizPart.isPending}
-                
-                showAnswers={showAnswers}
-                setShowAnswers={setShowAnswers}
-                setPreviewMode={setPreviewMode}
-                setShowPreview={setShowPreview}
-                setPreviewQuestionIndex={setPreviewQuestionIndex}
-                getQuestionTypeInfo={getQuestionTypeInfo}
-                formatOptions={formatOptions}
-                formatCorrectAnswer={formatCorrectAnswer}
-                handleSaveToBank={handleSaveToBank}
-                openEditDialog={openEditDialog}
-                handleDeleteQuestion={handleDeleteQuestion}
-                onBulkDelete={async (ids: string[]) => {
-                  for (const id of ids) {
-                    await deleteQuestion.mutateAsync(id);
-                  }
-                  toast({ title: 'Sukses', description: `${ids.length} soal berhasil dihapus` });
-                }}
-                onBulkSaveToBank={async (ids: string[]) => {
-                  if (!user) return;
-                  const selectedQuestions = (questions || []).filter((q: any) => ids.includes(q.id));
-                  const questionsToAdd = selectedQuestions.map((q: any) => {
-                    const options = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
-                    const correctAnswer = typeof q.correct_answer === 'string' ? JSON.parse(q.correct_answer) : q.correct_answer;
-                    return {
-                      course_id: courseId,
-                      instructor_profile_id: user.id,
-                      question_code: q.question_code || generateNextCode(),
-                      question_type: q.question_type,
-                      question_text: q.question_text,
-                      options: options,
-                      correct_answer: correctAnswer,
-                      feedback: q.feedback || null,
-                      points: q.points,
-                    };
-                  });
-                  await batchAddToBank.mutateAsync(questionsToAdd);
-                  toast({ title: 'Sukses', description: `${ids.length} soal berhasil disimpan ke bank soal` });
-                }}
-                onBatchUpdatePoints={async (questionIds, points) => {
-                  await batchUpdatePoints.mutateAsync({ questionIds, points });
-                }}
-                isBatchUpdatingPoints={batchUpdatePoints.isPending}
-              />
-            );
-          })}
-        </div>
-      )}
+      {/* Questions List with Bulk Select */}
+      <BulkSelectProvider>
+        <QuestionsListWithBulk
+          questions={questions}
+          showAnswers={showAnswers}
+          setShowAnswers={setShowAnswers}
+          setPreviewMode={setPreviewMode}
+          setShowPreview={setShowPreview}
+          setPreviewQuestionIndex={setPreviewQuestionIndex}
+          getQuestionTypeInfo={getQuestionTypeInfo}
+          formatOptions={formatOptions}
+          formatCorrectAnswer={formatCorrectAnswer}
+          handleSaveToBank={handleSaveToBank}
+          openEditDialog={openEditDialog}
+          handleDeleteQuestion={handleDeleteQuestion}
+          onBulkDelete={async (ids: string[]) => {
+            for (const id of ids) {
+              await deleteQuestion.mutateAsync(id);
+            }
+            toast({ title: 'Sukses', description: `${ids.length} soal berhasil dihapus` });
+          }}
+          onBulkSaveToBank={async (ids: string[]) => {
+            if (!user) return;
+            const selectedQuestions = (questions || []).filter((q: any) => ids.includes(q.id));
+            const questionsToAdd = selectedQuestions.map((q: any) => {
+              const options = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+              const correctAnswer = typeof q.correct_answer === 'string' ? JSON.parse(q.correct_answer) : q.correct_answer;
+              return {
+                course_id: courseId,
+                instructor_profile_id: user.id,
+                question_code: q.question_code || generateNextCode(),
+                question_type: q.question_type,
+                question_text: q.question_text,
+                options: options,
+                correct_answer: correctAnswer,
+                feedback: q.feedback || null,
+                points: q.points,
+              };
+            });
+            await batchAddToBank.mutateAsync(questionsToAdd);
+            toast({ title: 'Sukses', description: `${ids.length} soal berhasil disimpan ke bank soal` });
+          }}
+        />
+      </BulkSelectProvider>
 
-<QuestionBankDialog
+      {/* Points Distributor */}
+      {questions && questions.length > 0 && (
+        <PointsDistributor
+          questionCount={questions.length}
+          onDistribute={async (pointsPerQuestion) => {
+            const questionIds = questions.map((q: any) => q.id);
+            await batchUpdatePoints.mutateAsync({
+              questionIds,
+              points: pointsPerQuestion,
+            });
+          }}
+          isLoading={batchUpdatePoints.isPending}
+        />
+      )}
+      <QuestionBankDialog
         open={showQuestionBank}
         onOpenChange={setShowQuestionBank}
         courseId={courseId}
@@ -1093,7 +1069,6 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
       {questions && questions.length > 0 && (
         <QuizPreview
           questions={questions}
-          quizParts={quizParts}
           open={showPreview}
           onOpenChange={setShowPreview}
           mode={previewMode}

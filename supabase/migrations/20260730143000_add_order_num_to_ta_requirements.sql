@@ -1,0 +1,1 @@
+ALTER TABLE public.ta_requirements ADD COLUMN IF NOT EXISTS order_num INTEGER DEFAULT 0;
