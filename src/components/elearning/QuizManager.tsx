@@ -553,39 +553,7 @@ export function QuizManager({ assignmentId, classId, courseId, assignmentTitle =
 
   return (
     <div className="space-y-6">
-      {/* Weight Percentage Setting */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex items-end gap-4">
-            <div className="space-y-2 flex-1">
-              <Label>Bobot Kuis (%)</Label>
-              <Input
-                type="number"
-                min="0"
-                max="100"
-                value={weightPercentage}
-                onChange={(e) => setWeightPercentage(parseFloat(e.target.value) || 0)}
-              />
-            </div>
-            <Button 
-              onClick={async () => {
-                setIsSavingWeight(true);
-                try {
-                  await updateAssignmentWeight.mutateAsync({ id: assignmentId, weight: weightPercentage });
-                  toast({ title: "Sukses", description: "Bobot kuis berhasil diperbarui" });
-                } catch (e) {
-                  toast({ title: "Error", description: "Gagal memperbarui bobot kuis", variant: "destructive" });
-                }
-                setIsSavingWeight(false);
-              }}
-              disabled={isSavingWeight}
-            >
-              {isSavingWeight ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-              Simpan Bobot
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* SEB Config Generator */}
       {isSafeExamMode && (
