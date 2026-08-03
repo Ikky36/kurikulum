@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/accordion";
 import { useNotifications, NotificationItem, NotificationGroup } from '@/hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { format, isPast, parseISO } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
@@ -102,18 +103,29 @@ function NotificationCard({ item, onClick }: { item: NotificationItem; onClick: 
 export function NotificationBell() {
   const { data: notifications = [], isLoading } = useNotifications();
   const navigate = useNavigate();
+  const { profile } = useAuth();
   const [open, setOpen] = useState(false);
 
   const totalCount = notifications.length;
 
   const handleNotificationClick = (item: NotificationItem) => {
     setOpen(false);
+    const role = profile?.role;
+    
     if (item.group === 'e-learning') {
       navigate('/e-learning');
     } else if (item.group === 'akademik') {
-      navigate('/dashboard'); // or route to akademik
+      if (role === 'admin' || role === 'sub_admin') {
+        navigate('/dashboard#krs');
+      } else {
+        navigate('/dashboard#bimbingan');
+      }
     } else if (item.group === 'tugas-akhir') {
-      navigate('/dashboard'); // or route to TA dashboard
+      if (item.type === 'ta_pending_consultation') {
+        navigate('/dashboard#bimbingan_ta');
+      } else {
+        navigate('/tugas-akhir');
+      }
     }
   };
 
