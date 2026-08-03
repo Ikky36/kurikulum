@@ -35,6 +35,8 @@ function NotificationIcon({ type }: { type: NotificationItem['type'] }) {
       return <FileText className="h-4 w-4 text-purple-500" />;
     case 'ta_pending_consultation':
       return <Users className="h-4 w-4 text-purple-500" />;
+    case 'ta_consultation_feedback':
+      return <FileText className="h-4 w-4 text-emerald-500" />;
     case 'ta_status_update':
       return <GraduationCap className="h-4 w-4 text-emerald-500" />;
     default:

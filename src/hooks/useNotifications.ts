@@ -8,7 +8,7 @@ export type NotificationGroup = 'e-learning' | 'akademik' | 'tugas-akhir' | 'keu
 export interface NotificationItem {
   id: string;
   group: NotificationGroup;
-  type: 'unread_material' | 'pending_assignment' | 'ungraded_submission' | 'pending_krs' | 'ta_pending_approval' | 'ta_status_update' | 'ta_pending_consultation';
+  type: 'unread_material' | 'pending_assignment' | 'ungraded_submission' | 'pending_krs' | 'ta_pending_approval' | 'ta_status_update' | 'ta_pending_consultation' | 'ta_consultation_feedback';
   title: string;
   subtitle: string;
   classTitle: string;
@@ -136,6 +136,35 @@ async function fetchStudentNotifications(profileId: string): Promise<Notificatio
           subtitle: `Judul "${sub.title}" telah di${sub.status === 'approved' ? 'setujui' : 'tolak'}`,
           classTitle: 'Tugas Akhir',
           createdAt: sub.updated_at,
+          classId: 'ta',
+        });
+      }
+    }
+
+    const { data: taConsultations } = await supabase
+      .from('ta_consultation_logs')
+      .select(`
+        id, 
+        status, 
+        updated_at,
+        solution,
+        ta_submissions!inner(student_id)
+      `)
+      .eq('ta_submissions.student_id', profileId)
+      .in('status', ['approved', 'rejected'])
+      .gte('updated_at', sevenDaysAgo.toISOString())
+      .order('updated_at', { ascending: false });
+
+    if (taConsultations && taConsultations.length > 0) {
+      for (const log of taConsultations) {
+        notifications.push({
+          id: `ta-consult-fb-${log.id}`,
+          group: 'tugas-akhir',
+          type: 'ta_consultation_feedback',
+          title: 'Feedback Bimbingan TA',
+          subtitle: `Dosen telah memberi ${log.status === 'approved' ? 'solusi' : 'revisi'} pada log bimbingan Anda`,
+          classTitle: 'Tugas Akhir',
+          createdAt: log.updated_at,
           classId: 'ta',
         });
       }
