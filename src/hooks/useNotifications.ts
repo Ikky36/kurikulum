@@ -8,7 +8,7 @@ export type NotificationGroup = 'e-learning' | 'akademik' | 'tugas-akhir' | 'keu
 export interface NotificationItem {
   id: string;
   group: NotificationGroup;
-  type: 'unread_material' | 'pending_assignment' | 'ungraded_submission' | 'pending_krs' | 'ta_pending_approval' | 'ta_status_update';
+  type: 'unread_material' | 'pending_assignment' | 'ungraded_submission' | 'pending_krs' | 'ta_pending_approval' | 'ta_status_update' | 'ta_pending_consultation';
   title: string;
   subtitle: string;
   classTitle: string;
@@ -147,7 +147,7 @@ async function fetchStudentNotifications(profileId: string): Promise<Notificatio
   return notifications;
 }
 
-async function fetchDosenNotifications(profileId: string): Promise<NotificationItem[]> {
+async function fetchDosenNotifications(profileId: string, role: string): Promise<NotificationItem[]> {
   const notifications: NotificationItem[] = [];
 
   // --- 1. E-Learning Notifications ---
@@ -271,32 +271,67 @@ async function fetchDosenNotifications(profileId: string): Promise<NotificationI
 
   // --- 3. Tugas Akhir Notifications (Dosen/Admin) ---
   try {
-    // Fetch pending TA submissions (for simplicity, we fetch all pending for now, 
-    // ideally filtered by permissions/roles if we have kaprodi/koordinator)
-    const { data: pendingSubmissions } = await supabase
-      .from('ta_submissions')
-      .select(`
-        id, 
-        title, 
-        created_at,
-        profiles!ta_submissions_student_id_fkey(full_name)
-      `)
-      .eq('status', 'pending');
+    if (role === 'admin' || role === 'sub_admin') {
+      // Fetch pending TA submissions (for simplicity, we fetch all pending for now, 
+      // ideally filtered by permissions/roles if we have kaprodi/koordinator)
+      const { data: pendingSubmissions } = await supabase
+        .from('ta_submissions')
+        .select(`
+          id, 
+          title, 
+          created_at,
+          profiles!ta_submissions_student_id_fkey(full_name)
+        `)
+        .eq('status', 'pending');
 
-    if (pendingSubmissions && pendingSubmissions.length > 0) {
-      for (const sub of pendingSubmissions) {
-        // Safe access for the joined table
-        const student = (sub.profiles as any)?.full_name || 'Mahasiswa';
-        notifications.push({
-          id: `ta-pending-${sub.id}`,
-          group: 'tugas-akhir',
-          type: 'ta_pending_approval',
-          title: 'Pengajuan Judul TA Baru',
-          subtitle: `${student} mengajukan judul: "${sub.title}"`,
-          classTitle: 'Tugas Akhir',
-          createdAt: sub.created_at,
-          classId: 'ta',
-        });
+      if (pendingSubmissions && pendingSubmissions.length > 0) {
+        for (const sub of pendingSubmissions) {
+          // Safe access for the joined table
+          const student = (sub.profiles as any)?.full_name || 'Mahasiswa';
+          notifications.push({
+            id: `ta-pending-${sub.id}`,
+            group: 'tugas-akhir',
+            type: 'ta_pending_approval',
+            title: 'Pengajuan Judul TA Baru',
+            subtitle: `${student} mengajukan judul: "${sub.title}"`,
+            classTitle: 'Tugas Akhir',
+            createdAt: sub.created_at,
+            classId: 'ta',
+          });
+        }
+      }
+    }
+
+    if (role === 'dosen') {
+      const { data: pendingConsultations } = await supabase
+        .from('ta_consultation_logs')
+        .select(`
+          id,
+          date,
+          created_at,
+          ta_submissions(
+            title,
+            profiles!ta_submissions_student_id_fkey(full_name)
+          )
+        `)
+        .eq('dosen_id', profileId)
+        .eq('status', 'pending');
+        
+      if (pendingConsultations && pendingConsultations.length > 0) {
+        for (const log of pendingConsultations) {
+          const submission = log.ta_submissions as any;
+          const studentName = submission?.profiles?.full_name || 'Mahasiswa';
+          notifications.push({
+            id: `ta-consult-${log.id}`,
+            group: 'tugas-akhir',
+            type: 'ta_pending_consultation',
+            title: 'Pengajuan Bimbingan TA',
+            subtitle: `${studentName} mengajukan bimbingan baru`,
+            classTitle: 'Tugas Akhir',
+            createdAt: log.created_at || log.date,
+            classId: 'ta',
+          });
+        }
       }
     }
   } catch (error) {
@@ -339,7 +374,7 @@ export function useNotifications() {
       if (role === 'mahasiswa') {
         return fetchStudentNotifications(profile.id);
       } else if (role === 'dosen' || role === 'admin' || role === 'sub_admin') {
-        const dosenNotifs = await fetchDosenNotifications(profile.id);
+        const dosenNotifs = await fetchDosenNotifications(profile.id, role);
         return dosenNotifs;
       }
 
