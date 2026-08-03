@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Bell, BookOpen, FileText, ClipboardCheck, Clock, ChevronRight } from 'lucide-react';
+import { Bell, BookOpen, FileText, ClipboardCheck, Clock, ChevronRight, GraduationCap, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,7 +8,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { useNotifications, NotificationItem } from '@/hooks/useNotifications';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { useNotifications, NotificationItem, NotificationGroup } from '@/hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { format, isPast, parseISO } from 'date-fns';
@@ -23,7 +29,37 @@ function NotificationIcon({ type }: { type: NotificationItem['type'] }) {
     case 'ungraded_submission':
       return <ClipboardCheck className="h-4 w-4 text-emerald-500" />;
     case 'pending_krs':
-      return <FileText className="h-4 w-4 text-blue-500" />;
+      return <Users className="h-4 w-4 text-blue-500" />;
+    case 'ta_pending_approval':
+      return <FileText className="h-4 w-4 text-purple-500" />;
+    case 'ta_status_update':
+      return <GraduationCap className="h-4 w-4 text-emerald-500" />;
+    default:
+      return <Bell className="h-4 w-4 text-muted-foreground" />;
+  }
+}
+
+function GroupIcon({ group }: { group: NotificationGroup }) {
+  switch (group) {
+    case 'e-learning':
+      return <BookOpen className="h-4 w-4 text-blue-500" />;
+    case 'akademik':
+      return <Users className="h-4 w-4 text-amber-500" />;
+    case 'tugas-akhir':
+      return <GraduationCap className="h-4 w-4 text-purple-500" />;
+    case 'keuangan':
+    case 'event':
+      return <Bell className="h-4 w-4 text-muted-foreground" />;
+  }
+}
+
+function getGroupName(group: NotificationGroup) {
+  switch (group) {
+    case 'e-learning': return 'E-Learning';
+    case 'akademik': return 'Bimbingan Akademik';
+    case 'tugas-akhir': return 'Tugas Akhir';
+    case 'keuangan': return 'Keuangan';
+    case 'event': return 'Event & Pengumuman';
   }
 }
 
@@ -68,20 +104,28 @@ export function NotificationBell() {
 
   const totalCount = notifications.length;
 
-  const unreadMaterials = notifications.filter(n => n.type === 'unread_material');
-  const pendingAssignments = notifications.filter(n => n.type === 'pending_assignment');
-  const ungradedSubmissions = notifications.filter(n => n.type === 'ungraded_submission');
-
   const handleNotificationClick = (item: NotificationItem) => {
     setOpen(false);
-    navigate('/e-learning');
+    if (item.group === 'e-learning') {
+      navigate('/e-learning');
+    } else if (item.group === 'akademik') {
+      navigate('/dashboard'); // or route to akademik
+    } else if (item.group === 'tugas-akhir') {
+      navigate('/dashboard'); // or route to TA dashboard
+    }
   };
 
-  const sections = [
-    { title: 'Materi Belum Dibaca', items: unreadMaterials, icon: BookOpen, color: 'text-blue-500' },
-    { title: 'Tugas/Quiz Belum Dikerjakan', items: pendingAssignments, icon: FileText, color: 'text-amber-500' },
-    { title: 'Belum Diperiksa', items: ungradedSubmissions, icon: ClipboardCheck, color: 'text-emerald-500' },
-  ].filter(s => s.items.length > 0);
+  // Group notifications
+  const groupedNotifications = notifications.reduce((acc, curr) => {
+    if (!acc[curr.group]) {
+      acc[curr.group] = [];
+    }
+    acc[curr.group].push(curr);
+    return acc;
+  }, {} as Record<NotificationGroup, NotificationItem[]>);
+
+  // Available groups that have items
+  const activeGroups = (Object.keys(groupedNotifications) as NotificationGroup[]).sort();
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -119,43 +163,36 @@ export function NotificationBell() {
           </div>
         ) : (
           <ScrollArea className="h-[400px]">
-            <div className="p-2">
-              {sections.map((section) => (
-                <div key={section.title} className="mb-2 last:mb-0">
-                  <div className="flex items-center gap-2 px-3 py-1.5">
-                    <section.icon className={cn("h-3.5 w-3.5", section.color)} />
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                      {section.title} ({section.items.length})
-                    </span>
-                  </div>
-                  {section.items.map((item) => (
-                    <NotificationCard
-                      key={item.id}
-                      item={item}
-                      onClick={() => handleNotificationClick(item)}
-                    />
-                  ))}
-                </div>
-              ))}
-            </div>
+            <Accordion type="multiple" defaultValue={activeGroups} className="w-full">
+              {activeGroups.map((group) => {
+                const items = groupedNotifications[group];
+                return (
+                  <AccordionItem key={group} value={group} className="border-b-0">
+                    <AccordionTrigger className="px-4 py-3 hover:bg-muted/50 hover:no-underline">
+                      <div className="flex items-center gap-2">
+                        <GroupIcon group={group} />
+                        <span className="text-sm font-semibold">{getGroupName(group)}</span>
+                        <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-5 text-[10px]">
+                          {items.length}
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-2 pt-0 px-2">
+                      <div className="space-y-1">
+                        {items.map((item) => (
+                          <NotificationCard
+                            key={item.id}
+                            item={item}
+                            onClick={() => handleNotificationClick(item)}
+                          />
+                        ))}
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                );
+              })}
+            </Accordion>
           </ScrollArea>
-        )}
-
-        {totalCount > 0 && (
-          <div className="border-t px-4 py-2.5">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full text-xs"
-              onClick={() => {
-                setOpen(false);
-                navigate('/e-learning');
-              }}
-            >
-              Buka E-Learning
-              <ChevronRight className="h-3 w-3 ml-1" />
-            </Button>
-          </div>
         )}
       </PopoverContent>
     </Popover>

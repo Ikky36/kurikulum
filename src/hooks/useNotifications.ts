@@ -3,9 +3,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
+export type NotificationGroup = 'e-learning' | 'akademik' | 'tugas-akhir' | 'keuangan' | 'event';
+
 export interface NotificationItem {
   id: string;
-  type: 'unread_material' | 'pending_assignment' | 'ungraded_submission' | 'pending_krs';
+  group: NotificationGroup;
+  type: 'unread_material' | 'pending_assignment' | 'ungraded_submission' | 'pending_krs' | 'ta_pending_approval' | 'ta_status_update';
   title: string;
   subtitle: string;
   classTitle: string;
@@ -78,6 +81,7 @@ async function fetchStudentNotifications(profileId: string): Promise<Notificatio
       const cls = classMap.get(mat.elearning_class_id);
       notifications.push({
         id: `mat-${mat.id}`,
+        group: 'e-learning',
         type: 'unread_material',
         title: mat.title,
         subtitle: `Materi ${mat.content_type === 'video' ? 'video' : ''} belum dibaca`,
@@ -97,6 +101,7 @@ async function fetchStudentNotifications(profileId: string): Promise<Notificatio
       const isQuiz = assg.assignment_type === 'quiz';
       notifications.push({
         id: `assg-${assg.id}`,
+        group: 'e-learning',
         type: 'pending_assignment',
         title: assg.title,
         subtitle: isQuiz ? 'Quiz belum dikerjakan' : 'Tugas belum dikumpulkan',
@@ -106,6 +111,37 @@ async function fetchStudentNotifications(profileId: string): Promise<Notificatio
         classId: assg.elearning_class_id,
       });
     }
+  }
+
+  // --- 4. Tugas Akhir Notifications (Mahasiswa) ---
+  try {
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const { data: taSubmissions } = await supabase
+      .from('ta_submissions')
+      .select('id, title, status, updated_at')
+      .eq('student_id', profileId)
+      .in('status', ['approved', 'rejected'])
+      .gte('updated_at', sevenDaysAgo.toISOString())
+      .order('updated_at', { ascending: false });
+
+    if (taSubmissions && taSubmissions.length > 0) {
+      for (const sub of taSubmissions) {
+        notifications.push({
+          id: `ta-sub-${sub.id}`,
+          group: 'tugas-akhir',
+          type: 'ta_status_update',
+          title: 'Status Pengajuan Judul',
+          subtitle: `Judul "${sub.title}" telah di${sub.status === 'approved' ? 'setujui' : 'tolak'}`,
+          classTitle: 'Tugas Akhir',
+          createdAt: sub.updated_at,
+          classId: 'ta',
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching TA notifications:", error);
   }
 
   return notifications;
@@ -169,6 +205,7 @@ async function fetchDosenNotifications(profileId: string): Promise<NotificationI
 
             notifications.push({
               id: `ungraded-${assignmentId}`,
+              group: 'e-learning',
               type: 'ungraded_submission',
               title: assignment.title,
               subtitle: `${subs.length} pengumpulan belum diperiksa`,
@@ -216,6 +253,7 @@ async function fetchDosenNotifications(profileId: string): Promise<NotificationI
           for (const krs of pendingKrs) {
             notifications.push({
               id: `pending-krs-${krs.id}`,
+              group: 'akademik',
               type: 'pending_krs',
               title: 'Persetujuan KRS',
               subtitle: `${studentMap.get(krs.student_id)} mengajukan KRS baru`,
@@ -229,6 +267,40 @@ async function fetchDosenNotifications(profileId: string): Promise<NotificationI
     }
   } catch (error) {
     console.error("Error fetching DPA notifications:", error);
+  }
+
+  // --- 3. Tugas Akhir Notifications (Dosen/Admin) ---
+  try {
+    // Fetch pending TA submissions (for simplicity, we fetch all pending for now, 
+    // ideally filtered by permissions/roles if we have kaprodi/koordinator)
+    const { data: pendingSubmissions } = await supabase
+      .from('ta_submissions')
+      .select(`
+        id, 
+        title, 
+        created_at,
+        profiles!ta_submissions_student_id_fkey(full_name)
+      `)
+      .eq('status', 'pending');
+
+    if (pendingSubmissions && pendingSubmissions.length > 0) {
+      for (const sub of pendingSubmissions) {
+        // Safe access for the joined table
+        const student = (sub.profiles as any)?.full_name || 'Mahasiswa';
+        notifications.push({
+          id: `ta-pending-${sub.id}`,
+          group: 'tugas-akhir',
+          type: 'ta_pending_approval',
+          title: 'Pengajuan Judul TA Baru',
+          subtitle: `${student} mengajukan judul: "${sub.title}"`,
+          classTitle: 'Tugas Akhir',
+          createdAt: sub.created_at,
+          classId: 'ta',
+        });
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching Dosen TA notifications:", error);
   }
 
   return notifications;
