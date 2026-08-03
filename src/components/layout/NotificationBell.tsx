@@ -116,13 +116,15 @@ export function NotificationBell() {
       navigate('/e-learning');
     } else if (item.group === 'akademik') {
       if (role === 'admin' || role === 'sub_admin') {
-        navigate('/dashboard#krs');
+        navigate('/dashboard/admin#krs');
+      } else if (role === 'mahasiswa') {
+        navigate('/dashboard/mahasiswa#bimbingan');
       } else {
-        navigate('/dashboard#bimbingan');
+        navigate('/dashboard/dosen#bimbingan');
       }
     } else if (item.group === 'tugas-akhir') {
       if (item.type === 'ta_pending_consultation') {
-        navigate('/dashboard#bimbingan_ta');
+        navigate('/dashboard/dosen#bimbingan_ta');
       } else {
         navigate('/tugas-akhir');
       }
