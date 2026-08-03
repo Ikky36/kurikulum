@@ -179,23 +179,34 @@ export function CourseLearningOutcomes({ courseId, canEdit }: CourseLearningOutc
 
   // Helper function to recalculate PLO weights when CLOs are added/removed
   const recalculatePloWeights = async (ploIds: string[]) => {
+    // First, get all CLO IDs for this specific course to isolate the update
+    const { data: courseClos } = await supabase
+      .from('clos')
+      .select('id')
+      .eq('course_id', courseId);
+      
+    const cloIds = courseClos?.map(c => c.id) || [];
+    if (cloIds.length === 0) return;
+
     for (const ploId of ploIds) {
-      // Get all CLO-PLO links for this PLO
+      // Get CLO-PLO links ONLY for this PLO within THIS course
       const { data: links, error } = await supabase
         .from('clo_plos')
         .select('id')
-        .eq('plo_id', ploId);
+        .eq('plo_id', ploId)
+        .in('clo_id', cloIds);
       
       if (error || !links || links.length === 0) continue;
       
-      // Calculate equal weight for each CLO
+      // Calculate equal weight for each CLO in this course
       const equalWeight = 100 / links.length;
       
-      // Update all links with equal weight
+      // Update ONLY the links belonging to this course
+      const linkIds = links.map(l => l.id);
       await supabase
         .from('clo_plos')
         .update({ weight_percentage: equalWeight })
-        .eq('plo_id', ploId);
+        .in('id', linkIds);
     }
   };
 
