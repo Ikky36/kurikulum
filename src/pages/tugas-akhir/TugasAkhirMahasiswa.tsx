@@ -11,10 +11,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save, Undo2 } from 'lucide-react';
+import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save, Undo2, Eye, Edit2, Trash2, ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useAcademicPeriod } from '@/hooks/useAcademicPeriod';
 import { calculateSemester } from '@/utils/academicHelpers';
@@ -44,6 +45,7 @@ export default function TugasAkhirMahasiswa() {
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [isReviseOpen, setIsReviseOpen] = useState(false);
   const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
+  const [editSubmissionId, setEditSubmissionId] = useState<string | null>(null);
 
   const { data: myProfile } = useQuery({
     queryKey: ['my_profile', user?.id],
@@ -71,7 +73,7 @@ export default function TugasAkhirMahasiswa() {
 
   const mySubmission = selectedSubmissionId 
     ? mySubmissions?.find((s: any) => s.id === selectedSubmissionId) 
-    : mySubmissions?.[0];
+    : null;
 
   const { data: consultationLogs, isLoading: logsLoading } = useQuery({
     queryKey: ['my_ta_logs', mySubmission?.id],
@@ -264,6 +266,51 @@ export default function TugasAkhirMahasiswa() {
     }
   });
 
+  const updateSubmissionMutation = useMutation({
+    mutationFn: async ({ id }: { id: string }) => {
+      const { data, error } = await supabase
+        .from('ta_submissions')
+        .update({
+          type_id: selectedType,
+          title,
+          document_link: documentLink,
+          comments,
+          status: 'pending'
+        })
+        .eq('id', id)
+        .select().single();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my_ta_submissions', user?.id] });
+      toast.success('Berhasil memperbarui pengajuan Tugas Akhir');
+      setIsCreatingNew(false);
+      setSelectedSubmissionId(null);
+    },
+    onError: (error: any) => {
+      toast.error('Gagal memperbarui: ' + error.message);
+    }
+  });
+
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const deleteSubmissionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('ta_submissions').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my_ta_submissions', user?.id] });
+      toast.success('Pengajuan berhasil dihapus');
+      setDeleteId(null);
+    },
+    onError: (error: any) => {
+      toast.error('Gagal menghapus: ' + error.message);
+      setDeleteId(null);
+    }
+  });
+
   const reviseMutation = useMutation({
     mutationFn: async () => {
       if (!mySubmission) throw new Error('Tidak ada pengajuan yang direvisi');
@@ -325,6 +372,7 @@ export default function TugasAkhirMahasiswa() {
 
   const openNewSubmission = () => {
     setIsCreatingNew(true);
+    setEditSubmissionId(null);
     setTitle('');
     setDocumentLink('');
     setComments('');
@@ -359,31 +407,88 @@ export default function TugasAkhirMahasiswa() {
               <TabsTrigger value="sidang" disabled={!mySubmission || mySubmission.status !== 'approved' || isCreatingNew}>Sidang Akhir</TabsTrigger>
             </TabsList>
             
-            {!isCreatingNew && mySubmissions && mySubmissions.length > 0 && (
-              <div className="flex items-center gap-2 w-full md:w-auto">
-                <Select value={selectedSubmissionId || mySubmissions[0].id} onValueChange={setSelectedSubmissionId}>
-                  <SelectTrigger className="w-full md:w-[250px]">
-                    <SelectValue placeholder="Pilih Pengajuan..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {mySubmissions.map((sub: any, idx: number) => (
-                      <SelectItem key={sub.id} value={sub.id}>
-                        Pengajuan {mySubmissions.length - idx}: {sub.title.length > 30 ? sub.title.substring(0, 30) + '...' : sub.title}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                
-                <Button variant="outline" onClick={openNewSubmission} title="Buat Pengajuan Baru">
-                  <Plus className="w-4 h-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Ajukan Judul Lain</span>
-                </Button>
-              </div>
+            {mySubmission && !isCreatingNew && (
+              <Button variant="outline" onClick={() => setSelectedSubmissionId(null)}>
+                <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Daftar
+              </Button>
             )}
           </div>
 
           <TabsContent value="bimbingan" className="space-y-6">
-            {(mySubmission && !isCreatingNew) ? (
+            {!isCreatingNew && !mySubmission && mySubmissions && mySubmissions.length > 0 ? (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Daftar Pengajuan Tugas Akhir</CardTitle>
+                    <CardDescription>Pantau status dan riwayat judul tugas akhir yang Anda ajukan.</CardDescription>
+                  </div>
+                  <Button onClick={openNewSubmission} size="sm">
+                    <Plus className="w-4 h-4 mr-2" /> Ajukan Judul Baru
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Judul</TableHead>
+                          <TableHead>Jenis</TableHead>
+                          <TableHead>Tanggal</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead className="text-right">Aksi</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {mySubmissions.map((sub: any) => (
+                          <TableRow key={sub.id}>
+                            <TableCell className="font-medium max-w-[200px] sm:max-w-[300px] truncate" title={sub.title}>
+                              {sub.title}
+                            </TableCell>
+                            <TableCell>{sub.ta_types?.name}</TableCell>
+                            <TableCell className="whitespace-nowrap">{new Date(sub.created_at).toLocaleDateString('id-ID')}</TableCell>
+                            <TableCell>
+                              <Badge variant={
+                                sub.status === 'approved' ? 'default' :
+                                sub.status === 'rejected' ? 'destructive' :
+                                sub.status === 'revision' ? 'secondary' : 'outline'
+                              }>
+                                {sub.status === 'approved' ? 'Disetujui' :
+                                 sub.status === 'rejected' ? 'Ditolak' :
+                                 sub.status === 'revision' ? 'Revisi' : 'Menunggu'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right whitespace-nowrap">
+                              <div className="flex justify-end gap-2">
+                                <Button size="sm" variant="outline" onClick={() => setSelectedSubmissionId(sub.id)} title="Lihat Detail">
+                                  <Eye className="w-4 h-4" />
+                                </Button>
+                                {sub.status !== 'approved' && (
+                                  <>
+                                    <Button size="sm" variant="outline" onClick={() => {
+                                      setTitle(sub.title);
+                                      setDocumentLink(sub.document_link || '');
+                                      setComments(sub.comments || '');
+                                      setSelectedType(sub.type_id || '');
+                                      setEditSubmissionId(sub.id);
+                                      setIsCreatingNew(true);
+                                    }} title="Edit">
+                                      <Edit2 className="w-4 h-4" />
+                                    </Button>
+                                    <Button size="sm" variant="destructive" onClick={() => setDeleteId(sub.id)} title="Hapus">
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (mySubmission && !isCreatingNew) ? (
               <div className="space-y-6">
                 <Card>
                   <CardHeader>
@@ -715,15 +820,24 @@ export default function TugasAkhirMahasiswa() {
                   </div>
                 </CardContent>
                 <CardFooter className="flex gap-2">
-                  {isCreatingNew && (
-                    <Button variant="outline" onClick={() => setIsCreatingNew(false)} className="w-full sm:w-auto">Batal</Button>
+                  {isCreatingNew && mySubmissions && mySubmissions.length > 0 && (
+                    <Button variant="outline" onClick={() => {
+                      setIsCreatingNew(false);
+                      setEditSubmissionId(null);
+                    }} className="w-full sm:w-auto">Batal</Button>
                   )}
                   <Button 
-                    onClick={() => submitMutation.mutate()} 
-                    disabled={!selectedType || !title || !documentLink || submitMutation.isPending || validationErrors.length > 0 || generalErrors.length > 0}
+                    onClick={() => {
+                      if (editSubmissionId) {
+                        updateSubmissionMutation.mutate({ id: editSubmissionId });
+                      } else {
+                        submitMutation.mutate();
+                      }
+                    }} 
+                    disabled={!selectedType || !title || !documentLink || submitMutation.isPending || updateSubmissionMutation.isPending || validationErrors.length > 0 || generalErrors.length > 0}
                     className="flex-1"
                   >
-                    {submitMutation.isPending ? 'Mengirim...' : 'Kirim Pengajuan'}
+                    {submitMutation.isPending || updateSubmissionMutation.isPending ? 'Menyimpan...' : editSubmissionId ? 'Simpan Perubahan' : 'Kirim Pengajuan'}
                   </Button>
                 </CardFooter>
               </Card>
@@ -887,6 +1001,28 @@ export default function TugasAkhirMahasiswa() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Modal Hapus Pengajuan */}
+        <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus Pengajuan?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus pengajuan tugas akhir ini? Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={() => deleteId && deleteSubmissionMutation.mutate(deleteId)}
+                disabled={deleteSubmissionMutation.isPending}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {deleteSubmissionMutation.isPending ? 'Menghapus...' : 'Hapus'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
       </div>
     </Layout>
