@@ -43,6 +43,7 @@ export default function TugasAkhirMahasiswa() {
   // Revision & Rejection State
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [isReviseOpen, setIsReviseOpen] = useState(false);
+  const [selectedSubmissionId, setSelectedSubmissionId] = useState<string | null>(null);
 
   const { data: myProfile } = useQuery({
     queryKey: ['my_profile', user?.id],
@@ -54,21 +55,23 @@ export default function TugasAkhirMahasiswa() {
     enabled: !!user?.id
   });
 
-  const { data: mySubmission, isLoading: subLoading } = useQuery({
-    queryKey: ['my_ta_submission', user?.id],
+  const { data: mySubmissions, isLoading: subLoading } = useQuery({
+    queryKey: ['my_ta_submissions', user?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ta_submissions')
         .select('*, ta_types(name), ta_advisors(role, profiles(id, full_name))')
         .eq('student_id', user?.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (error && error.code !== 'PGRST116') throw error;
+        .order('created_at', { ascending: false });
+      if (error) throw error;
       return data;
     },
     enabled: !!user?.id
   });
+
+  const mySubmission = selectedSubmissionId 
+    ? mySubmissions?.find((s: any) => s.id === selectedSubmissionId) 
+    : mySubmissions?.[0];
 
   const { data: consultationLogs, isLoading: logsLoading } = useQuery({
     queryKey: ['my_ta_logs', mySubmission?.id],
@@ -252,7 +255,7 @@ export default function TugasAkhirMahasiswa() {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my_ta_submission', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['my_ta_submissions', user?.id] });
       toast.success('Berhasil mengajukan Tugas Akhir');
       setIsCreatingNew(false);
     },
@@ -349,11 +352,34 @@ export default function TugasAkhirMahasiswa() {
         )}
 
         <Tabs defaultValue="bimbingan" className="space-y-6">
-          <TabsList className="w-full sm:w-auto grid grid-cols-3">
-            <TabsTrigger value="bimbingan">Judul & Bimbingan</TabsTrigger>
-            <TabsTrigger value="seminar" disabled={!mySubmission || mySubmission.status !== 'approved' || isCreatingNew}>Seminar Proposal</TabsTrigger>
-            <TabsTrigger value="sidang" disabled={!mySubmission || mySubmission.status !== 'approved' || isCreatingNew}>Sidang Akhir</TabsTrigger>
-          </TabsList>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <TabsList className="w-full sm:w-auto grid grid-cols-3">
+              <TabsTrigger value="bimbingan">Judul & Bimbingan</TabsTrigger>
+              <TabsTrigger value="seminar" disabled={!mySubmission || mySubmission.status !== 'approved' || isCreatingNew}>Seminar Proposal</TabsTrigger>
+              <TabsTrigger value="sidang" disabled={!mySubmission || mySubmission.status !== 'approved' || isCreatingNew}>Sidang Akhir</TabsTrigger>
+            </TabsList>
+            
+            {!isCreatingNew && mySubmissions && mySubmissions.length > 0 && (
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <Select value={selectedSubmissionId || mySubmissions[0].id} onValueChange={setSelectedSubmissionId}>
+                  <SelectTrigger className="w-full md:w-[250px]">
+                    <SelectValue placeholder="Pilih Pengajuan..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {mySubmissions.map((sub: any, idx: number) => (
+                      <SelectItem key={sub.id} value={sub.id}>
+                        Pengajuan {mySubmissions.length - idx}: {sub.title.length > 30 ? sub.title.substring(0, 30) + '...' : sub.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Button variant="outline" onClick={openNewSubmission} title="Buat Pengajuan Baru">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+          </div>
 
           <TabsContent value="bimbingan" className="space-y-6">
             {(mySubmission && !isCreatingNew) ? (
@@ -388,10 +414,7 @@ export default function TugasAkhirMahasiswa() {
                         <AlertCircle className="h-4 w-4" />
                         <AlertTitle>Pengajuan Ditolak</AlertTitle>
                         <AlertDescription className="mt-2 space-y-4">
-                          <p>Mohon maaf, pengajuan judul Anda ditolak. Silakan ajukan judul baru dengan menghubungi Kaprodi atau membuat pengajuan baru.</p>
-                          <Button variant="outline" size="sm" onClick={openNewSubmission}>
-                            Buat Pengajuan Judul Baru
-                          </Button>
+                          <p>Mohon maaf, pengajuan judul ini ditolak. Silakan ajukan judul baru dengan menghubungi Kaprodi atau membuat pengajuan baru dengan menekan tombol plus (+).</p>
                         </AlertDescription>
                       </Alert>
                     )}
