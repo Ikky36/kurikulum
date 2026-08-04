@@ -478,9 +478,9 @@ export default function Settings() {
   };
 
   const handleSaveInstrumen = () => {
-    const min = parseInt(instrumenMin);
-    const max = parseInt(instrumenMax);
-    const bobot = parseFloat(instrumenBobot);
+    const min = parseFloat(instrumenMin.replace(',', '.'));
+    const max = parseFloat(instrumenMax.replace(',', '.'));
+    const bobot = parseFloat(instrumenBobot.replace(',', '.'));
     if (isNaN(min) || isNaN(max)) {
       toast({ title: 'Gagal', description: 'Rentang harus berupa angka', variant: 'destructive' });
       return;
@@ -1772,9 +1772,8 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                               <div className="space-y-2">
                                 <Label>Rentang Minimal</Label>
                                 <Input 
-                                  type="number" 
-                                  min="0" 
-                                  max="100"
+                                  type="text" 
+                                  inputMode="decimal"
                                   value={instrumenMin} 
                                   onChange={(e) => setInstrumenMin(e.target.value)} 
                                   placeholder="0"
@@ -1783,9 +1782,8 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                               <div className="space-y-2">
                                 <Label>Rentang Maksimal</Label>
                                 <Input 
-                                  type="number" 
-                                  min="0" 
-                                  max="100"
+                                  type="text" 
+                                  inputMode="decimal"
                                   value={instrumenMax} 
                                   onChange={(e) => setInstrumenMax(e.target.value)} 
                                   placeholder="100"
@@ -1804,10 +1802,8 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                               <div className="space-y-2">
                                 <Label>Bobot (1-4)</Label>
                                 <Input 
-                                  type="number" 
-                                  min="0" 
-                                  max="4"
-                                  step="0.01"
+                                  type="text" 
+                                  inputMode="decimal"
                                   value={instrumenBobot} 
                                   onChange={(e) => setInstrumenBobot(e.target.value)} 
                                   placeholder="Contoh: 4.00"
@@ -1950,9 +1946,8 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                               <TableCell>
                                 {editingPassingScoreId === cay.id ? (
                                   <Input 
-                                    type="number" 
-                                    min="0" 
-                                    max="100" 
+                                    type="text" 
+                                    inputMode="decimal"
                                     value={passingScoreValue} 
                                     onChange={(e) => setPassingScoreValue(e.target.value)}
                                     className="w-20 h-8"
@@ -1969,7 +1964,7 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                                       size="icon" 
                                       className="h-8 w-8 text-success" 
                                       onClick={() => {
-                                        updatePassingScoreMutation.mutate({ id: cay.id, passing_score: Number(passingScoreValue) });
+                                        updatePassingScoreMutation.mutate({ id: cay.id, passing_score: Number(passingScoreValue.replace(',', '.')) });
                                         setEditingPassingScoreId(null);
                                       }}
                                     >

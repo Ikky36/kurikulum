@@ -809,7 +809,7 @@ function GradeRow({
   };
 
   const handleSave = () => {
-    const numScore = parseInt(score);
+    const numScore = parseFloat(score.replace(',', '.'));
     if (!isNaN(numScore) && numScore >= 0 && numScore <= 100) {
       onSave(numScore);
       setHasChanged(false);
@@ -834,9 +834,8 @@ function GradeRow({
       <TableCell className="font-mono text-sm">{student.nim || '-'}</TableCell>
       <TableCell>
         <Input
-          type="number"
-          min="0"
-          max="100"
+          type="text"
+          inputMode="decimal"
           value={score}
           onChange={(e) => handleChange(e.target.value)}
           className={cn(

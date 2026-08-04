@@ -295,7 +295,10 @@ export default function CourseDetail() {
   const handleSaveScore = async () => {
     if (!editingCell || !user) return;
     
-    const score = editValue === '' ? null : parseFloat(editValue);
+    // Replace comma with dot for decimal parsing
+    const normalizedValue = editValue.replace(',', '.');
+    const score = normalizedValue === '' ? null : parseFloat(normalizedValue);
+    
     if (score !== null && (isNaN(score) || score < 0 || score > 100)) {
       toast.error('Nilai harus antara 0-100');
       return;
@@ -745,9 +748,8 @@ export default function CourseDetail() {
                                 <TableCell key={assessment.id} className="text-center p-1">
                                   {isEditing ? (
                                     <Input
-                                      type="number"
-                                      min="0"
-                                      max="100"
+                                      type="text"
+                                      inputMode="decimal"
                                       value={editValue}
                                       onChange={(e) => setEditValue(e.target.value)}
                                       onBlur={handleSaveScore}

@@ -169,7 +169,7 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
   const handleSaveGrade = async () => {
     if (!selectedSubmission || !profile?.id) return;
 
-    const score = parseFloat(gradeValue);
+    const score = parseFloat(gradeValue.replace(',', '.'));
     if (isNaN(score) || score < 0 || score > 100) {
       toast({ title: 'Error', description: 'Nilai harus antara 0-100', variant: 'destructive' });
       return;
@@ -462,9 +462,8 @@ export function SubmissionGrader({ assignmentId, assignmentTitle, classId }: Sub
                         <Label htmlFor="grade-value">Nilai (0-100) *</Label>
                         <Input
                           id="grade-value"
-                          type="number"
-                          min={0}
-                          max={100}
+                          type="text"
+                          inputMode="decimal"
                           placeholder="Masukkan nilai..."
                           value={gradeValue}
                           onChange={(e) => setGradeValue(e.target.value)}
