@@ -129,7 +129,7 @@ export default function KrsMahasiswa() {
 
   // Ambil daftar mata kuliah kurikulum yang sesuai dengan paritas semester aktif
   const { data: availableCourses = [], isLoading: isLoadingCourses } = useQuery({
-    queryKey: ['courses_available', activeSemester?.id],
+    queryKey: ['courses_available', activeSemester?.id, profile?.program],
     enabled: !!activeSemester?.id,
     queryFn: async () => {
       // Ambil semua courses yang punya semester yang ganjil/genapnya sama dengan activeSemester
@@ -137,7 +137,7 @@ export default function KrsMahasiswa() {
         .from('courses')
         .select(`
           *,
-          curricula!inner(name, is_active),
+          curricula!inner(name, is_active, program_id),
           course_prerequisites!course_prerequisites_course_id_fkey(prerequisite_course_id)
         `)
         .eq('curricula.is_active', true)
@@ -145,7 +145,16 @@ export default function KrsMahasiswa() {
         .order('name', { ascending: true });
         
       if (error) throw error;
-      return data;
+      
+      let filteredData = data;
+      if (profile?.program) {
+        const { data: programsData } = await supabase.from('programs').select('id').eq('name', profile.program).maybeSingle();
+        if (programsData) {
+          filteredData = data.filter((c: any) => c.curricula?.program_id === programsData.id);
+        }
+      }
+      
+      return filteredData;
     },
   });
 
