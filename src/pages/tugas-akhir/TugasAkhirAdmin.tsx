@@ -196,7 +196,21 @@ export default function TugasAkhirAdmin() {
       setIsSeminarDetailOpen(false);
     },
     onError: (error: any) => {
-      toast.error('Gagal memperbarui jadwal: ' + error.message);
+      toast.error(error.message || 'Gagal memperbarui jadwal seminar');
+    }
+  });
+
+  const deleteSubmissionMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('thesis_submissions').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Pengajuan berhasil dihapus');
+      queryClient.invalidateQueries({ queryKey: ['admin_ta_submissions'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Gagal menghapus pengajuan');
     }
   });
 
@@ -362,6 +376,19 @@ export default function TugasAkhirAdmin() {
                                   setIsDetailOpen(true);
                                 }}>
                                   <Eye className="w-4 h-4 mr-2" /> Detail
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="text-destructive hover:bg-destructive hover:text-white" 
+                                  onClick={() => {
+                                    if (window.confirm('Yakin ingin menghapus pengajuan Tugas Akhir ini? Semua data terkait (bimbingan, seminar, file) juga mungkin akan terhapus.')) {
+                                      deleteSubmissionMutation.mutate(sub.id);
+                                    }
+                                  }} 
+                                  disabled={deleteSubmissionMutation.isPending}
+                                >
+                                  <Trash2 className="w-4 h-4" />
                                 </Button>
                               </div>
                             </TableCell>
