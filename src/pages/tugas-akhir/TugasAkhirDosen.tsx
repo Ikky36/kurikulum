@@ -182,7 +182,7 @@ export default function TugasAkhirDosen() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="mb-1">{adv.ta_submissions?.ta_types?.name}</Badge>
-                          <div className="font-medium line-clamp-2" title={adv.ta_submissions?.title}>{adv.ta_submissions?.title}</div>
+                          <div className="font-medium whitespace-normal text-justify" title={adv.ta_submissions?.title}>{adv.ta_submissions?.title}</div>
                         </TableCell>
                         <TableCell>
                           <span className="text-sm font-medium">{adv.role}</span>

@@ -328,7 +328,7 @@ export default function TugasAkhirAdmin() {
                             </TableCell>
                             <TableCell>
                               <Badge variant="outline" className="mb-1">{sub.ta_types?.name}</Badge>
-                              <div className="font-medium line-clamp-2" title={sub.title}>{sub.title}</div>
+                              <div className="font-medium whitespace-normal text-justify" title={sub.title}>{sub.title}</div>
                             </TableCell>
                             <TableCell>
                               {sub.ta_advisors?.length > 0 ? (
@@ -685,7 +685,7 @@ export default function TugasAkhirAdmin() {
                       <p className="font-medium capitalize">{selectedSeminar.type}</p>
                       
                       <Label className="text-xs text-muted-foreground mt-3 block">Topik / Judul</Label>
-                      <p className="text-sm font-medium line-clamp-2">{selectedSeminar.ta_submissions?.title}</p>
+                      <p className="text-sm font-medium whitespace-normal text-justify">{selectedSeminar.ta_submissions?.title}</p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
