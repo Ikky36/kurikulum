@@ -431,11 +431,12 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
         <div className="relative w-full max-w-xl">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-          placeholder="Cari mata kuliah, dosen, atau kelas..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
+            placeholder="Cari mata kuliah, dosen, atau kelas..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+          />
+        </div>
       </div>
 
       {/* Classes Grid */}
