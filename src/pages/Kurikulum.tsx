@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProgramFilter } from '@/hooks/useProgramFilter';
 import { useMultiTableRealtimeSubscription } from '@/hooks/useRealtimeSubscription';
 import { Layout } from '@/components/layout/Layout';
 import { useAppSettings } from '@/hooks/useAppSettings';
@@ -233,12 +234,34 @@ function KurikulumContent() {
     },
   });
 
-  const { data: curricula = [] } = useQuery({
-    queryKey: ['curricula'],
+  const { selectedProgramId, hasGlobalAccess, isAdminProdiOrDosen } = useProgramFilter();
+  
+  const { data: programs = [] } = useQuery({
+    queryKey: ['programs'],
     queryFn: async () => {
-      const { data } = await supabase.from('curricula').select('*').order('name');
+      const { data } = await supabase.from('programs').select('*').order('name');
       return data || [];
     },
+  });
+
+  const { data: curricula = [] } = useQuery({
+    queryKey: ['curricula', selectedProgramId, profile?.program],
+    queryFn: async () => {
+      let query = supabase.from('curricula').select('*').order('name');
+      
+      if (isAdminProdiOrDosen && profile?.program) {
+        const matchedProgram = programs.find(p => p.name === profile.program);
+        if (matchedProgram) {
+          query = query.eq('program_id', matchedProgram.id);
+        }
+      } else if (hasGlobalAccess && selectedProgramId !== 'all') {
+        query = query.eq('program_id', selectedProgramId);
+      }
+      
+      const { data } = await query;
+      return data || [];
+    },
+    enabled: programs.length > 0 || !isAdminProdiOrDosen, // Wait for programs to load if needed
   });
 
   // Active semesters from settings (sorted by order_index)
@@ -2133,7 +2156,23 @@ function KurikulumContent() {
           </div>
           
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <label className="text-sm font-medium text-muted-foreground">Filter Kurikulum:</label>
+            {hasGlobalAccess && (
+              <>
+                <label className="text-sm font-medium text-muted-foreground">Prodi:</label>
+                <Select value={selectedProgramId} onValueChange={setSelectedProgramId}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Semua Prodi" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Prodi</SelectItem>
+                    {programs.map((p: any) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </>
+            )}
+            <label className="text-sm font-medium text-muted-foreground ml-2">Filter Kurikulum:</label>
             <Select value={selectedCurriculumId} onValueChange={setSelectedCurriculumId}>
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="Pilih Kurikulum" />

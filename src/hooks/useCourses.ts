@@ -2,15 +2,22 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Course, CourseWithStats, Profile } from '@/lib/types';
 
+import { useProgramFilter } from '@/hooks/useProgramFilter';
+
 export function useCourses() {
+  const { resolvedProgramId } = useProgramFilter();
+
   return useQuery({
-    queryKey: ['courses'],
+    queryKey: ['courses', resolvedProgramId],
     queryFn: async () => {
       // First, get active curricula
-      const { data: activeCurricula, error: curriculaError } = await supabase
-        .from('curricula')
-        .select('id')
-        .eq('is_active', true);
+      let curriculaQuery = supabase.from('curricula').select('id').eq('is_active', true);
+      
+      if (resolvedProgramId !== 'all') {
+        curriculaQuery = curriculaQuery.eq('program_id', resolvedProgramId);
+      }
+      
+      const { data: activeCurricula, error: curriculaError } = await curriculaQuery;
       
       if (curriculaError) throw curriculaError;
       const activeCurriculumIds = activeCurricula?.map(c => c.id) || [];
@@ -31,14 +38,19 @@ export function useCourses() {
 }
 
 export function useCoursesWithStats() {
+  const { resolvedProgramId } = useProgramFilter();
+
   return useQuery({
-    queryKey: ['courses-with-stats'],
+    queryKey: ['courses-with-stats', resolvedProgramId],
     queryFn: async () => {
       // First, get active curricula
-      const { data: activeCurricula, error: curriculaError } = await supabase
-        .from('curricula')
-        .select('id')
-        .eq('is_active', true);
+      let curriculaQuery = supabase.from('curricula').select('id').eq('is_active', true);
+      
+      if (resolvedProgramId !== 'all') {
+        curriculaQuery = curriculaQuery.eq('program_id', resolvedProgramId);
+      }
+      
+      const { data: activeCurricula, error: curriculaError } = await curriculaQuery;
       
       if (curriculaError) throw curriculaError;
       const activeCurriculumIds = activeCurricula?.map(c => c.id) || [];

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProgramFilter } from '@/hooks/useProgramFilter';
 import type { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 // Types
@@ -15,16 +16,17 @@ export type ElearningSubmission = Tables<'elearning_submissions'>;
 // Fetch all elearning classes with related data
 export function useElearningClasses() {
   const { profile } = useAuth();
+  const { resolvedProgramId } = useProgramFilter();
 
   return useQuery({
-    queryKey: ['elearning-classes', profile?.id, profile?.role],
+    queryKey: ['elearning-classes', profile?.id, profile?.role, resolvedProgramId],
     queryFn: async () => {
       let query = supabase
         .from('elearning_classes')
         .select(`
           *,
           class_group:class_groups(*),
-          course:courses(*),
+          course:courses(*, curriculum:curricula(program_id)),
           instructor:profiles!elearning_classes_instructor_profile_id_fkey(*)
         `)
         .order('created_at', { ascending: false });
@@ -50,7 +52,12 @@ export function useElearningClasses() {
       const { data, error } = await query;
 
       if (error) throw error;
-      return data;
+      
+      let filteredData = data;
+      if (resolvedProgramId !== 'all') {
+        filteredData = filteredData?.filter((cls: any) => cls.course?.curriculum?.program_id === resolvedProgramId) || [];
+      }
+      return filteredData;
     },
     enabled: !!profile,
   });
@@ -66,7 +73,7 @@ export function useElearningClass(classId: string) {
         .select(`
           *,
           class_group:class_groups(*),
-          course:courses(*),
+          course:courses(*, curriculum:curricula(program_id)),
           instructor:profiles!elearning_classes_instructor_profile_id_fkey(*)
         `)
         .eq('id', classId)

@@ -375,7 +375,8 @@ export default function TugasAkhirMahasiswa() {
                 </Select>
                 
                 <Button variant="outline" onClick={openNewSubmission} title="Buat Pengajuan Baru">
-                  <Plus className="w-4 h-4" />
+                  <Plus className="w-4 h-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Ajukan Judul Lain</span>
                 </Button>
               </div>
             )}

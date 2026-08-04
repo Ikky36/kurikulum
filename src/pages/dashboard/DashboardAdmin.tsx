@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target, Eye, EyeOff, Settings, CheckSquare, LogIn, FileText } from 'lucide-react';
 import { Navigate, Link, useLocation } from 'react-router-dom';
 import { Course, Profile, AppRole, Program } from '@/lib/types';
+import { useProgramFilter } from '@/hooks/useProgramFilter';
 
 import { SistemKuliahManager } from '@/components/admin/SistemKuliahManager';
 import { StudentSemesterBadge } from '@/components/ui/semester-badge';
@@ -45,6 +46,7 @@ export default function DashboardAdmin() {
   const { user, profile, role, refreshProfile, loading } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { resolvedProgramId, hasGlobalAccess, programs, selectedProgramId, setSelectedProgramId } = useProgramFilter();
   const { saveAdminSession } = useLoginAs();
 
   // Enable realtime for admin dashboard data
@@ -166,11 +168,15 @@ export default function DashboardAdmin() {
 
   // Fetch all courses
   const { data: courses, refetch: refetchCourses } = useQuery({
-    queryKey: ['admin-courses'],
+    queryKey: ['admin-courses', resolvedProgramId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('courses').select('*').order('code');
+      const { data, error } = await supabase.from('courses').select('*, curriculum:curricula(program_id)').order('code');
       if (error) throw error;
-      return data as Course[];
+      let filteredData = data;
+      if (resolvedProgramId !== 'all') {
+        filteredData = filteredData?.filter((c: any) => c.curriculum?.program_id === resolvedProgramId);
+      }
+      return (filteredData || []) as Course[];
     },
   });
 
@@ -247,9 +253,13 @@ export default function DashboardAdmin() {
 
   // Fetch curricula for filtering courses in assignment
   const { data: assignCurricula } = useQuery({
-    queryKey: ['curricula', 'active'],
+    queryKey: ['curricula', 'active', resolvedProgramId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('curricula').select('id, name').eq('is_active', true).order('name');
+      let query = supabase.from('curricula').select('id, name').eq('is_active', true).order('name');
+      if (resolvedProgramId !== 'all') {
+        query = query.eq('program_id', resolvedProgramId);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       return data as { id: string; name: string }[];
     },
@@ -276,14 +286,7 @@ export default function DashboardAdmin() {
   });
 
   // Fetch programs from settings
-  const { data: programs } = useQuery({
-    queryKey: ['programs'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('programs').select('*').order('name');
-      if (error) throw error;
-      return data as Program[];
-    },
-  });
+  // (Redundant: already fetched via useProgramFilter, but keeping structure)
 
   // Fetch sistem kuliah
   const { data: sistemKuliahList } = useQuery({
@@ -982,14 +985,25 @@ export default function DashboardAdmin() {
   return (
     <Layout>
       <div className="container py-8 lg:py-12 px-4 sm:px-6 lg:px-10 xl:px-16">
-        <div className="mb-8 animate-fade-in flex items-center justify-between">
-          <div>
-            <h1 className="font-display text-3xl font-bold lg:text-4xl mb-2">
+        <div className="mb-8 animate-fade-in flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <h1 className="font-display text-3xl font-bold lg:text-4xl">
               Dashboard {role === 'sub_admin' ? 'Sub-Admin' : 'Admin'}
             </h1>
-            <p className="text-muted-foreground">
-              Kelola kurikulum, akun pengguna, dan penugasan dosen
-            </p>
+            {hasGlobalAccess && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Prodi:</span>
+                <Select value={selectedProgramId} onValueChange={setSelectedProgramId}>
+                  <SelectTrigger className="w-[180px] h-9">
+                    <SelectValue placeholder="Semua Prodi" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Semua Prodi</SelectItem>
+                    {programs?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
         </div>
 

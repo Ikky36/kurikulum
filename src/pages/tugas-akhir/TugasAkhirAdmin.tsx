@@ -19,6 +19,7 @@ import { SubTargetViewer } from './SubTargetViewer';
 import { ListTodo } from 'lucide-react';
 import { useAcademicPeriod } from '@/hooks/useAcademicPeriod';
 import { calculateSemester } from '@/utils/academicHelpers';
+import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 
 export default function TugasAkhirAdmin() {
   const { activeAcademicYear, activeSemester } = useAcademicPeriod();
@@ -62,7 +63,7 @@ export default function TugasAkhirAdmin() {
     }
   });
 
-  const { data: submissions, isLoading } = useQuery({
+  const { data: submissions, isLoading, refetch: refetchSubmissions } = useQuery({
     queryKey: ['admin_ta_submissions'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -211,6 +212,7 @@ export default function TugasAkhirAdmin() {
     onSuccess: () => {
       toast.success('Pengajuan berhasil dihapus');
       queryClient.invalidateQueries({ queryKey: ['admin_ta_submissions'] });
+      refetchSubmissions();
     },
     onError: (error: any) => {
       toast.error(error.message || 'Gagal menghapus pengajuan');
@@ -421,8 +423,11 @@ export default function TugasAkhirAdmin() {
                         <p className="font-medium">{selectedSubmission.profiles?.full_name}</p>
                         <p className="text-sm text-muted-foreground">
                           {selectedSubmission.profiles?.nim}
-                          {selectedSubmission.profiles?.enrollment_year && activeAcademicYear?.name ? 
-                            ` • Semester ${calculateSemester(selectedSubmission.profiles.enrollment_year, activeAcademicYear.name, activeSemester?.name) || '...'}` : ''}
+                          {selectedSubmission.profiles?.id && (
+                            <span className="ml-2">
+                              <StudentSemesterBadge studentId={selectedSubmission.profiles.id} />
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div>

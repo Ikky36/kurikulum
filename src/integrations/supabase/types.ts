@@ -1006,6 +1006,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          program_id: string | null
           updated_at: string
         }
         Insert: {
@@ -1014,6 +1015,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          program_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -1022,9 +1024,18 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          program_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "curricula_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       curriculum_academic_years: {
         Row: {
@@ -3066,7 +3077,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "mahasiswa" | "dosen" | "admin" | "sub_admin"
+      app_role: "mahasiswa" | "dosen" | "admin" | "sub_admin" | "super_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -3194,7 +3205,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["mahasiswa", "dosen", "admin", "sub_admin"],
+      app_role: ["mahasiswa", "dosen", "admin", "sub_admin", "super_admin"],
     },
   },
 } as const

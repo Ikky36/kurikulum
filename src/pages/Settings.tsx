@@ -38,6 +38,7 @@ export default function Settings() {
   const [editingCurriculum, setEditingCurriculum] = useState<Curriculum | null>(null);
   const [curriculumName, setCurriculumName] = useState('');
   const [curriculumDescription, setCurriculumDescription] = useState('');
+  const [curriculumProgramId, setCurriculumProgramId] = useState<string>('none');
   const [curriculumAcademicYearIds, setCurriculumAcademicYearIds] = useState<string[]>([]);
 
   // Academic Year state
@@ -436,6 +437,7 @@ export default function Settings() {
   const resetCurriculumForm = () => {
     setCurriculumName('');
     setCurriculumDescription('');
+    setCurriculumProgramId('none');
     setCurriculumAcademicYearIds([]);
     setEditingCurriculum(null);
     setShowCurriculumDialog(false);
@@ -504,6 +506,7 @@ export default function Settings() {
     setEditingCurriculum(curriculum);
     setCurriculumName(curriculum.name);
     setCurriculumDescription(curriculum.description || '');
+    setCurriculumProgramId(curriculum.program_id || 'none');
     // Load linked academic year IDs
     const linkedIds = curriculumAcademicYears?.filter(ca => ca.curriculum_id === curriculum.id).map(ca => ca.academic_year_id) || [];
     setCurriculumAcademicYearIds(linkedIds);
@@ -520,7 +523,8 @@ export default function Settings() {
 
   const handleSaveCurriculum = async () => {
     if (editingCurriculum) {
-      await updateCurriculumMutation.mutateAsync({ id: editingCurriculum.id, name: curriculumName, description: curriculumDescription || undefined });
+      const payload: any = { id: editingCurriculum.id, name: curriculumName, description: curriculumDescription || undefined, program_id: curriculumProgramId !== 'none' ? curriculumProgramId : null };
+      await updateCurriculumMutation.mutateAsync(payload);
       // Update academic year links
       await supabase.from('curriculum_academic_years').delete().eq('curriculum_id', editingCurriculum.id);
       if (curriculumAcademicYearIds.length > 0) {
@@ -530,7 +534,8 @@ export default function Settings() {
       }
       queryClient.invalidateQueries({ queryKey: ['curriculum-academic-years'] });
     } else {
-      const { data: newCurr, error } = await supabase.from('curricula').insert([{ name: curriculumName, description: curriculumDescription || undefined }]).select().single();
+      const payload: any = { name: curriculumName, description: curriculumDescription || undefined, program_id: curriculumProgramId !== 'none' ? curriculumProgramId : null };
+      const { data: newCurr, error } = await supabase.from('curricula').insert([payload]).select().single();
       if (error) { toast({ title: 'Gagal', description: error.message, variant: 'destructive' }); return; }
       if (newCurr && curriculumAcademicYearIds.length > 0) {
         await supabase.from('curriculum_academic_years').insert(
@@ -1022,6 +1027,20 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                             />
                           </div>
                           <div className="space-y-2">
+                            <Label>Program Studi</Label>
+                            <Select value={curriculumProgramId} onValueChange={setCurriculumProgramId}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Pilih Program Studi" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">-- Umum / Tanpa Prodi --</SelectItem>
+                                {programs?.map((p: any) => (
+                                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
                             <Label>Tahun Akademik</Label>
                             <div className="border rounded-lg p-3 max-h-32 overflow-y-auto space-y-2">
                               {academicYears?.map(ay => (
@@ -1060,6 +1079,7 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                       <TableRow className="bg-primary hover:bg-primary">
                         <TableHead className="w-12 text-primary-foreground">No</TableHead>
                         <TableHead className="text-primary-foreground">Nama Kurikulum</TableHead>
+                        <TableHead className="text-primary-foreground">Program Studi</TableHead>
                         <TableHead className="text-primary-foreground">Tahun Akademik</TableHead>
                         <TableHead className="text-primary-foreground">Deskripsi</TableHead>
                         <TableHead className="w-20 text-primary-foreground text-center">Aktif</TableHead>
@@ -1077,6 +1097,9 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                               <Badge variant={curriculum.is_active ? "secondary" : "outline"} className={!curriculum.is_active ? "opacity-50" : ""}>
                                 {curriculum.name}
                               </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {programs?.find(p => p.id === curriculum.program_id)?.name || <span className="text-muted-foreground italic text-xs">Umum</span>}
                             </TableCell>
                             <TableCell>
                               <div className="flex flex-wrap gap-1">

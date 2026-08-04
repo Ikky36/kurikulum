@@ -45,7 +45,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Users, BookOpen, Eye, EyeOff, Globe, GraduationCap, Calendar, LogIn, Search } from 'lucide-react';
+import { ChevronDown, Plus, Search, BookOpen, Clock, Users, ArrowRight, Video, FileText, CheckCircle2, MoreHorizontal } from 'lucide-react';
+import { useProgramFilter } from '@/hooks/useProgramFilter';
 
 type AssignedInstructor = {
   id: string;
@@ -75,6 +76,7 @@ interface ElearningKelasProps {
 
 export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
   const { profile } = useAuth();
+  const { selectedProgramId, setSelectedProgramId, hasGlobalAccess, programs } = useProgramFilter();
   const { data: classes, isLoading } = useElearningClasses();
   const { data: courses } = useCourses();
   const { data: classGroups } = useClassGroups();
@@ -410,10 +412,25 @@ export function ElearningKelas({ onEnterClass }: ElearningKelasProps) {
         )}
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-xl">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
+      <div className="flex flex-col sm:flex-row gap-4 items-center">
+        {hasGlobalAccess && (
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Prodi:</span>
+            <Select value={selectedProgramId} onValueChange={setSelectedProgramId}>
+              <SelectTrigger className="w-[180px] h-10">
+                <SelectValue placeholder="Semua Prodi" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Prodi</SelectItem>
+                {programs?.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        {/* Search */}
+        <div className="relative w-full max-w-xl">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
           placeholder="Cari mata kuliah, dosen, atau kelas..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}

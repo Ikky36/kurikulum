@@ -197,11 +197,13 @@ export function RubricScorer({ rubric, classId }: RubricScorerProps) {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Input
-                          type="number"
-                          min={0}
-                          max={c.max_score}
-                          value={scores[c.id]?.score || 0}
-                          onChange={(e) => handleScoreChange(c.id, parseFloat(e.target.value) || 0)}
+                          type="text"
+                          inputMode="decimal"
+                          value={scores[c.id]?.score === 0 && !scores[c.id]?.feedback ? '' : (scores[c.id]?.score?.toString() || '')}
+                          onChange={(e) => {
+                            let val = e.target.value.replace(',', '.');
+                            handleScoreChange(c.id, parseFloat(val) || 0);
+                          }}
                           className="w-20"
                         />
                         <span className="text-sm text-muted-foreground">/ {c.max_score}</span>

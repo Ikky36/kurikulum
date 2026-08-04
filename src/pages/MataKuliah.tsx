@@ -19,10 +19,12 @@ import { Curriculum } from '@/lib/types';
 import { TableSortHeader, SortConfig, sortData } from '@/components/ui/table-sort-header';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { useProgramFilter } from '@/hooks/useProgramFilter';
 
 export default function MataKuliah() {
   const { data: courses, isLoading, error } = useCoursesWithStats();
   const { user, hasAnyRole } = useAuth();
+  const { selectedProgramId, setSelectedProgramId, hasGlobalAccess, programs } = useProgramFilter();
   const isGuest = !user;
   
   // Permission checks
@@ -328,6 +330,20 @@ export default function MataKuliah() {
                 <div className="flex items-center gap-6">
                   <CardTitle className="text-lg">Daftar Mata Kuliah</CardTitle>
                 </div>
+                {hasGlobalAccess && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Prodi:</span>
+                    <Select value={selectedProgramId} onValueChange={setSelectedProgramId}>
+                      <SelectTrigger className="w-[180px] h-9">
+                        <SelectValue placeholder="Semua Prodi" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Prodi</SelectItem>
+                        {programs?.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 {curricula && curricula.length > 0 && (
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">Kurikulum:</span>
