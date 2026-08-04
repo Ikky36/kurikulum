@@ -234,7 +234,7 @@ function KurikulumContent() {
     },
   });
 
-  const { selectedProgramId, hasGlobalAccess, isAdminProdiOrDosen } = useProgramFilter();
+  const { selectedProgramId, setSelectedProgramId, hasGlobalAccess, isAdminProdiOrDosen } = useProgramFilter();
   
   const { data: programs = [] } = useQuery({
     queryKey: ['programs'],
