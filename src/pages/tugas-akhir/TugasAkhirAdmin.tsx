@@ -17,8 +17,11 @@ import { Input } from '@/components/ui/input';
 import { MasterPhaseAdmin } from './MasterPhaseAdmin';
 import { SubTargetViewer } from './SubTargetViewer';
 import { ListTodo } from 'lucide-react';
+import { useAcademicPeriod } from '@/hooks/useAcademicPeriod';
+import { calculateSemester } from '@/utils/academicHelpers';
 
 export default function TugasAkhirAdmin() {
+  const { activeSemester } = useAcademicPeriod();
   const [activeTab, setActiveTab] = useState('pengajuan');
   
   // STATE FOR PENGAJUAN
@@ -66,7 +69,7 @@ export default function TugasAkhirAdmin() {
         .from('ta_submissions')
         .select(`
           *,
-          profiles:student_id(full_name, nim, program),
+          profiles:student_id(full_name, nim, program, enrollment_year),
           ta_types(id, name),
           ta_advisors(role, dosen_id, profiles(full_name)),
           current_phase:ta_master_phases(name)
@@ -416,7 +419,11 @@ export default function TugasAkhirAdmin() {
                       <div>
                         <Label className="text-muted-foreground text-xs">Nama Mahasiswa</Label>
                         <p className="font-medium">{selectedSubmission.profiles?.full_name}</p>
-                        <p className="text-sm text-muted-foreground">{selectedSubmission.profiles?.nim}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedSubmission.profiles?.nim}
+                          {selectedSubmission.profiles?.enrollment_year && activeSemester?.name ? 
+                            ` • Semester ${calculateSemester(selectedSubmission.profiles.enrollment_year, activeSemester.name)}` : ''}
+                        </p>
                       </div>
                       <div>
                         <Label className="text-muted-foreground text-xs">Jenis Tugas Akhir</Label>
