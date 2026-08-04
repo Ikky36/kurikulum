@@ -441,7 +441,7 @@ export default function TugasAkhirMahasiswa() {
                       <TableBody>
                         {mySubmissions.map((sub: any) => (
                           <TableRow key={sub.id}>
-                            <TableCell className="font-medium max-w-[200px] sm:max-w-[300px] truncate" title={sub.title}>
+                            <TableCell className="font-medium whitespace-normal text-justify" title={sub.title}>
                               {sub.title}
                             </TableCell>
                             <TableCell>{sub.ta_types?.name}</TableCell>
