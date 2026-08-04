@@ -21,7 +21,7 @@ import { useAcademicPeriod } from '@/hooks/useAcademicPeriod';
 import { calculateSemester } from '@/utils/academicHelpers';
 
 export default function TugasAkhirAdmin() {
-  const { activeSemester } = useAcademicPeriod();
+  const { activeAcademicYear, activeSemester } = useAcademicPeriod();
   const [activeTab, setActiveTab] = useState('pengajuan');
   
   // STATE FOR PENGAJUAN
@@ -421,8 +421,8 @@ export default function TugasAkhirAdmin() {
                         <p className="font-medium">{selectedSubmission.profiles?.full_name}</p>
                         <p className="text-sm text-muted-foreground">
                           {selectedSubmission.profiles?.nim}
-                          {selectedSubmission.profiles?.enrollment_year && activeSemester?.name ? 
-                            ` • Semester ${calculateSemester(selectedSubmission.profiles.enrollment_year, activeSemester.name)}` : ''}
+                          {selectedSubmission.profiles?.enrollment_year && activeAcademicYear?.name ? 
+                            ` • Semester ${calculateSemester(selectedSubmission.profiles.enrollment_year, activeAcademicYear.name, activeSemester?.name) || '...'}` : ''}
                         </p>
                       </div>
                       <div>
