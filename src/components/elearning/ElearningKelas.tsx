@@ -45,7 +45,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { ChevronDown, Plus, Search, BookOpen, Clock, Users, ArrowRight, Video, FileText, CheckCircle2, MoreHorizontal } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, BookOpen, Eye, EyeOff, Globe, GraduationCap, Calendar, LogIn, Search, ChevronDown, Clock, ArrowRight, Video, FileText, CheckCircle2, MoreHorizontal } from 'lucide-react';
 import { useProgramFilter } from '@/hooks/useProgramFilter';
 
 type AssignedInstructor = {
