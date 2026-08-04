@@ -202,7 +202,7 @@ export default function TugasAkhirAdmin() {
 
   const deleteSubmissionMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('thesis_submissions').delete().eq('id', id);
+      const { error } = await supabase.from('ta_submissions').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
