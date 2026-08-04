@@ -228,6 +228,7 @@ export function useCourseEnrollments(courseId: string) {
           created_at,
           krs:krs_id!inner(
             status,
+            academic_year_id,
             student_id,
             profiles:student_id (*)
           )
@@ -251,6 +252,7 @@ export function useCourseEnrollments(courseId: string) {
               student: krsData.profiles as unknown as Profile,
               class_group_id: null, // No longer bound to a physical Rombel in this context
               class_group_name: null,
+              academic_year_id: krsData.academic_year_id,
             });
           }
         });

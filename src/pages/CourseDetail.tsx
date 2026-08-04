@@ -64,6 +64,20 @@ export default function CourseDetail() {
     },
   });
 
+  const { data: curriculumAcademicYears } = useQuery({
+    queryKey: ['curriculum-academic-years-passing-scores', course?.curriculum_id],
+    queryFn: async () => {
+      if (!course?.curriculum_id) return [];
+      const { data, error } = await supabase
+        .from('curriculum_academic_years')
+        .select('*')
+        .eq('curriculum_id', course.curriculum_id);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!course?.curriculum_id,
+  });
+
   const [editingCell, setEditingCell] = useState<{ studentId: string; assessmentId: string } | null>(null);
   const [editValue, setEditValue] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
@@ -124,18 +138,27 @@ export default function CourseDetail() {
       // Get class_group from enrollment data (may come from class_students)
       const classGroupName = (e as any).class_group_name || e.student?.class_group;
       
+      // Find specific passing score for this student's academic year
+      const studentAcademicYearId = (e as any).academic_year_id;
+      const specificPassingScore = curriculumAcademicYears?.find(
+        cay => cay.academic_year_id === studentAcademicYearId
+      )?.passing_score;
+      
+      const passingScoreLimit = specificPassingScore ?? course?.passing_score ?? 60;
+      
       return {
         ...e.student,
         class_group: classGroupName,
         class_group_id: (e as any).class_group_id,
         grade: grade?.final_score,
-        isPassing: achievementPercentage !== null ? achievementPercentage >= (course?.passing_score || 60) : null,
+        isPassing: achievementPercentage !== null ? achievementPercentage >= passingScoreLimit : null,
         assessmentScores: studentAssessmentScores,
         achievementPercentage,
         poin,
+        passingScoreLimit,
       };
     }) || [];
-  }, [enrollments, grades, assessments, assessmentScores, totalWeight, course?.passing_score]);
+  }, [enrollments, grades, assessments, assessmentScores, totalWeight, course?.passing_score, curriculumAcademicYears]);
 
   // Function to get predikat based on average score (poin)
   const getPredikat = (poin: number | null) => {
@@ -260,7 +283,7 @@ export default function CourseDetail() {
       name: s.full_name?.split(' ')[0] || 'Unknown',
       fullName: s.full_name || 'Unknown',
       score: s.achievementPercentage || 0,
-      isPassing: (s.achievementPercentage || 0) >= (course?.passing_score || 60),
+      isPassing: s.isPassing,
     }));
 
   const handleStartEdit = (studentId: string, assessmentId: string, currentScore: number | null) => {

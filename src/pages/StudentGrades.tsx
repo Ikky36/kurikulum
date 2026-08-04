@@ -37,6 +37,15 @@ export default function StudentGrades() {
     },
   });
 
+  const { data: curriculumAcademicYears } = useQuery({
+    queryKey: ['curriculum-academic-years'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('curriculum_academic_years').select('*');
+      if (error) throw error;
+      return data;
+    },
+  });
+
   // Fetch all assessment scores for this student
   const { data: studentAssessmentScores } = useQuery({
     queryKey: ['student-assessment-scores', studentId],
@@ -68,6 +77,7 @@ export default function StudentGrades() {
     course_id: string;
     course: { name: string; code: string; passing_score: number } | null;
     calculated_score: number | null;
+    passing_score: number;
   }> => {
     if (!grades || !studentAssessmentScores) return [];
     
@@ -81,6 +91,12 @@ export default function StudentGrades() {
       const totalScores = courseScores.reduce((sum, s) => sum + s.score, 0);
       const avgScore = courseScores.length > 0 ? totalScores / courseScores.length : null;
       
+      // Get dynamic passing score
+      const specificPassingScore = curriculumAcademicYears?.find(
+        cay => cay.curriculum_id === grade.course?.curriculum_id && cay.academic_year_id === grade.academic_year_id
+      )?.passing_score;
+      const passingScoreLimit = specificPassingScore ?? grade.course?.passing_score ?? 60;
+      
       return {
         id: grade.id,
         course_id: grade.course_id,
@@ -92,9 +108,10 @@ export default function StudentGrades() {
           curriculum_id: grade.course.curriculum_id,
         } : null,
         calculated_score: avgScore,
+        passing_score: passingScoreLimit,
       };
     });
-  }, [grades, studentAssessmentScores]);
+  }, [grades, studentAssessmentScores, curriculumAcademicYears]);
 
   const isLoading = studentLoading || gradesLoading;
 
@@ -117,8 +134,8 @@ export default function StudentGrades() {
     fullName: g.course?.name || 'Unknown',
     code: g.course?.code || '',
     score: g.calculated_score ?? 0,
-    passingScore: g.course?.passing_score || 60,
-    isPassing: (g.calculated_score ?? 0) >= (g.course?.passing_score || 60),
+    passingScore: g.passing_score,
+    isPassing: (g.calculated_score ?? 0) >= g.passing_score,
   }));
 
   // Radar chart data
@@ -379,9 +396,9 @@ export default function StudentGrades() {
                               <div className="flex items-center justify-center gap-2">
                                 <Progress 
                                   value={score} 
-                                  className="w-16 h-2 [&>div]:bg-primary"
+                                  className={`w-16 h-2 ${score >= grade.passing_score ? '[&>div]:bg-success' : '[&>div]:bg-destructive'}`}
                                 />
-                                <span className="font-bold">
+                                <span className={score >= grade.passing_score ? 'font-bold text-success' : 'font-bold text-destructive'}>
                                   {score.toFixed(1)}
                                 </span>
                               </div>

@@ -15,7 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Navigate } from 'react-router-dom';
-import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff, Scale, CheckCircle2, XCircle, Zap, Wifi, WifiOff, Cloud, Calendar, Hash } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Palette, BookOpen, GraduationCap, Settings as SettingsIcon, Image, Shield, Type, FileText, Key, Sparkles, Eye, EyeOff, Scale, CheckCircle2, XCircle, Zap, Wifi, WifiOff, Cloud, Calendar, Hash, Check, X } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Curriculum, Program, AppSetting, InstrumenPenilaian } from '@/lib/types';
@@ -86,6 +86,8 @@ export default function Settings() {
   const [editingInstrumen, setEditingInstrumen] = useState<InstrumenPenilaian | null>(null);
   const [instrumenMin, setInstrumenMin] = useState('');
   const [instrumenMax, setInstrumenMax] = useState('');
+  const [editingPassingScoreId, setEditingPassingScoreId] = useState<string | null>(null);
+  const [passingScoreValue, setPassingScoreValue] = useState('');
   const [instrumenPredikat, setInstrumenPredikat] = useState('');
   const [instrumenColor, setInstrumenColor] = useState('#22c55e');
   const [instrumenBobot, setInstrumenBobot] = useState('0');
@@ -132,10 +134,10 @@ export default function Settings() {
   });
 
   // Fetch curriculum-academic-year mappings
-  const { data: curriculumAcademicYears } = useQuery({
+  const { data: curriculumAcademicYears, refetch: refetchCurriculumAcademicYears } = useQuery({
     queryKey: ['curriculum-academic-years'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('curriculum_academic_years').select('*');
+      const { data, error } = await supabase.from('curriculum_academic_years').select('*, curriculum:curricula(name), academic_year:academic_years(name)');
       if (error) throw error;
       return data;
     },
@@ -355,6 +357,20 @@ export default function Settings() {
     onError: (error: any) => {
       toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
     },
+  });
+
+  const updatePassingScoreMutation = useMutation({
+    mutationFn: async ({ id, passing_score }: { id: string; passing_score: number }) => {
+      const { error } = await supabase.from('curriculum_academic_years').update({ passing_score }).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['curriculum-academic-years'] });
+      toast({ title: 'Berhasil', description: 'Batas kelulusan berhasil diperbarui' });
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    }
   });
 
   // Settings mutation
@@ -1904,6 +1920,91 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
                         Belum ada instrumen penilaian. Klik "Tambah Instrumen" untuk menambahkan.
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Batas Kelulusan MK per Kurikulum & Tahun Akademik */}
+                <Card className="mt-6">
+                  <CardHeader>
+                    <CardTitle>Batas Kelulusan MK</CardTitle>
+                    <CardDescription>Atur batas kelulusan (passing score) minimum untuk setiap Kurikulum dan Tahun Akademik.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {curriculumAcademicYears && curriculumAcademicYears.length > 0 ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Kurikulum</TableHead>
+                            <TableHead>Tahun Akademik</TableHead>
+                            <TableHead>Batas Kelulusan</TableHead>
+                            <TableHead className="w-24">Aksi</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {curriculumAcademicYears.map((cay: any) => (
+                            <TableRow key={cay.id}>
+                              <TableCell>{cay.curriculum?.name || 'Unknown'}</TableCell>
+                              <TableCell>{cay.academic_year?.name || 'Unknown'}</TableCell>
+                              <TableCell>
+                                {editingPassingScoreId === cay.id ? (
+                                  <Input 
+                                    type="number" 
+                                    min="0" 
+                                    max="100" 
+                                    value={passingScoreValue} 
+                                    onChange={(e) => setPassingScoreValue(e.target.value)}
+                                    className="w-20 h-8"
+                                  />
+                                ) : (
+                                  <span>{cay.passing_score || 60}</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {editingPassingScoreId === cay.id ? (
+                                  <div className="flex gap-1">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-8 w-8 text-success" 
+                                      onClick={() => {
+                                        updatePassingScoreMutation.mutate({ id: cay.id, passing_score: Number(passingScoreValue) });
+                                        setEditingPassingScoreId(null);
+                                      }}
+                                    >
+                                      <Check className="h-4 w-4" />
+                                    </Button>
+                                    <Button 
+                                      variant="ghost" 
+                                      size="icon" 
+                                      className="h-8 w-8 text-destructive" 
+                                      onClick={() => setEditingPassingScoreId(null)}
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    className="h-8 w-8" 
+                                    onClick={() => {
+                                      setEditingPassingScoreId(cay.id);
+                                      setPassingScoreValue(String(cay.passing_score || 60));
+                                    }}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        Belum ada pemetaan Kurikulum dan Tahun Akademik.
                       </div>
                     )}
                   </CardContent>
