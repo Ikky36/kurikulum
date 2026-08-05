@@ -484,13 +484,21 @@ export default function Settings() {
     setShowInstrumenDialog(false);
   };
 
-  const openEditInstrumen = (instrumen: InstrumenPenilaian) => {
+  const openEditInstrumen = (instrumen: any) => {
     setEditingInstrumen(instrumen);
     setInstrumenMin(instrumen.rentang_min.toString());
     setInstrumenMax(instrumen.rentang_max.toString());
     setInstrumenPredikat(instrumen.predikat);
+    
+    // Auto-calculate bobot if it's 0
+    if (!instrumen.bobot || instrumen.bobot === 0 || instrumen.bobot === "0") {
+      const calc = (Number(instrumen.rentang_max) / 100) * 4;
+      setInstrumenBobot(calc.toFixed(2));
+    } else {
+      setInstrumenBobot(instrumen.bobot.toString());
+    }
+    
     setInstrumenColor(instrumen.color || '#22c55e');
-    setInstrumenBobot(instrumen.bobot?.toString() || '0');
     
     // Load linked curriculum IDs
     const linkedIds = instrumen.instrumen_curricula?.map(ic => ic.curriculum_id) || [];
