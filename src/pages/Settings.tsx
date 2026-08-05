@@ -1954,7 +1954,7 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                                   {instrumen.predikat}
                                 </Badge>
                               </TableCell>
-                              <TableCell>{instrumen.bobot || '0'}</TableCell>
+                              <TableCell>{instrumen.bobot !== undefined && instrumen.bobot !== null ? Number(instrumen.bobot).toFixed(2) : '0.00'}</TableCell>
                               <TableCell className="max-w-[200px]">
                                 {instrumen.instrumen_curricula && instrumen.instrumen_curricula.length > 0 ? (
                                   <div className="flex flex-wrap gap-1">
