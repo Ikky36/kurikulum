@@ -249,7 +249,8 @@ function KurikulumContent() {
     queryFn: async () => {
       let query = supabase.from('curricula').select('*').order('name');
       
-      if (isAdminProdiOrDosen && profile?.program) {
+      const isProgramRestricted = isAdminProdiOrDosen || profile?.role === 'mahasiswa';
+      if (isProgramRestricted && profile?.program) {
         const matchedProgram = programs.find(p => p.name === profile.program);
         if (matchedProgram) {
           query = query.eq('program_id', matchedProgram.id);
