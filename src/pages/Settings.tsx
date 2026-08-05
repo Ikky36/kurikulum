@@ -92,7 +92,7 @@ export default function Settings() {
   const [instrumenPredikat, setInstrumenPredikat] = useState('');
   const [instrumenColor, setInstrumenColor] = useState('#22c55e');
   const [instrumenBobot, setInstrumenBobot] = useState('0');
-  const [instrumenCurriculumId, setInstrumenCurriculumId] = useState<string | null>(null);
+  const [instrumenCurriculumIds, setInstrumenCurriculumIds] = useState<string[]>([]);
 
   // Fetch curricula
   const { data: curricula } = useQuery({
@@ -148,7 +148,7 @@ export default function Settings() {
   const { data: instrumenList } = useQuery({
     queryKey: ['instrumen-penilaian'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('instrumen_penilaian').select('*, curriculum:curricula(name)').order('rentang_min');
+      const { data, error } = await supabase.from('instrumen_penilaian').select('*, instrumen_curricula(curriculum_id, curricula(name))').order('rentang_min');
       if (error) throw error;
       return data as InstrumenPenilaian[];
     },
@@ -317,9 +317,16 @@ export default function Settings() {
 
   // Instrumen mutations
   const createInstrumenMutation = useMutation({
-    mutationFn: async (data: { rentang_min: number; rentang_max: number; predikat: string; color?: string; bobot?: number; curriculum_id?: string | null }) => {
-      const { error } = await supabase.from('instrumen_penilaian').insert([data]);
+    mutationFn: async (data: { rentang_min: number; rentang_max: number; predikat: string; color?: string; bobot?: number; curriculum_ids?: string[] }) => {
+      const { curriculum_ids, ...instrumenData } = data;
+      const { data: inserted, error } = await supabase.from('instrumen_penilaian').insert([instrumenData]).select().single();
       if (error) throw error;
+      
+      if (curriculum_ids && curriculum_ids.length > 0 && inserted) {
+        const junctionData = curriculum_ids.map(cId => ({ instrumen_id: inserted.id, curriculum_id: cId }));
+        const { error: junctionError } = await supabase.from('instrumen_curricula').insert(junctionData);
+        if (junctionError) throw junctionError;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['instrumen-penilaian'] });
@@ -332,9 +339,18 @@ export default function Settings() {
   });
 
   const updateInstrumenMutation = useMutation({
-    mutationFn: async ({ id, ...data }: Partial<InstrumenPenilaian> & { id: string }) => {
+    mutationFn: async ({ id, curriculum_ids, ...data }: Partial<InstrumenPenilaian> & { id: string, curriculum_ids?: string[] }) => {
       const { error } = await supabase.from('instrumen_penilaian').update(data).eq('id', id);
       if (error) throw error;
+
+      if (curriculum_ids !== undefined) {
+        await supabase.from('instrumen_curricula').delete().eq('instrumen_id', id);
+        if (curriculum_ids.length > 0) {
+          const junctionData = curriculum_ids.map(cId => ({ instrumen_id: id, curriculum_id: cId }));
+          const { error: junctionError } = await supabase.from('instrumen_curricula').insert(junctionData);
+          if (junctionError) throw junctionError;
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['instrumen-penilaian'] });
@@ -463,7 +479,7 @@ export default function Settings() {
     setInstrumenPredikat('');
     setInstrumenColor('#22c55e');
     setInstrumenBobot('0');
-    setInstrumenCurriculumId(null);
+    setInstrumenCurriculumIds([]);
     setEditingInstrumen(null);
     setShowInstrumenDialog(false);
   };
@@ -475,8 +491,21 @@ export default function Settings() {
     setInstrumenPredikat(instrumen.predikat);
     setInstrumenColor(instrumen.color || '#22c55e');
     setInstrumenBobot(instrumen.bobot?.toString() || '0');
-    setInstrumenCurriculumId(instrumen.curriculum_id || null);
+    
+    // Load linked curriculum IDs
+    const linkedIds = instrumen.instrumen_curricula?.map(ic => ic.curriculum_id) || [];
+    setInstrumenCurriculumIds(linkedIds);
+    
     setShowInstrumenDialog(true);
+  };
+
+  const handleInstrumenMaxChange = (val: string) => {
+    setInstrumenMax(val);
+    const maxVal = parseFloat(val.replace(',', '.'));
+    if (!isNaN(maxVal)) {
+      const calculatedBobot = (maxVal / 100) * 4;
+      setInstrumenBobot(calculatedBobot.toFixed(2));
+    }
   };
 
   const handleSaveInstrumen = () => {
@@ -496,9 +525,9 @@ export default function Settings() {
       return;
     }
     if (editingInstrumen) {
-      updateInstrumenMutation.mutate({ id: editingInstrumen.id, rentang_min: min, rentang_max: max, predikat: instrumenPredikat, color: instrumenColor, bobot, curriculum_id: instrumenCurriculumId });
+      updateInstrumenMutation.mutate({ id: editingInstrumen.id, rentang_min: min, rentang_max: max, predikat: instrumenPredikat, color: instrumenColor, bobot, curriculum_ids: instrumenCurriculumIds });
     } else {
-      createInstrumenMutation.mutate({ rentang_min: min, rentang_max: max, predikat: instrumenPredikat, color: instrumenColor, bobot, curriculum_id: instrumenCurriculumId });
+      createInstrumenMutation.mutate({ rentang_min: min, rentang_max: max, predikat: instrumenPredikat, color: instrumenColor, bobot, curriculum_ids: instrumenCurriculumIds });
     }
   };
 
@@ -1808,7 +1837,7 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                                   type="text" 
                                   inputMode="decimal"
                                   value={instrumenMax} 
-                                  onChange={(e) => setInstrumenMax(e.target.value)} 
+                                  onChange={(e) => handleInstrumenMaxChange(e.target.value)} 
                                   placeholder="100"
                                 />
                               </div>
@@ -1852,18 +1881,27 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                                 </div>
                               </div>
                               <div className="space-y-2">
-                                <Label>Kurikulum (Opsional)</Label>
-                                <Select value={instrumenCurriculumId || 'global'} onValueChange={(val) => setInstrumenCurriculumId(val === 'global' ? null : val)}>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Semua Kurikulum (Global)" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="global">Semua Kurikulum (Global)</SelectItem>
-                                    {curricula?.map(c => (
-                                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                <Label>Kurikulum (Kosongkan jika Global)</Label>
+                                <div className="grid grid-cols-1 gap-2 max-h-[150px] overflow-y-auto border p-2 rounded-md">
+                                  {curricula?.map(c => (
+                                    <div key={c.id} className="flex items-center space-x-2">
+                                      <Checkbox 
+                                        id={`curr-${c.id}`}
+                                        checked={instrumenCurriculumIds.includes(c.id)}
+                                        onCheckedChange={(checked) => {
+                                          if (checked) {
+                                            setInstrumenCurriculumIds(prev => [...prev, c.id]);
+                                          } else {
+                                            setInstrumenCurriculumIds(prev => prev.filter(id => id !== c.id));
+                                          }
+                                        }}
+                                      />
+                                      <Label htmlFor={`curr-${c.id}`} className="font-normal cursor-pointer text-sm">
+                                        {c.name}
+                                      </Label>
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -1909,9 +1947,15 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
                                 </Badge>
                               </TableCell>
                               <TableCell>{instrumen.bobot || '0'}</TableCell>
-                              <TableCell>
-                                {instrumen.curriculum_id ? (
-                                  <Badge variant="outline">{(instrumen as any).curriculum?.name || 'Unknown'}</Badge>
+                              <TableCell className="max-w-[200px]">
+                                {instrumen.instrumen_curricula && instrumen.instrumen_curricula.length > 0 ? (
+                                  <div className="flex flex-wrap gap-1">
+                                    {instrumen.instrumen_curricula.map(ic => (
+                                      <Badge key={ic.curriculum_id} variant="outline" className="text-xs">
+                                        {ic.curricula?.name || 'Unknown'}
+                                      </Badge>
+                                    ))}
+                                  </div>
                                 ) : (
                                   <span className="text-muted-foreground text-sm">Global</span>
                                 )}

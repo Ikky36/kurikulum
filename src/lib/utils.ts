@@ -29,15 +29,15 @@ export function calculateIPK(
     const score = Number(grade.final_score) || 0;
     const curriculumId = grade.course?.curriculum_id;
 
-    const relevantInstrumen = (instrumenList || []).filter(i => 
-      curriculumId ? i.curriculum_id === curriculumId : !i.curriculum_id
+    let relevantInstrumen = (instrumenList || []).filter(i => 
+      curriculumId && i.instrumen_curricula?.some(ic => ic.curriculum_id === curriculumId)
     );
     
-    const activeInstrumen = relevantInstrumen.length > 0 
-      ? relevantInstrumen 
-      : (instrumenList || []).filter(i => !i.curriculum_id);
+    if (relevantInstrumen.length === 0) {
+      relevantInstrumen = (instrumenList || []).filter(i => !i.instrumen_curricula || i.instrumen_curricula.length === 0);
+    }
 
-    const matched = activeInstrumen.find(i => score >= i.rentang_min && score <= i.rentang_max);
+    const matched = relevantInstrumen.find(i => score >= i.rentang_min && score <= i.rentang_max);
     const bobot = matched?.bobot || 0;
 
     totalSks += sks;

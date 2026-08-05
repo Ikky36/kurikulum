@@ -71,7 +71,7 @@ export default function DashboardMahasiswa() {
   const { data: instrumenList } = useQuery({
     queryKey: ['instrumen-penilaian-ipk'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('instrumen_penilaian').select('*').order('rentang_min');
+      const { data, error } = await supabase.from('instrumen_penilaian').select('*, instrumen_curricula(curriculum_id)').order('rentang_min');
       if (error) throw error;
       return data as any[];
     }

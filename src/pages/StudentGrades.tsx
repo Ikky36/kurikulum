@@ -31,7 +31,7 @@ export default function StudentGrades() {
   const { data: instrumenList } = useQuery({
     queryKey: ['instrumen-penilaian'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('instrumen_penilaian').select('*').order('rentang_min');
+      const { data, error } = await supabase.from('instrumen_penilaian').select('*, instrumen_curricula(curriculum_id)').order('rentang_min');
       if (error) throw error;
       return data;
     },
@@ -61,12 +61,21 @@ export default function StudentGrades() {
   });
 
   // Function to get predikat based on score
-  const getPredikat = (score: number | null) => {
+  const getPredikat = (score: number | null, curriculumId?: string | null) => {
     if (score === null || !instrumenList || instrumenList.length === 0) {
       return null;
     }
-    const instrumen = instrumenList.find(
-      i => score >= i.rentang_min && score <= i.rentang_max
+    
+    let relevantInstrumen = instrumenList.filter((i: any) => 
+      curriculumId && i.instrumen_curricula?.some((ic: any) => ic.curriculum_id === curriculumId)
+    );
+    
+    if (relevantInstrumen.length === 0) {
+      relevantInstrumen = instrumenList.filter((i: any) => !i.instrumen_curricula || i.instrumen_curricula.length === 0);
+    }
+
+    const instrumen = relevantInstrumen.find(
+      (i: any) => score >= i.rentang_min && score <= i.rentang_max
     );
     return instrumen ? { predikat: instrumen.predikat, color: instrumen.color } : null;
   };
@@ -374,7 +383,7 @@ export default function StudentGrades() {
                   {gradesWithCalculatedScore && gradesWithCalculatedScore.length > 0 ? (
                     gradesWithCalculatedScore.map((grade, index) => {
                       const score = grade.calculated_score;
-                      const predikatData = getPredikat(score);
+                      const predikatData = getPredikat(score, grade.course?.curriculum_id);
                       return (
                         <TableRow key={grade.id} className="hover:bg-muted/30">
                           <TableCell className="text-center">{index + 1}</TableCell>

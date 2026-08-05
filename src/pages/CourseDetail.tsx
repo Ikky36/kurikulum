@@ -58,7 +58,7 @@ export default function CourseDetail() {
   const { data: instrumenList } = useQuery({
     queryKey: ['instrumen-penilaian'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('instrumen_penilaian').select('*').order('rentang_min');
+      const { data, error } = await supabase.from('instrumen_penilaian').select('*, instrumen_curricula(curriculum_id)').order('rentang_min');
       if (error) throw error;
       return data;
     },
@@ -161,12 +161,21 @@ export default function CourseDetail() {
   }, [enrollments, grades, assessments, assessmentScores, totalWeight, course?.passing_score, curriculumAcademicYears]);
 
   // Function to get predikat based on average score (poin)
-  const getPredikat = (poin: number | null) => {
+  const getPredikat = (poin: number | null, curriculumId?: string | null) => {
     if (poin === null || !instrumenList || instrumenList.length === 0) {
       return null;
     }
-    const instrumen = instrumenList.find(
-      i => poin >= i.rentang_min && poin <= i.rentang_max
+    
+    let relevantInstrumen = instrumenList.filter((i: any) => 
+      curriculumId && i.instrumen_curricula?.some((ic: any) => ic.curriculum_id === curriculumId)
+    );
+    
+    if (relevantInstrumen.length === 0) {
+      relevantInstrumen = instrumenList.filter((i: any) => !i.instrumen_curricula || i.instrumen_curricula.length === 0);
+    }
+
+    const instrumen = relevantInstrumen.find(
+      (i: any) => poin >= i.rentang_min && poin <= i.rentang_max
     );
     return instrumen ? { predikat: instrumen.predikat, color: instrumen.color } : null;
   };
@@ -815,9 +824,9 @@ export default function CourseDetail() {
                             </TableCell>
                             <TableCell className="text-center">
                               {(student as any)?.poin !== null && (student as any)?.poin !== undefined ? (
-                                (() => {
-                                  const predikatData = getPredikat((student as any).poin);
-                                  return predikatData ? (
+                                  (() => {
+                                    const predikatData = getPredikat((student as any).poin, course?.curriculum_id);
+                                    return predikatData ? (
                                     <Badge 
                                       style={{ 
                                         backgroundColor: predikatData.color || undefined,
