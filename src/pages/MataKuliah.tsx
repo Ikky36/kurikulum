@@ -23,7 +23,7 @@ import { useProgramFilter } from '@/hooks/useProgramFilter';
 
 export default function MataKuliah() {
   const { data: courses, isLoading, error } = useCoursesWithStats();
-  const { user, hasAnyRole } = useAuth();
+  const { user, hasAnyRole, profile } = useAuth();
   const { selectedProgramId, setSelectedProgramId, hasGlobalAccess, programs } = useProgramFilter();
   const isGuest = !user;
   
@@ -44,12 +44,25 @@ export default function MataKuliah() {
 
   // Fetch curricula for filter and display (only active ones)
   const { data: curricula } = useQuery({
-    queryKey: ['curricula', 'active'],
+    queryKey: ['curricula', 'active', selectedProgramId, profile?.program],
     queryFn: async () => {
-      const { data, error } = await supabase.from('curricula').select('*').eq('is_active', true).order('name');
+      let query = supabase.from('curricula').select('*').eq('is_active', true).order('name');
+      
+      const isProgramRestricted = profile?.role === 'sub_admin' || profile?.role === 'dosen' || profile?.role === 'mahasiswa';
+      if (isProgramRestricted && profile?.program) {
+        const matchedProgram = programs.find(p => p.name === profile.program);
+        if (matchedProgram) {
+          query = query.eq('program_id', matchedProgram.id);
+        }
+      } else if (hasGlobalAccess && selectedProgramId !== 'all') {
+        query = query.eq('program_id', selectedProgramId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as Curriculum[];
     },
+    enabled: programs.length > 0 || !profile,
   });
 
   // Set default curriculum filter to the first active curriculum
@@ -61,12 +74,25 @@ export default function MataKuliah() {
 
   // Fetch all curricula including inactive for filtering purposes
   const { data: allCurricula } = useQuery({
-    queryKey: ['curricula'],
+    queryKey: ['curricula', selectedProgramId, profile?.program],
     queryFn: async () => {
-      const { data, error } = await supabase.from('curricula').select('*').order('name');
+      let query = supabase.from('curricula').select('*').order('name');
+      
+      const isProgramRestricted = profile?.role === 'sub_admin' || profile?.role === 'dosen' || profile?.role === 'mahasiswa';
+      if (isProgramRestricted && profile?.program) {
+        const matchedProgram = programs.find(p => p.name === profile.program);
+        if (matchedProgram) {
+          query = query.eq('program_id', matchedProgram.id);
+        }
+      } else if (hasGlobalAccess && selectedProgramId !== 'all') {
+        query = query.eq('program_id', selectedProgramId);
+      }
+      
+      const { data, error } = await query;
       if (error) throw error;
       return data as Curriculum[];
     },
+    enabled: programs.length > 0 || !profile,
   });
 
   // Active semesters for filtering visibility
