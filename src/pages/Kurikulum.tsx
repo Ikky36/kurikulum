@@ -1375,7 +1375,7 @@ function KurikulumContent() {
                 <Button size="sm" onClick={() => openEdit('courses', { code: '', name: '', semester: '', curriculum_id: '', passing_score: '60', sks: '0', ploIds: [], plIds: [], has_prerequisite: 'false', prerequisiteIds: [] }, true)}>
                   <Plus className="h-4 w-4 mr-1" /> Tambah
                 </Button>
-                <KurikulumImportExport tableConfig={tableConfig} data={filteredCourses} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
+                <KurikulumImportExport tableConfig={tableConfig} data={displayedCourses} extraDefaults={selectedCurriculumId !== '' ? { curriculum_id: selectedCurriculumId } : undefined} />
               </div>
             )}
           </div>
