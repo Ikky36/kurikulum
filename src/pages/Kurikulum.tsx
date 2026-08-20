@@ -1338,6 +1338,24 @@ function KurikulumContent() {
         { key: 'name', label: 'Nama', required: true },
         { key: 'semester', label: 'Semester', required: false },
         { key: 'sks', label: 'SKS', required: false },
+        { 
+          key: 'cpl', 
+          label: 'CPL/PLO', 
+          importOnlyExport: true,
+          exportValue: (item: any) => {
+            const coursePlos = item.course_plos?.map((cp: any) => cp.plos) || [];
+            return coursePlos.map((p: any) => p?.code).filter(Boolean).join(', ');
+          }
+        },
+        { 
+          key: 'pl', 
+          label: 'PL', 
+          importOnlyExport: true,
+          exportValue: (item: any) => {
+            const coursePls = item.course_profil_lulusan?.map((cpl: any) => cpl.profil_lulusan) || [];
+            return coursePls.map((p: any) => p?.code).filter(Boolean).join(', ');
+          }
+        },
       ],
       queryKey: 'courses_kurikulum',
     };
