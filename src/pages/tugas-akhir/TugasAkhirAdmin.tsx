@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, CheckCircle2, XCircle, Users, ExternalLink, Plus, Trash2, Save, Calendar, Clock, MapPin } from 'lucide-react';
+import { Eye, CheckCircle2, XCircle, Users, ExternalLink, Plus, Trash2, Save, Calendar, Clock, MapPin, Search } from 'lucide-react';
+import { TableSortHeader, SortConfig, sortData } from '@/components/ui/table-sort-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -35,6 +36,8 @@ export default function TugasAkhirAdmin() {
   // FILTERS
   const [filterProgram, setFilterProgram] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
   // STATE FOR SUB TARGET VIEWER
   const [isSubTargetOpen, setIsSubTargetOpen] = useState(false);
@@ -103,8 +106,27 @@ export default function TugasAkhirAdmin() {
   const filteredSubmissions = submissions?.filter((sub: any) => {
     if (filterProgram !== 'all' && sub.profiles?.program !== filterProgram) return false;
     if (filterType !== 'all' && sub.ta_types?.name !== filterType) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matchName = sub.profiles?.full_name?.toLowerCase().includes(q);
+      const matchNim = sub.profiles?.nim?.toLowerCase().includes(q);
+      const matchTitle = sub.title?.toLowerCase().includes(q);
+      if (!matchName && !matchNim && !matchTitle) return false;
+    }
     return true;
   });
+
+  const sortedSubmissions = sortData(
+    filteredSubmissions,
+    sortConfig,
+    (item, key) => {
+      if (key === 'mahasiswa') return item.profiles?.full_name || '';
+      if (key === 'judul') return item.ta_types?.name + ' ' + item.title || '';
+      if (key === 'fase') return item.ta_phases?.name || '';
+      if (key === 'status') return item.status || '';
+      return item[key];
+    }
+  );
 
   const processMutation = useMutation({
     mutationFn: async () => {
@@ -267,6 +289,15 @@ export default function TugasAkhirAdmin() {
                     <CardDescription>Persetujuan judul dan penugasan dosen pembimbing.</CardDescription>
                   </div>
                   <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                    <div className="relative w-full sm:w-[250px]">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Cari mahasiswa/judul..."
+                        className="pl-8"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
                     <Select value={filterProgram} onValueChange={setFilterProgram}>
                       <SelectTrigger className="w-full sm:w-[180px]">
                         <SelectValue placeholder="Semua Prodi" />
@@ -297,11 +328,39 @@ export default function TugasAkhirAdmin() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Mahasiswa</TableHead>
-                        <TableHead>Jenis & Judul</TableHead>
+                        <TableHead>
+                          <TableSortHeader
+                            sortKey="mahasiswa"
+                            label="Mahasiswa"
+                            currentSort={sortConfig}
+                            onSort={setSortConfig}
+                          />
+                        </TableHead>
+                        <TableHead>
+                          <TableSortHeader
+                            sortKey="judul"
+                            label="Jenis & Judul"
+                            currentSort={sortConfig}
+                            onSort={setSortConfig}
+                          />
+                        </TableHead>
                         <TableHead>Dosen Pembimbing</TableHead>
-                        <TableHead>Fase Saat Ini</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>
+                          <TableSortHeader
+                            sortKey="fase"
+                            label="Fase Saat Ini"
+                            currentSort={sortConfig}
+                            onSort={setSortConfig}
+                          />
+                        </TableHead>
+                        <TableHead>
+                          <TableSortHeader
+                            sortKey="status"
+                            label="Status"
+                            currentSort={sortConfig}
+                            onSort={setSortConfig}
+                          />
+                        </TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -310,14 +369,14 @@ export default function TugasAkhirAdmin() {
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-10">Memuat data...</TableCell>
                         </TableRow>
-                      ) : filteredSubmissions?.length === 0 ? (
+                      ) : sortedSubmissions?.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
                             Belum ada data pengajuan yang sesuai filter
                           </TableCell>
                         </TableRow>
                       ) : (
-                        filteredSubmissions?.map((sub: any) => (
+                        sortedSubmissions?.map((sub: any) => (
                           <TableRow key={sub.id}>
                             <TableCell>
                               <div className="font-medium">{sub.profiles?.full_name}</div>
