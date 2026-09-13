@@ -331,35 +331,39 @@ export default function TugasAkhirAdmin() {
                         <TableHead>
                           <TableSortHeader
                             sortKey="mahasiswa"
-                            label="Mahasiswa"
                             currentSort={sortConfig}
                             onSort={setSortConfig}
-                          />
+                          >
+                            Mahasiswa
+                          </TableSortHeader>
                         </TableHead>
                         <TableHead>
                           <TableSortHeader
                             sortKey="judul"
-                            label="Jenis & Judul"
                             currentSort={sortConfig}
                             onSort={setSortConfig}
-                          />
+                          >
+                            Jenis & Judul
+                          </TableSortHeader>
                         </TableHead>
                         <TableHead>Dosen Pembimbing</TableHead>
                         <TableHead>
                           <TableSortHeader
                             sortKey="fase"
-                            label="Fase Saat Ini"
                             currentSort={sortConfig}
                             onSort={setSortConfig}
-                          />
+                          >
+                            Fase Saat Ini
+                          </TableSortHeader>
                         </TableHead>
                         <TableHead>
                           <TableSortHeader
                             sortKey="status"
-                            label="Status"
                             currentSort={sortConfig}
                             onSort={setSortConfig}
-                          />
+                          >
+                            Status
+                          </TableSortHeader>
                         </TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
                       </TableRow>
