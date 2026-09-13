@@ -36,6 +36,7 @@ export default function TugasAkhirAdmin() {
   // FILTERS
   const [filterProgram, setFilterProgram] = useState<string>('all');
   const [filterType, setFilterType] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
 
@@ -102,10 +103,12 @@ export default function TugasAkhirAdmin() {
 
   const uniquePrograms = Array.from(new Set(submissions?.map((s: any) => s.profiles?.program).filter(Boolean) || []));
   const uniqueTypes = Array.from(new Set(submissions?.map((s: any) => s.ta_types?.name).filter(Boolean) || []));
+  const uniqueStatuses = Array.from(new Set(submissions?.map((s: any) => s.status).filter(Boolean) || []));
 
   const filteredSubmissions = submissions?.filter((sub: any) => {
     if (filterProgram !== 'all' && sub.profiles?.program !== filterProgram) return false;
     if (filterType !== 'all' && sub.ta_types?.name !== filterType) return false;
+    if (filterStatus !== 'all' && sub.status !== filterStatus) return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const matchName = sub.profiles?.full_name?.toLowerCase().includes(q);
@@ -317,6 +320,21 @@ export default function TugasAkhirAdmin() {
                         <SelectItem value="all">Semua Jenis</SelectItem>
                         {uniqueTypes.map(t => (
                           <SelectItem key={t as string} value={t as string}>{t as string}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={filterStatus} onValueChange={setFilterStatus}>
+                      <SelectTrigger className="w-full sm:w-[150px]">
+                        <SelectValue placeholder="Semua Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Semua Status</SelectItem>
+                        {uniqueStatuses.map(s => (
+                          <SelectItem key={s as string} value={s as string}>
+                            {s === 'pending' ? 'Menunggu' :
+                             s === 'approved' ? 'Disetujui' :
+                             s === 'rejected' ? 'Ditolak' : s}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
