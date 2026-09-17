@@ -488,7 +488,7 @@ export default function TugasAkhirAdmin() {
             </Card>
 
             <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                   <DialogTitle>Detail Pengajuan Tugas Akhir</DialogTitle>
                   <DialogDescription>
@@ -497,7 +497,7 @@ export default function TugasAkhirAdmin() {
                 </DialogHeader>
                 
                 {selectedSubmission && (
-                  <div className="space-y-4 py-4">
+                  <div className="space-y-4 py-4 overflow-y-auto overflow-x-auto pr-2">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="text-muted-foreground text-xs">Nama Mahasiswa</Label>
@@ -747,7 +747,7 @@ export default function TugasAkhirAdmin() {
             </Card>
 
             <Dialog open={isSeminarDetailOpen} onOpenChange={setIsSeminarDetailOpen}>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
                 <DialogHeader>
                   <DialogTitle>Atur Jadwal Ujian & Penguji</DialogTitle>
                   <DialogDescription>
@@ -756,7 +756,7 @@ export default function TugasAkhirAdmin() {
                 </DialogHeader>
 
                 {selectedSeminar && (
-                  <div className="space-y-6 py-4">
+                  <div className="space-y-6 py-4 overflow-y-auto overflow-x-auto pr-2">
                     <div className="p-4 bg-muted/50 rounded-lg border">
                       <Label className="text-xs text-muted-foreground">Mahasiswa</Label>
                       <p className="font-medium text-base">{selectedSeminar.ta_submissions?.profiles?.full_name}</p>
