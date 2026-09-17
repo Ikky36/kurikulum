@@ -342,7 +342,7 @@ export default function TugasAkhirAdmin() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -488,7 +488,7 @@ export default function TugasAkhirAdmin() {
             </Card>
 
             <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Detail Pengajuan Tugas Akhir</DialogTitle>
                   <DialogDescription>
@@ -497,7 +497,7 @@ export default function TugasAkhirAdmin() {
                 </DialogHeader>
                 
                 {selectedSubmission && (
-                  <div className="space-y-4 py-4 overflow-y-auto pr-2">
+                  <div className="space-y-4 py-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label className="text-muted-foreground text-xs">Nama Mahasiswa</Label>
@@ -519,20 +519,20 @@ export default function TugasAkhirAdmin() {
                     
                     <div>
                       <Label className="text-muted-foreground text-xs">Topik / Judul</Label>
-                      <p className="font-medium mt-1 p-3 bg-muted rounded-md">{selectedSubmission.title}</p>
+                      <p className="font-medium mt-1 p-3 bg-muted rounded-md break-words whitespace-pre-wrap">{selectedSubmission.title}</p>
                     </div>
 
-                    <div>
+                    <div className="w-full overflow-hidden">
                       <Label className="text-muted-foreground text-xs">Link Dokumen</Label>
                       {selectedSubmission.document_link ? (
-                        <div className="mt-1">
+                        <div className="mt-1 break-words">
                           <a 
                             href={selectedSubmission.document_link.startsWith('http') ? selectedSubmission.document_link : `https://${selectedSubmission.document_link}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="inline-flex items-center text-primary hover:underline text-sm font-medium"
+                            className="inline-flex items-center text-primary hover:underline text-sm font-medium break-all"
                           >
-                            <ExternalLink className="w-4 h-4 mr-1" /> Buka Dokumen Pengajuan
+                            <ExternalLink className="w-4 h-4 mr-1 flex-shrink-0" /> <span className="line-clamp-2">Buka Dokumen Pengajuan</span>
                           </a>
                         </div>
                       ) : (
@@ -656,7 +656,7 @@ export default function TugasAkhirAdmin() {
                 <CardDescription>Atur jadwal ujian, lokasi, dan tetapkan dosen penguji.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -747,7 +747,7 @@ export default function TugasAkhirAdmin() {
             </Card>
 
             <Dialog open={isSeminarDetailOpen} onOpenChange={setIsSeminarDetailOpen}>
-              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Atur Jadwal Ujian & Penguji</DialogTitle>
                   <DialogDescription>
@@ -756,7 +756,7 @@ export default function TugasAkhirAdmin() {
                 </DialogHeader>
 
                 {selectedSeminar && (
-                  <div className="space-y-6 py-4 overflow-y-auto pr-2">
+                  <div className="space-y-6 py-4">
                     <div className="p-4 bg-muted/50 rounded-lg border">
                       <Label className="text-xs text-muted-foreground">Mahasiswa</Label>
                       <p className="font-medium text-base">{selectedSeminar.ta_submissions?.profiles?.full_name}</p>
