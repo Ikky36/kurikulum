@@ -292,3 +292,8 @@
     font-feature-settings: "liga" 1, "calt" 1;
   }
 }
+
+/* Ensure Radix portalled combobox / popover overlays inside modals receive pointer and scroll events */
+[data-radix-popper-content-wrapper] {
+  pointer-events: auto !important;
+}

@@ -1625,7 +1625,13 @@ export default function DashboardAdmin() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <CardTitle>Penugasan Dosen</CardTitle>
-                  <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+                  <Dialog open={showAssignDialog} onOpenChange={(open) => {
+                    setShowAssignDialog(open);
+                    if (!open) {
+                      setCourseSearchOpen(false);
+                      setCourseSearchQuery('');
+                    }
+                  }}>
                     <DialogTrigger asChild>
                       <Button size="sm">
                         <Plus className="h-4 w-4 mr-2" />
@@ -1665,7 +1671,7 @@ export default function DashboardAdmin() {
                         </div>
                         <div className="space-y-2">
                           <Label>Mata Kuliah</Label>
-                          <Popover open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
+                          <Popover modal={true} open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
@@ -1682,14 +1688,19 @@ export default function DashboardAdmin() {
                                 <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                               </Button>
                             </PopoverTrigger>
-                            <PopoverContent className="w-[400px] p-0" align="start">
-                              <Command>
+                            <PopoverContent 
+                              className="w-[var(--radix-popover-trigger-width)] min-w-[320px] max-w-[90vw] p-0 z-[60]" 
+                              align="start"
+                              onWheel={(e) => e.stopPropagation()}
+                            >
+                              <Command shouldFilter={false}>
                                 <CommandInput 
                                   placeholder="Cari mata kuliah..." 
                                   value={courseSearchQuery}
                                   onValueChange={setCourseSearchQuery}
+                                  autoFocus
                                 />
-                                <CommandList>
+                                <CommandList className="max-h-[250px] overflow-y-auto">
                                   <CommandEmpty>Mata kuliah tidak ditemukan.</CommandEmpty>
                                   <CommandGroup>
                                     {courses?.filter(course => {

@@ -190,7 +190,7 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
           {/* Source Class Selection */}
           <div className="space-y-2">
             <Label>Pilih Kelas Sumber</Label>
-            <Popover open={classPickerOpen} onOpenChange={setClassPickerOpen}>
+            <Popover modal={true} open={classPickerOpen} onOpenChange={setClassPickerOpen}>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
@@ -206,10 +206,10 @@ export function ContentImportDialog({ courseId, targetClassId, defaultTab = 'mat
                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[60]" align="start">
                 <Command>
-                  <CommandInput placeholder="Cari kelas, mata kuliah, atau dosen..." />
-                  <CommandList>
+                  <CommandInput placeholder="Cari kelas, mata kuliah, atau dosen..." autoFocus />
+                  <CommandList className="max-h-[250px] overflow-y-auto">
                     {classesLoading ? (
                       <div className="p-3 text-center text-sm text-muted-foreground">Loading...</div>
                     ) : (
