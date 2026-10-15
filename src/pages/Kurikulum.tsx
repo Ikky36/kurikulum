@@ -1222,7 +1222,7 @@ function KurikulumContent() {
                         <div className="flex items-start gap-2">
                           <div className="flex-1">
                             <label className="text-xs font-medium">Mata Kuliah</label>
-                            <Popover modal={true} open={!!coursePickerOpen[idx]} onOpenChange={(o) => setCoursePickerOpen(prev => ({ ...prev, [idx]: o }))}>
+                            <Popover open={!!coursePickerOpen[idx]} onOpenChange={(o) => setCoursePickerOpen(prev => ({ ...prev, [idx]: o }))}>
                               <PopoverTrigger asChild>
                                 <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
                                   <span className={cn(!entry.course_id && 'text-muted-foreground', 'truncate')}>
@@ -1231,7 +1231,7 @@ function KurikulumContent() {
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </PopoverTrigger>
-                              <PopoverContent className="w-[--radix-popover-trigger-width] p-0 z-[60]" align="start">
+                              <PopoverContent portal={false} className="w-[--radix-popover-trigger-width] p-0 z-50" align="start">
                                 <Command>
                                   <CommandInput placeholder="Cari mata kuliah..." autoFocus />
                                   <CommandList className="max-h-[250px] overflow-y-auto">

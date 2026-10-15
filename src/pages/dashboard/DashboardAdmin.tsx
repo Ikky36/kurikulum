@@ -1671,7 +1671,7 @@ export default function DashboardAdmin() {
                         </div>
                         <div className="space-y-2">
                           <Label>Mata Kuliah</Label>
-                          <Popover modal={true} open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
+                          <Popover open={courseSearchOpen} onOpenChange={setCourseSearchOpen}>
                             <PopoverTrigger asChild>
                               <Button
                                 variant="outline"
@@ -1689,9 +1689,9 @@ export default function DashboardAdmin() {
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent 
-                              className="w-[var(--radix-popover-trigger-width)] min-w-[320px] max-w-[90vw] p-0 z-[60]" 
+                              portal={false}
+                              className="w-[var(--radix-popover-trigger-width)] min-w-[320px] max-w-[90vw] p-0 z-50" 
                               align="start"
-                              onWheel={(e) => e.stopPropagation()}
                             >
                               <Command shouldFilter={false}>
                                 <CommandInput 
