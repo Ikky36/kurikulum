@@ -7,13 +7,34 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { AlertCircle, CheckCircle2, Clock, Info } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, Info, Printer } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { KrsDocumentViewerModal } from '@/components/document/KrsDocumentViewerModal';
 
 export default function KrsMahasiswa() {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
+
+  // Print KRS Modal State
+  const [isPrintKrsOpen, setIsPrintKrsOpen] = useState(false);
+  const [printTargetKrs, setPrintTargetKrs] = useState<any>(null);
+
+  // Ambil data DPA mahasiswa untuk tanda tangan KRS
+  const { data: dpaInfo } = useQuery({
+    queryKey: ['my_dpa_for_krs', profile?.enrollment_year, (profile as any)?.sistem_kuliah_id],
+    enabled: !!profile?.enrollment_year && !!(profile as any)?.sistem_kuliah_id,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('academic_advisors')
+        .select('*, dosen:profiles!academic_advisors_dosen_id_fkey(*)')
+        .eq('enrollment_year', profile!.enrollment_year!)
+        .eq('sistem_kuliah_id', (profile as any).sistem_kuliah_id)
+        .maybeSingle();
+      if (error) return null;
+      return data;
+    },
+  });
 
   // Ambil semester aktif berdasarkan angkatan mahasiswa dan tahun akademik aktif
   const { data: activeSemester, isLoading: isLoadingSemester } = useQuery({
@@ -388,9 +409,25 @@ export default function KrsMahasiswa() {
         {isApproved && (
           <Alert className="mb-6 bg-green-500/10 text-green-700 border-green-500/20">
             <CheckCircle2 className="h-4 w-4" color="green" />
-            <AlertTitle>KRS Disetujui</AlertTitle>
-            <AlertDescription>
-              KRS Anda telah disetujui oleh Dosen Pembimbing / Admin. Fitur cetak KRS akan tersedia segera.
+            <AlertTitle className="font-bold">KRS Disetujui</AlertTitle>
+            <AlertDescription className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-1.5">
+              <span>KRS Anda telah disetujui secara resmi oleh Dosen Pembimbing Akademik (DPA) / Admin.</span>
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => {
+                  setPrintTargetKrs({
+                    krs,
+                    items: krs?.krs_items || [],
+                    semester: activeSemester?.name,
+                    academicYear: activeSemester?.academic_years?.name,
+                  });
+                  setIsPrintKrsOpen(true);
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shrink-0 shadow-sm"
+              >
+                <Printer className="h-4 w-4" /> Cetak KRS (PDF)
+              </Button>
             </AlertDescription>
           </Alert>
         )}
@@ -547,16 +584,37 @@ export default function KrsMahasiswa() {
                   return (
                     <AccordionItem key={history.id} value={history.id} className="bg-card border rounded-lg mb-2 px-4 shadow-sm">
                       <AccordionTrigger className="hover:no-underline">
-                        <div className="flex flex-col sm:flex-row sm:items-center w-full gap-2 sm:gap-4 text-left">
-                          <span className="font-semibold">{headerTitle}</span>
-                          <div className="flex gap-2 mt-1 sm:mt-0">
-                            <Badge variant={history.status === 'approved' ? 'default' : history.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize">
-                              {history.status === 'approved' ? 'Disetujui' : history.status === 'rejected' ? 'Ditolak' : 'Menunggu'}
-                            </Badge>
-                            <Badge variant="outline" className="font-normal text-muted-foreground bg-background">
-                              {totalSks} SKS
-                            </Badge>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full pr-4 gap-2 text-left">
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                            <span className="font-semibold">{headerTitle}</span>
+                            <div className="flex gap-2 mt-1 sm:mt-0">
+                              <Badge variant={history.status === 'approved' ? 'default' : history.status === 'rejected' ? 'destructive' : 'secondary'} className="capitalize">
+                                {history.status === 'approved' ? 'Disetujui' : history.status === 'rejected' ? 'Ditolak' : 'Menunggu'}
+                              </Badge>
+                              <Badge variant="outline" className="font-normal text-muted-foreground bg-background">
+                                {totalSks} SKS
+                              </Badge>
+                            </div>
                           </div>
+                          {history.status === 'approved' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs gap-1 self-start sm:self-center"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPrintTargetKrs({
+                                  krs: history,
+                                  items: history.krs_items || [],
+                                  semester: history.semesters?.name,
+                                  academicYear: history.academic_years?.name,
+                                });
+                                setIsPrintKrsOpen(true);
+                              }}
+                            >
+                              <Printer className="h-3 w-3" /> Cetak KRS
+                            </Button>
+                          )}
                         </div>
                       </AccordionTrigger>
                       <AccordionContent>
@@ -599,6 +657,18 @@ export default function KrsMahasiswa() {
           )}
         </div>
       </div>
+
+      {/* Modal Cetak KRS */}
+      <KrsDocumentViewerModal
+        open={isPrintKrsOpen}
+        onOpenChange={setIsPrintKrsOpen}
+        krsData={printTargetKrs?.krs}
+        krsItems={printTargetKrs?.items || []}
+        studentProfile={profile}
+        dpaProfile={dpaInfo?.dosen}
+        semesterName={printTargetKrs?.semester}
+        academicYearName={printTargetKrs?.academicYear}
+      />
     </Layout>
   );
 }

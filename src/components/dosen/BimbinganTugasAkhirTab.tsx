@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Calendar, CheckCircle2, FileText, MessageSquare, Plus, Save, Clock, ExternalLink } from 'lucide-react';
+import { BookOpen, Calendar, CheckCircle2, FileText, MessageSquare, Plus, Save, Clock, ExternalLink, Printer } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 
 import { TADosenMilestones } from '@/pages/tugas-akhir/TADosenMilestones';
+import { KartuBimbinganViewerModal } from '@/components/document/KartuBimbinganViewerModal';
 
 export function BimbinganTugasAkhirTab() {
   const { user, profile } = useAuth();
@@ -22,6 +23,7 @@ export function BimbinganTugasAkhirTab() {
   
   const [selectedAdvisorship, setSelectedAdvisorship] = useState<any>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   
   // States for consultation response & add
   const [activeLog, setActiveLog] = useState<any>(null);
@@ -42,7 +44,8 @@ export function BimbinganTugasAkhirTab() {
           ta_submissions (
             id, title, type_id, status, document_link, comments, created_at,
             ta_types (id, name),
-            profiles:student_id (id, full_name, nim)
+            profiles:student_id (id, full_name, nim, program),
+            ta_advisors (id, role, profiles (id, full_name, nip, signature_url, paraf_url))
           )
         `)
         .eq('dosen_id', user?.id);
@@ -53,13 +56,12 @@ export function BimbinganTugasAkhirTab() {
   });
 
   const { data: consultationLogs, isLoading: loadingLogs } = useQuery({
-    queryKey: ['ta_consultation_logs', selectedAdvisorship?.ta_submissions?.id, user?.id],
+    queryKey: ['ta_consultation_logs', selectedAdvisorship?.ta_submissions?.id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ta_consultation_logs')
-        .select('*')
+        .select('*, profiles:dosen_id (id, full_name, nip, signature_url, paraf_url)')
         .eq('submission_id', selectedAdvisorship.ta_submissions.id)
-        .eq('dosen_id', user?.id)
         .order('date', { ascending: false });
       if (error) throw error;
       return data;
@@ -276,9 +278,14 @@ export function BimbinganTugasAkhirTab() {
                   <h3 className="text-lg font-semibold flex items-center">
                     <FileText className="w-5 h-5 mr-2" /> Riwayat Log Konsultasi
                   </h3>
-                  <Button size="sm" onClick={openAddLog}>
-                    <Plus className="w-4 h-4 mr-2" /> Tambah Log Manual
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setIsPrintModalOpen(true)} className="gap-1.5">
+                      <Printer className="w-4 h-4" /> Cetak Kartu Bimbingan
+                    </Button>
+                    <Button size="sm" onClick={openAddLog}>
+                      <Plus className="w-4 h-4 mr-2" /> Tambah Log Manual
+                    </Button>
+                  </div>
                 </div>
 
                 {(activeLog || isAddingLog) ? (
@@ -449,6 +456,17 @@ export function BimbinganTugasAkhirTab() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Modal Cetak Kartu Bimbingan Tugas Akhir */}
+      {selectedAdvisorship?.ta_submissions && (
+        <KartuBimbinganViewerModal
+          open={isPrintModalOpen}
+          onOpenChange={setIsPrintModalOpen}
+          submission={selectedAdvisorship.ta_submissions}
+          consultationLogs={consultationLogs || []}
+          studentProfile={selectedAdvisorship.ta_submissions?.profiles}
+        />
+      )}
     </div>
   );
 }

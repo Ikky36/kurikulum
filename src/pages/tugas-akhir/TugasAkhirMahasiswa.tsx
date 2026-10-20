@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save, Undo2, Eye, Edit2, Trash2, ArrowLeft } from 'lucide-react';
+import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save, Undo2, Eye, Edit2, Trash2, ArrowLeft, Printer } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -21,9 +21,10 @@ import { useAcademicPeriod } from '@/hooks/useAcademicPeriod';
 import { calculateSemester } from '@/utils/academicHelpers';
 import { TATimeline } from './TATimeline';
 import { SeminarRegistrationForm } from './SeminarRegistrationForm';
+import { KartuBimbinganViewerModal } from '@/components/document/KartuBimbinganViewerModal';
 
 export default function TugasAkhirMahasiswa() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const { activeAcademicYear, activeSemester } = useAcademicPeriod();
   
@@ -34,6 +35,9 @@ export default function TugasAkhirMahasiswa() {
   
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [generalErrors, setGeneralErrors] = useState<string[]>([]);
+
+  // Print Card State
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   // Add Log State
   const [isAddLogOpen, setIsAddLogOpen] = useState(false);
@@ -77,7 +81,7 @@ export default function TugasAkhirMahasiswa() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ta_submissions')
-        .select('*, ta_types(name), ta_advisors(role, profiles(id, full_name))')
+        .select('*, ta_types(name), ta_advisors(role, profiles(id, full_name, nip, signature_url, paraf_url))')
         .eq('student_id', user?.id)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -95,7 +99,7 @@ export default function TugasAkhirMahasiswa() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ta_consultation_logs')
-        .select('*, profiles:dosen_id(full_name)')
+        .select('*, profiles:dosen_id(id, full_name, nip, signature_url, paraf_url)')
         .eq('submission_id', mySubmission.id)
         .order('date', { ascending: false });
       if (error) throw error;
@@ -691,14 +695,24 @@ export default function TugasAkhirMahasiswa() {
 
                 {mySubmission.status === 'approved' && (
                   <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
+                    <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div>
                         <CardTitle>Riwayat Bimbingan</CardTitle>
                         <CardDescription>Catat dan pantau histori konsultasi Anda dengan dosen pembimbing.</CardDescription>
                       </div>
-                      <Button onClick={() => setIsAddLogOpen(true)} size="sm">
-                        <Plus className="w-4 h-4 mr-2" /> Tambah Log
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsPrintModalOpen(true)}
+                          className="gap-1.5"
+                        >
+                          <Printer className="w-4 h-4" /> Cetak Kartu Bimbingan
+                        </Button>
+                        <Button onClick={() => setIsAddLogOpen(true)} size="sm">
+                          <Plus className="w-4 h-4 mr-2" /> Tambah Log
+                        </Button>
+                      </div>
                     </CardHeader>
                     <CardContent>
                       <div className="rounded-md border">
@@ -1057,6 +1071,17 @@ export default function TugasAkhirMahasiswa() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Modal Cetak Kartu Bimbingan Tugas Akhir */}
+        {mySubmission && (
+          <KartuBimbinganViewerModal
+            open={isPrintModalOpen}
+            onOpenChange={setIsPrintModalOpen}
+            submission={mySubmission}
+            consultationLogs={consultationLogs || []}
+            studentProfile={profile}
+          />
+        )}
 
       </div>
     </Layout>
