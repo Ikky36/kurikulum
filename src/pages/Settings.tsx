@@ -23,6 +23,7 @@ import { RolePermissionsTab } from '@/components/admin/RolePermissionsTab';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { SistemKuliahManager } from '@/components/admin/SistemKuliahManager';
 import { TugasAkhirSettingsTab } from '@/components/admin/TugasAkhirSettingsTab';
+import { DocumentSettingsTab } from '@/components/admin/DocumentSettingsTab';
 import { useAppSettings, useUpdateAppSetting } from '@/hooks/useAppSettings';
 import { getVmtsAcronym } from '@/lib/utils';
 
@@ -855,6 +856,13 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
               <span className="hidden md:inline">Sistem Kuliah</span>
               <span className="md:hidden">Sistem</span>
             </TabsTrigger>
+            {canAccessTheme && (
+              <TabsTrigger value="document-layout" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <FileText className="h-4 w-4" />
+                <span className="hidden md:inline">Kop & Dokumen</span>
+                <span className="md:hidden">Kop</span>
+              </TabsTrigger>
+            )}
             <TabsTrigger value="tugas-akhir" className="w-full justify-start gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BookOpen className="h-4 w-4" />
               <span className="hidden md:inline">Tugas Akhir</span>
@@ -1618,6 +1626,13 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
             </TabsContent>
 
             {/* Tugas Akhir Tab */}
+            {/* Kop & Dokumen Tab */}
+            {canAccessTheme && (
+              <TabsContent value="document-layout" className="mt-0">
+                <DocumentSettingsTab />
+              </TabsContent>
+            )}
+
             <TabsContent value="tugas-akhir" className="mt-0">
               <TugasAkhirSettingsTab />
             </TabsContent>
