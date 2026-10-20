@@ -243,10 +243,70 @@ export const TugasAkhirSettingsTab = () => {
     onError: (error) => toast.error('Gagal mengurutkan: ' + error.message)
   });
 
+  const { data: appSettings } = useQuery({
+    queryKey: ['app-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('app_settings').select('*');
+      if (error) throw error;
+      const settingsMap: Record<string, string> = {};
+      data?.forEach((s: any) => {
+        settingsMap[s.setting_key] = s.setting_value || '';
+      });
+      return settingsMap;
+    }
+  });
+
+  const allowStudentDelete = appSettings?.ta_allow_student_delete_submission === 'true';
+
+  const updateSettingMutation = useMutation({
+    mutationFn: async ({ key, value }: { key: string; value: string }) => {
+      const { error } = await supabase
+        .from('app_settings')
+        .upsert({ setting_key: key, setting_value: value }, { onConflict: 'setting_key' });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['app-settings'] });
+      toast.success('Pengaturan berhasil diperbarui');
+    },
+    onError: (err: any) => {
+      toast.error('Gagal memperbarui pengaturan: ' + err.message);
+    }
+  });
+
   if (typesLoading || reqsLoading) return <div>Memuat pengaturan...</div>;
 
   return (
     <div className="space-y-6">
+      {/* Kebijakan Pengajuan Judul */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Kebijakan Pengajuan Judul</CardTitle>
+          <CardDescription>
+            Atur izin dan kebijakan bagi mahasiswa dalam mengelola riwayat pengajuan judul tugas akhir.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 border rounded-lg bg-card">
+            <div className="space-y-1">
+              <Label className="text-base font-medium">Izinkan Mahasiswa Menghapus Judul</Label>
+              <p className="text-sm text-muted-foreground">
+                Jika diaktifkan, tombol Hapus akan tersedia bagi mahasiswa untuk semua judul (termasuk judul yang sudah Disetujui) guna merapikan pengajuan alternatif yang tidak terpilih. Jika dimatikan, judul yang sudah Disetujui akan terkunci dari penghapusan.
+              </p>
+            </div>
+            <Switch
+              checked={allowStudentDelete}
+              onCheckedChange={(checked) => {
+                updateSettingMutation.mutate({
+                  key: 'ta_allow_student_delete_submission',
+                  value: checked ? 'true' : 'false'
+                });
+              }}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>

@@ -57,6 +57,21 @@ export default function TugasAkhirMahasiswa() {
     enabled: !!user?.id
   });
 
+  const { data: appSettings } = useQuery({
+    queryKey: ['app-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('app_settings').select('*');
+      if (error) throw error;
+      const settingsMap: Record<string, string> = {};
+      data?.forEach((s: any) => {
+        settingsMap[s.setting_key] = s.setting_value || '';
+      });
+      return settingsMap;
+    }
+  });
+
+  const allowDeleteApproved = appSettings?.ta_allow_student_delete_submission === 'true';
+
   const { data: mySubmissions, isLoading: subLoading } = useQuery({
     queryKey: ['my_ta_submissions', user?.id],
     queryFn: async () => {
@@ -302,8 +317,10 @@ export default function TugasAkhirMahasiswa() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my_ta_submissions', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['my_ta_submission', user?.id] });
       toast.success('Pengajuan berhasil dihapus');
       setDeleteId(null);
+      setSelectedSubmissionId(null);
     },
     onError: (error: any) => {
       toast.error('Gagal menghapus: ' + error.message);
@@ -408,9 +425,16 @@ export default function TugasAkhirMahasiswa() {
             </TabsList>
             
             {mySubmission && !isCreatingNew && (
-              <Button variant="outline" onClick={() => setSelectedSubmissionId(null)}>
-                <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Daftar
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => setSelectedSubmissionId(null)}>
+                  <ArrowLeft className="w-4 h-4 mr-2" /> Kembali ke Daftar
+                </Button>
+                {(mySubmission.status !== 'approved' || allowDeleteApproved) && (
+                  <Button variant="destructive" size="sm" onClick={() => setDeleteId(mySubmission.id)}>
+                    <Trash2 className="w-4 h-4 mr-1" /> Hapus Judul
+                  </Button>
+                )}
+              </div>
             )}
           </div>
 
@@ -463,21 +487,21 @@ export default function TugasAkhirMahasiswa() {
                                   <Eye className="w-4 h-4" />
                                 </Button>
                                 {sub.status !== 'approved' && (
-                                  <>
-                                    <Button size="sm" variant="outline" onClick={() => {
-                                      setTitle(sub.title);
-                                      setDocumentLink(sub.document_link || '');
-                                      setComments(sub.comments || '');
-                                      setSelectedType(sub.type_id || '');
-                                      setEditSubmissionId(sub.id);
-                                      setIsCreatingNew(true);
-                                    }} title="Edit">
-                                      <Edit2 className="w-4 h-4" />
-                                    </Button>
-                                    <Button size="sm" variant="destructive" onClick={() => setDeleteId(sub.id)} title="Hapus">
-                                      <Trash2 className="w-4 h-4" />
-                                    </Button>
-                                  </>
+                                  <Button size="sm" variant="outline" onClick={() => {
+                                    setTitle(sub.title);
+                                    setDocumentLink(sub.document_link || '');
+                                    setComments(sub.comments || '');
+                                    setSelectedType(sub.type_id || '');
+                                    setEditSubmissionId(sub.id);
+                                    setIsCreatingNew(true);
+                                  }} title="Edit">
+                                    <Edit2 className="w-4 h-4" />
+                                  </Button>
+                                )}
+                                {(sub.status !== 'approved' || allowDeleteApproved) && (
+                                  <Button size="sm" variant="destructive" onClick={() => setDeleteId(sub.id)} title="Hapus">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
                                 )}
                               </div>
                             </TableCell>
@@ -1008,7 +1032,17 @@ export default function TugasAkhirMahasiswa() {
             <AlertDialogHeader>
               <AlertDialogTitle>Hapus Pengajuan?</AlertDialogTitle>
               <AlertDialogDescription>
-                Apakah Anda yakin ingin menghapus pengajuan tugas akhir ini? Tindakan ini tidak dapat dibatalkan.
+                {(() => {
+                  const targetSub = mySubmissions?.find((s: any) => s.id === deleteId);
+                  if (targetSub?.status === 'approved') {
+                    return (
+                      <span className="text-destructive font-medium block">
+                        ⚠️ Perhatian: Judul ini telah Disetujui. Menghapus judul ini akan membatalkan penugasan dosen pembimbing dan menghapus seluruh riwayat log bimbingan yang telah dicatat. Apakah Anda yakin ingin menghapus judul ini?
+                      </span>
+                    );
+                  }
+                  return 'Apakah Anda yakin ingin menghapus pengajuan tugas akhir ini? Tindakan ini tidak dapat dibatalkan.';
+                })()}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
