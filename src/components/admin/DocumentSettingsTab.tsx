@@ -27,11 +27,13 @@ import {
   Maximize2,
   Info
 } from 'lucide-react';
+import { DocumentTemplateCustomizer } from './DocumentTemplateCustomizer';
 
 export function DocumentSettingsTab() {
   const { user } = useAuth();
   const { settings, isLoading, updateSettings, isUpdating } = useDocumentSettings();
   const [form, setForm] = useState<DocumentLayoutSettings>(settings);
+  const [activeMainTab, setActiveMainTab] = useState<'layout' | 'templates'>('layout');
   const [uploadingField, setUploadingField] = useState<string | null>(null);
 
   // Hidden File Input Refs
@@ -159,7 +161,21 @@ export function DocumentSettingsTab() {
         </CardHeader>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-12 items-start">
+      {/* Sub-Navigasi Pengaturan Dokumen */}
+      <Tabs value={activeMainTab} onValueChange={(val) => setActiveMainTab(val as any)} className="w-full">
+        <TabsList className="grid grid-cols-2 max-w-md bg-muted p-1">
+          <TabsTrigger value="layout" className="text-xs font-semibold py-2">
+            <Sliders className="h-4 w-4 mr-1.5" />
+            1. Format Lembar & Kop Surat
+          </TabsTrigger>
+          <TabsTrigger value="templates" className="text-xs font-semibold py-2">
+            <FileText className="h-4 w-4 mr-1.5" />
+            2. Kustomisasi Dokumen & Kolom
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="layout" className="mt-4">
+          <div className="grid gap-6 lg:grid-cols-12 items-start">
         {/* PANEL KIRI: FORM PENGATURAN (7 Kolom) */}
         <div className="lg:col-span-7 space-y-6">
           <Tabs defaultValue="kertas" className="w-full">
@@ -878,6 +894,12 @@ export function DocumentSettingsTab() {
           </Card>
         </div>
       </div>
-    </div>
+    </TabsContent>
+
+    <TabsContent value="templates" className="mt-4">
+      <DocumentTemplateCustomizer />
+    </TabsContent>
+  </Tabs>
+</div>
   );
 }
