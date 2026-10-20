@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -28,6 +29,7 @@ export function SistemKuliahManager() {
 
   const [showDialog, setShowDialog] = useState(false);
   const [editing, setEditing] = useState<SistemKuliah | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<SistemKuliah | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [isActive, setIsActive] = useState(true);
@@ -76,15 +78,26 @@ export function SistemKuliahManager() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
+      // 1. Lepaskan relasi profil mahasiswa/pengguna yang terhubung dengan sistem kuliah ini
+      const { error: unlinkProfilesError } = await supabase
+        .from('profiles')
+        .update({ sistem_kuliah_id: null })
+        .eq('sistem_kuliah_id', id);
+      if (unlinkProfilesError) throw unlinkProfilesError;
+
+      // 2. Hapus sistem kuliah
       const { error } = await supabase.from('sistem_kuliah').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sistem-kuliah'] });
+      queryClient.invalidateQueries({ queryKey: ['profiles'] });
       toast({ title: 'Berhasil', description: 'Sistem kuliah berhasil dihapus' });
+      setDeleteTarget(null);
     },
     onError: (error: any) => {
       toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+      setDeleteTarget(null);
     },
   });
 
@@ -212,7 +225,7 @@ export function SistemKuliahManager() {
                       variant="ghost"
                       size="icon"
                       className="text-destructive hover:text-destructive"
-                      onClick={() => deleteMutation.mutate(item.id)}
+                      onClick={() => setDeleteTarget(item)}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -230,6 +243,38 @@ export function SistemKuliahManager() {
           </TableBody>
         </Table>
       </CardContent>
+
+      {/* Dialog Konfirmasi Hapus */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Hapus Sistem Kuliah?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>
+                Apakah Anda yakin ingin menghapus sistem kuliah{' '}
+                <span className="font-semibold text-foreground">"{deleteTarget?.name}"</span>?
+              </p>
+              <p className="text-xs text-muted-foreground bg-muted p-2.5 rounded-md border">
+                Mahasiswa atau profil pengguna yang sebelumnya terhubung ke sistem kuliah ini akan otomatis diatur menjadi tanpa sistem kuliah agar data pengguna tetap aman.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMutation.isPending}
+              onClick={() => {
+                if (deleteTarget) {
+                  deleteMutation.mutate(deleteTarget.id);
+                }
+              }}
+            >
+              {deleteMutation.isPending ? 'Menghapus...' : 'Ya, Hapus'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
