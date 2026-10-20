@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Navigate } from 'react-router-dom';
 import { User, Mail, Shield, GraduationCap, Calendar } from 'lucide-react';
 import { ChangePasswordCard } from '@/components/settings/ChangePasswordCard';
+import { SignatureUploadCard } from '@/components/profile/SignatureUploadCard';
 import { Badge } from '@/components/ui/badge';
 import { SemesterBadge } from '@/components/ui/semester-badge';
 
@@ -126,6 +127,11 @@ export default function Profile() {
 
           {/* Change Password Card */}
           <ChangePasswordCard />
+
+          {/* Signature & Paraf Card (Dosen, Admin, Sub-Admin) */}
+          {profile?.role !== 'mahasiswa' && (
+            <SignatureUploadCard className="lg:col-span-2" />
+          )}
         </div>
       </div>
     </Layout>

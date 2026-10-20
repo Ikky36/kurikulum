@@ -44,6 +44,8 @@ export interface Profile {
   program?: string;
   class_group?: string;
   photo_url?: string;
+  signature_url?: string | null;
+  paraf_url?: string | null;
   enrollment_year?: number;
   gender?: 'pria' | 'wanita' | null;
   sistem_kuliah_id?: string | null;

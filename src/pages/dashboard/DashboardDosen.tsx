@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Camera, Loader2, Upload, Download, Save, BookOpen } from 'lucide-react';
+import { User, Mail, Camera, Loader2, Upload, Download, Save, BookOpen, PenLine } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Course, Profile, Grade } from '@/lib/types';
@@ -562,6 +562,29 @@ export default function DashboardDosen() {
                   <div className="flex items-center gap-2">
                     <BookOpen className="h-4 w-4 text-muted-foreground" />
                     <span>{assignedCourses?.length || 0} Mata Kuliah</span>
+                  </div>
+
+                  <div className="pt-3 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs flex items-center justify-between gap-1.5 h-8 px-2.5"
+                      onClick={() => navigate('/profile')}
+                    >
+                      <span className="flex items-center gap-1.5 truncate">
+                        <PenLine className="h-3.5 w-3.5 text-primary shrink-0" />
+                        Tanda Tangan & Paraf
+                      </span>
+                      {profile?.signature_url && profile?.paraf_url ? (
+                        <Badge variant="default" className="text-[10px] h-4 px-1.5 bg-emerald-600 hover:bg-emerald-600">
+                          Lengkap
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-[10px] h-4 px-1.5 text-amber-600 dark:text-amber-400">
+                          {profile?.signature_url || profile?.paraf_url ? 'Sebagian' : 'Belum Ada'}
+                        </Badge>
+                      )}
+                    </Button>
                   </div>
                 </div>
               )}

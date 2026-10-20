@@ -2076,6 +2076,8 @@ export type Database = {
           photo_url: string | null
           program: string | null
           role: Database["public"]["Enums"]["app_role"]
+          signature_url: string | null
+          paraf_url: string | null
           sistem_kuliah_id: string | null
           updated_at: string
         }
@@ -2092,6 +2094,8 @@ export type Database = {
           photo_url?: string | null
           program?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          signature_url?: string | null
+          paraf_url?: string | null
           sistem_kuliah_id?: string | null
           updated_at?: string
         }
@@ -2108,6 +2112,8 @@ export type Database = {
           photo_url?: string | null
           program?: string | null
           role?: Database["public"]["Enums"]["app_role"]
+          signature_url?: string | null
+          paraf_url?: string | null
           sistem_kuliah_id?: string | null
           updated_at?: string
         }
