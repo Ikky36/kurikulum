@@ -282,7 +282,7 @@ export function UniversalDocumentContainer({
           )}
 
           {/* 3.b TEKS NARASI / SURAT KETERANGAN */}
-          {template.body_text_enabled && template.body_text_template && (
+          {template.content_mode !== 'table_only' && template.body_text_enabled !== false && template.body_text_template && (
             <div className="my-3 text-xs leading-relaxed text-slate-800 text-justify whitespace-pre-line">
               {interpolateVariables(template.body_text_template, {
                 nama_mahasiswa: studentInfo?.name || '',
@@ -309,7 +309,7 @@ export function UniversalDocumentContainer({
           )}
 
           {/* 4. ISI UTAMA DOKUMEN (TABEL ATAU KONTEN DARI PROPS) */}
-          {template.table_enabled !== false && (
+          {template.content_mode !== 'text_only' && template.table_enabled !== false && (
             <div className="flex-1 my-2 document-content">
               {children}
             </div>
@@ -403,7 +403,7 @@ export function UniversalDocumentContainer({
         </div>
 
         {/* 7. FOOTER RESMI DOKUMEN */}
-        {docSettings.footer_enabled && (
+        {docSettings.footer_enabled && template.show_footer !== false && (
           <div
             className={`mt-4 ${
               docSettings.footer_mode === 'image' && docSettings.footer_image_full_bleed

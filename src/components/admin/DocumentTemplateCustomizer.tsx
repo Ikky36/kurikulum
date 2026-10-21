@@ -40,6 +40,10 @@ import {
   Printer,
   Sparkles,
   ChevronDown,
+  CheckSquare,
+  Type,
+  AlignLeft,
+  LayoutTemplate,
 } from 'lucide-react';
 
 export function DocumentTemplateCustomizer() {
@@ -59,6 +63,9 @@ export function DocumentTemplateCustomizer() {
 
   // Textarea Cursor Ref for Variable Inserter
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Input for adding custom table column
+  const [newColumnLabel, setNewColumnLabel] = useState('');
 
   // Input for adding Carbon Copy (Tembusan)
   const [newCopyItem, setNewCopyItem] = useState('');
@@ -85,6 +92,16 @@ export function DocumentTemplateCustomizer() {
 
   const updateTemplateField = <K extends keyof SingleDocumentTemplate>(key: K, value: SingleDocumentTemplate[K]) => {
     setCurrentTemplate((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Content mode handler ('all' | 'text_only' | 'table_only')
+  const handleContentModeChange = (mode: 'all' | 'text_only' | 'table_only') => {
+    setCurrentTemplate((prev) => ({
+      ...prev,
+      content_mode: mode,
+      body_text_enabled: mode === 'all' || mode === 'text_only',
+      table_enabled: mode === 'all' || mode === 'table_only',
+    }));
   };
 
   // Variable Inserter Handler: Inserts {{variable}} at cursor position in Textarea
@@ -128,6 +145,31 @@ export function DocumentTemplateCustomizer() {
     }));
   };
 
+  const handleAddColumn = () => {
+    if (!newColumnLabel.trim()) {
+      toast.error('Masukkan nama label kolom');
+      return;
+    }
+    const cleanId = `col_${Date.now()}`;
+    const newCol = {
+      id: cleanId,
+      label: newColumnLabel.trim(),
+      enabled: true,
+      is_custom: true,
+    };
+    updateTemplateField('columns', [...(currentTemplate.columns || []), newCol]);
+    setNewColumnLabel('');
+    toast.success(`Kolom "${newCol.label}" berhasil ditambahkan`);
+  };
+
+  const handleRemoveColumn = (columnId: string) => {
+    updateTemplateField(
+      'columns',
+      currentTemplate.columns.filter((c) => c.id !== columnId)
+    );
+    toast.info('Kolom dihapus');
+  };
+
   // Signer Handlers
   const addSigner = () => {
     const newId = `signer_${Date.now()}`;
@@ -144,6 +186,7 @@ export function DocumentTemplateCustomizer() {
       },
     ];
     updateTemplateField('signatures', newSigners);
+    toast.success('Penandatangan baru ditambahkan');
   };
 
   const removeSigner = (sigId: string) => {
@@ -168,6 +211,7 @@ export function DocumentTemplateCustomizer() {
     const list = currentTemplate.copies_list || [];
     updateTemplateField('copies_list', [...list, newCopyItem.trim()]);
     setNewCopyItem('');
+    toast.success('Tembusan ditambahkan');
   };
 
   const removeCopyItem = (index: number) => {
@@ -208,7 +252,9 @@ export function DocumentTemplateCustomizer() {
       document_title: newDocName.toUpperCase(),
       document_subtitle: `PROGRAM STUDI ${docSettings.program_name || 'PENDIDIKAN BAHASA ARAB'}`,
       show_kop: true,
+      show_footer: true,
       show_student_info: true,
+      content_mode: 'all',
       body_text_enabled: true,
       body_text_template: 'Dengan ini menerangkan bahwa mahasiswa {{nama_mahasiswa}} (NIM: {{nim}}) adalah mahasiswa aktif pada Program Studi {{program_studi}}...',
       table_enabled: modDef.tableDatasets.length > 0,
@@ -275,6 +321,7 @@ export function DocumentTemplateCustomizer() {
   const previewBodyText = interpolateVariables(currentTemplate.body_text_template || '', dummyContext);
 
   const isPortrait = (currentTemplate.orientation || 'portrait') === 'portrait';
+  const currentContentMode = currentTemplate.content_mode || 'all';
 
   return (
     <div className="space-y-6">
@@ -401,25 +448,168 @@ export function DocumentTemplateCustomizer() {
 
       {/* MAIN TWO-COLUMN BUILDER & LIVE PREVIEW */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* LEFT COLUMN (7 COLS): DYNAMIC BUILDER FORMS */}
+        {/* LEFT COLUMN (7 COLS): REORDERED DYNAMIC BUILDER FORMS */}
         <div className="lg:col-span-7 space-y-5">
-          {/* 1. MODUL SUMBER DATA & IDENTITAS DOKUMEN */}
-          <Card className="shadow-xs">
+          
+          {/* ============================================================== */}
+          {/* 1. CEKLIST FOOTER DAN KOP SURAT                                */}
+          {/* ============================================================== */}
+          <Card className="shadow-xs border-primary/20">
             <CardHeader className="pb-3 border-b">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <Database className="h-4 w-4 text-primary" />
-                  1. Sumber Data & Identitas Lembar
+                  <CheckSquare className="h-4 w-4 text-primary" />
+                  1. Ceklist Footer dan Kop Surat
                 </CardTitle>
                 <Badge variant="outline" className="text-[10px] font-normal">
-                  Modul: {activeModule.name}
+                  Layout & Header-Footer
+                </Badge>
+              </div>
+              <CardDescription className="text-xs">
+                Tentukan elemen kop surat institusi, footer catatan kaki, serta posisi lembar dokumen.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Checklist Kop Surat */}
+                <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg border">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs font-semibold">Kop Surat</Label>
+                    <p className="text-[10px] text-muted-foreground">Header resmi institusi</p>
+                  </div>
+                  <Switch
+                    checked={currentTemplate.show_kop}
+                    onCheckedChange={(checked) => updateTemplateField('show_kop', checked)}
+                  />
+                </div>
+
+                {/* Checklist Footer Dokumen */}
+                <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg border">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs font-semibold">Footer Dokumen</Label>
+                    <p className="text-[10px] text-muted-foreground">Catatan kaki & halaman</p>
+                  </div>
+                  <Switch
+                    checked={currentTemplate.show_footer !== false}
+                    onCheckedChange={(checked) => updateTemplateField('show_footer', checked)}
+                  />
+                </div>
+
+                {/* Checklist Biodata Mahasiswa */}
+                <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg border">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs font-semibold">Biodata Mahasiswa</Label>
+                    <p className="text-[10px] text-muted-foreground">Kotak Nama, NIM, Prodi</p>
+                  </div>
+                  <Switch
+                    checked={currentTemplate.show_student_info}
+                    onCheckedChange={(checked) => updateTemplateField('show_student_info', checked)}
+                  />
+                </div>
+              </div>
+
+              {/* Orientasi Lembar Kertas */}
+              <div className="space-y-1.5 pt-2 border-t">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-xs font-medium">Orientasi Kertas Cetak</Label>
+                    <p className="text-[10px] text-muted-foreground">
+                      Ditentukan langsung oleh Admin agar format cetak terkunci rapi bagi civitas.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={isPortrait ? 'default' : 'outline'}
+                      className="h-8 text-xs justify-center gap-1"
+                      onClick={() => updateTemplateField('orientation', 'portrait')}
+                    >
+                      <FileText className="h-3 w-3" />
+                      Portrait (Tegak)
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={!isPortrait ? 'default' : 'outline'}
+                      className="h-8 text-xs justify-center gap-1"
+                      onClick={() => updateTemplateField('orientation', 'landscape')}
+                    >
+                      <FileText className="h-3 w-3 rotate-90" />
+                      Landscape (Mendatar)
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ============================================================== */}
+          {/* 2. JUDUL UTAMA DOKUMEN                                         */}
+          {/* ============================================================== */}
+          <Card className="shadow-xs">
+            <CardHeader className="pb-3 border-b">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                <Type className="h-4 w-4 text-primary" />
+                2. Judul Utama Dokumen
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Tentukan teks judul resmi dan subjudul identitas dokumen.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="pt-4 space-y-3.5">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Judul Utama Dokumen (Kapital)</Label>
+                <Input
+                  value={currentTemplate.document_title}
+                  onChange={(e) => updateTemplateField('document_title', e.target.value)}
+                  placeholder="Contoh: KARTU KENDALI BIMBINGAN TUGAS AKHIR"
+                  className="font-bold text-xs uppercase"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium">Subjudul Dokumen</Label>
+                <Input
+                  value={currentTemplate.document_subtitle}
+                  onChange={(e) => updateTemplateField('document_subtitle', e.target.value)}
+                  placeholder="Contoh: PROGRAM STUDI PENDIDIKAN BAHASA ARAB"
+                  className="text-xs"
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ============================================================== */}
+          {/* 3. TEKS EDITOR / TABEL BUILDER (PILIHAN & DATABASE BEBAS)      */}
+          {/* ============================================================== */}
+          <Card className="shadow-xs border-primary/20">
+            <CardHeader className="pb-3 border-b">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                    <LayoutTemplate className="h-4 w-4 text-primary" />
+                    3. Teks Editor & Tabel Builder
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    Admin dapat memilih format teks editor, tabel builder, atau keduanya. Database bebas dipilih dan kolom/narasi bisa ditambah.
+                  </CardDescription>
+                </div>
+
+                <Badge variant="outline" className="text-[10px] w-fit">
+                  Database: {activeModule.name}
                 </Badge>
               </div>
             </CardHeader>
+
             <CardContent className="pt-4 space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Modul Sumber Data Database</Label>
+              {/* PEMILIHAN DATABASE BEBAS */}
+              <div className="p-3 bg-slate-50 border rounded-lg space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
+                    <Database className="h-4 w-4 text-primary" />
+                    Pilih Modul Sumber Data Database:
+                  </div>
                   <Select
                     value={currentTemplate.data_source_module || 'tugas_akhir'}
                     onValueChange={(val) => {
@@ -436,9 +626,10 @@ export function DocumentTemplateCustomizer() {
                           }))
                         );
                       }
+                      toast.success(`Modul data dialihkan ke ${mod.name}`);
                     }}
                   >
-                    <SelectTrigger className="text-xs">
+                    <SelectTrigger className="text-xs h-8 sm:w-[260px] bg-white">
                       <SelectValue placeholder="Pilih modul..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -449,285 +640,294 @@ export function DocumentTemplateCustomizer() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-[10px] text-muted-foreground">{activeModule.description}</p>
                 </div>
-
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium">Orientasi Lembar (Ditentukan Admin)</Label>
-                  <div className="grid grid-cols-2 gap-1.5">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={(currentTemplate.orientation || 'portrait') === 'portrait' ? 'default' : 'outline'}
-                      className="h-8 text-xs justify-center gap-1"
-                      onClick={() => updateTemplateField('orientation', 'portrait')}
-                    >
-                      <FileText className="h-3 w-3" />
-                      Portrait
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={currentTemplate.orientation === 'landscape' ? 'default' : 'outline'}
-                      className="h-8 text-xs justify-center gap-1"
-                      onClick={() => updateTemplateField('orientation', 'landscape')}
-                    >
-                      <FileText className="h-3 w-3 rotate-90" />
-                      Landscape
-                    </Button>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground">Posisi cetak otomatis terkunci untuk civitas.</p>
-                </div>
+                <p className="text-[11px] text-muted-foreground">{activeModule.description}</p>
               </div>
 
-              <div className="space-y-1.5 pt-2 border-t">
-                <Label className="text-xs font-medium">Judul Utama Dokumen</Label>
-                <Input
-                  value={currentTemplate.document_title}
-                  onChange={(e) => updateTemplateField('document_title', e.target.value)}
-                  placeholder="KARTU KENDALI BIMBINGAN TUGAS AKHIR"
-                  className="font-bold text-xs uppercase"
-                />
-              </div>
-
+              {/* PEMILIHAN TIPE KONTEN: TEKS EDITOR ATAU TABEL BUILDER ATAU KEDUANYA */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-medium">Subjudul Dokumen</Label>
-                <Input
-                  value={currentTemplate.document_subtitle}
-                  onChange={(e) => updateTemplateField('document_subtitle', e.target.value)}
-                  placeholder="PROGRAM STUDI PENDIDIKAN BAHASA ARAB"
-                  className="text-xs"
-                />
+                <Label className="text-xs font-medium">Pilih Format Isi Dokumen:</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleContentModeChange('all')}
+                    className={`py-2 px-3 text-xs rounded-lg border flex flex-col items-center justify-center gap-1 text-center transition-all ${
+                      currentContentMode === 'all'
+                        ? 'border-primary bg-primary/10 text-primary font-semibold shadow-xs'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1">
+                      <AlignLeft className="h-3.5 w-3.5" /> + <TableIcon className="h-3.5 w-3.5" />
+                    </span>
+                    <span>Keduanya (Teks & Tabel)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleContentModeChange('text_only')}
+                    className={`py-2 px-3 text-xs rounded-lg border flex flex-col items-center justify-center gap-1 text-center transition-all ${
+                      currentContentMode === 'text_only'
+                        ? 'border-primary bg-primary/10 text-primary font-semibold shadow-xs'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    <AlignLeft className="h-3.5 w-3.5" />
+                    <span>Hanya Teks Editor</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleContentModeChange('table_only')}
+                    className={`py-2 px-3 text-xs rounded-lg border flex flex-col items-center justify-center gap-1 text-center transition-all ${
+                      currentContentMode === 'table_only'
+                        ? 'border-primary bg-primary/10 text-primary font-semibold shadow-xs'
+                        : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-600'
+                    }`}
+                  >
+                    <TableIcon className="h-3.5 w-3.5" />
+                    <span>Hanya Tabel Builder</span>
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t">
-                <div className="flex items-center justify-between p-2.5 bg-muted/40 rounded-lg">
-                  <div className="space-y-0.5">
-                    <Label className="text-xs font-semibold">Tampilkan Kop Surat</Label>
-                    <p className="text-[10px] text-muted-foreground">Kop resmi institusi</p>
+              {/* A. BAGIAN TEKS EDITOR / NARASI */}
+              {currentContentMode !== 'table_only' && (
+                <div className="p-3.5 border border-primary/20 bg-card rounded-lg space-y-3">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <div className="flex items-center gap-1.5 font-semibold text-xs text-slate-900">
+                      <AlignLeft className="h-3.5 w-3.5 text-primary" />
+                      Teks Editor / Narasi Surat Keterangan
+                    </div>
+                    <Switch
+                      checked={currentTemplate.body_text_enabled !== false}
+                      onCheckedChange={(checked) => updateTemplateField('body_text_enabled', checked)}
+                    />
                   </div>
-                  <Switch
-                    checked={currentTemplate.show_kop}
-                    onCheckedChange={(checked) => updateTemplateField('show_kop', checked)}
-                  />
-                </div>
 
-                <div className="flex items-center justify-between p-2.5 bg-muted/40 rounded-lg">
-                  <div className="space-y-0.5">
-                    <Label className="text-xs font-semibold">Kotak Biodata Mahasiswa</Label>
-                    <p className="text-[10px] text-muted-foreground">Nama, NIM, Prodi, Semester</p>
-                  </div>
-                  <Switch
-                    checked={currentTemplate.show_student_info}
-                    onCheckedChange={(checked) => updateTemplateField('show_student_info', checked)}
-                  />
+                  {currentTemplate.body_text_enabled !== false && (
+                    <div className="space-y-3">
+                      {/* TOOLBAR SISIPKAN REFERENSI DATABASE */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 border rounded-lg">
+                        <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                          <Database className="h-3.5 w-3.5 text-primary" />
+                          Variabel Database:
+                        </span>
+
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button size="sm" variant="default" className="h-7 text-xs gap-1.5 shadow-xs">
+                              <Plus className="h-3.5 w-3.5" />
+                              Sisipkan Data Database
+                              <ChevronDown className="h-3 w-3 opacity-70" />
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-80 p-3" align="end">
+                            <div className="space-y-2.5">
+                              <div className="border-b pb-1.5">
+                                <p className="font-semibold text-xs text-foreground">
+                                  Pilih Kolom Data ({activeModule.name})
+                                </p>
+                                <p className="text-[10px] text-muted-foreground">
+                                  Klik item untuk menyisipkan placeholder otomatis di posisi kursor teks.
+                                </p>
+                              </div>
+                              <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                                {activeModule.textVariables.map((v) => (
+                                  <button
+                                    key={v.key}
+                                    type="button"
+                                    onClick={() => handleInsertVariable(v.key)}
+                                    className="w-full text-left p-1.5 rounded hover:bg-primary/10 transition-colors flex items-center justify-between border border-transparent hover:border-primary/20 text-xs group"
+                                  >
+                                    <div>
+                                      <p className="font-medium text-slate-900 group-hover:text-primary">{v.label}</p>
+                                      <p className="text-[10px] text-muted-foreground font-mono">{`{{${v.key}}}`}</p>
+                                    </div>
+                                    <Badge variant="outline" className="text-[9px] py-0 px-1 font-normal uppercase">
+                                      {v.category}
+                                    </Badge>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      {/* QUICK CHIPS SHORTCUT */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] text-muted-foreground">Sisip Cepat:</span>
+                        {activeModule.textVariables.slice(0, 5).map((v) => (
+                          <button
+                            key={v.key}
+                            type="button"
+                            onClick={() => handleInsertVariable(v.key)}
+                            className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 hover:bg-primary/15 hover:text-primary border transition-colors"
+                            title={v.label}
+                          >
+                            + {v.label}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="space-y-1">
+                        <Textarea
+                          ref={textareaRef}
+                          rows={4}
+                          value={currentTemplate.body_text_template || ''}
+                          onChange={(e) => updateTemplateField('body_text_template', e.target.value)}
+                          placeholder="Ketik narasi surat di sini. Gunakan tombol 'Sisipkan Data Database' untuk menyisipkan nilai data..."
+                          className="text-xs leading-relaxed font-sans"
+                        />
+                        <p className="text-[10px] text-muted-foreground">
+                          Placeholder seperti <code className="bg-muted px-1 rounded font-mono">{`{{nama_mahasiswa}}`}</code> otomatis diisi dengan data asli dari database kampus saat dicetak.
+                        </p>
+                      </div>
+
+                      {/* Sub-Bab Catatan / Tata Tertib Tambahan */}
+                      <div className="pt-2 border-t space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-semibold flex items-center gap-1.5">
+                            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                            Sertakan Poin Catatan / Tata Tertib di Bawah Teks
+                          </Label>
+                          <Switch
+                            checked={currentTemplate.rules_note_enabled}
+                            onCheckedChange={(checked) => updateTemplateField('rules_note_enabled', checked)}
+                          />
+                        </div>
+                        {currentTemplate.rules_note_enabled && (
+                          <div className="space-y-2 pl-2 border-l-2 border-primary/30">
+                            <Input
+                              value={currentTemplate.rules_note_title}
+                              onChange={(e) => updateTemplateField('rules_note_title', e.target.value)}
+                              placeholder="Ketentuan & Tata Tertib:"
+                              className="text-xs font-semibold h-7"
+                            />
+                            <Textarea
+                              rows={2}
+                              value={currentTemplate.rules_note_text}
+                              onChange={(e) => updateTemplateField('rules_note_text', e.target.value)}
+                              placeholder="1. Poin aturan..."
+                              className="text-xs"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
+
+              {/* B. BAGIAN TABEL BUILDER (DATA BERULANG) */}
+              {currentContentMode !== 'text_only' && (
+                <div className="p-3.5 border border-primary/20 bg-card rounded-lg space-y-3">
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <div className="flex items-center gap-1.5 font-semibold text-xs text-slate-900">
+                      <TableIcon className="h-3.5 w-3.5 text-primary" />
+                      Tabel Builder (Kolom Data Dinamis)
+                    </div>
+                    <Switch
+                      checked={currentTemplate.table_enabled !== false}
+                      onCheckedChange={(checked) => updateTemplateField('table_enabled', checked)}
+                    />
+                  </div>
+
+                  {currentTemplate.table_enabled !== false && (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-slate-700">Daftar Kolom Tabel:</span>
+                        <span className="text-[10px] text-muted-foreground">Aktifkan & sesuaikan judul kolom</span>
+                      </div>
+
+                      <div className="space-y-2 border rounded-lg p-2.5 bg-slate-50">
+                        {currentTemplate.columns.map((col) => (
+                          <div
+                            key={col.id}
+                            className="flex items-center justify-between gap-3 p-1.5 bg-white border rounded text-xs"
+                          >
+                            <div className="flex items-center gap-2 flex-1">
+                              <Switch
+                                checked={col.enabled}
+                                onCheckedChange={(checked) => toggleColumn(col.id, checked)}
+                              />
+                              <Input
+                                value={col.label}
+                                onChange={(e) => updateColumnLabel(col.id, e.target.value)}
+                                className="h-7 text-xs font-medium max-w-[200px]"
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-muted-foreground font-mono">id: {col.id}</span>
+                              {col.is_custom && (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleRemoveColumn(col.id)}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* FORM TAMBAH KOLOM BARU (BISA DITAMBAH) */}
+                      <div className="flex items-center gap-2 pt-1 border-t">
+                        <Input
+                          placeholder="Nama kolom baru (contoh: Keterangan / Tindak Lanjut)..."
+                          value={newColumnLabel}
+                          onChange={(e) => setNewColumnLabel(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddColumn();
+                            }
+                          }}
+                          className="h-8 text-xs"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={handleAddColumn}
+                          className="h-8 text-xs gap-1 whitespace-nowrap"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Tambah Kolom
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* 2. TEKS NARASI / SURAT KETERANGAN (MAIL-MERGE DENGAN TOMBOL REFERENSI DATABASE) */}
-          <Card className="shadow-xs border-primary/20">
-            <CardHeader className="pb-3 border-b">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    2. Teks Narasi / Isi Surat Keterangan
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Gunakan tombol referensi untuk menyisipkan variabel data otomatis di antara teks.
-                  </CardDescription>
-                </div>
-                <Switch
-                  checked={currentTemplate.body_text_enabled !== false}
-                  onCheckedChange={(checked) => updateTemplateField('body_text_enabled', checked)}
-                />
-              </div>
-            </CardHeader>
-
-            {currentTemplate.body_text_enabled !== false && (
-              <CardContent className="pt-4 space-y-3">
-                {/* TOOLBAR SISIPKAN REFERENSI DATABASE */}
-                <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 border rounded-lg">
-                  <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                    <Database className="h-3.5 w-3.5 text-primary" />
-                    Referensi Database:
-                  </span>
-
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button size="sm" variant="default" className="h-7 text-xs gap-1.5 shadow-xs">
-                        <Plus className="h-3.5 w-3.5" />
-                        Sisipkan Data Database
-                        <ChevronDown className="h-3 w-3 opacity-70" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-80 p-3" align="end">
-                      <div className="space-y-2.5">
-                        <div className="border-b pb-1.5">
-                          <p className="font-semibold text-xs text-foreground">Pilih Kolom Data</p>
-                          <p className="text-[10px] text-muted-foreground">
-                            Klik item untuk menyisipkan langsung di kursor teks.
-                          </p>
-                        </div>
-                        <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-                          {activeModule.textVariables.map((v) => (
-                            <button
-                              key={v.key}
-                              type="button"
-                              onClick={() => handleInsertVariable(v.key)}
-                              className="w-full text-left p-1.5 rounded hover:bg-primary/10 transition-colors flex items-center justify-between border border-transparent hover:border-primary/20 text-xs group"
-                            >
-                              <div>
-                                <p className="font-medium text-slate-900 group-hover:text-primary">{v.label}</p>
-                                <p className="text-[10px] text-muted-foreground font-mono">{`{{${v.key}}}`}</p>
-                              </div>
-                              <Badge variant="outline" className="text-[9px] py-0 px-1 font-normal uppercase">
-                                {v.category}
-                              </Badge>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                {/* QUICK CHIPS SHORTCUT */}
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[11px] text-muted-foreground">Sisip Cepat:</span>
-                  {activeModule.textVariables.slice(0, 5).map((v) => (
-                    <button
-                      key={v.key}
-                      type="button"
-                      onClick={() => handleInsertVariable(v.key)}
-                      className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 hover:bg-primary/15 hover:text-primary border transition-colors"
-                      title={v.label}
-                    >
-                      + {v.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="space-y-1">
-                  <Textarea
-                    ref={textareaRef}
-                    rows={4}
-                    value={currentTemplate.body_text_template || ''}
-                    onChange={(e) => updateTemplateField('body_text_template', e.target.value)}
-                    placeholder="Contoh: Dengan ini menerangkan bahwa mahasiswa {{nama_mahasiswa}} (NIM: {{nim}}) telah menyelesaikan bimbingan skripsi berjudul {{judul_tugas_akhir}}..."
-                    className="text-xs leading-relaxed font-sans"
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Variabel dalam kurung kurawal ganda seperti <code className="bg-muted px-1 rounded font-mono">{`{{nama_mahasiswa}}`}</code> otomatis diisi dengan data asli saat dicetak.
-                  </p>
-                </div>
-              </CardContent>
-            )}
-          </Card>
-
-          {/* 3. TABEL DATA BERULANG */}
-          <Card className="shadow-xs">
-            <CardHeader className="pb-3 border-b">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <TableIcon className="h-4 w-4 text-primary" />
-                    3. Tabel Data Berulang
-                  </CardTitle>
-                  <CardDescription className="text-xs">
-                    Atur kolom tabel yang dimuat dari database modul ini.
-                  </CardDescription>
-                </div>
-                <Switch
-                  checked={currentTemplate.table_enabled !== false}
-                  onCheckedChange={(checked) => updateTemplateField('table_enabled', checked)}
-                />
-              </div>
-            </CardHeader>
-
-            {currentTemplate.table_enabled !== false && (
-              <CardContent className="pt-4 space-y-3">
-                <p className="text-xs font-semibold text-slate-700">Daftar Kolom Tabel:</p>
-                <div className="space-y-2 border rounded-lg p-2.5 bg-slate-50">
-                  {currentTemplate.columns.map((col) => (
-                    <div
-                      key={col.id}
-                      className="flex items-center justify-between gap-3 p-1.5 bg-white border rounded text-xs"
-                    >
-                      <div className="flex items-center gap-2 flex-1">
-                        <Switch
-                          checked={col.enabled}
-                          onCheckedChange={(checked) => toggleColumn(col.id, checked)}
-                        />
-                        <Input
-                          value={col.label}
-                          onChange={(e) => updateColumnLabel(col.id, e.target.value)}
-                          className="h-7 text-xs font-medium max-w-[200px]"
-                        />
-                      </div>
-                      <span className="text-[10px] text-muted-foreground font-mono">id: {col.id}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            )}
-          </Card>
-
-          {/* 4. SUB-BAB CATATAN & TATA TERTIB */}
-          <Card className="shadow-xs">
-            <CardHeader className="pb-3 border-b">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <HelpCircle className="h-4 w-4 text-primary" />
-                  4. Sub-Bab Catatan / Tata Tertib
-                </CardTitle>
-                <Switch
-                  checked={currentTemplate.rules_note_enabled}
-                  onCheckedChange={(checked) => updateTemplateField('rules_note_enabled', checked)}
-                />
-              </div>
-            </CardHeader>
-            {currentTemplate.rules_note_enabled && (
-              <CardContent className="pt-4 space-y-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Judul Sub-Bab</Label>
-                  <Input
-                    value={currentTemplate.rules_note_title}
-                    onChange={(e) => updateTemplateField('rules_note_title', e.target.value)}
-                    placeholder="Ketentuan & Tata Tertib Bimbingan:"
-                    className="text-xs font-semibold"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Isi Poin-Poin Aturan</Label>
-                  <Textarea
-                    rows={3}
-                    value={currentTemplate.rules_note_text}
-                    onChange={(e) => updateTemplateField('rules_note_text', e.target.value)}
-                    placeholder="1. Mahasiswa wajib..."
-                    className="text-xs leading-relaxed"
-                  />
-                </div>
-              </CardContent>
-            )}
-          </Card>
-
-          {/* 5. PENGESAHAN MULTI-LEVEL (TANDA TANGAN & NIDN) */}
+          {/* ============================================================== */}
+          {/* 4. PENGESAHAN & TANDA TANGAN                                   */}
+          {/* ============================================================== */}
           <Card className="shadow-xs">
             <CardHeader className="pb-3 border-b">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-primary" />
-                  5. Pengesahan & Tanda Tangan
+                  4. Pengesahan & Tanda Tangan
                 </CardTitle>
                 <Button size="sm" variant="outline" onClick={addSigner} className="h-7 text-xs gap-1">
                   <Plus className="h-3 w-3" /> Tambah Penandatangan
                 </Button>
               </div>
+              <CardDescription className="text-xs">
+                Tentukan siapa saja yang menandatangani, status peran (Menyetujui/Mengetahui), serta daftar tembusan resmi.
+              </CardDescription>
             </CardHeader>
-            <CardContent className="pt-4 space-y-3">
+            <CardContent className="pt-4 space-y-4">
+              {/* DAFTAR PENANDATANGAN */}
               <div className="space-y-3">
                 {currentTemplate.signatures.map((sig, idx) => (
                   <div key={sig.id} className="p-3 border rounded-lg bg-slate-50 space-y-2.5 text-xs">
@@ -756,7 +956,7 @@ export function DocumentTemplateCustomizer() {
                         <Input
                           value={sig.role_label}
                           onChange={(e) => updateSignerField(sig.id, 'role_label', e.target.value)}
-                          placeholder="Contoh: Dosen Pembimbing I"
+                          placeholder="Contoh: Dosen Pembimbing I / Ketua Program Studi"
                           className="h-7 text-xs"
                         />
                       </div>
@@ -776,6 +976,28 @@ export function DocumentTemplateCustomizer() {
                             <SelectItem value="pemohon" className="text-xs">Pemohon / Mahasiswa</SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-[11px]">Nama Kustom (Opsional)</Label>
+                        <Input
+                          value={sig.custom_name || ''}
+                          onChange={(e) => updateSignerField(sig.id, 'custom_name', e.target.value)}
+                          placeholder="Kosongkan jika otomatis dari akun..."
+                          className="h-7 text-xs"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-[11px]">NIDN / NUPTK / NIP</Label>
+                        <Input
+                          value={sig.custom_id_number || ''}
+                          onChange={(e) => updateSignerField(sig.id, 'custom_id_number', e.target.value)}
+                          placeholder="Nomor identitas dosen..."
+                          className="h-7 text-xs"
+                        />
                       </div>
                     </div>
 
@@ -805,76 +1027,80 @@ export function DocumentTemplateCustomizer() {
                   </div>
                 ))}
               </div>
+
+              {/* DAFTAR TEMBUSAN RESMI (CARBON COPY / CC) */}
+              <div className="pt-3 border-t space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5">
+                      <Send className="h-3.5 w-3.5 text-primary" />
+                      Tembusan (Carbon Copy / CC)
+                    </Label>
+                    <p className="text-[10px] text-muted-foreground">Daftar pihak penerima tembusan resmi dokumen</p>
+                  </div>
+                  <Switch
+                    checked={currentTemplate.copies_enabled || false}
+                    onCheckedChange={(checked) => updateTemplateField('copies_enabled', checked)}
+                  />
+                </div>
+
+                {currentTemplate.copies_enabled && (
+                  <div className="space-y-2 pl-2 border-l-2 border-primary/30">
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Contoh: Dekan Fakultas Tarbiyah / Arsip BAAK..."
+                        value={newCopyItem}
+                        onChange={(e) => setNewCopyItem(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addCopyItem();
+                          }
+                        }}
+                        className="h-8 text-xs"
+                      />
+                      <Button size="sm" onClick={addCopyItem} className="h-8 text-xs gap-1">
+                        <Plus className="h-3.5 w-3.5" /> Tambah
+                      </Button>
+                    </div>
+
+                    <div className="space-y-1.5 border rounded-lg p-2.5 bg-slate-50 text-xs">
+                      {currentTemplate.copies_list && currentTemplate.copies_list.length > 0 ? (
+                        currentTemplate.copies_list.map((item, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-1 bg-white border rounded">
+                            <span>{idx + 1}. {item}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 w-5 p-0 text-destructive"
+                              onClick={() => removeCopyItem(idx)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground text-center py-1">Belum ada tembusan.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
 
-          {/* 6. TEMBUSAN (CARBON COPY / CC) */}
-          <Card className="shadow-xs">
-            <CardHeader className="pb-3 border-b">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <Send className="h-4 w-4 text-primary" />
-                  6. Tembusan (Carbon Copy / CC)
-                </CardTitle>
-                <Switch
-                  checked={currentTemplate.copies_enabled || false}
-                  onCheckedChange={(checked) => updateTemplateField('copies_enabled', checked)}
-                />
-              </div>
-            </CardHeader>
-            {currentTemplate.copies_enabled && (
-              <CardContent className="pt-4 space-y-3">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Contoh: Dekan Fakultas Tarbiyah"
-                    value={newCopyItem}
-                    onChange={(e) => setNewCopyItem(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        addCopyItem();
-                      }
-                    }}
-                    className="h-8 text-xs"
-                  />
-                  <Button size="sm" onClick={addCopyItem} className="h-8 text-xs gap-1">
-                    <Plus className="h-3.5 w-3.5" /> Tambah
-                  </Button>
-                </div>
-
-                <div className="space-y-1.5 border rounded-lg p-2.5 bg-slate-50 text-xs">
-                  {currentTemplate.copies_list && currentTemplate.copies_list.length > 0 ? (
-                    currentTemplate.copies_list.map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-1 bg-white border rounded">
-                        <span>{idx + 1}. {item}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-5 w-5 p-0 text-destructive"
-                          onClick={() => removeCopyItem(idx)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground text-center py-1">Belum ada tembusan.</p>
-                  )}
-                </div>
-              </CardContent>
-            )}
-          </Card>
-
-          {/* 7. PENEMPATAN TOMBOL CETAK */}
+          {/* ============================================================== */}
+          {/* 5. PENEMPATAN TOMBOL CETAK                                     */}
+          {/* ============================================================== */}
           <Card className="shadow-xs">
             <CardHeader className="pb-3 border-b">
               <CardTitle className="text-sm font-semibold flex items-center gap-2">
                 <Layers className="h-4 w-4 text-primary" />
-                7. Penempatan Tombol Cetak di Aplikasi
+                5. Penempatan Tombol Cetak di Aplikasi
               </CardTitle>
               <CardDescription className="text-xs">
-                Tentukan di halaman mana saja tombol cetak dokumen ini akan aktif.
+                Tentukan di halaman mana saja tombol cetak dokumen ini akan aktif dan siapa saja role yang dapat mencetaknya.
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4 space-y-2">
@@ -896,6 +1122,7 @@ export function DocumentTemplateCustomizer() {
               })}
             </CardContent>
           </Card>
+
         </div>
 
         {/* RIGHT COLUMN (5 COLS): REAL-TIME LIVE SHEET PREVIEW */}
@@ -996,14 +1223,14 @@ export function DocumentTemplateCustomizer() {
                     )}
 
                     {/* Teks Narasi / Surat Keterangan */}
-                    {currentTemplate.body_text_enabled !== false && previewBodyText && (
+                    {currentContentMode !== 'table_only' && currentTemplate.body_text_enabled !== false && previewBodyText && (
                       <div className="p-1 text-[6.5px] leading-relaxed text-slate-800 border-l-2 border-primary/40 bg-slate-50/50 mb-1.5">
                         {previewBodyText}
                       </div>
                     )}
 
                     {/* Tabel Data Dummy */}
-                    {currentTemplate.table_enabled !== false && (
+                    {currentContentMode !== 'text_only' && currentTemplate.table_enabled !== false && (
                       <table className="w-full border-collapse border border-slate-300 text-[6px]">
                         <thead>
                           <tr className="bg-slate-100">
@@ -1077,7 +1304,7 @@ export function DocumentTemplateCustomizer() {
                 </div>
 
                 {/* 3. FOOTER */}
-                {docSettings.footer_enabled && (
+                {docSettings.footer_enabled && currentTemplate.show_footer !== false && (
                   <div className="border-t border-slate-200 pt-0.5 mt-1 flex justify-between items-center text-[5px] text-slate-500">
                     <p className="truncate max-w-[200px]">{docSettings.footer_text}</p>
                     {docSettings.show_page_number && <span>Hal. 1/1</span>}

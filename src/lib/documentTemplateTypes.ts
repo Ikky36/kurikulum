@@ -6,6 +6,7 @@ export interface DocumentTableColumnConfig {
   id: string;
   label: string;
   enabled: boolean;
+  is_custom?: boolean;
 }
 
 export interface DocumentSignatureConfig {
@@ -26,7 +27,11 @@ export interface SingleDocumentTemplate {
   document_title: string;
   document_subtitle: string;
   show_kop: boolean;
+  show_footer?: boolean; // Toggle footer resmi dokumen
   show_student_info: boolean;
+
+  // Pilihan Jenis Konten: 'all' (Teks & Tabel) | 'text_only' (Hanya Teks Editor) | 'table_only' (Hanya Tabel Builder)
+  content_mode?: 'all' | 'text_only' | 'table_only';
 
   // Teks Narasi / Surat Keterangan (dengan variabel {{nama_mahasiswa}}, dll.)
   body_text_enabled?: boolean;
@@ -64,7 +69,9 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     document_title: 'KARTU KENDALI BIMBINGAN TUGAS AKHIR',
     document_subtitle: 'PROGRAM STUDI PENDIDIKAN BAHASA ARAB',
     show_kop: true,
+    show_footer: true,
     show_student_info: true,
+    content_mode: 'all',
     body_text_enabled: false,
     body_text_template: 'Dengan ini menerangkan bahwa mahasiswa bernama {{nama_mahasiswa}} NIM {{nim}} telah melaksanakan kegiatan bimbingan skripsi dengan judul: "{{judul_tugas_akhir}}" di bawah bimbingan {{nama_pembimbing_1}}.',
     table_enabled: true,
@@ -100,7 +107,9 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     document_title: 'KARTU RENCANA STUDI (KRS)',
     document_subtitle: 'SEMESTER PERKULIAHAN AKTIF',
     show_kop: true,
+    show_footer: true,
     show_student_info: true,
+    content_mode: 'all',
     body_text_enabled: false,
     body_text_template: 'Berdasarkan data akademik semester berjalan, mahasiswa {{nama_mahasiswa}} (NIM: {{nim}}) telah resmi mengontrak mata kuliah berikut dengan persetujuan Dosen Pembimbing Akademik.',
     table_enabled: true,
@@ -136,7 +145,9 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     document_title: 'KARTU BIMBINGAN AKADEMIK MAHASISWA',
     document_subtitle: 'CATATAN KONSULTASI PERWALIAN STUDI',
     show_kop: true,
+    show_footer: true,
     show_student_info: true,
+    content_mode: 'all',
     body_text_enabled: false,
     body_text_template: 'Lembar kartu perwalian akademik bagi mahasiswa {{nama_mahasiswa}} (NIM {{nim}}) bersama Dosen Pembimbing Akademik {{nama_dpa}}.',
     table_enabled: true,
