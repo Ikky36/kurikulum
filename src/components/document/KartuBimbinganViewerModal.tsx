@@ -52,35 +52,15 @@ export function KartuBimbinganViewerModal({
     metadataItems.push({ label: 'Dosen Pembimbing II', value: advisor2.profiles.full_name });
   }
 
-  // Signatures Data
-  const signaturesData: Record<string, DocumentSignatureData> = {
-    student: {
-      name: mhsName,
-      id_number: mhsNim,
-    },
-    advisor_1: {
-      name: advisor1?.profiles?.full_name || '....................................',
-      id_number: advisor1?.profiles?.nip,
-      signature_url: advisor1?.profiles?.signature_url,
-      paraf_url: advisor1?.profiles?.paraf_url,
-    },
-    advisor_2: {
-      name: advisor2?.profiles?.full_name || '....................................',
-      id_number: advisor2?.profiles?.nip,
-      signature_url: advisor2?.profiles?.signature_url,
-      paraf_url: advisor2?.profiles?.paraf_url,
-    },
-    kaprodi: {
-      name: docSettings.kaprodi_name || '....................................',
-      id_number: docSettings.kaprodi_nidn,
-      signature_url: docSettings.kaprodi_signature_url,
-    },
-  };
+  // Sort logs by date ascending for official card view
+  const sortedLogs = [...consultationLogs].sort((a, b) => {
+    return new Date(a.date).getTime() - new Date(b.date).getTime();
+  });
 
-  // Filter columns based on template configuration
-  const colMap = new Map(template.columns.map((c) => [c.id, c]));
-  const isColEnabled = (id: string) => colMap.get(id)?.enabled ?? true;
-  const getColLabel = (id: string, fallback: string) => colMap.get(id)?.label || fallback;
+  // Hitung tanggal pengesahan/tanda tangan terakhir dari log bimbingan yang disetujui atau tanggal approval pengajuan
+  const approvedLogs = sortedLogs.filter((l) => l.status === 'approved' || l.solution);
+  const lastApprovedLog = approvedLogs.length > 0 ? approvedLogs[approvedLogs.length - 1] : sortedLogs[sortedLogs.length - 1];
+  const latestSignatureDate = submission.approved_at || lastApprovedLog?.date || submission.updated_at || submission.created_at;
 
   // Format date helper
   const formatDate = (dateString?: string) => {
@@ -96,16 +76,41 @@ export function KartuBimbinganViewerModal({
     }
   };
 
-  // Sort logs by date ascending for official card view
-  const sortedLogs = [...consultationLogs].sort((a, b) => {
-    return new Date(a.date).getTime() - new Date(b.date).getTime();
-  });
+  // Signatures Data
+  const signaturesData: Record<string, DocumentSignatureData> = {
+    student: {
+      name: mhsName,
+      id_number: mhsNim,
+      signed_at: sortedLogs[0]?.date || submission.created_at,
+    },
+    advisor_1: {
+      name: advisor1?.profiles?.full_name || '....................................',
+      id_number: advisor1?.profiles?.nip,
+      signature_url: advisor1?.profiles?.signature_url,
+      paraf_url: advisor1?.profiles?.paraf_url,
+      signed_at: lastApprovedLog?.date || submission.approved_at,
+    },
+    advisor_2: {
+      name: advisor2?.profiles?.full_name || '....................................',
+      id_number: advisor2?.profiles?.nip,
+      signature_url: advisor2?.profiles?.signature_url,
+      paraf_url: advisor2?.profiles?.paraf_url,
+      signed_at: lastApprovedLog?.date || submission.approved_at,
+    },
+    kaprodi: {
+      name: docSettings.kaprodi_name || '....................................',
+      id_number: docSettings.kaprodi_nidn,
+      signature_url: docSettings.kaprodi_signature_url,
+      signed_at: submission.approved_at || lastApprovedLog?.date,
+    },
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl w-full p-0 max-h-[95vh] overflow-y-auto bg-transparent border-none shadow-none">
         <UniversalDocumentContainer
           templateCode="kartu_bimbingan_ta"
+          documentDate={latestSignatureDate}
           studentInfo={{
             name: mhsName,
             nim: mhsNim,

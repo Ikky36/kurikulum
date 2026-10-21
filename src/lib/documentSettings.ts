@@ -42,6 +42,7 @@ export interface DocumentLayoutSettings {
   // Kota & Default Penandatangan
   default_city: string;
   show_signature_date?: boolean;       // tampilkan tanggal di atas tanda tangan (default: true)
+  date_source?: 'last_signature' | 'today'; // mekanisme tanggal: mengikuti pengesahan terakhir (default) atau hari ini
   kaprodi_profile_id?: string;
   kaprodi_name: string;
   kaprodi_nidn: string;
@@ -87,6 +88,7 @@ export const defaultDocumentSettings: DocumentLayoutSettings = {
 
   default_city: 'Ponorogo',
   show_signature_date: true,
+  date_source: 'last_signature',
   kaprodi_profile_id: '',
   kaprodi_name: '',
   kaprodi_nidn: '',

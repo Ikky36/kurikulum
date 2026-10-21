@@ -1379,17 +1379,41 @@ export function DocumentTemplateCustomizer() {
               </div>
 
               {/* TOGGLE TAMPILKAN KOTA & TANGGAL DI ATAS TANDA TANGAN */}
-              <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg border">
-                <div className="space-y-0.5">
-                  <Label className="text-xs font-semibold">Tampilkan Kota & Tanggal Pengesahan</Label>
-                  <p className="text-[10px] text-muted-foreground">
-                    Contoh: "{docSettings.default_city || 'Ponorogo'}, 21 Oktober 2026" di sisi kanan atas tanda tangan
-                  </p>
+              <div className="space-y-3 p-3 bg-muted/40 rounded-lg border">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label className="text-xs font-semibold">Tampilkan Kota & Tanggal Pengesahan</Label>
+                    <p className="text-[10px] text-muted-foreground">
+                      Contoh: "{docSettings.default_city || 'Ponorogo'}, 21 Oktober 2026" di sisi kanan atas tanda tangan
+                    </p>
+                  </div>
+                  <Switch
+                    checked={currentTemplate.show_signature_date !== false}
+                    onCheckedChange={(checked) => updateTemplateField('show_signature_date', checked)}
+                  />
                 </div>
-                <Switch
-                  checked={currentTemplate.show_signature_date !== false}
-                  onCheckedChange={(checked) => updateTemplateField('show_signature_date', checked)}
-                />
+
+                {currentTemplate.show_signature_date !== false && (
+                  <div className="space-y-1.5 pt-2 border-t">
+                    <Label className="text-xs">Mekanisme Penetapan Tanggal</Label>
+                    <Select
+                      value={currentTemplate.date_source || docSettings.date_source || 'last_signature'}
+                      onValueChange={(val) => updateTemplateField('date_source', val as 'last_signature' | 'today')}
+                    >
+                      <SelectTrigger className="text-xs h-8">
+                        <SelectValue placeholder="Pilih mekanisme tanggal..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="last_signature" className="text-xs">
+                          Mengikuti Pengesahan Terakhir (Rekomendasi)
+                        </SelectItem>
+                        <SelectItem value="today" className="text-xs">
+                          Tanggal Hari Ini (Real-Time Cetak)
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
 
               {/* DAFTAR PENANDATANGAN */}

@@ -1029,7 +1029,7 @@ export function DocumentSettingsTab() {
                     <div className="space-y-0.5">
                       <Label className="text-xs font-semibold">Tampilkan Tanggal Pengesahan</Label>
                       <p className="text-[11px] text-muted-foreground">
-                        Cantumkan kota dan tanggal otomatis (hari ini) di atas kolom tanda tangan
+                        Cantumkan kota dan tanggal di atas kolom tanda tangan
                       </p>
                     </div>
                     <Switch
@@ -1037,6 +1037,38 @@ export function DocumentSettingsTab() {
                       onCheckedChange={(checked) => updateField('show_signature_date', checked)}
                     />
                   </div>
+
+                  {form.show_signature_date !== false && (
+                    <div className="space-y-1.5 pl-1 pt-1">
+                      <Label className="text-xs">Mekanisme Penetapan Tanggal</Label>
+                      <Select
+                        value={form.date_source || 'last_signature'}
+                        onValueChange={(val) => updateField('date_source', val as 'last_signature' | 'today')}
+                      >
+                        <SelectTrigger className="text-xs h-9">
+                          <SelectValue placeholder="Pilih mekanisme tanggal..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="last_signature" className="text-xs">
+                            <div className="flex flex-col text-left">
+                              <span className="font-medium">Mengikuti Tanggal Pengesahan Terakhir (Rekomendasi)</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                Mengambil tanggal persetujuan/tanda tangan terakhir dari pejabat berwenang
+                              </span>
+                            </div>
+                          </SelectItem>
+                          <SelectItem value="today" className="text-xs">
+                            <div className="flex flex-col text-left">
+                              <span className="font-medium">Tanggal Hari Ini (Real-Time Cetak)</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                Mengambil tanggal saat lembar dokumen dibuka atau dicetak
+                              </span>
+                            </div>
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
 
                   {/* PENGESAHAN 1: KETUA PROGRAM STUDI (KAPRODI) */}
                   <div className="space-y-3 pt-3 border-t">

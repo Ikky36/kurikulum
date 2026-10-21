@@ -35,22 +35,28 @@ export function KrsDocumentViewerModal({
   const mhsProgram = studentProfile?.program || docSettings.program_name || '-';
   const mhsSistem = (studentProfile as any)?.sistem_kuliah?.name || (studentProfile as any)?.sistem_kuliah_id || 'Reguler';
 
+  // Tanggal persetujuan/tanda tangan terakhir KRS
+  const latestKrsDate = krsData?.approved_at || krsData?.updated_at || krsData?.created_at;
+
   // Signatures Data
   const signaturesData: Record<string, DocumentSignatureData> = {
     student: {
       name: mhsName,
       id_number: mhsNim,
+      signed_at: krsData?.created_at,
     },
     dpa: {
       name: dpaProfile?.full_name || '....................................',
       id_number: dpaProfile?.nip,
       signature_url: dpaProfile?.signature_url,
       paraf_url: dpaProfile?.paraf_url,
+      signed_at: latestKrsDate,
     },
     kaprodi: {
       name: docSettings.kaprodi_name || '....................................',
       id_number: docSettings.kaprodi_nidn,
       signature_url: docSettings.kaprodi_signature_url,
+      signed_at: latestKrsDate,
     },
   };
 
@@ -70,6 +76,7 @@ export function KrsDocumentViewerModal({
       <DialogContent className="max-w-5xl w-full p-0 max-h-[95vh] overflow-y-auto bg-transparent border-none shadow-none">
         <UniversalDocumentContainer
           templateCode="krs"
+          documentDate={latestKrsDate}
           studentInfo={{
             name: mhsName,
             nim: mhsNim,

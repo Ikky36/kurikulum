@@ -17,6 +17,7 @@ export interface DocumentSignatureData {
   id_number?: string; // NIP, NIDN, or NIM
   signature_url?: string | null;
   paraf_url?: string | null;
+  signed_at?: string | Date | null; // Timestamp tanggal pengesahan/tanda tangan
 }
 
 export interface UniversalDocumentContainerProps {
@@ -25,6 +26,7 @@ export interface UniversalDocumentContainerProps {
   containerId?: string;
   documentTitle?: string;
   documentSubtitle?: string;
+  documentDate?: string | Date | null; // Tanggal penetapan dokumen eksplisit
   studentInfo?: {
     name?: string;
     nim?: string;
@@ -48,6 +50,7 @@ export function UniversalDocumentContainer({
   containerId = 'printable-document',
   documentTitle,
   documentSubtitle,
+  documentDate,
   studentInfo,
   variables,
   metadataItems = [],
@@ -67,6 +70,60 @@ export function UniversalDocumentContainer({
   // Orientasi ditentukan oleh konfigurasi template dokumen yang diatur Admin (fallback ke global docSettings)
   const effectiveOrientation = template.orientation || docSettings.orientation || 'portrait';
   const isPortrait = effectiveOrientation === 'portrait';
+
+  // Resolve effective date mechanism: 'last_signature' vs 'today'
+  const effectiveDateSource = template.date_source || docSettings.date_source || 'last_signature';
+
+  const resolvedDate = React.useMemo(() => {
+    // 1. Jika mode paksa tanggal hari ini (real-time cetak)
+    if (effectiveDateSource === 'today') {
+      return new Date().toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    }
+
+    // 2. Jika mode 'last_signature':
+    // Prioritas A: Explicit documentDate prop
+    if (documentDate) {
+      try {
+        const d = new Date(documentDate);
+        if (!isNaN(d.getTime())) {
+          return d.toLocaleDateString('id-ID', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+          });
+        }
+      } catch (e) {
+        console.error('Invalid documentDate:', e);
+      }
+    }
+
+    // Prioritas B: Cari timestamp tanda tangan/persetujuan paling akhir dari signaturesData
+    const signedTimestamps = Object.values(signaturesData)
+      .map((s) => s?.signed_at)
+      .filter(Boolean)
+      .map((d) => new Date(d!).getTime())
+      .filter((t) => !isNaN(t));
+
+    if (signedTimestamps.length > 0) {
+      const latestTs = Math.max(...signedTimestamps);
+      return new Date(latestTs).toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    }
+
+    // Prioritas C: Fallback jika belum ada tanda tangan resmi (mengambil tanggal hari ini)
+    return new Date().toLocaleDateString('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  }, [effectiveDateSource, documentDate, signaturesData]);
 
   // Print Handler via isolated iframe printer
   const handlePrint = async () => {
@@ -371,12 +428,7 @@ export function UniversalDocumentContainer({
             <div className={`${getSignatureSpacingClass(template.signature_spacing)} pt-2 break-inside-avoid page-break-inside-avoid text-xs signature-block`}>
               {template.show_signature_date !== false && docSettings.show_signature_date !== false && (
                 <div className="text-right text-xs text-slate-700 mb-2">
-                  {docSettings.default_city || 'Ponorogo'},{' '}
-                  {new Date().toLocaleDateString('id-ID', {
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })}
+                  {docSettings.default_city || 'Ponorogo'}, {resolvedDate}
                 </div>
               )}
 
