@@ -51,6 +51,25 @@ export interface DocumentLayoutSettings {
   dekan_name: string;
   dekan_nidn: string;
   dekan_signature_url?: string;
+
+  // QR Code & Verifikasi Keabsahan Dokumen
+  qr_code_enabled?: boolean;
+  qr_code_position?: 'signature_side' | 'footer';
+  qr_code_size?: 'small' | 'medium';
+  qr_code_show_label?: boolean;
+
+  // Kontrol Tampilan Halaman Verifikasi Publik (Saat QR Code discan)
+  qr_verify_show_badge?: boolean;
+  qr_verify_show_doc_number?: boolean;
+  qr_verify_show_student_name?: boolean;
+  qr_verify_show_student_nim?: boolean;
+  qr_verify_show_student_prodi?: boolean;
+  qr_verify_show_topic_title?: boolean;
+  qr_verify_show_signers?: boolean;
+  qr_verify_show_timestamps?: boolean;
+  qr_verify_show_activity_summary?: boolean;
+  qr_verify_show_legal_note?: boolean;
+  qr_verify_custom_footer_message?: string;
 }
 
 export const defaultDocumentSettings: DocumentLayoutSettings = {
@@ -97,6 +116,24 @@ export const defaultDocumentSettings: DocumentLayoutSettings = {
   dekan_name: '',
   dekan_nidn: '',
   dekan_signature_url: '',
+
+  // Nilai Baku QR Code & Verifikasi Keabsahan
+  qr_code_enabled: true,
+  qr_code_position: 'signature_side',
+  qr_code_size: 'medium',
+  qr_code_show_label: true,
+
+  qr_verify_show_badge: true,
+  qr_verify_show_doc_number: true,
+  qr_verify_show_student_name: true,
+  qr_verify_show_student_nim: true,
+  qr_verify_show_student_prodi: true,
+  qr_verify_show_topic_title: true,
+  qr_verify_show_signers: true,
+  qr_verify_show_timestamps: true,
+  qr_verify_show_activity_summary: true,
+  qr_verify_show_legal_note: true,
+  qr_verify_custom_footer_message: 'Dokumen ini diterbitkan secara sah melalui Sistem Informasi Akademik STIT Madani Yogyakarta dan telah diverifikasi keabsahannya.',
 };
 
 export const SETTING_KEY_DOC_LAYOUT = 'doc_layout_settings';

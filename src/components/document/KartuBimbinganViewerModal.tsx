@@ -231,6 +231,7 @@ export function KartuBimbinganViewerModal({
           <UniversalDocumentContainer
             templateCode={template.code}
             templateOverride={template}
+            documentId={submission.id}
             documentDate={latestSignatureDate}
             studentInfo={{
               name: mhsName,

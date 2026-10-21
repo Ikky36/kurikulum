@@ -10,7 +10,8 @@ import { interpolateVariables, getDummyValueForColumn } from '@/lib/documentData
 import { printElementById } from '@/lib/printUtils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Printer, X, Download, ShieldCheck, Info } from 'lucide-react';
+import { Printer, X, Download, ShieldCheck, Info, QrCode } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 export interface DocumentSignatureData {
   name: string;
@@ -25,6 +26,7 @@ export interface UniversalDocumentContainerProps {
   templateCode: string;
   templateOverride?: SingleDocumentTemplate;
   containerId?: string;
+  documentId?: string; // ID unik dokumen untuk tautan verifikasi keabsahan (QR Code)
   documentTitle?: string;
   documentSubtitle?: string;
   documentDate?: string | Date | null; // Tanggal penetapan dokumen eksplisit
@@ -50,6 +52,7 @@ export function UniversalDocumentContainer({
   templateCode,
   templateOverride,
   containerId = 'printable-document',
+  documentId,
   documentTitle,
   documentSubtitle,
   documentDate,
@@ -176,6 +179,11 @@ export function UniversalDocumentContainer({
     ),
     ...(variables || {}),
   };
+
+  // Tautan URL resmi untuk pemindaian QR Code Verifikasi Keabsahan
+  const verificationUrl = typeof window !== 'undefined'
+    ? `${window.location.origin}/verifikasi-dokumen?doc=${templateCode}&id=${documentId || 'sample'}`
+    : '';
 
   return (
     <div className={`relative min-h-screen bg-slate-100 dark:bg-slate-900/90 text-slate-900 py-6 px-2 sm:px-4 ${className}`}>
@@ -442,6 +450,23 @@ export function UniversalDocumentContainer({
 
               {/* Grid Tanda Tangan */}
               <div className="flex flex-wrap items-start justify-around gap-6 pt-1 text-center">
+                {/* Stempel QR Code Verifikasi di Samping Tanda Tangan */}
+                {docSettings.qr_code_enabled !== false && docSettings.qr_code_position !== 'footer' && (
+                  <div className="min-w-[85px] max-w-[110px] flex flex-col items-center justify-center p-2 rounded border border-slate-300 bg-white/70 print:bg-transparent text-center self-center signature-block">
+                    <QRCodeSVG
+                      value={verificationUrl}
+                      size={docSettings.qr_code_size === 'small' ? 56 : 70}
+                      level="M"
+                      includeMargin={false}
+                    />
+                    {docSettings.qr_code_show_label !== false && (
+                      <span className="text-[8px] text-slate-500 font-medium mt-1 leading-tight text-center max-w-[90px]">
+                        Pindai untuk verifikasi keaslian
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {(template.signatures || [])
                   .filter((s) => s.enabled)
                   .map((sig) => {
@@ -639,7 +664,19 @@ export function UniversalDocumentContainer({
           >
             {docSettings.footer_mode === 'text' ? (
               <div className="text-[10px] text-slate-500 flex flex-wrap items-center justify-between gap-2">
-                <p className="max-w-md truncate">{docSettings.footer_text}</p>
+                <div className="flex items-center gap-2">
+                  {docSettings.qr_code_enabled !== false && docSettings.qr_code_position === 'footer' && (
+                    <div className="flex items-center gap-1.5 shrink-0 bg-white/80 p-0.5 rounded border border-slate-300">
+                      <QRCodeSVG
+                        value={verificationUrl}
+                        size={docSettings.qr_code_size === 'small' ? 36 : 46}
+                        level="M"
+                        includeMargin={false}
+                      />
+                    </div>
+                  )}
+                  <p className="max-w-md truncate">{docSettings.footer_text}</p>
+                </div>
                 {docSettings.show_page_number && (
                   <span className="font-medium">{docSettings.footer_watermark_text || 'Dokumen Sah Akademik'}</span>
                 )}

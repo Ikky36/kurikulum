@@ -100,6 +100,7 @@ export function KrsDocumentViewerModal({
           <UniversalDocumentContainer
             templateCode={template.code}
             templateOverride={template}
+            documentId={krsData?.id}
             documentDate={latestKrsDate}
             studentInfo={{
               name: mhsName,

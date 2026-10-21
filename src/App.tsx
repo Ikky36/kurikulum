@@ -24,6 +24,7 @@ import ELearning from "./pages/ELearning";
 import QuizTaking from "./pages/QuizTaking";
 import ElearningRecap from "./pages/ElearningRecap";
 import TugasAkhir from "./pages/TugasAkhir";
+import VerifikasiDokumenPublic from "./pages/VerifikasiDokumenPublic";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -57,6 +58,7 @@ function AppContent() {
           <Route path="/settings" element={<Settings />} />
           <Route path="/tugas-akhir" element={<TugasAkhir />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/verifikasi-dokumen" element={<VerifikasiDokumenPublic />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

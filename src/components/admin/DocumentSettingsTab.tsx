@@ -33,7 +33,11 @@ import {
   Building,
   UserCheck,
   Maximize2,
-  Info
+  Info,
+  QrCode,
+  Smartphone,
+  ShieldCheck,
+  Scale
 } from 'lucide-react';
 import { DocumentTemplateCustomizer } from './DocumentTemplateCustomizer';
 import { UniversalDocumentContainer } from '@/components/document/UniversalDocumentContainer';
@@ -1244,6 +1248,249 @@ export function DocumentSettingsTab() {
                     )}
                   </div>
                 </CardContent>
+              </Card>
+
+              {/* CARD PENGATURAN QR CODE & HALAMAN VERIFIKASI KEABSAHAN */}
+              <Card className="border shadow-sm">
+                <CardHeader className="pb-3 border-b">
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <QrCode className="h-5 w-5 text-primary" />
+                        QR Code & Halaman Verifikasi Keabsahan Dokumen
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Atur penyematan stempel QR Code pada dokumen fisik dan tentukan informasi yang tampil saat discan kamera HP.
+                      </CardDescription>
+                    </div>
+                    <Switch
+                      checked={form.qr_code_enabled !== false}
+                      onCheckedChange={(checked) => updateField('qr_code_enabled', checked)}
+                    />
+                  </div>
+                </CardHeader>
+
+                {form.qr_code_enabled !== false && (
+                  <CardContent className="space-y-5 pt-4">
+                    {/* 1. Posisi & Ukuran QR Code pada Lembar Cetak */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-lg border">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold">Posisi QR Code di Dokumen</Label>
+                        <Select
+                          value={form.qr_code_position || 'signature_side'}
+                          onValueChange={(val: any) => updateField('qr_code_position', val)}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Pilih posisi..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="signature_side" className="text-xs">
+                              Di Samping Blok Tanda Tangan (Rekomendasi)
+                            </SelectItem>
+                            <SelectItem value="footer" className="text-xs">
+                              Di Sudut Footer Dokumen
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold">Ukuran QR Code</Label>
+                        <Select
+                          value={form.qr_code_size || 'medium'}
+                          onValueChange={(val: any) => updateField('qr_code_size', val)}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Pilih ukuran..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="medium" className="text-xs">Sedang (24 mm x 24 mm)</SelectItem>
+                            <SelectItem value="small" className="text-xs">Kecil (18 mm x 18 mm)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="sm:col-span-2 flex items-center justify-between pt-1">
+                        <Label className="text-xs font-normal text-muted-foreground">
+                          Sertakan teks label keterangan di bawah QR Code ("Pindai untuk verifikasi")
+                        </Label>
+                        <Switch
+                          checked={form.qr_code_show_label !== false}
+                          onCheckedChange={(checked) => updateField('qr_code_show_label', checked)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* 2. Kontrol Informasi yang Ditampilkan Saat QR Code Discan */}
+                    <div className="space-y-3">
+                      <div>
+                        <Label className="text-xs font-bold text-slate-900 block">
+                          Kontrol Informasi Halaman Verifikasi Publik (Saat QR Code Discan)
+                        </Label>
+                        <p className="text-[11px] text-muted-foreground">
+                          Pilih data apa saja yang diizinkan tampil di layar HP penguji / publik saat memindai dokumen.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2 border rounded-lg p-3 bg-card divide-y divide-border/60">
+                        {/* Switch Item 1: Badge Status */}
+                        <div className="flex items-center justify-between py-1.5">
+                          <div>
+                            <span className="text-xs font-medium text-slate-800 block">Pita Status Keabsahan</span>
+                            <span className="text-[10px] text-muted-foreground">Banner hijau "DOKUMEN RESMI TERVERIFIKASI & SAH"</span>
+                          </div>
+                          <Switch
+                            checked={form.qr_verify_show_badge !== false}
+                            onCheckedChange={(c) => updateField('qr_verify_show_badge', c)}
+                          />
+                        </div>
+
+                        {/* Switch Item 2: Nomor Dokumen */}
+                        <div className="flex items-center justify-between py-1.5">
+                          <div>
+                            <span className="text-xs font-medium text-slate-800 block">Nomor Registrasi / Kode Unik</span>
+                            <span className="text-[10px] text-muted-foreground">Kode unik dokumen (contoh: #DOC-TA-202610-88492)</span>
+                          </div>
+                          <Switch
+                            checked={form.qr_verify_show_doc_number !== false}
+                            onCheckedChange={(c) => updateField('qr_verify_show_doc_number', c)}
+                          />
+                        </div>
+
+                        {/* Switch Item 3: Nama Mahasiswa */}
+                        <div className="flex items-center justify-between py-1.5">
+                          <div>
+                            <span className="text-xs font-medium text-slate-800 block">Nama Mahasiswa</span>
+                            <span className="text-[10px] text-muted-foreground">Tampilkan nama lengkap mahasiswa pemilik dokumen</span>
+                          </div>
+                          <Switch
+                            checked={form.qr_verify_show_student_name !== false}
+                            onCheckedChange={(c) => updateField('qr_verify_show_student_name', c)}
+                          />
+                        </div>
+
+                        {/* Switch Item 4: NIM Mahasiswa */}
+                        <div className="flex items-center justify-between py-1.5">
+                          <div>
+                            <span className="text-xs font-medium text-slate-800 block">Nomor Induk Mahasiswa (NIM)</span>
+                            <span className="text-[10px] text-muted-foreground">Tampilkan NIM mahasiswa</span>
+                          </div>
+                          <Switch
+                            checked={form.qr_verify_show_student_nim !== false}
+                            onCheckedChange={(c) => updateField('qr_verify_show_student_nim', c)}
+                          />
+                        </div>
+
+                        {/* Switch Item 5: Program Studi */}
+                        <div className="flex items-center justify-between py-1.5">
+                          <div>
+                            <span className="text-xs font-medium text-slate-800 block">Program Studi & Angkatan</span>
+                            <span className="text-[10px] text-muted-foreground">Tampilkan prodi dan tahun akademik</span>
+                          </div>
+                          <Switch
+                            checked={form.qr_verify_show_student_prodi !== false}
+                            onCheckedChange={(c) => updateField('qr_verify_show_student_prodi', c)}
+                          />
+                        </div>
+
+                        {/* Switch Item 6: Judul Tugas Akhir */}
+                        <div className="flex items-center justify-between py-1.5">
+                          <div>
+                            <span className="text-xs font-medium text-slate-800 block">Judul Tugas Akhir / Topik Dokumen</span>
+                            <span className="text-[10px] text-muted-foreground">Menampilkan judul skripsi untuk mencegah kecurangan isi</span>
+                          </div>
+                          <Switch
+                            checked={form.qr_verify_show_topic_title !== false}
+                            onCheckedChange={(c) => updateField('qr_verify_show_topic_title', c)}
+                          />
+                        </div>
+
+                        {/* Switch Item 7: Pejabat Pengesah */}
+                        <div className="flex items-center justify-between py-1.5">
+                          <div>
+                            <span className="text-xs font-medium text-slate-800 block">Daftar Pejabat Pengesah (Audit Trail)</span>
+                            <span className="text-[10px] text-muted-foreground">Nama & NIDN Dosen Pembimbing serta Ketua Program Studi</span>
+                          </div>
+                          <Switch
+                            checked={form.qr_verify_show_signers !== false}
+                            onCheckedChange={(c) => updateField('qr_verify_show_signers', c)}
+                          />
+                        </div>
+
+                        {/* Switch Item 8: Waktu Pengesahan Presisi */}
+                        <div className="flex items-center justify-between py-1.5">
+                          <div>
+                            <span className="text-xs font-medium text-slate-800 block">Waktu Persis Pengesahan (Tanggal & Jam WIB)</span>
+                            <span className="text-[10px] text-muted-foreground">Sebagai bukti digital kapan pejabat menekan tombol sah</span>
+                          </div>
+                          <Switch
+                            checked={form.qr_verify_show_timestamps !== false}
+                            onCheckedChange={(c) => updateField('qr_verify_show_timestamps', c)}
+                          />
+                        </div>
+
+                        {/* Switch Item 9: Ringkasan Aktivitas */}
+                        <div className="flex items-center justify-between py-1.5">
+                          <div>
+                            <span className="text-xs font-medium text-slate-800 block">Ringkasan Aktivitas Bimbingan / SKS</span>
+                            <span className="text-[10px] text-muted-foreground">Jumlah sesi konsultasi yang telah disetujui dosen</span>
+                          </div>
+                          <Switch
+                            checked={form.qr_verify_show_activity_summary !== false}
+                            onCheckedChange={(c) => updateField('qr_verify_show_activity_summary', c)}
+                          />
+                        </div>
+
+                        {/* Switch Item 10: Klausul Hukum UU ITE */}
+                        <div className="flex items-center justify-between py-1.5">
+                          <div>
+                            <span className="text-xs font-medium text-slate-800 block">Klausul Landasan Hukum (UU ITE)</span>
+                            <span className="text-[10px] text-muted-foreground">Keterangan bahwa dokumen elektronik sah diakui negara</span>
+                          </div>
+                          <Switch
+                            checked={form.qr_verify_show_legal_note !== false}
+                            onCheckedChange={(c) => updateField('qr_verify_show_legal_note', c)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 3. Teks Pesan Bantuan / Kontak Kampus */}
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold">Pesan Footer / Kontak Konfirmasi Kampus</Label>
+                      <Textarea
+                        value={form.qr_verify_custom_footer_message ?? ''}
+                        onChange={(e) => updateField('qr_verify_custom_footer_message', e.target.value)}
+                        placeholder="Contoh: Jika memerlukan konfirmasi lebih lanjut, hubungi BAAK STITMA: baak@stitmadani.ac.id"
+                        rows={2}
+                        className="text-xs"
+                      />
+                      <p className="text-[10px] text-muted-foreground">
+                        Pesan ini akan ditampilkan di bagian paling bawah halaman verifikasi HP.
+                      </p>
+                    </div>
+
+                    {/* 4. Link Cek Pratinjau Langsung */}
+                    <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Smartphone className="h-4 w-4 text-primary" />
+                        <span className="text-xs font-medium text-slate-800">
+                          Lihat Simulasi Halaman Verifikasi HP
+                        </span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-7 gap-1"
+                        onClick={() => window.open('/verifikasi-dokumen?id=sample', '_blank')}
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        Uji Buka Layar HP
+                      </Button>
+                    </div>
+                  </CardContent>
+                )}
               </Card>
             </TabsContent>
           </Tabs>
