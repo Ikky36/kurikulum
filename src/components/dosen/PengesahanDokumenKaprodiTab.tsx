@@ -41,6 +41,25 @@ export function PengesahanDokumenKaprodiTab() {
   const [selectedSubForPreview, setSelectedSubForPreview] = useState<any>(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
+  // Dedicated query untuk mengambil log bimbingan lengkap dengan profil dosen saat modal dibuka
+  const { data: previewConsultationLogs } = useQuery({
+    queryKey: ['kaprodi_preview_logs', selectedSubForPreview?.id],
+    queryFn: async () => {
+      if (!selectedSubForPreview?.id) return [];
+      const { data, error } = await supabase
+        .from('ta_consultation_logs')
+        .select('*, profiles:dosen_id (id, full_name, nip, signature_url, paraf_url)')
+        .eq('submission_id', selectedSubForPreview.id)
+        .order('date', { ascending: true });
+      if (error) {
+        console.error('Error fetching preview logs:', error);
+        return selectedSubForPreview.ta_consultation_logs || [];
+      }
+      return data || [];
+    },
+    enabled: Boolean(selectedSubForPreview?.id && isPreviewOpen),
+  });
+
   // 1. Fetch seluruh pengajuan Tugas Akhir & Bimbingan
   const { data: rawSubmissions = [], isLoading: loadingTA } = useQuery({
     queryKey: ['kaprodi_ta_approvals'],
@@ -500,9 +519,14 @@ export function PengesahanDokumenKaprodiTab() {
       {selectedSubForPreview && (
         <KartuBimbinganViewerModal
           open={isPreviewOpen}
-          onOpenChange={setIsPreviewOpen}
+          onOpenChange={(isOpen) => {
+            setIsPreviewOpen(isOpen);
+            if (!isOpen) {
+              setSelectedSubForPreview(null);
+            }
+          }}
           submission={selectedSubForPreview}
-          consultationLogs={selectedSubForPreview.ta_consultation_logs || []}
+          consultationLogs={previewConsultationLogs || selectedSubForPreview.ta_consultation_logs || []}
           studentProfile={selectedSubForPreview.profiles}
         />
       )}

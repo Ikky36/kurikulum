@@ -28,6 +28,7 @@ export interface UniversalDocumentContainerProps {
   documentTitle?: string;
   documentSubtitle?: string;
   documentDate?: string | Date | null; // Tanggal penetapan dokumen eksplisit
+  isPreview?: boolean; // Mode pratinjau editor/customizer (jika true, tampilkan contoh ttd jika ada)
   studentInfo?: {
     name?: string;
     nim?: string;
@@ -52,6 +53,7 @@ export function UniversalDocumentContainer({
   documentTitle,
   documentSubtitle,
   documentDate,
+  isPreview = false,
   studentInfo,
   variables,
   metadataItems = [],
@@ -62,7 +64,11 @@ export function UniversalDocumentContainer({
 }: UniversalDocumentContainerProps) {
   const { settings: docSettings } = useDocumentSettings();
   const { getTemplate } = useDocumentTemplatesConfig();
-  const template: SingleDocumentTemplate = templateOverride || getTemplate(templateCode);
+  const template: SingleDocumentTemplate =
+    templateOverride ||
+    getTemplate(templateCode) ||
+    defaultDocumentTemplates[templateCode] ||
+    defaultDocumentTemplates.kartu_bimbingan_ta;
 
   const finalTitle = documentTitle || template.document_title;
   const finalSubtitle = documentSubtitle || template.document_subtitle;
@@ -386,12 +392,12 @@ export function UniversalDocumentContainer({
             <div className="w-full my-2 document-content">
               {children ? (
                 children
-              ) : template.columns && template.columns.length > 0 ? (
+              ) : (template.columns && template.columns.length > 0) ? (
                 <div className="w-full overflow-hidden my-2">
                   <table className="w-full border-collapse border border-slate-300 text-xs [page-break-inside:auto] [break-inside:auto]">
                     <thead className="table-header-group">
                       <tr className="bg-slate-100 font-semibold text-slate-800 [page-break-inside:avoid] [break-inside:avoid]">
-                        {template.columns.map((c) => (
+                        {(template.columns || []).map((c) => (
                           <th key={c.id} className="border border-slate-300 p-2 text-center text-xs">
                             {c.label}
                           </th>
@@ -401,7 +407,7 @@ export function UniversalDocumentContainer({
                     <tbody className="table-row-group">
                       {[1, 2, 3].map((rowIdx) => (
                         <tr key={rowIdx} className="hover:bg-slate-50/50 [page-break-inside:avoid] [break-inside:avoid]">
-                          {template.columns.map((c) => (
+                          {(template.columns || []).map((c) => (
                             <td key={c.id} className="border border-slate-300 p-2 text-center text-xs text-slate-700">
                               {getDummyValueForColumn(c.id, c.label, rowIdx)}
                             </td>
@@ -426,7 +432,7 @@ export function UniversalDocumentContainer({
           )}
 
           {/* 6. BLOK TANDA TANGAN & PENGESAHAN (Mengalir proporsional beberapa cm setelah konten terakhir) */}
-          {template.signatures.filter((s) => s.enabled).length > 0 && (
+          {(template.signatures || []).filter((s) => s.enabled).length > 0 && (
             <div className={`${getSignatureSpacingClass(template.signature_spacing)} pt-2 break-inside-avoid page-break-inside-avoid text-xs signature-block`}>
               {template.show_signature_date !== false && docSettings.show_signature_date !== false && (
                 <div className="text-right text-xs text-slate-700 mb-2">
@@ -436,7 +442,7 @@ export function UniversalDocumentContainer({
 
               {/* Grid Tanda Tangan */}
               <div className="flex flex-wrap items-start justify-around gap-6 pt-1 text-center">
-                {template.signatures
+                {(template.signatures || [])
                   .filter((s) => s.enabled)
                   .map((sig) => {
                     const baseData = signaturesData[sig.id] || {};
