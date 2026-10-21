@@ -360,14 +360,15 @@ export function UniversalDocumentContainer({
                   );
                 })}
 
-                {/* Additional Metadata Items */}
-                {metadataItems.map((item, idx) => (
-                  <div key={`meta_${idx}`} className="flex col-span-2">
-                    <span className="w-32 font-medium text-slate-600 shrink-0">{item.label}</span>
-                    <span className="w-3 text-center shrink-0">:</span>
-                    <span className="text-slate-900 flex-1 font-medium">{item.value}</span>
-                  </div>
-                ))}
+                {/* Additional Metadata Items (hanya jika template belum memiliki student_bio_fields yang dikonfigurasi Admin) */}
+                {(!template.student_bio_fields || template.student_bio_fields.length === 0) &&
+                  metadataItems.map((item, idx) => (
+                    <div key={`meta_${idx}`} className="flex col-span-2">
+                      <span className="w-32 font-medium text-slate-600 shrink-0">{item.label}</span>
+                      <span className="w-3 text-center shrink-0">:</span>
+                      <span className="text-slate-900 flex-1 font-medium">{item.value}</span>
+                    </div>
+                  ))}
               </div>
             </div>
           )}

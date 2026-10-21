@@ -102,9 +102,7 @@ export function KrsDocumentViewerModal({
             nama_dpa: dpaProfile?.full_name || '',
             nidn_dpa: dpaProfile?.nip || dpaProfile?.nidn || '',
           }}
-          metadataItems={[
-            { label: 'Dosen Pembimbing (DPA)', value: dpaProfile?.full_name || 'Belum Ditentukan' },
-          ]}
+          metadataItems={[]}
           signaturesData={signaturesData}
           onClose={() => onOpenChange(false)}
         >

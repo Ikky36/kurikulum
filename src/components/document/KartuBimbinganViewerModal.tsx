@@ -50,35 +50,7 @@ export function KartuBimbinganViewerModal({
   const mhsNim = submission.profiles?.nim || studentProfile?.nim || '-';
   const mhsProgram = submission.profiles?.program || studentProfile?.program || docSettings.program_name || '-';
   const mhsSistem = submission.sistem_kuliah?.name || (studentProfile as any)?.sistem_kuliah?.name || 'Reguler';
-
-  // Metadata items (hindari duplikasi jika key sudah ada di student_bio_fields yang dikonfigurasi Admin)
-  const bioKeys = (template.student_bio_fields || []).map((f) => f.key);
-  const metadataItems: { label: string; value: string | React.ReactNode }[] = [];
-
-  if (!bioKeys.includes('judul_tugas_akhir') && submission.title) {
-    metadataItems.push({
-      label: 'Judul Tugas Akhir',
-      value: <span className="font-semibold uppercase">{submission.title}</span>,
-    });
-  }
-  if (!bioKeys.includes('jenis_tugas_akhir')) {
-    metadataItems.push({
-      label: 'Jenis Tugas Akhir',
-      value: submission.ta_types?.name || 'Skripsi',
-    });
-  }
-  if (!bioKeys.includes('nama_pembimbing_1') && advisor1?.profiles?.full_name) {
-    metadataItems.push({
-      label: 'Dosen Pembimbing I',
-      value: advisor1.profiles.full_name,
-    });
-  }
-  if (!bioKeys.includes('nama_pembimbing_2') && advisor2?.profiles?.full_name) {
-    metadataItems.push({
-      label: 'Dosen Pembimbing II',
-      value: advisor2.profiles.full_name,
-    });
-  }
+  const mhsAngkatan = submission.profiles?.academic_year || studentProfile?.academic_year || (studentProfile as any)?.entry_year || '2023';
 
   // Sort logs by date ascending for official card view
   const sortedLogs = [...consultationLogs].sort((a, b) => {
@@ -150,6 +122,7 @@ export function KartuBimbinganViewerModal({
             nama_mahasiswa: mhsName,
             nim: mhsNim,
             program_studi: mhsProgram,
+            tahun_angkatan: mhsAngkatan,
             judul_tugas_akhir: submission.title || '',
             nama_pembimbing_1: advisor1?.profiles?.full_name || '',
             nidn_pembimbing_1: advisor1?.profiles?.nip || advisor1?.profiles?.nidn || '',
@@ -159,7 +132,7 @@ export function KartuBimbinganViewerModal({
             status_tugas_akhir: submission.status || '',
             total_pertemuan_bimbingan: `${sortedLogs.length} Pertemuan`,
           }}
-          metadataItems={metadataItems}
+          metadataItems={[]}
           signaturesData={signaturesData}
           onClose={() => onOpenChange(false)}
         >
