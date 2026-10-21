@@ -13,21 +13,44 @@ export interface DocumentSignatureConfig {
   role_label: string;
   enabled: boolean;
   use_digital_signature: boolean; // true = pakai signature_url / paraf_url; false = ruang kosong tanda tangan basah
+  signer_status?: 'menyetujui' | 'mengetahui' | 'pemohon';
+  custom_name?: string;
+  custom_id_number?: string; // NIDN / NUPTK / NIM
 }
 
 export interface SingleDocumentTemplate {
   code: string;
   name: string;
   orientation?: 'portrait' | 'landscape'; // Orientasi format cetak dokumen (diatur oleh Admin)
+  data_source_module?: string; // 'tugas_akhir' | 'akademik' | 'hasil_studi' | 'kurikulum' dll
   document_title: string;
   document_subtitle: string;
   show_kop: boolean;
   show_student_info: boolean;
+
+  // Teks Narasi / Surat Keterangan (dengan variabel {{nama_mahasiswa}}, dll.)
+  body_text_enabled?: boolean;
+  body_text_template?: string;
+
+  // Tabel Data Berulang
+  table_enabled?: boolean;
+  table_dataset_id?: string;
+  columns: DocumentTableColumnConfig[];
+
+  // Sub-Bab Catatan / Tata Tertib
   rules_note_enabled: boolean;
   rules_note_title: string;
   rules_note_text: string;
-  columns: DocumentTableColumnConfig[];
+
+  // Pengesahan (Signatures)
   signatures: DocumentSignatureConfig[];
+
+  // Tembusan (Carbon Copy / CC)
+  copies_enabled?: boolean;
+  copies_list?: string[];
+
+  // Penempatan Tombol Cetak di Aplikasi
+  placement_targets?: string[];
 }
 
 export type AllDocumentTemplatesMap = Record<string, SingleDocumentTemplate>;
@@ -37,10 +60,15 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     code: 'kartu_bimbingan_ta',
     name: 'Kartu Bimbingan Tugas Akhir',
     orientation: 'portrait',
+    data_source_module: 'tugas_akhir',
     document_title: 'KARTU KENDALI BIMBINGAN TUGAS AKHIR',
     document_subtitle: 'PROGRAM STUDI PENDIDIKAN BAHASA ARAB',
     show_kop: true,
     show_student_info: true,
+    body_text_enabled: false,
+    body_text_template: 'Dengan ini menerangkan bahwa mahasiswa bernama {{nama_mahasiswa}} NIM {{nim}} telah melaksanakan kegiatan bimbingan skripsi dengan judul: "{{judul_tugas_akhir}}" di bawah bimbingan {{nama_pembimbing_1}}.',
+    table_enabled: true,
+    table_dataset_id: 'riwayat_bimbingan_ta',
     rules_note_enabled: true,
     rules_note_title: 'Ketentuan & Tata Tertib Bimbingan:',
     rules_note_text:
@@ -54,21 +82,29 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
       { id: 'paraf', label: 'Paraf / Validasi', enabled: true },
     ],
     signatures: [
-      { id: 'student', role_label: 'Mahasiswa Bersangkutan', enabled: true, use_digital_signature: false },
-      { id: 'advisor_1', role_label: 'Dosen Pembimbing I', enabled: true, use_digital_signature: true },
-      { id: 'advisor_2', role_label: 'Dosen Pembimbing II', enabled: true, use_digital_signature: true },
-      { id: 'kaprodi', role_label: 'Ketua Program Studi', enabled: true, use_digital_signature: true },
+      { id: 'student', role_label: 'Mahasiswa Bersangkutan', enabled: true, use_digital_signature: false, signer_status: 'pemohon' },
+      { id: 'advisor_1', role_label: 'Dosen Pembimbing I', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
+      { id: 'advisor_2', role_label: 'Dosen Pembimbing II', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
+      { id: 'kaprodi', role_label: 'Ketua Program Studi', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
     ],
+    copies_enabled: false,
+    copies_list: ['Dekan Fakultas Tarbiyah', 'Ketua Program Studi PBA', 'Arsip BAAK'],
+    placement_targets: ['mahasiswa_tugas_akhir', 'dosen_bimbingan_ta', 'admin_tugas_akhir'],
   },
 
   krs: {
     code: 'krs',
     name: 'Kartu Rencana Studi (KRS)',
     orientation: 'portrait',
+    data_source_module: 'akademik',
     document_title: 'KARTU RENCANA STUDI (KRS)',
     document_subtitle: 'SEMESTER PERKULIAHAN AKTIF',
     show_kop: true,
     show_student_info: true,
+    body_text_enabled: false,
+    body_text_template: 'Berdasarkan data akademik semester berjalan, mahasiswa {{nama_mahasiswa}} (NIM: {{nim}}) telah resmi mengontrak mata kuliah berikut dengan persetujuan Dosen Pembimbing Akademik.',
+    table_enabled: true,
+    table_dataset_id: 'daftar_mata_kuliah_krs',
     rules_note_enabled: true,
     rules_note_title: 'Ketentuan KRS:',
     rules_note_text:
@@ -83,20 +119,28 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
       { id: 'schedule', label: 'Jadwal Kuliah', enabled: false },
     ],
     signatures: [
-      { id: 'student', role_label: 'Mahasiswa', enabled: true, use_digital_signature: false },
-      { id: 'dpa', role_label: 'Dosen Pembimbing Akademik (DPA)', enabled: true, use_digital_signature: true },
-      { id: 'kaprodi', role_label: 'Ketua Program Studi', enabled: true, use_digital_signature: true },
+      { id: 'student', role_label: 'Mahasiswa', enabled: true, use_digital_signature: false, signer_status: 'pemohon' },
+      { id: 'dpa', role_label: 'Dosen Pembimbing Akademik (DPA)', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
+      { id: 'kaprodi', role_label: 'Ketua Program Studi', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
     ],
+    copies_enabled: false,
+    copies_list: ['Mahasiswa Bersangkutan', 'Dosen Pembimbing Akademik', 'Arsip BAAK'],
+    placement_targets: ['mahasiswa_krs', 'dosen_perwalian_dpa', 'admin_akademik'],
   },
 
   kartu_bimbingan_dpa: {
     code: 'kartu_bimbingan_dpa',
     name: 'Kartu Bimbingan Akademik (DPA)',
     orientation: 'portrait',
+    data_source_module: 'akademik',
     document_title: 'KARTU BIMBINGAN AKADEMIK MAHASISWA',
     document_subtitle: 'CATATAN KONSULTASI PERWALIAN STUDI',
     show_kop: true,
     show_student_info: true,
+    body_text_enabled: false,
+    body_text_template: 'Lembar kartu perwalian akademik bagi mahasiswa {{nama_mahasiswa}} (NIM {{nim}}) bersama Dosen Pembimbing Akademik {{nama_dpa}}.',
+    table_enabled: true,
+    table_dataset_id: 'daftar_mata_kuliah_krs',
     rules_note_enabled: true,
     rules_note_title: 'Petunjuk Konsultasi Perwalian:',
     rules_note_text:
@@ -110,9 +154,12 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
       { id: 'paraf', label: 'Paraf DPA', enabled: true },
     ],
     signatures: [
-      { id: 'student', role_label: 'Mahasiswa', enabled: true, use_digital_signature: false },
-      { id: 'dpa', role_label: 'Dosen Pembimbing Akademik', enabled: true, use_digital_signature: true },
+      { id: 'student', role_label: 'Mahasiswa', enabled: true, use_digital_signature: false, signer_status: 'pemohon' },
+      { id: 'dpa', role_label: 'Dosen Pembimbing Akademik', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
     ],
+    copies_enabled: false,
+    copies_list: ['Ketua Program Studi', 'Arsip DPA'],
+    placement_targets: ['mahasiswa_krs', 'dosen_perwalian_dpa'],
   },
 };
 
@@ -199,11 +246,28 @@ export function useDocumentTemplatesConfig() {
     mutation.mutate(newMap);
   };
 
+  const createNewTemplate = (code: string, newTemplate: SingleDocumentTemplate) => {
+    const currentMap = query.data || defaultDocumentTemplates;
+    const newMap: AllDocumentTemplatesMap = {
+      ...currentMap,
+      [code]: newTemplate,
+    };
+    mutation.mutate(newMap);
+  };
+
+  const deleteTemplate = (code: string) => {
+    const currentMap = { ...(query.data || defaultDocumentTemplates) };
+    delete currentMap[code];
+    mutation.mutate(currentMap);
+  };
+
   return {
     templatesMap: query.data || defaultDocumentTemplates,
     isLoading: query.isLoading,
     getTemplate,
     updateSingleTemplate,
+    createNewTemplate,
+    deleteTemplate,
     saveAllTemplates: mutation.mutate,
     isUpdating: mutation.isPending,
   };

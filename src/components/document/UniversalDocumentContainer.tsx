@@ -1,6 +1,7 @@
 import React, { useRef } from 'react';
 import { useDocumentSettings } from '@/lib/documentSettings';
 import { useDocumentTemplatesConfig, SingleDocumentTemplate } from '@/lib/documentTemplateTypes';
+import { interpolateVariables } from '@/lib/documentDataSources';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Printer, X, Download, ShieldCheck, Info } from 'lucide-react';
@@ -278,10 +279,34 @@ export function UniversalDocumentContainer({
             </div>
           )}
 
+          {/* 3.b TEKS NARASI / SURAT KETERANGAN */}
+          {template.body_text_enabled && template.body_text_template && (
+            <div className="my-3 text-xs leading-relaxed text-slate-800 text-justify whitespace-pre-line">
+              {interpolateVariables(template.body_text_template, {
+                nama_mahasiswa: studentInfo?.name || '',
+                nim: studentInfo?.nim || '',
+                program_studi: studentInfo?.program || docSettings.program_name || '',
+                fakultas: docSettings.faculty_name || '',
+                semester: studentInfo?.semester || '',
+                tahun_akademik: studentInfo?.academic_year || '',
+                nama_kampus: docSettings.institution_line_2 || '',
+                kota_institusi: docSettings.default_city || 'Ponorogo',
+                nama_kaprodi: docSettings.kaprodi_name || '',
+                nidn_kaprodi: docSettings.kaprodi_nidn || '',
+                nama_dekan: docSettings.dekan_name || '',
+                nidn_dekan: docSettings.dekan_nidn || '',
+                tanggal_cetak: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+                ...metadataItems.reduce((acc, curr) => ({ ...acc, [curr.label.toLowerCase().replace(/\s+/g, '_')]: curr.value }), {}),
+              })}
+            </div>
+          )}
+
           {/* 4. ISI UTAMA DOKUMEN (TABEL ATAU KONTEN DARI PROPS) */}
-          <div className="flex-1 my-2 document-content">
-            {children}
-          </div>
+          {template.table_enabled !== false && (
+            <div className="flex-1 my-2 document-content">
+              {children}
+            </div>
+          )}
 
           {/* 5. SUB-BAB CATATAN & TATA TERTIB */}
           {template.rules_note_enabled && template.rules_note_text && (
@@ -311,14 +336,19 @@ export function UniversalDocumentContainer({
                   .filter((s) => s.enabled)
                   .map((sig) => {
                     const sigData = signaturesData[sig.id] || {
-                      name: sig.id === 'kaprodi' ? docSettings.kaprodi_name || 'Dr. Fulan, M.Pd.' : '..................................',
-                      id_number: sig.id === 'kaprodi' ? docSettings.kaprodi_nidn : undefined,
+                      name: sig.custom_name || (sig.id === 'kaprodi' ? docSettings.kaprodi_name || 'Dr. Fulan, M.Pd.' : '..................................'),
+                      id_number: sig.custom_id_number || (sig.id === 'kaprodi' ? docSettings.kaprodi_nidn : undefined),
                     };
 
                     const signatureImg = sig.use_digital_signature ? (sigData.signature_url || sigData.paraf_url) : null;
 
                     return (
                       <div key={sig.id} className="min-w-[140px] max-w-[200px] flex flex-col items-center">
+                        {sig.signer_status && sig.signer_status !== 'pemohon' && (
+                          <p className="text-[10px] uppercase font-semibold text-slate-500 mb-0.5">
+                            {sig.signer_status === 'mengetahui' ? 'Mengetahui,' : 'Menyetujui,'}
+                          </p>
+                        )}
                         <p className="text-xs text-slate-600 mb-1 font-medium">{sig.role_label},</p>
 
                         {/* Kotak Gambar Tanda Tangan */}
@@ -349,6 +379,18 @@ export function UniversalDocumentContainer({
                     );
                   })}
               </div>
+
+              {/* 6.b TEMBUSAN (CARBON COPY / CC) */}
+              {template.copies_enabled && template.copies_list && template.copies_list.length > 0 && (
+                <div className="mt-5 pt-3 border-t text-[10px] text-slate-600 break-inside-avoid">
+                  <p className="font-semibold text-slate-800 mb-1">Tembusan disampaikan kepada Yth:</p>
+                  <ol className="list-decimal list-inside space-y-0.5 pl-1">
+                    {template.copies_list.map((item, idx) => (
+                      <li key={idx} className="text-slate-700">{item}</li>
+                    ))}
+                  </ol>
+                </div>
+              )}
             </div>
           )}
         </div>
