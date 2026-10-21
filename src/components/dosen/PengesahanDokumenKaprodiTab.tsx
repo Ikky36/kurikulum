@@ -35,7 +35,7 @@ export function PengesahanDokumenKaprodiTab() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [docTypeFilter, setDocTypeFilter] = useState<'all' | 'bimbingan_ta' | 'krs'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved'>('pending');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'not_requested'>('pending');
 
   // Modal Cetak / Preview
   const [selectedSubForPreview, setSelectedSubForPreview] = useState<any>(null);
@@ -52,7 +52,7 @@ export function PengesahanDokumenKaprodiTab() {
           ta_types (id, name),
           profiles:student_id (id, full_name, nim, program),
           ta_advisors (id, role, dosen_id, profiles (id, full_name, nip, signature_url, paraf_url)),
-          ta_consultation_logs (id, date, status)
+          ta_consultation_logs (id, date, problem, solution, status, dosen_id, profiles:dosen_id (id, full_name, nip, signature_url, paraf_url))
         `)
         .order('created_at', { ascending: false });
 
@@ -130,21 +130,40 @@ export function PengesahanDokumenKaprodiTab() {
 
   // Statistik Counter
   const stats = useMemo(() => {
-    const pendingTA = processedTAItems.filter((item) => !item.isKaprodiApproved).length;
-    const approvedTA = processedTAItems.filter((item) => item.isKaprodiApproved).length;
+    // Permohonan masuk: HANYA yang telah resmi diajukan mahasiswa dan belum disahkan Kaprodi
+    const pendingTA = processedTAItems.filter((item) => Boolean(item.requested && !item.isKaprodiApproved)).length;
+    // Telah disahkan oleh Kaprodi
+    const approvedTA = processedTAItems.filter((item) => Boolean(item.isKaprodiApproved)).length;
+    // Belum mengajukan pengesahan
+    const notRequestedTA = processedTAItems.filter((item) => Boolean(!item.requested && !item.isKaprodiApproved)).length;
+
     return {
       pendingTA,
       approvedTA,
+      notRequestedTA,
       totalTA: processedTAItems.length,
     };
   }, [processedTAItems]);
 
   // Filter Data TA
   const filteredTAItems = useMemo(() => {
-    return processedTAItems.filter((item) => {
+    // Prioritaskan dokumen yang telah diajukan mahasiswa dan belum disahkan agar berada di atas
+    const sorted = [...processedTAItems].sort((a, b) => {
+      if (a.requested && !a.isKaprodiApproved && (!b.requested || b.isKaprodiApproved)) return -1;
+      if (b.requested && !b.isKaprodiApproved && (!a.requested || a.isKaprodiApproved)) return 1;
+      return new Date(b.requestedAt || 0).getTime() - new Date(a.requestedAt || 0).getTime();
+    });
+
+    return sorted.filter((item) => {
       // Filter Status
-      if (statusFilter === 'pending' && item.isKaprodiApproved) return false;
-      if (statusFilter === 'approved' && !item.isKaprodiApproved) return false;
+      if (statusFilter === 'pending') {
+        // HANYA yang telah diajukan mahasiswa dan belum disahkan
+        if (!item.requested || item.isKaprodiApproved) return false;
+      } else if (statusFilter === 'approved') {
+        if (!item.isKaprodiApproved) return false;
+      } else if (statusFilter === 'not_requested') {
+        if (item.requested || item.isKaprodiApproved) return false;
+      }
 
       // Filter Pencarian (Nama, NIM, Judul)
       if (searchQuery.trim()) {
@@ -195,7 +214,7 @@ export function PengesahanDokumenKaprodiTab() {
         <Card className="border-l-4 border-l-amber-500 shadow-sm bg-card">
           <CardHeader className="py-3 px-4">
             <CardDescription className="text-xs flex items-center justify-between">
-              <span>Menunggu Pengesahan Kaprodi</span>
+              <span>Permohonan Masuk (Menunggu)</span>
               <Clock className="w-4 h-4 text-amber-500" />
             </CardDescription>
             <CardTitle className="text-2xl font-bold text-amber-600">
@@ -203,14 +222,14 @@ export function PengesahanDokumenKaprodiTab() {
             </CardTitle>
           </CardHeader>
           <CardContent className="py-0 px-4 pb-3 text-[11px] text-muted-foreground">
-            Dokumen bimbingan TA yang belum Anda sahkan
+            Mahasiswa yang telah resmi mengajukan pengesahan
           </CardContent>
         </Card>
 
         <Card className="border-l-4 border-l-emerald-500 shadow-sm bg-card">
           <CardHeader className="py-3 px-4">
             <CardDescription className="text-xs flex items-center justify-between">
-              <span>Telah Disahkan</span>
+              <span>Telah Disahkan Kaprodi</span>
               <CheckCircle2 className="w-4 h-4 text-emerald-500" />
             </CardDescription>
             <CardTitle className="text-2xl font-bold text-emerald-600">
@@ -225,7 +244,7 @@ export function PengesahanDokumenKaprodiTab() {
         <Card className="border-l-4 border-l-primary shadow-sm bg-card">
           <CardHeader className="py-3 px-4">
             <CardDescription className="text-xs flex items-center justify-between">
-              <span>Total Mahasiswa TA</span>
+              <span>Total Mahasiswa Tugas Akhir</span>
               <GraduationCap className="w-4 h-4 text-primary" />
             </CardDescription>
             <CardTitle className="text-2xl font-bold">
@@ -233,7 +252,7 @@ export function PengesahanDokumenKaprodiTab() {
             </CardTitle>
           </CardHeader>
           <CardContent className="py-0 px-4 pb-3 text-[11px] text-muted-foreground">
-            Total seluruh riwayat pengajuan tugas akhir
+            {stats.notRequestedTA} mahasiswa belum mengajukan pengesahan
           </CardContent>
         </Card>
       </div>
@@ -276,14 +295,17 @@ export function PengesahanDokumenKaprodiTab() {
               onValueChange={(v: any) => setStatusFilter(v)}
               className="w-full sm:w-auto"
             >
-              <TabsList className="grid grid-cols-3 w-full sm:w-auto">
-                <TabsTrigger value="pending" className="text-xs">
+              <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full sm:w-auto h-auto">
+                <TabsTrigger value="pending" className="text-xs py-1.5 font-medium data-[state=active]:font-bold">
                   Menunggu ({stats.pendingTA})
                 </TabsTrigger>
-                <TabsTrigger value="approved" className="text-xs">
+                <TabsTrigger value="approved" className="text-xs py-1.5">
                   Telah Disahkan ({stats.approvedTA})
                 </TabsTrigger>
-                <TabsTrigger value="all" className="text-xs">
+                <TabsTrigger value="not_requested" className="text-xs py-1.5">
+                  Belum Diajukan ({stats.notRequestedTA})
+                </TabsTrigger>
+                <TabsTrigger value="all" className="text-xs py-1.5">
                   Semua ({stats.totalTA})
                 </TabsTrigger>
               </TabsList>
@@ -415,9 +437,13 @@ export function PengesahanDokumenKaprodiTab() {
                                 </span>
                               )}
                             </div>
-                          ) : (
+                          ) : item.requested ? (
                             <Badge variant="secondary" className="gap-1 text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border-amber-200">
-                              <Clock className="w-3.5 h-3.5" /> Menunggu Pengesahan
+                              <Clock className="w-3.5 h-3.5 text-amber-600" /> Menunggu Pengesahan
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] text-muted-foreground border-dashed">
+                              Belum Diajukan Mhs
                             </Badge>
                           )}
                         </TableCell>

@@ -126,7 +126,7 @@ export default function DashboardDosen() {
     role === 'sub_admin'
   );
 
-  // Hitung dokumen yang menunggu pengesahan Kaprodi
+  // Hitung dokumen yang menunggu pengesahan Kaprodi (hanya yang telah resmi diajukan mahasiswa)
   const { data: pendingKaprodiCount = 0 } = useQuery({
     queryKey: ['kaprodi_pending_approvals_count', isKaprodi],
     queryFn: async () => {
@@ -137,7 +137,7 @@ export default function DashboardDosen() {
       if (error) return 0;
       return (data || []).filter((sub: any) => {
         const parsed = parseApprovalsFromComments(sub.comments);
-        return !parsed.signers.kaprodi?.is_approved;
+        return Boolean(parsed.requested && !parsed.signers?.kaprodi?.is_approved);
       }).length;
     },
     enabled: isKaprodi,
