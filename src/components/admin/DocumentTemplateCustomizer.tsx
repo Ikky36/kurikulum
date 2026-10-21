@@ -301,6 +301,45 @@ export function DocumentTemplateCustomizer() {
     }));
   };
 
+  const handleRoleTypeChange = (sigId: string, roleType: string) => {
+    let defaultLabel = '';
+    let defaultStatus: 'mengetahui' | 'menyetujui' | 'pemohon' = 'mengetahui';
+
+    if (roleType === 'kaprodi') {
+      defaultLabel = 'Ketua Program Studi';
+      defaultStatus = 'mengetahui';
+    } else if (roleType === 'dekan') {
+      defaultLabel = 'Dekan Fakultas';
+      defaultStatus = 'mengetahui';
+    } else if (roleType === 'advisor_1') {
+      defaultLabel = 'Dosen Pembimbing I';
+      defaultStatus = 'mengetahui';
+    } else if (roleType === 'advisor_2') {
+      defaultLabel = 'Dosen Pembimbing II';
+      defaultStatus = 'mengetahui';
+    } else if (roleType === 'dpa') {
+      defaultLabel = 'Dosen Pembimbing Akademik';
+      defaultStatus = 'menyetujui';
+    } else if (roleType === 'student') {
+      defaultLabel = 'Mahasiswa Pemohon';
+      defaultStatus = 'pemohon';
+    }
+
+    setCurrentTemplate((prev) => ({
+      ...prev,
+      signatures: prev.signatures.map((s) => {
+        if (s.id !== sigId) return s;
+        return {
+          ...s,
+          role_type: roleType as any,
+          role_label: defaultLabel || s.role_label,
+          signer_status: defaultStatus || s.signer_status,
+          id: roleType === 'kaprodi' ? 'kaprodi' : roleType === 'dekan' ? 'dekan' : s.id,
+        };
+      }),
+    }));
+  };
+
   // Carbon Copy (Tembusan) Handlers
   const addCopyItem = () => {
     if (!newCopyItem.trim()) return;
@@ -1310,6 +1349,93 @@ export function DocumentTemplateCustomizer() {
                       </Button>
                     </div>
 
+                    {/* Sumber Akun Pejabat Penandatangan (Skema B) */}
+                    {(() => {
+                      const effectiveRoleType =
+                        sig.role_type ||
+                        (sig.id === 'kaprodi'
+                          ? 'kaprodi'
+                          : sig.id === 'dekan'
+                          ? 'dekan'
+                          : sig.id.includes('advisor_1') || sig.id.includes('pembimbing')
+                          ? 'advisor_1'
+                          : sig.id.includes('advisor_2')
+                          ? 'advisor_2'
+                          : sig.id.includes('dpa')
+                          ? 'dpa'
+                          : sig.id.includes('pemohon') || sig.id.includes('student')
+                          ? 'student'
+                          : 'custom');
+
+                      return (
+                        <div className="space-y-1.5 p-2 bg-slate-50 border border-slate-200 rounded-md">
+                          <Label className="text-[11px] font-semibold text-slate-700">Sumber Pejabat / Akun Penandatangan:</Label>
+                          <Select
+                            value={effectiveRoleType}
+                            onValueChange={(val) => handleRoleTypeChange(sig.id, val)}
+                          >
+                            <SelectTrigger className="h-7 text-xs bg-white border-slate-300">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="kaprodi" className="text-xs">
+                                🎓 Ketua Program Studi (Kaprodi) — Otomatis Akun Kaprodi
+                              </SelectItem>
+                              <SelectItem value="dekan" className="text-xs">
+                                🏛️ Dekan Fakultas / Pimpinan — Otomatis Akun Dekan
+                              </SelectItem>
+                              <SelectItem value="advisor_1" className="text-xs">
+                                👨‍🏫 Dosen Pembimbing I — Otomatis Pembimbing 1 Mahasiswa
+                              </SelectItem>
+                              <SelectItem value="advisor_2" className="text-xs">
+                                👨‍🏫 Dosen Pembimbing II — Otomatis Pembimbing 2 Mahasiswa
+                              </SelectItem>
+                              <SelectItem value="dpa" className="text-xs">
+                                📋 Dosen Pembimbing Akademik (DPA) — Otomatis DPA Mahasiswa
+                              </SelectItem>
+                              <SelectItem value="student" className="text-xs">
+                                👤 Mahasiswa Pemohon — Otomatis Akun Mahasiswa
+                              </SelectItem>
+                              <SelectItem value="custom" className="text-xs">
+                                ✍️ Pejabat Kustom / Lainnya (Input Manual)
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          {effectiveRoleType === 'kaprodi' && (
+                            <p className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              🔗 <strong>Terhubung ke Akun Kaprodi:</strong> {docSettings.kaprodi_name || 'Belum dipilih di Pengaturan Dokumen'} {docSettings.kaprodi_signature_url ? '(✓ TTD Digital Tersedia)' : '(Belum upload TTD di profil)'}
+                            </p>
+                          )}
+                          {effectiveRoleType === 'dekan' && (
+                            <p className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              🔗 <strong>Terhubung ke Akun Dekan:</strong> {docSettings.dekan_name || 'Belum dipilih di Pengaturan Dokumen'} {docSettings.dekan_signature_url ? '(✓ TTD Digital Tersedia)' : '(Belum upload TTD di profil)'}
+                            </p>
+                          )}
+                          {effectiveRoleType === 'advisor_1' && (
+                            <p className="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                              🔗 <strong>Dinamis:</strong> Mengambil nama & tanda tangan dosen pembimbing 1 dari pengajuan tugas akhir mahasiswa terkait.
+                            </p>
+                          )}
+                          {effectiveRoleType === 'advisor_2' && (
+                            <p className="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                              🔗 <strong>Dinamis:</strong> Mengambil nama & tanda tangan dosen pembimbing 2 dari pengajuan tugas akhir mahasiswa terkait.
+                            </p>
+                          )}
+                          {effectiveRoleType === 'dpa' && (
+                            <p className="text-[10px] text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                              🔗 <strong>Dinamis:</strong> Mengambil nama & tanda tangan DPA dari angkatan/rombel mahasiswa terkait.
+                            </p>
+                          )}
+                          {effectiveRoleType === 'student' && (
+                            <p className="text-[10px] text-purple-700 bg-purple-50 px-2 py-0.5 rounded border border-purple-200">
+                              🔗 <strong>Dinamis:</strong> Mengambil nama & NIM mahasiswa yang membuka/mengunduh dokumen.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div className="space-y-1">
                         <Label className="text-[11px]">Label Jabatan</Label>
@@ -1658,10 +1784,20 @@ export function DocumentTemplateCustomizer() {
                             )}
                             <p className="text-[5.5px] text-slate-600">{sig.role_label},</p>
                             <div className="h-5 flex items-center justify-center font-serif text-[6px] italic text-slate-400">
-                              (Ttd)
+                              {sig.use_digital_signature ? (
+                                (sig.id === 'kaprodi' && docSettings.kaprodi_signature_url) ? (
+                                  <img src={docSettings.kaprodi_signature_url} alt="TTD" className="max-h-4 max-w-full object-contain" />
+                                ) : (sig.id === 'dekan' && docSettings.dekan_signature_url) ? (
+                                  <img src={docSettings.dekan_signature_url} alt="TTD" className="max-h-4 max-w-full object-contain" />
+                                ) : (
+                                  <span className="text-[5px] text-emerald-600 font-sans font-semibold">✓ TTD Digital</span>
+                                )
+                              ) : (
+                                '(Ttd)'
+                              )}
                             </div>
                             <p className="font-semibold text-slate-800 underline">
-                              {sig.custom_name || (sig.id === 'kaprodi' ? docSettings.kaprodi_name || 'Dr. Fulan' : 'Nama Pejabat')}
+                              {sig.custom_name || (sig.id === 'kaprodi' ? docSettings.kaprodi_name || 'Dr. Fulan' : sig.id === 'dekan' ? docSettings.dekan_name || 'Prof. Dr. Ahmad' : 'Nama Pejabat')}
                             </p>
                           </div>
                         ))}

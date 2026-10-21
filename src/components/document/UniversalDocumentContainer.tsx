@@ -383,12 +383,31 @@ export function UniversalDocumentContainer({
                 {template.signatures
                   .filter((s) => s.enabled)
                   .map((sig) => {
-                    const sigData = signaturesData[sig.id] || {
-                      name: sig.custom_name || (sig.id === 'kaprodi' ? docSettings.kaprodi_name || 'Dr. Fulan, M.Pd.' : '..................................'),
-                      id_number: sig.custom_id_number || (sig.id === 'kaprodi' ? docSettings.kaprodi_nidn : undefined),
-                    };
+                    const baseData = signaturesData[sig.id] || {};
+                    const isKaprodi = sig.id === 'kaprodi' || (sig as any).role_type === 'kaprodi';
+                    const isDekan = sig.id === 'dekan' || (sig as any).role_type === 'dekan';
 
-                    const signatureImg = sig.use_digital_signature ? (sigData.signature_url || sigData.paraf_url) : null;
+                    const resolvedName =
+                      baseData.name ||
+                      sig.custom_name ||
+                      (isKaprodi
+                        ? docSettings.kaprodi_name || 'Ketua Program Studi'
+                        : isDekan
+                        ? docSettings.dekan_name || 'Dekan Fakultas'
+                        : '..................................');
+
+                    const resolvedIdNumber =
+                      baseData.id_number ||
+                      sig.custom_id_number ||
+                      (isKaprodi ? docSettings.kaprodi_nidn : isDekan ? docSettings.dekan_nidn : undefined);
+
+                    const resolvedSignatureUrl =
+                      baseData.signature_url ||
+                      (isKaprodi ? docSettings.kaprodi_signature_url : isDekan ? docSettings.dekan_signature_url : undefined);
+
+                    const signatureImg = sig.use_digital_signature
+                      ? resolvedSignatureUrl || baseData.paraf_url
+                      : null;
 
                     return (
                       <div key={sig.id} className="min-w-[140px] max-w-[200px] flex flex-col items-center signature-block">
@@ -416,11 +435,11 @@ export function UniversalDocumentContainer({
 
                         {/* Nama & NIP/NIM */}
                         <p className="font-bold text-slate-900 text-xs border-b border-slate-900 pb-0.5 px-1 inline-block">
-                          {sigData.name}
+                          {resolvedName}
                         </p>
-                        {sigData.id_number && (
+                        {resolvedIdNumber && (
                           <p className="text-[10px] text-slate-600 mt-0.5">
-                            NIDN/NIM. {sigData.id_number}
+                            NIDN/NIM. {resolvedIdNumber}
                           </p>
                         )}
                       </div>

@@ -50,6 +50,7 @@ export function KrsDocumentViewerModal({
     kaprodi: {
       name: docSettings.kaprodi_name || '....................................',
       id_number: docSettings.kaprodi_nidn,
+      signature_url: docSettings.kaprodi_signature_url,
     },
   };
 

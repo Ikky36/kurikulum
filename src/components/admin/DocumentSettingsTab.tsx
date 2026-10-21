@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useDocumentSettings, DocumentLayoutSettings, defaultDocumentSettings } from '@/lib/documentSettings';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,6 +11,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 import {
   FileText,
@@ -54,6 +62,63 @@ export function DocumentSettingsTab() {
   // Update field helper
   const updateField = <K extends keyof DocumentLayoutSettings>(key: K, value: DocumentLayoutSettings[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  // Fetch daftar akun dosen untuk penugasan jabatan Kaprodi & Dekan (Skema B Tanda Tangan Digital)
+  const { data: dosenList = [] } = useQuery({
+    queryKey: ['dosen_list_for_doc_settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, nip, signature_url, paraf_url, role')
+        .in('role', ['dosen', 'admin'])
+        .order('full_name', { ascending: true });
+      if (error) {
+        console.warn('Error fetching dosen list for doc settings:', error);
+        return [];
+      }
+      return data || [];
+    },
+  });
+
+  const handleKaprodiSelect = (dosenId: string) => {
+    if (dosenId === 'manual') {
+      setForm((prev) => ({
+        ...prev,
+        kaprodi_profile_id: '',
+      }));
+      return;
+    }
+    const selected = dosenList.find((d) => d.id === dosenId);
+    if (selected) {
+      setForm((prev) => ({
+        ...prev,
+        kaprodi_profile_id: selected.id,
+        kaprodi_name: selected.full_name || prev.kaprodi_name,
+        kaprodi_nidn: selected.nip || prev.kaprodi_nidn,
+        kaprodi_signature_url: selected.signature_url || '',
+      }));
+    }
+  };
+
+  const handleDekanSelect = (dosenId: string) => {
+    if (dosenId === 'manual') {
+      setForm((prev) => ({
+        ...prev,
+        dekan_profile_id: '',
+      }));
+      return;
+    }
+    const selected = dosenList.find((d) => d.id === dosenId);
+    if (selected) {
+      setForm((prev) => ({
+        ...prev,
+        dekan_profile_id: selected.id,
+        dekan_name: selected.full_name || prev.dekan_name,
+        dekan_nidn: selected.nip || prev.dekan_nidn,
+        dekan_signature_url: selected.signature_url || '',
+      }));
+    }
   };
 
   // Image Upload Handler (Max 1 MB)
@@ -944,42 +1009,178 @@ export function DocumentSettingsTab() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-                    <div className="space-y-1">
-                      <Label className="text-xs font-semibold">Nama Ketua Program Studi (Kaprodi)</Label>
-                      <Input
-                        value={form.kaprodi_name}
-                        onChange={(e) => updateField('kaprodi_name', e.target.value)}
-                        placeholder="Contoh: Dr. Fulan, M.Pd."
-                      />
+                  {/* PENGESAHAN 1: KETUA PROGRAM STUDI (KAPRODI) */}
+                  <div className="space-y-3 pt-3 border-t">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                          <UserCheck className="h-4 w-4 text-primary" />
+                          Ketua Program Studi (Kaprodi)
+                        </Label>
+                        <p className="text-[11px] text-muted-foreground">
+                          Tautkan ke akun dosen terdaftar agar tanda tangan digital terhubung otomatis (Skema B).
+                        </p>
+                      </div>
+                      {form.kaprodi_signature_url ? (
+                        <Badge variant="outline" className="text-emerald-700 bg-emerald-50 border-emerald-300 text-[10px] gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> TTD Digital Aktif
+                        </Badge>
+                      ) : form.kaprodi_profile_id ? (
+                        <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-300 text-[10px] gap-1">
+                          <Info className="h-3 w-3" /> Belum Upload TTD di Akun
+                        </Badge>
+                      ) : null}
                     </div>
+
                     <div className="space-y-1">
-                      <Label className="text-xs font-semibold">NIDN / NIP Kaprodi</Label>
-                      <Input
-                        value={form.kaprodi_nidn}
-                        onChange={(e) => updateField('kaprodi_nidn', e.target.value)}
-                        placeholder="Contoh: 0712345678"
-                      />
+                      <Label className="text-[11px] font-medium text-slate-600">Pilih Akun Dosen Pemangku Jabatan:</Label>
+                      <Select
+                        value={form.kaprodi_profile_id || 'manual'}
+                        onValueChange={handleKaprodiSelect}
+                      >
+                        <SelectTrigger className="text-xs h-9">
+                          <SelectValue placeholder="Pilih akun dosen..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manual" className="text-xs font-medium text-muted-foreground">
+                            ✏️ Input Manual (Tanpa Tautan Akun)
+                          </SelectItem>
+                          {dosenList.map((d) => (
+                            <SelectItem key={d.id} value={d.id} className="text-xs">
+                              <div className="flex items-center justify-between w-full gap-2">
+                                <span>{d.full_name} {d.nip ? `(NIP: ${d.nip})` : ''}</span>
+                                {d.signature_url && (
+                                  <span className="text-[9px] text-emerald-600 font-semibold ml-2">✓ Ada TTD</span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-medium text-slate-600">Nama Lengkap & Gelar</Label>
+                        <Input
+                          value={form.kaprodi_name}
+                          onChange={(e) => updateField('kaprodi_name', e.target.value)}
+                          placeholder="Contoh: Dr. Fulan, M.Pd."
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-medium text-slate-600">NIDN / NIP</Label>
+                        <Input
+                          value={form.kaprodi_nidn}
+                          onChange={(e) => updateField('kaprodi_nidn', e.target.value)}
+                          placeholder="Contoh: 0712345678"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Pratinjau Tanda Tangan Digital Kaprodi jika ada */}
+                    {form.kaprodi_signature_url && (
+                      <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-md flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-24 bg-white border border-slate-300 rounded p-1 flex items-center justify-center">
+                            <img src={form.kaprodi_signature_url} alt="TTD Kaprodi" className="max-h-8 max-w-full object-contain" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-slate-800">Tanda Tangan Digital Terhubung</p>
+                            <p className="text-[10px] text-slate-500">Tanda tangan dari akun dosen ini otomatis disematkan pada dokumen resmi.</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3 pt-2 border-t">
-                    <div className="space-y-1">
-                      <Label className="text-xs font-semibold">Nama Dekan Fakultas</Label>
-                      <Input
-                        value={form.dekan_name}
-                        onChange={(e) => updateField('dekan_name', e.target.value)}
-                        placeholder="Contoh: Prof. Dr. Ahmad, M.A."
-                      />
+                  {/* PENGESAHAN 2: DEKAN FAKULTAS / PIMPINAN */}
+                  <div className="space-y-3 pt-3 border-t">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                          <Building className="h-4 w-4 text-primary" />
+                          Dekan Fakultas / Pimpinan Institusi
+                        </Label>
+                        <p className="text-[11px] text-muted-foreground">
+                          Tautkan ke akun pejabat terkait untuk tanda tangan digital otomatis.
+                        </p>
+                      </div>
+                      {form.dekan_signature_url ? (
+                        <Badge variant="outline" className="text-emerald-700 bg-emerald-50 border-emerald-300 text-[10px] gap-1">
+                          <CheckCircle2 className="h-3 w-3" /> TTD Digital Aktif
+                        </Badge>
+                      ) : form.dekan_profile_id ? (
+                        <Badge variant="outline" className="text-amber-700 bg-amber-50 border-amber-300 text-[10px] gap-1">
+                          <Info className="h-3 w-3" /> Belum Upload TTD di Akun
+                        </Badge>
+                      ) : null}
                     </div>
+
                     <div className="space-y-1">
-                      <Label className="text-xs font-semibold">NIDN / NIP Dekan</Label>
-                      <Input
-                        value={form.dekan_nidn}
-                        onChange={(e) => updateField('dekan_nidn', e.target.value)}
-                        placeholder="Contoh: 0787654321"
-                      />
+                      <Label className="text-[11px] font-medium text-slate-600">Pilih Akun Dosen Pemangku Jabatan:</Label>
+                      <Select
+                        value={form.dekan_profile_id || 'manual'}
+                        onValueChange={handleDekanSelect}
+                      >
+                        <SelectTrigger className="text-xs h-9">
+                          <SelectValue placeholder="Pilih akun dekan/pimpinan..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manual" className="text-xs font-medium text-muted-foreground">
+                            ✏️ Input Manual (Tanpa Tautan Akun)
+                          </SelectItem>
+                          {dosenList.map((d) => (
+                            <SelectItem key={d.id} value={d.id} className="text-xs">
+                              <div className="flex items-center justify-between w-full gap-2">
+                                <span>{d.full_name} {d.nip ? `(NIP: ${d.nip})` : ''}</span>
+                                {d.signature_url && (
+                                  <span className="text-[9px] text-emerald-600 font-semibold ml-2">✓ Ada TTD</span>
+                                )}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-medium text-slate-600">Nama Dekan / Pimpinan</Label>
+                        <Input
+                          value={form.dekan_name}
+                          onChange={(e) => updateField('dekan_name', e.target.value)}
+                          placeholder="Contoh: Prof. Dr. Ahmad, M.A."
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-[11px] font-medium text-slate-600">NIDN / NIP</Label>
+                        <Input
+                          value={form.dekan_nidn}
+                          onChange={(e) => updateField('dekan_nidn', e.target.value)}
+                          placeholder="Contoh: 0787654321"
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Pratinjau Tanda Tangan Digital Dekan jika ada */}
+                    {form.dekan_signature_url && (
+                      <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-md flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-24 bg-white border border-slate-300 rounded p-1 flex items-center justify-center">
+                            <img src={form.dekan_signature_url} alt="TTD Dekan" className="max-h-8 max-w-full object-contain" />
+                          </div>
+                          <div>
+                            <p className="text-xs font-semibold text-slate-800">Tanda Tangan Digital Terhubung</p>
+                            <p className="text-[10px] text-slate-500">Tanda tangan dari akun dekan ini otomatis disematkan pada dokumen resmi.</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

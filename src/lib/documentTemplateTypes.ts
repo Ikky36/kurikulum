@@ -11,6 +11,7 @@ export interface DocumentTableColumnConfig {
 
 export interface DocumentSignatureConfig {
   id: string;
+  role_type?: 'kaprodi' | 'dekan' | 'advisor_1' | 'advisor_2' | 'dpa' | 'student' | 'custom';
   role_label: string;
   enabled: boolean;
   use_digital_signature: boolean; // true = pakai signature_url / paraf_url; false = ruang kosong tanda tangan basah

@@ -40,10 +40,14 @@ export interface DocumentLayoutSettings {
 
   // Kota & Default Penandatangan
   default_city: string;
+  kaprodi_profile_id?: string;
   kaprodi_name: string;
   kaprodi_nidn: string;
+  kaprodi_signature_url?: string;
+  dekan_profile_id?: string;
   dekan_name: string;
   dekan_nidn: string;
+  dekan_signature_url?: string;
 }
 
 export const defaultDocumentSettings: DocumentLayoutSettings = {
@@ -79,10 +83,14 @@ export const defaultDocumentSettings: DocumentLayoutSettings = {
   show_page_number: true,
 
   default_city: 'Ponorogo',
+  kaprodi_profile_id: '',
   kaprodi_name: '',
   kaprodi_nidn: '',
+  kaprodi_signature_url: '',
+  dekan_profile_id: '',
   dekan_name: '',
   dekan_nidn: '',
+  dekan_signature_url: '',
 };
 
 export const SETTING_KEY_DOC_LAYOUT = 'doc_layout_settings';
@@ -107,7 +115,40 @@ export function useDocumentSettings() {
       if (data?.setting_value) {
         try {
           const parsed = JSON.parse(data.setting_value);
-          return { ...defaultDocumentSettings, ...parsed } as DocumentLayoutSettings;
+          const merged: DocumentLayoutSettings = { ...defaultDocumentSettings, ...parsed };
+
+          // Sinkronisasi otomatis tanda tangan digital live dari tabel profiles jika akun ditautkan
+          const linkedProfileIds = [merged.kaprodi_profile_id, merged.dekan_profile_id].filter(
+            (id): id is string => Boolean(id) && id !== 'manual'
+          );
+
+          if (linkedProfileIds.length > 0) {
+            try {
+              const { data: profiles } = await supabase
+                .from('profiles')
+                .select('id, full_name, nip, signature_url')
+                .in('id', linkedProfileIds);
+
+              if (profiles && profiles.length > 0) {
+                const kaprodiProf = profiles.find((p) => p.id === merged.kaprodi_profile_id);
+                if (kaprodiProf) {
+                  if (kaprodiProf.signature_url) merged.kaprodi_signature_url = kaprodiProf.signature_url;
+                  if (!merged.kaprodi_name) merged.kaprodi_name = kaprodiProf.full_name || '';
+                  if (!merged.kaprodi_nidn) merged.kaprodi_nidn = kaprodiProf.nip || '';
+                }
+                const dekanProf = profiles.find((p) => p.id === merged.dekan_profile_id);
+                if (dekanProf) {
+                  if (dekanProf.signature_url) merged.dekan_signature_url = dekanProf.signature_url;
+                  if (!merged.dekan_name) merged.dekan_name = dekanProf.full_name || '';
+                  if (!merged.dekan_nidn) merged.dekan_nidn = dekanProf.nip || '';
+                }
+              }
+            } catch (pErr) {
+              console.warn('[documentSettings] Gagal sinkronisasi live profiles penandatangan:', pErr);
+            }
+          }
+
+          return merged;
         } catch (e) {
           console.error('Failed to parse doc_layout_settings JSON:', e);
         }
