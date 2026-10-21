@@ -28,6 +28,8 @@ import {
   Info
 } from 'lucide-react';
 import { DocumentTemplateCustomizer } from './DocumentTemplateCustomizer';
+import { UniversalDocumentContainer } from '@/components/document/UniversalDocumentContainer';
+import { printElementById } from '@/lib/printUtils';
 
 export function DocumentSettingsTab() {
   const { user } = useAuth();
@@ -107,9 +109,24 @@ export function DocumentSettingsTab() {
     toast.info('Form dikembalikan ke pengaturan default (belum disimpan)');
   };
 
-  // Test Print simulation
-  const handleTestPrint = () => {
-    window.print();
+  // Test Print simulation via isolated print iframe
+  const handleTestPrint = async () => {
+    toast.loading('Menyiapkan lembar uji cetak kop...', { id: 'test-print-kop' });
+    try {
+      await printElementById('admin-kop-printable-sheet', {
+        paperSize: form.paper_size,
+        orientation: form.orientation,
+        marginTop: form.margin_top,
+        marginBottom: form.margin_bottom,
+        marginLeft: form.margin_left,
+        marginRight: form.margin_right,
+        title: `Uji Cetak Kop & Lembar - ${form.institution_line_1 || 'STITMA'}`,
+      });
+      toast.success('Dialog cetak berhasil dibuka.', { id: 'test-print-kop' });
+    } catch (e) {
+      console.error(e);
+      toast.error('Gagal mencetak dokumen.', { id: 'test-print-kop' });
+    }
   };
 
   if (isLoading) {
@@ -1190,6 +1207,15 @@ export function DocumentSettingsTab() {
       <DocumentTemplateCustomizer />
     </TabsContent>
   </Tabs>
+
+  {/* ELEMEN OFFSCREEN UNTUK UJI CETAK KOP DOKUMEN */}
+  <div className="fixed -left-[9999px] top-0 pointer-events-none opacity-0 overflow-hidden" aria-hidden="true">
+    <UniversalDocumentContainer
+      containerId="admin-kop-printable-sheet"
+      templateCode="kartu_bimbingan_ta"
+      variables={{}}
+    />
+  </div>
 </div>
   );
 }

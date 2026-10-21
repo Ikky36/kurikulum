@@ -1,7 +1,8 @@
 import React, { useRef } from 'react';
 import { useDocumentSettings } from '@/lib/documentSettings';
 import { useDocumentTemplatesConfig, SingleDocumentTemplate, defaultStudentBioFields } from '@/lib/documentTemplateTypes';
-import { interpolateVariables } from '@/lib/documentDataSources';
+import { interpolateVariables, getDummyValueForColumn } from '@/lib/documentDataSources';
+import { printElementById } from '@/lib/printUtils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Printer, X, Download, ShieldCheck, Info } from 'lucide-react';
@@ -15,6 +16,8 @@ export interface DocumentSignatureData {
 
 export interface UniversalDocumentContainerProps {
   templateCode: string;
+  templateOverride?: SingleDocumentTemplate;
+  containerId?: string;
   documentTitle?: string;
   documentSubtitle?: string;
   studentInfo?: {
@@ -29,13 +32,15 @@ export interface UniversalDocumentContainerProps {
   variables?: Record<string, any>;
   metadataItems?: { label: string; value: string | React.ReactNode }[];
   signaturesData?: Record<string, DocumentSignatureData>;
-  children: React.ReactNode;
+  children?: React.ReactNode;
   onClose?: () => void;
   className?: string;
 }
 
 export function UniversalDocumentContainer({
   templateCode,
+  templateOverride,
+  containerId = 'printable-document',
   documentTitle,
   documentSubtitle,
   studentInfo,
@@ -48,20 +53,28 @@ export function UniversalDocumentContainer({
 }: UniversalDocumentContainerProps) {
   const { settings: docSettings } = useDocumentSettings();
   const { getTemplate } = useDocumentTemplatesConfig();
-  const template: SingleDocumentTemplate = getTemplate(templateCode);
+  const template: SingleDocumentTemplate = templateOverride || getTemplate(templateCode);
 
   const finalTitle = documentTitle || template.document_title;
   const finalSubtitle = documentSubtitle || template.document_subtitle;
-
-  // Print Handler
-  const handlePrint = () => {
-    window.print();
-  };
 
   const isA4 = docSettings.paper_size === 'A4';
   // Orientasi ditentukan oleh konfigurasi template dokumen yang diatur Admin (fallback ke global docSettings)
   const effectiveOrientation = template.orientation || docSettings.orientation || 'portrait';
   const isPortrait = effectiveOrientation === 'portrait';
+
+  // Print Handler via isolated iframe printer
+  const handlePrint = async () => {
+    await printElementById(containerId, {
+      paperSize: docSettings.paper_size,
+      orientation: effectiveOrientation,
+      marginTop: docSettings.margin_top,
+      marginBottom: docSettings.margin_bottom,
+      marginLeft: docSettings.margin_left,
+      marginRight: docSettings.margin_right,
+      title: finalTitle,
+    });
+  };
 
   // CSS Page sizing for @media print
   const pageSizeStyle = `@page { 
@@ -126,7 +139,7 @@ export function UniversalDocumentContainer({
 
       {/* LEMBAR DOKUMEN FISIK (A4 / F4) */}
       <div
-        id="printable-document"
+        id={containerId}
         className={`bg-white text-slate-900 shadow-xl border mx-auto rounded-sm overflow-hidden flex flex-col justify-between transition-all print:shadow-none print:border-none print:m-0 print:p-0 print:w-full print:max-w-none ${
           isPortrait ? 'max-w-[215mm]' : 'max-w-[330mm]'
         }`}
@@ -302,7 +315,34 @@ export function UniversalDocumentContainer({
           {/* 4. ISI UTAMA DOKUMEN (TABEL ATAU KONTEN DARI PROPS) */}
           {template.content_mode !== 'text_only' && template.table_enabled !== false && (
             <div className="flex-1 my-2 document-content">
-              {children}
+              {children ? (
+                children
+              ) : template.columns && template.columns.length > 0 ? (
+                <div className="w-full overflow-hidden my-2">
+                  <table className="w-full border-collapse border border-slate-300 text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 font-semibold text-slate-800">
+                        {template.columns.map((c) => (
+                          <th key={c.id} className="border border-slate-300 p-2 text-center text-xs">
+                            {c.label}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {[1, 2, 3].map((rowIdx) => (
+                        <tr key={rowIdx} className="hover:bg-slate-50/50">
+                          {template.columns.map((c) => (
+                            <td key={c.id} className="border border-slate-300 p-2 text-center text-xs text-slate-700">
+                              {getDummyValueForColumn(c.id, c.label, rowIdx)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
             </div>
           )}
 
@@ -318,7 +358,7 @@ export function UniversalDocumentContainer({
 
           {/* 6. BLOK TANDA TANGAN & PENGESAHAN */}
           {template.signatures.filter((s) => s.enabled).length > 0 && (
-            <div className="mt-6 pt-2 break-inside-avoid text-xs">
+            <div className="mt-6 pt-2 break-inside-avoid text-xs signature-block">
               <div className="text-right text-xs text-slate-700 mb-2">
                 {docSettings.default_city || 'Ponorogo'},{' '}
                 {new Date().toLocaleDateString('id-ID', {
@@ -341,7 +381,7 @@ export function UniversalDocumentContainer({
                     const signatureImg = sig.use_digital_signature ? (sigData.signature_url || sigData.paraf_url) : null;
 
                     return (
-                      <div key={sig.id} className="min-w-[140px] max-w-[200px] flex flex-col items-center">
+                      <div key={sig.id} className="min-w-[140px] max-w-[200px] flex flex-col items-center signature-block">
                         {sig.signer_status && sig.signer_status !== 'pemohon' && (
                           <p className="text-[10px] uppercase font-semibold text-slate-500 mb-0.5">
                             {sig.signer_status === 'mengetahui' ? 'Mengetahui,' : 'Menyetujui,'}
@@ -380,7 +420,7 @@ export function UniversalDocumentContainer({
 
               {/* 6.b TEMBUSAN (CARBON COPY / CC) */}
               {template.copies_enabled && template.copies_list && template.copies_list.length > 0 && (
-                <div className="mt-5 pt-3 border-t text-[10px] text-slate-600 break-inside-avoid">
+                <div className="mt-5 pt-3 border-t text-[10px] text-slate-600 break-inside-avoid signature-block">
                   <p className="font-semibold text-slate-800 mb-1">Tembusan disampaikan kepada Yth:</p>
                   <ol className="list-decimal list-inside space-y-0.5 pl-1">
                     {template.copies_list.map((item, idx) => (

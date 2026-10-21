@@ -16,6 +16,8 @@ import {
   getDummyValueForColumn,
 } from '@/lib/documentDataSources';
 import { useDocumentSettings } from '@/lib/documentSettings';
+import { UniversalDocumentContainer } from '@/components/document/UniversalDocumentContainer';
+import { printElementById } from '@/lib/printUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,6 +82,9 @@ export function DocumentTemplateCustomizer() {
 
   // Input for adding Carbon Copy (Tembusan)
   const [newCopyItem, setNewCopyItem] = useState('');
+
+  // State for Full Preview Modal & Isolated Test Print
+  const [showFullPreviewModal, setShowFullPreviewModal] = useState<boolean>(false);
 
   // Sync state when selected document or templateMap changes
   useEffect(() => {
@@ -412,6 +417,26 @@ export function DocumentTemplateCustomizer() {
 
   // Available database columns for the active module
   const availableDbCols = activeModule.tableDatasets[0]?.availableColumns || [];
+
+  // Handler eksekusi langsung "Uji Cetak" yang mengisolasi lembar dokumen resmi
+  const handleDirectTestPrint = async () => {
+    toast.loading('Menyiapkan lembar cetak dokumen...', { id: 'test-print-toast' });
+    try {
+      await printElementById('admin-test-printable-document', {
+        paperSize: docSettings.paper_size,
+        orientation: currentTemplate.orientation || 'portrait',
+        marginTop: docSettings.margin_top,
+        marginBottom: docSettings.margin_bottom,
+        marginLeft: docSettings.margin_left,
+        marginRight: docSettings.margin_right,
+        title: `${currentTemplate.document_title || 'Uji Cetak Dokumen'} - ${docSettings.institution_line_1 || 'STITMA'}`,
+      });
+      toast.success('Dialog cetak berhasil dibuka.', { id: 'test-print-toast' });
+    } catch (err) {
+      console.error(err);
+      toast.error('Gagal mencetak dokumen.', { id: 'test-print-toast' });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -1601,22 +1626,73 @@ export function DocumentTemplateCustomizer() {
                 )}
               </div>
             </CardContent>
-            <CardFooter className="py-2.5 px-4 border-t flex justify-between">
+            <CardFooter className="py-2.5 px-4 border-t flex flex-wrap justify-between items-center gap-2">
               <span className="text-[11px] text-muted-foreground flex items-center gap-1">
                 <Info className="h-3 w-3" /> Pratinjau simulasi data modul {activeModule.name}
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-xs h-7 gap-1"
-                onClick={() => window.print()}
-              >
-                <Printer className="h-3 w-3" /> Uji Cetak
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-7 gap-1"
+                  onClick={() => setShowFullPreviewModal(true)}
+                >
+                  <Eye className="h-3 w-3" /> Pratinjau Penuh
+                </Button>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  className="text-xs h-7 gap-1 shadow-sm"
+                  onClick={handleDirectTestPrint}
+                >
+                  <Printer className="h-3 w-3" /> Uji Cetak
+                </Button>
+              </div>
             </CardFooter>
           </Card>
         </div>
       </div>
+
+      {/* ELEMEN OFFSCREEN SKALA NYATA UNTUK EKSEKUSI LANGSUNG "UJI CETAK" */}
+      <div className="fixed -left-[9999px] top-0 pointer-events-none opacity-0 overflow-hidden" aria-hidden="true">
+        <UniversalDocumentContainer
+          containerId="admin-test-printable-document"
+          templateCode={currentTemplate.code}
+          templateOverride={currentTemplate}
+          studentInfo={{
+            name: dummyContext.nama_mahasiswa || 'Ahmad Fauzi Mubarak',
+            nim: dummyContext.nim || '4220261109',
+            program: dummyContext.program_studi || 'Pendidikan Bahasa Arab',
+            sistem_kuliah: 'Reguler',
+            semester: dummyContext.semester || 'VII',
+            academic_year: '2026/2027',
+          }}
+          variables={dummyContext}
+        />
+      </div>
+
+      {/* MODAL DIALOG PRATINJAU PENUH & UJI CETAK */}
+      <Dialog open={showFullPreviewModal} onOpenChange={setShowFullPreviewModal}>
+        <DialogContent className="max-w-5xl w-full p-0 max-h-[95vh] overflow-y-auto bg-transparent border-none shadow-none">
+          <UniversalDocumentContainer
+            containerId="admin-modal-printable-document"
+            templateCode={currentTemplate.code}
+            templateOverride={currentTemplate}
+            onClose={() => setShowFullPreviewModal(false)}
+            studentInfo={{
+              name: dummyContext.nama_mahasiswa || 'Ahmad Fauzi Mubarak',
+              nim: dummyContext.nim || '4220261109',
+              program: dummyContext.program_studi || 'Pendidikan Bahasa Arab',
+              sistem_kuliah: 'Reguler',
+              semester: dummyContext.semester || 'VII',
+              academic_year: '2026/2027',
+            }}
+            variables={dummyContext}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

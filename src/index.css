@@ -297,3 +297,99 @@
 [data-radix-popper-content-wrapper] {
   pointer-events: auto !important;
 }
+
+
+/* =========================================================================
+   SISTEM CETAK DOKUMEN RESMI (A4 / F4)
+   Mengisolasi lembar dokumen saat dicetak dan menyembunyikan seluruh UI web:
+   dashboard, navbar, sidebar, tabs form, tombol, toast, dan dialog overlay.
+   ========================================================================= */
+@media print {
+  /* Sembunyikan elemen non-cetak aplikasi */
+  .no-print,
+  nav,
+  header:not(.official-header),
+  aside,
+  button,
+  .sidebar,
+  [data-radix-portal] > [data-state="open"]:not([role="dialog"]),
+  [data-radix-portal] > div.fixed.inset-0,
+  [data-radix-popper-content-wrapper],
+  .sonner-toast,
+  [data-sonner-toaster] {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Jika mencetak dari dalam Dialog Modal */
+  body:has(#printable-document) > #root,
+  body:has(#admin-test-printable-document) > #root {
+    display: none !important;
+  }
+
+  /* Hilangkan backdrop gelap modal radix */
+  [data-radix-portal] {
+    position: static !important;
+  }
+
+  [role="dialog"] {
+    position: static !important;
+    transform: none !important;
+    max-width: none !important;
+    max-height: none !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+
+  /* Lembar dokumen resmi */
+  #printable-document,
+  #admin-test-printable-document,
+  .printable-sheet {
+    display: flex !important;
+    visibility: visible !important;
+    position: relative !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  table {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .signature-block {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}

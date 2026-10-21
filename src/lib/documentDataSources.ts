@@ -280,21 +280,33 @@ export function getDummyContextForModule(moduleId: string, customSettings?: any)
 /**
  * Menyediakan nilai dummy untuk simulasi kolom tabel di pratinjau live
  */
-export function getDummyValueForColumn(columnId: string, customLabel?: string): string {
+export function getDummyValueForColumn(columnId: string, customLabel?: string, rowIndex: number = 1): string {
   const baseId = columnId.split('_')[0]; // normalize ids like date_172...
   switch (baseId) {
     case 'no':
-      return '1';
+      return String(rowIndex);
     case 'date':
-      return '14 Okt 2026';
+      return rowIndex === 1 ? '14 Okt 2026' : rowIndex === 2 ? '21 Okt 2026' : '28 Okt 2026';
     case 'code':
-      return 'PBA-301';
+      return rowIndex === 1 ? 'PBA-301' : rowIndex === 2 ? 'PBA-302' : 'PBA-305';
     case 'name':
-      return 'Metodologi Pengajaran';
+      return rowIndex === 1
+        ? 'Metodologi Pengajaran Bahasa Arab'
+        : rowIndex === 2
+        ? 'Tadrib Lughawi & Balaghah'
+        : 'Seminar Proposal Skripsi';
     case 'topic':
-      return 'Bab I: Latar Belakang Masalah';
+      return rowIndex === 1
+        ? 'Bab I: Latar Belakang Masalah'
+        : rowIndex === 2
+        ? 'Bab II: Kajian Pustaka & Kerangka Teori'
+        : 'Bab III: Metodologi Penelitian';
     case 'notes':
-      return 'Perbaiki fokus rumusan dan instrumen';
+      return rowIndex === 1
+        ? 'Perbaiki fokus rumusan dan instrumen'
+        : rowIndex === 2
+        ? 'Tambahkan referensi jurnal terakreditasi'
+        : 'Lanjut ke penyusunan kisi-kisi angket';
     case 'advisor':
     case 'advisor_name':
     case 'lecturer':
@@ -302,33 +314,33 @@ export function getDummyValueForColumn(columnId: string, customLabel?: string): 
     case 'paraf':
       return '[Paraf]';
     case 'sks':
-      return '3';
+      return rowIndex === 1 ? '3' : rowIndex === 2 ? '2' : '4';
     case 'grade':
-      return 'A';
+      return rowIndex === 1 ? 'A' : rowIndex === 2 ? 'A-' : 'B+';
     case 'score':
     case 'score_number':
-      return '4.00';
+      return rowIndex === 1 ? '4.00' : rowIndex === 2 ? '3.75' : '3.50';
     case 'bobot':
-      return '12.00';
+      return rowIndex === 1 ? '12.00' : rowIndex === 2 ? '7.50' : '14.00';
     case 'semester':
-      return 'IV';
+      return 'VII';
     case 'class':
     case 'class_group':
       return 'A';
     case 'schedule':
-      return 'Senin, 08.00';
+      return rowIndex === 1 ? 'Senin, 08.00' : rowIndex === 2 ? 'Selasa, 10.00' : 'Kamis, 13.00';
     case 'room':
-      return 'R.201';
+      return rowIndex === 1 ? 'R.201' : rowIndex === 2 ? 'R.105' : 'Lab Bahasa';
     case 'duration':
       return '45 Menit';
     case 'status':
     case 'status_krs':
       return 'Disetujui';
     case 'feedback':
-      return 'Revisi diserahkan pekan depan';
+      return rowIndex === 1 ? 'Revisi diserahkan pekan depan' : 'Format penulisan telah sesuai';
     case 'custom':
     case 'custom_blank':
     default:
-      return customLabel ? `[ ${customLabel} ]` : 'Data Contoh';
+      return customLabel ? `[ ${customLabel} ]` : `Data Baris #${rowIndex}`;
   }
 }
