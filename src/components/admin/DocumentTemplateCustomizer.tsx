@@ -28,6 +28,16 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import {
   FileText,
@@ -40,6 +50,7 @@ import {
   Info,
   Plus,
   Trash2,
+  AlertTriangle,
   Database,
   Layers,
   Send,
@@ -82,6 +93,9 @@ export function DocumentTemplateCustomizer() {
 
   // Input for adding Carbon Copy (Tembusan)
   const [newCopyItem, setNewCopyItem] = useState('');
+
+  // Dialog State for Delete Confirmation
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // State for Full Preview Modal & Isolated Test Print
   const [showFullPreviewModal, setShowFullPreviewModal] = useState<boolean>(false);
@@ -421,15 +435,20 @@ export function DocumentTemplateCustomizer() {
 
   // Delete Document Handler
   const handleDeleteDocument = () => {
-    if (['kartu_bimbingan_ta', 'krs', 'kartu_bimbingan_dpa'].includes(selectedDocCode)) {
-      toast.error('Dokumen sistem bawaan tidak dapat dihapus.');
+    const remainingCodes = Object.keys(templatesMap).filter((c) => c !== selectedDocCode);
+    if (remainingCodes.length === 0) {
+      toast.warning('Minimal harus tersisa 1 template dokumen.');
       return;
     }
-    if (confirm(`Yakin ingin menghapus dokumen "${currentTemplate.name}"?`)) {
-      deleteTemplate(selectedDocCode);
-      setSelectedDocCode('kartu_bimbingan_ta');
-      toast.success('Dokumen berhasil dihapus.');
+    const deletedName = currentTemplate.name;
+    const nextCode = remainingCodes[0];
+    deleteTemplate(selectedDocCode);
+    setSelectedDocCode(nextCode);
+    if (templatesMap[nextCode]) {
+      setCurrentTemplate(templatesMap[nextCode]);
     }
+    setDeleteDialogOpen(false);
+    toast.success(`Format dokumen "${deletedName}" berhasil dihapus.`);
   };
 
   // Save Handler
@@ -575,17 +594,50 @@ export function DocumentTemplateCustomizer() {
             </DialogContent>
           </Dialog>
 
-          {!['kartu_bimbingan_ta', 'krs', 'kartu_bimbingan_dpa'].includes(selectedDocCode) && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="sm:mt-5 text-xs text-destructive hover:bg-destructive/10"
-              onClick={handleDeleteDocument}
-            >
-              <Trash2 className="h-3.5 w-3.5 mr-1" />
-              Hapus
-            </Button>
-          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 sm:mt-5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
+            onClick={() => setDeleteDialogOpen(true)}
+            disabled={Object.keys(templatesMap).length <= 1}
+            title={Object.keys(templatesMap).length <= 1 ? 'Minimal harus tersisa 1 template dokumen' : 'Hapus format dokumen yang dipilih'}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Hapus Dokumen
+          </Button>
+
+          {/* ALERT DIALOG KONFIRMASI HAPUS DOKUMEN */}
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <div className="flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-5 w-5" />
+                  <AlertDialogTitle>Hapus Format Dokumen?</AlertDialogTitle>
+                </div>
+                <AlertDialogDescription className="space-y-2 text-sm text-foreground/80 pt-2">
+                  <span>
+                    Anda yakin ingin menghapus template format dokumen berikut?
+                  </span>
+                  <div className="p-3 bg-muted/60 border rounded-md">
+                    <p className="font-semibold text-foreground text-sm">{currentTemplate.name}</p>
+                    <p className="text-xs text-muted-foreground font-mono mt-0.5">Kode: {currentTemplate.code}</p>
+                  </div>
+                  <p className="text-xs text-destructive font-medium">
+                    Peringatan: Seluruh konfigurasi tata letak, kolom tabel, biodata, dan tanda tangan pada format dokumen ini akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.
+                  </p>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="mt-2">
+                <AlertDialogCancel>Batal</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteDocument}
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                >
+                  Ya, Hapus Dokumen
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
         <div className="flex items-center gap-2">

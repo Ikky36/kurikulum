@@ -245,9 +245,21 @@ export function useDocumentTemplatesConfig() {
       if (data?.setting_value) {
         try {
           const parsed = JSON.parse(data.setting_value) as AllDocumentTemplatesMap;
-          // Merge with defaults so new documents or keys are safely guaranteed
-          const merged: AllDocumentTemplatesMap = { ...defaultDocumentTemplates };
+          const deletedCodes: string[] = (parsed as any)._deleted_codes || [];
+
+          // Mulai dari default template yang belum dihapus oleh Admin
+          const merged: AllDocumentTemplatesMap = {};
+          for (const key of Object.keys(defaultDocumentTemplates)) {
+            if (!deletedCodes.includes(key)) {
+              merged[key] = { ...defaultDocumentTemplates[key] };
+            }
+          }
+
+          // Gabungkan dengan template yang tersimpan di database
           for (const key of Object.keys(parsed)) {
+            if (key === '_deleted_codes') continue;
+            if (deletedCodes.includes(key)) continue;
+
             if (merged[key]) {
               merged[key] = {
                 ...merged[key],
@@ -259,6 +271,13 @@ export function useDocumentTemplatesConfig() {
               merged[key] = parsed[key];
             }
           }
+
+          Object.defineProperty(merged, '_deleted_codes', {
+            value: deletedCodes,
+            enumerable: false,
+            writable: true,
+            configurable: true,
+          });
           return merged;
         } catch (e) {
           console.error('Failed to parse doc_templates_config JSON:', e);
@@ -271,7 +290,8 @@ export function useDocumentTemplatesConfig() {
 
   const mutation = useMutation({
     mutationFn: async (updatedMap: AllDocumentTemplatesMap) => {
-      const jsonValue = JSON.stringify(updatedMap);
+      const deletedCodes = (updatedMap as any)._deleted_codes || [];
+      const jsonValue = JSON.stringify({ ...updatedMap, _deleted_codes: deletedCodes });
       const { error } = await supabase
         .from('app_settings')
         .upsert(
@@ -294,30 +314,56 @@ export function useDocumentTemplatesConfig() {
 
   const getTemplate = (code: string): SingleDocumentTemplate => {
     const map = query.data || defaultDocumentTemplates;
-    return map[code] || defaultDocumentTemplates[code] || defaultDocumentTemplates.kartu_bimbingan_ta;
+    if (map[code]) return map[code];
+    const available = Object.values(map);
+    return available[0] || defaultDocumentTemplates.kartu_bimbingan_ta;
   };
 
   const updateSingleTemplate = (code: string, updated: SingleDocumentTemplate) => {
     const currentMap = query.data || defaultDocumentTemplates;
+    const deletedCodes: string[] = [...((currentMap as any)._deleted_codes || [])].filter((c) => c !== code);
     const newMap: AllDocumentTemplatesMap = {
       ...currentMap,
       [code]: updated,
     };
+    Object.defineProperty(newMap, '_deleted_codes', {
+      value: deletedCodes,
+      enumerable: false,
+      writable: true,
+      configurable: true,
+    });
     mutation.mutate(newMap);
   };
 
   const createNewTemplate = (code: string, newTemplate: SingleDocumentTemplate) => {
     const currentMap = query.data || defaultDocumentTemplates;
+    const deletedCodes: string[] = [...((currentMap as any)._deleted_codes || [])].filter((c) => c !== code);
     const newMap: AllDocumentTemplatesMap = {
       ...currentMap,
       [code]: newTemplate,
     };
+    Object.defineProperty(newMap, '_deleted_codes', {
+      value: deletedCodes,
+      enumerable: false,
+      writable: true,
+      configurable: true,
+    });
     mutation.mutate(newMap);
   };
 
   const deleteTemplate = (code: string) => {
     const currentMap = { ...(query.data || defaultDocumentTemplates) };
+    const deletedCodes: string[] = [...((currentMap as any)._deleted_codes || [])];
+    if (!deletedCodes.includes(code)) {
+      deletedCodes.push(code);
+    }
     delete currentMap[code];
+    Object.defineProperty(currentMap, '_deleted_codes', {
+      value: deletedCodes,
+      enumerable: false,
+      writable: true,
+      configurable: true,
+    });
     mutation.mutate(currentMap);
   };
 
