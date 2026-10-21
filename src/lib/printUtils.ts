@@ -40,6 +40,10 @@ export async function printHtml(
   const {
     paperSize = 'A4',
     orientation = 'portrait',
+    marginTop = 40,
+    marginBottom = 10,
+    marginLeft = 20,
+    marginRight = 20,
     title = 'Dokumen',
     removeShadowAndBorder = true,
   } = options;
@@ -119,6 +123,24 @@ export async function printHtml(
         : ''
     }
 
+    /* Full-bleed header & footer: Menjangkau 100% lebar kertas dari tepi ke tepi tanpa celah putih samping */
+    .header-full-bleed {
+      width: calc(100% + ${marginLeft + marginRight}mm) !important;
+      max-width: none !important;
+      margin-left: -${marginLeft}mm !important;
+      margin-right: -${marginRight}mm !important;
+      margin-top: -${marginTop}mm !important;
+      box-sizing: border-box !important;
+    }
+    .footer-full-bleed {
+      width: calc(100% + ${marginLeft + marginRight}mm) !important;
+      max-width: none !important;
+      margin-left: -${marginLeft}mm !important;
+      margin-right: -${marginRight}mm !important;
+      margin-bottom: -${marginBottom}mm !important;
+      box-sizing: border-box !important;
+    }
+
     /* Fallback Utilitas Dokumen & Tabel */
     .grid { display: grid !important; }
     .grid-cols-1 { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
@@ -161,19 +183,24 @@ export async function printHtml(
     .border-t { border-top: 1px solid #cbd5e1 !important; }
     .border-slate-200 { border-color: #e2e8f0 !important; }
     .border-slate-300 { border-color: #cbd5e1 !important; }
+    .border-slate-400 { border-color: #94a3b8 !important; }
     .border-slate-900 { border-color: #0f172a !important; }
     .bg-slate-50 { background-color: #f8fafc !important; }
     .bg-slate-100 { background-color: #f1f5f9 !important; }
     .bg-white { background-color: #ffffff !important; }
     .rounded { border-radius: 0.25rem !important; }
 
-    .w-full { width: 100% !important; }
-    .w-32 { width: 8rem !important; }
-    .w-3 { width: 0.75rem !important; }
-    .min-w-\\[140px\\] { min-width: 140px !important; }
-    .max-w-\\[200px\\] { max-width: 200px !important; }
-    .h-16 { height: 4rem !important; }
-    .h-12 { height: 3rem !important; }
+    /* Dimensi tanpa !important agar style atribut dinamis dapat menimpa dengan wajar */
+    .w-full { width: 100%; }
+    .w-32 { width: 8rem; }
+    .w-3 { width: 0.75rem; }
+    .w-10 { width: 2.5rem; }
+    .w-28 { width: 7rem; }
+    .w-36 { width: 9rem; }
+    .min-w-\\[140px\\] { min-width: 140px; }
+    .max-w-\\[200px\\] { max-width: 200px; }
+    .h-16 { height: 4rem; }
+    .h-12 { height: 3rem; }
 
     table {
       width: 100% !important;
@@ -192,7 +219,7 @@ export async function printHtml(
       break-inside: avoid !important;
     }
     th, td {
-      border: 1px solid #cbd5e1 !important;
+      border: 1px solid #94a3b8 !important;
       padding: 0.5rem !important;
     }
     th {

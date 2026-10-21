@@ -146,7 +146,9 @@ export function UniversalDocumentContainer({
       <div
         id={containerId}
         className={`bg-white text-slate-900 shadow-xl border mx-auto rounded-sm flex flex-col justify-between transition-all print:shadow-none print:border-none print:m-0 print:w-full print:max-w-none ${
-          isPortrait ? 'max-w-[215mm]' : 'max-w-[330mm]'
+          isPortrait
+            ? (isA4 ? 'w-[210mm] max-w-[210mm]' : 'w-[215mm] max-w-[215mm]')
+            : (isA4 ? 'w-[297mm] max-w-[297mm]' : 'w-[330mm] max-w-[330mm]')
         }`}
         style={{
           minHeight: isPortrait ? (isA4 ? '297mm' : '330mm') : (isA4 ? '210mm' : '215mm'),
@@ -159,11 +161,13 @@ export function UniversalDocumentContainer({
         <div className="w-full flex flex-col">
           {/* 1. KOP SURAT RESMI */}
           {template.show_kop && docSettings.header_mode !== 'none' && (
-            <div className="w-full mb-4">
+            <div className={`w-full ${docSettings.header_image_full_bleed ? 'mb-2' : 'mb-4'}`}>
               {/* Mode Gambar Banner Penuh */}
               {docSettings.header_mode === 'image' && docSettings.header_image_url && (
                 <div
-                  className="w-full mb-3"
+                  className={`overflow-hidden ${
+                    docSettings.header_image_full_bleed ? 'header-full-bleed mb-3' : 'w-full mb-3'
+                  }`}
                   style={
                     docSettings.header_image_full_bleed
                       ? {
@@ -171,6 +175,7 @@ export function UniversalDocumentContainer({
                           marginLeft: `-${docSettings.margin_left}mm`,
                           marginRight: `-${docSettings.margin_right}mm`,
                           width: `calc(100% + ${docSettings.margin_left + docSettings.margin_right}mm)`,
+                          maxWidth: `calc(100% + ${docSettings.margin_left + docSettings.margin_right}mm)`,
                         }
                       : undefined
                   }
@@ -185,8 +190,8 @@ export function UniversalDocumentContainer({
                     }`}
                     style={
                       docSettings.header_image_height_mode === 'auto'
-                        ? undefined
-                        : { height: `${docSettings.header_image_height_mm || 35}mm` }
+                        ? { width: '100%' }
+                        : { width: '100%', height: `${docSettings.header_image_height_mm || 35}mm` }
                     }
                   />
                 </div>
@@ -443,7 +448,7 @@ export function UniversalDocumentContainer({
           <div
             className={`mt-auto break-inside-avoid page-break-inside-avoid print-footer ${
               docSettings.footer_mode === 'image' && docSettings.footer_image_full_bleed
-                ? 'overflow-hidden'
+                ? 'footer-full-bleed overflow-hidden'
                 : 'pt-2.5 border-t border-slate-300'
             }`}
             style={
@@ -453,6 +458,7 @@ export function UniversalDocumentContainer({
                     marginLeft: `-${docSettings.margin_left}mm`,
                     marginRight: `-${docSettings.margin_right}mm`,
                     width: `calc(100% + ${docSettings.margin_left + docSettings.margin_right}mm)`,
+                    maxWidth: `calc(100% + ${docSettings.margin_left + docSettings.margin_right}mm)`,
                   }
                 : undefined
             }
