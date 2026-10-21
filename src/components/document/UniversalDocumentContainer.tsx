@@ -145,7 +145,7 @@ export function UniversalDocumentContainer({
       {/* LEMBAR DOKUMEN FISIK (A4 / F4) */}
       <div
         id={containerId}
-        className={`bg-white text-slate-900 shadow-xl border mx-auto rounded-sm transition-all print:shadow-none print:border-none print:m-0 print:p-0 print:w-full print:max-w-none print:min-h-0 print:overflow-visible ${
+        className={`bg-white text-slate-900 shadow-xl border mx-auto rounded-sm flex flex-col justify-between transition-all print:shadow-none print:border-none print:m-0 print:w-full print:max-w-none ${
           isPortrait ? 'max-w-[215mm]' : 'max-w-[330mm]'
         }`}
         style={{
@@ -441,7 +441,7 @@ export function UniversalDocumentContainer({
         {/* 7. FOOTER RESMI DOKUMEN */}
         {docSettings.footer_enabled && template.show_footer !== false && (
           <div
-            className={`mt-8 break-inside-avoid page-break-inside-avoid print-footer ${
+            className={`mt-auto break-inside-avoid page-break-inside-avoid print-footer ${
               docSettings.footer_mode === 'image' && docSettings.footer_image_full_bleed
                 ? 'overflow-hidden'
                 : 'pt-2.5 border-t border-slate-300'

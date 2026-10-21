@@ -1510,9 +1510,7 @@ export function DocumentTemplateCustomizer() {
             <CardContent className="p-3 bg-muted/40 flex justify-center overflow-x-auto">
               {/* LEMBAR KERTAS FISIK SIMULASI */}
               <div
-                className={`w-full bg-white text-slate-900 shadow-md rounded-sm border transition-all flex flex-col ${
-                  currentTemplate.signature_spacing === 'bottom' ? 'justify-between' : ''
-                } overflow-hidden ${
+                className={`w-full bg-white text-slate-900 shadow-md rounded-sm border transition-all flex flex-col justify-between overflow-hidden ${
                   isPortrait ? 'max-w-[340px] aspect-[1/1.414]' : 'max-w-[480px] aspect-[1.414/1]'
                 }`}
                 style={{
@@ -1681,9 +1679,7 @@ export function DocumentTemplateCustomizer() {
 
                 {/* 3. FOOTER */}
                 {docSettings.footer_enabled && currentTemplate.show_footer !== false && (
-                  <div className={`border-t border-slate-200 pt-0.5 text-[5px] text-slate-500 flex justify-between items-center ${
-                    currentTemplate.signature_spacing === 'bottom' ? 'mt-1' : 'mt-2'
-                  }`}>
+                  <div className="border-t border-slate-200 pt-0.5 mt-auto text-[5px] text-slate-500 flex justify-between items-center">
                     <p className="truncate max-w-[200px]">{docSettings.footer_text}</p>
                     {docSettings.show_page_number && <span>Hal. 1/1</span>}
                   </div>

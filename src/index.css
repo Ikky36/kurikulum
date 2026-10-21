@@ -366,20 +366,20 @@
   #admin-test-printable-document,
   #admin-kop-printable-sheet,
   .printable-sheet {
-    display: block !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
     visibility: visible !important;
     position: relative !important;
     width: 100% !important;
     max-width: none !important;
     margin: 0 !important;
-    padding: 0 !important;
     box-shadow: none !important;
     border: none !important;
     background: #ffffff !important;
     color: #000000 !important;
-    min-height: 0 !important;
-    height: auto !important;
-    overflow: visible !important;
+    min-height: 297mm !important;
+    box-sizing: border-box !important;
   }
 
   /* Tabel multi-halaman: memecah baris secara rapi & mengulang header tabel di halaman berikutnya */
@@ -410,6 +410,7 @@
   }
 
   .print-footer {
+    margin-top: auto !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }

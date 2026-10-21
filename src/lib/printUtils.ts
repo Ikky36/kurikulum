@@ -56,7 +56,7 @@ export async function printHtml(
   const pageCss = `
     @page {
       size: ${widthMm}mm ${heightMm}mm;
-      margin: ${marginTop}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm;
+      margin: 0;
     }
     * {
       box-sizing: border-box;
@@ -68,9 +68,8 @@ export async function printHtml(
       padding: 0 !important;
       background: #ffffff !important;
       color: #000000 !important;
-      width: 100% !important;
-      min-height: 0 !important;
-      height: auto !important;
+      width: ${widthMm}mm !important;
+      min-height: ${heightMm}mm !important;
       font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     }
     .no-print {
@@ -86,12 +85,13 @@ export async function printHtml(
         border: none !important;
         box-shadow: none !important;
         margin: 0 !important;
-        padding: 0 !important;
         width: 100% !important;
         max-width: none !important;
-        min-height: 0 !important;
-        height: auto !important;
-        display: block !important;
+        min-height: ${heightMm}mm !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        box-sizing: border-box !important;
       }
     `
         : ''
@@ -117,6 +117,7 @@ export async function printHtml(
       break-inside: avoid !important;
     }
     .print-footer {
+      margin-top: auto !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
     }
