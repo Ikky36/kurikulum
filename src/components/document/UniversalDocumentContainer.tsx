@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { useDocumentSettings } from '@/lib/documentSettings';
-import { useDocumentTemplatesConfig, SingleDocumentTemplate } from '@/lib/documentTemplateTypes';
+import { useDocumentTemplatesConfig, SingleDocumentTemplate, defaultStudentBioFields } from '@/lib/documentTemplateTypes';
 import { interpolateVariables } from '@/lib/documentDataSources';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -68,6 +68,32 @@ export function UniversalDocumentContainer({
     size: ${docSettings.paper_size} ${effectiveOrientation}; 
     margin: ${docSettings.margin_top}mm ${docSettings.margin_right}mm ${docSettings.margin_bottom}mm ${docSettings.margin_left}mm; 
   }`;
+
+  // Kamus lengkap variabel database yang siap diisi
+  const resolvedVariables: Record<string, any> = {
+    nama_mahasiswa: studentInfo?.name || '',
+    nim: studentInfo?.nim || '',
+    program_studi: studentInfo?.program || docSettings.program_name || '',
+    fakultas: docSettings.faculty_name || '',
+    sistem_kuliah: studentInfo?.sistem_kuliah || 'Reguler',
+    semester: studentInfo?.semester || '',
+    semester_aktif: studentInfo?.semester || '',
+    tahun_akademik: studentInfo?.academic_year || '',
+    tahun_angkatan: studentInfo?.academic_year?.split('/')[0] || studentInfo?.angkatan || '2023',
+    nama_kampus: docSettings.institution_line_2 || '',
+    kota_institusi: docSettings.default_city || 'Ponorogo',
+    nama_kaprodi: docSettings.kaprodi_name || '',
+    nidn_kaprodi: docSettings.kaprodi_nidn || '',
+    nama_dekan: docSettings.dekan_name || '',
+    nidn_dekan: docSettings.dekan_nidn || '',
+    tanggal_cetak: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+    ...Object.fromEntries(
+      metadataItems
+        .filter((m) => typeof m.value === 'string' || typeof m.value === 'number')
+        .map((m) => [m.label.toLowerCase().replace(/\s+/g, '_'), String(m.value)])
+    ),
+    ...(variables || {}),
+  };
 
   return (
     <div className={`relative min-h-screen bg-slate-100 dark:bg-slate-900/90 text-slate-900 py-6 px-2 sm:px-4 ${className}`}>
@@ -222,57 +248,42 @@ export function UniversalDocumentContainer({
             )}
           </div>
 
-          {/* 3. BIODATA MAHASISWA & METADATA */}
-          {template.show_student_info && (studentInfo || metadataItems.length > 0) && (
+          {/* 3. BIODATA MAHASISWA & METADATA (DINAMIS DARI DATABASE) */}
+          {template.show_student_info && (
             <div className="mb-4 p-3 bg-slate-50 border border-slate-300 rounded text-xs leading-relaxed">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
-                {studentInfo?.name && (
-                  <div className="flex">
-                    <span className="w-28 font-medium text-slate-600">Nama Mahasiswa</span>
-                    <span className="w-3 text-center">:</span>
-                    <span className="font-semibold text-slate-900 flex-1">{studentInfo.name}</span>
-                  </div>
-                )}
-                {studentInfo?.nim && (
-                  <div className="flex">
-                    <span className="w-28 font-medium text-slate-600">NIM</span>
-                    <span className="w-3 text-center">:</span>
-                    <span className="font-semibold text-slate-900 flex-1">{studentInfo.nim}</span>
-                  </div>
-                )}
-                {studentInfo?.program && (
-                  <div className="flex">
-                    <span className="w-28 font-medium text-slate-600">Program Studi</span>
-                    <span className="w-3 text-center">:</span>
-                    <span className="text-slate-900 flex-1">{studentInfo.program}</span>
-                  </div>
-                )}
-                {studentInfo?.sistem_kuliah && (
-                  <div className="flex">
-                    <span className="w-28 font-medium text-slate-600">Sistem Kuliah</span>
-                    <span className="w-3 text-center">:</span>
-                    <span className="text-slate-900 flex-1">{studentInfo.sistem_kuliah}</span>
-                  </div>
-                )}
-                {studentInfo?.semester && (
-                  <div className="flex">
-                    <span className="w-28 font-medium text-slate-600">Semester</span>
-                    <span className="w-3 text-center">:</span>
-                    <span className="text-slate-900 flex-1">{studentInfo.semester}</span>
-                  </div>
-                )}
-                {studentInfo?.academic_year && (
-                  <div className="flex">
-                    <span className="w-28 font-medium text-slate-600">Tahun Akademik</span>
-                    <span className="w-3 text-center">:</span>
-                    <span className="text-slate-900 flex-1">{studentInfo.academic_year}</span>
-                  </div>
-                )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
+                {(template.student_bio_fields && template.student_bio_fields.length > 0
+                  ? template.student_bio_fields
+                  : defaultStudentBioFields
+                ).map((field, idx) => {
+                  const val =
+                    resolvedVariables[field.key] ||
+                    studentInfo?.[field.key] ||
+                    studentInfo?.[field.key.replace('nama_mahasiswa', 'name')] ||
+                    studentInfo?.[field.key.replace('program_studi', 'program')] ||
+                    '-';
+                  const isLongValue = String(val).length > 35;
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex ${isLongValue ? 'col-span-1 sm:col-span-2' : ''}`}
+                    >
+                      <span className="w-32 font-medium text-slate-600 shrink-0">
+                        {field.label}
+                      </span>
+                      <span className="w-3 text-center shrink-0">:</span>
+                      <span className="font-semibold text-slate-900 flex-1 break-words">
+                        {val}
+                      </span>
+                    </div>
+                  );
+                })}
 
                 {/* Additional Metadata Items */}
                 {metadataItems.map((item, idx) => (
-                  <div key={idx} className="flex col-span-1 sm:col-span-2">
-                    <span className="w-28 font-medium text-slate-600 shrink-0">{item.label}</span>
+                  <div key={`meta_${idx}`} className="flex col-span-1 sm:col-span-2">
+                    <span className="w-32 font-medium text-slate-600 shrink-0">{item.label}</span>
                     <span className="w-3 text-center shrink-0">:</span>
                     <span className="text-slate-900 flex-1 font-medium">{item.value}</span>
                   </div>
@@ -284,27 +295,7 @@ export function UniversalDocumentContainer({
           {/* 3.b TEKS NARASI / SURAT KETERANGAN */}
           {template.content_mode !== 'table_only' && template.body_text_enabled !== false && template.body_text_template && (
             <div className="my-3 text-xs leading-relaxed text-slate-800 text-justify whitespace-pre-line">
-              {interpolateVariables(template.body_text_template, {
-                nama_mahasiswa: studentInfo?.name || '',
-                nim: studentInfo?.nim || '',
-                program_studi: studentInfo?.program || docSettings.program_name || '',
-                fakultas: docSettings.faculty_name || '',
-                semester: studentInfo?.semester || '',
-                tahun_akademik: studentInfo?.academic_year || '',
-                nama_kampus: docSettings.institution_line_2 || '',
-                kota_institusi: docSettings.default_city || 'Ponorogo',
-                nama_kaprodi: docSettings.kaprodi_name || '',
-                nidn_kaprodi: docSettings.kaprodi_nidn || '',
-                nama_dekan: docSettings.dekan_name || '',
-                nidn_dekan: docSettings.dekan_nidn || '',
-                tanggal_cetak: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-                ...Object.fromEntries(
-                  metadataItems
-                    .filter((m) => typeof m.value === 'string' || typeof m.value === 'number')
-                    .map((m) => [m.label.toLowerCase().replace(/\s+/g, '_'), String(m.value)])
-                ),
-                ...(variables || {}),
-              })}
+              {interpolateVariables(template.body_text_template, resolvedVariables)}
             </div>
           )}
 

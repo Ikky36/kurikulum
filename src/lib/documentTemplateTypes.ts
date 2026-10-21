@@ -19,6 +19,18 @@ export interface DocumentSignatureConfig {
   custom_id_number?: string; // NIDN / NUPTK / NIM
 }
 
+export interface DocumentStudentBioFieldConfig {
+  key: string;        // Variable key in database, e.g. 'nama_mahasiswa', 'nim', 'program_studi', 'judul_tugas_akhir'
+  label: string;      // Label displayed, e.g. 'Nama Mahasiswa', 'NIM'
+}
+
+export const defaultStudentBioFields: DocumentStudentBioFieldConfig[] = [
+  { key: 'nama_mahasiswa', label: 'Nama Mahasiswa' },
+  { key: 'nim', label: 'NIM' },
+  { key: 'program_studi', label: 'Program Studi' },
+  { key: 'tahun_angkatan', label: 'Tahun Masuk / Angkatan' },
+];
+
 export interface SingleDocumentTemplate {
   code: string;
   name: string;
@@ -29,6 +41,7 @@ export interface SingleDocumentTemplate {
   show_kop: boolean;
   show_footer?: boolean; // Toggle footer resmi dokumen
   show_student_info: boolean;
+  student_bio_fields?: DocumentStudentBioFieldConfig[]; // Konfigurasi item biodata yang dipilih dari database
 
   // Pilihan Jenis Konten: 'all' (Teks & Tabel) | 'text_only' (Hanya Teks Editor) | 'table_only' (Hanya Tabel Builder)
   content_mode?: 'all' | 'text_only' | 'table_only';
@@ -71,6 +84,12 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     show_kop: true,
     show_footer: true,
     show_student_info: true,
+    student_bio_fields: [
+      { key: 'nama_mahasiswa', label: 'Nama Mahasiswa' },
+      { key: 'nim', label: 'NIM' },
+      { key: 'program_studi', label: 'Program Studi' },
+      { key: 'tahun_angkatan', label: 'Tahun Masuk / Angkatan' },
+    ],
     content_mode: 'all',
     body_text_enabled: false,
     body_text_template: 'Dengan ini menerangkan bahwa mahasiswa bernama {{nama_mahasiswa}} NIM {{nim}} telah melaksanakan kegiatan bimbingan skripsi dengan judul: "{{judul_tugas_akhir}}" di bawah bimbingan {{nama_pembimbing_1}}.',
@@ -109,6 +128,12 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     show_kop: true,
     show_footer: true,
     show_student_info: true,
+    student_bio_fields: [
+      { key: 'nama_mahasiswa', label: 'Nama Mahasiswa' },
+      { key: 'nim', label: 'NIM' },
+      { key: 'program_studi', label: 'Program Studi' },
+      { key: 'tahun_angkatan', label: 'Tahun Masuk / Angkatan' },
+    ],
     content_mode: 'all',
     body_text_enabled: false,
     body_text_template: 'Berdasarkan data akademik semester berjalan, mahasiswa {{nama_mahasiswa}} (NIM: {{nim}}) telah resmi mengontrak mata kuliah berikut dengan persetujuan Dosen Pembimbing Akademik.',
@@ -147,6 +172,12 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     show_kop: true,
     show_footer: true,
     show_student_info: true,
+    student_bio_fields: [
+      { key: 'nama_mahasiswa', label: 'Nama Mahasiswa' },
+      { key: 'nim', label: 'NIM' },
+      { key: 'program_studi', label: 'Program Studi' },
+      { key: 'tahun_angkatan', label: 'Tahun Masuk / Angkatan' },
+    ],
     content_mode: 'all',
     body_text_enabled: false,
     body_text_template: 'Lembar kartu perwalian akademik bagi mahasiswa {{nama_mahasiswa}} (NIM {{nim}}) bersama Dosen Pembimbing Akademik {{nama_dpa}}.',

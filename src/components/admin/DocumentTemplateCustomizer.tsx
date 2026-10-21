@@ -4,6 +4,8 @@ import {
   SingleDocumentTemplate,
   defaultDocumentTemplates,
   DocumentTableColumnConfig,
+  defaultStudentBioFields,
+  DocumentStudentBioFieldConfig,
 } from '@/lib/documentTemplateTypes';
 import {
   DOCUMENT_DATA_SOURCE_MODULES,
@@ -72,6 +74,10 @@ export function DocumentTemplateCustomizer() {
   const [selectedFieldForNewCol, setSelectedFieldForNewCol] = useState<string>('');
   const [newColumnLabel, setNewColumnLabel] = useState<string>('');
 
+  // Form State for Adding New Student Bio Item from Database
+  const [selectedBioKey, setSelectedBioKey] = useState<string>('');
+  const [newBioLabel, setNewBioLabel] = useState<string>('');
+
   // Input for adding Carbon Copy (Tembusan)
   const [newCopyItem, setNewCopyItem] = useState('');
 
@@ -107,6 +113,60 @@ export function DocumentTemplateCustomizer() {
       body_text_enabled: mode === 'all' || mode === 'text_only',
       table_enabled: mode === 'all' || mode === 'table_only',
     }));
+  };
+
+  // Student Bio Field Handlers (Pilih & Tambah dari Database)
+  const handleSelectBioKey = (key: string) => {
+    setSelectedBioKey(key);
+    const found = activeModule.textVariables.find((v) => v.key === key);
+    if (found) {
+      setNewBioLabel(found.label);
+    }
+  };
+
+  const handleAddBioField = () => {
+    if (!selectedBioKey) {
+      toast.error('Pilih data dari database terlebih dahulu.');
+      return;
+    }
+    if (!newBioLabel.trim()) {
+      toast.error('Masukkan label judul biodata.');
+      return;
+    }
+
+    const currentList = currentTemplate.student_bio_fields || defaultStudentBioFields;
+    if (currentList.some((f) => f.key === selectedBioKey)) {
+      toast.warning('Data ini sudah ada dalam kotak biodata.');
+      return;
+    }
+
+    const newField: DocumentStudentBioFieldConfig = {
+      key: selectedBioKey,
+      label: newBioLabel.trim(),
+    };
+
+    updateTemplateField('student_bio_fields', [...currentList, newField]);
+    setSelectedBioKey('');
+    setNewBioLabel('');
+    toast.success(`Item "${newField.label}" berhasil ditambahkan ke biodata!`);
+  };
+
+  const handleUpdateBioLabel = (index: number, newLabel: string) => {
+    const currentList = [...(currentTemplate.student_bio_fields || defaultStudentBioFields)];
+    currentList[index] = { ...currentList[index], label: newLabel };
+    updateTemplateField('student_bio_fields', currentList);
+  };
+
+  const handleRemoveBioField = (index: number) => {
+    const currentList = [...(currentTemplate.student_bio_fields || defaultStudentBioFields)];
+    if (currentList.length <= 1) {
+      toast.warning('Kotak biodata minimal harus memiliki 1 data.');
+      return;
+    }
+    const removedItem = currentList[index];
+    currentList.splice(index, 1);
+    updateTemplateField('student_bio_fields', currentList);
+    toast.info(`Biodata "${removedItem?.label || 'Item'}" dihapus.`);
   };
 
   // Active module definition
@@ -529,7 +589,7 @@ export function DocumentTemplateCustomizer() {
                 <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg border">
                   <div className="space-y-0.5">
                     <Label className="text-xs font-semibold">Biodata Mahasiswa</Label>
-                    <p className="text-[10px] text-muted-foreground">Kotak Nama, NIM, Prodi</p>
+                    <p className="text-[10px] text-muted-foreground">Kotak identitas mahasiswa</p>
                   </div>
                   <Switch
                     checked={currentTemplate.show_student_info}
@@ -537,6 +597,120 @@ export function DocumentTemplateCustomizer() {
                   />
                 </div>
               </div>
+
+              {/* SUB-SEKSI: KONFIGURASI ITEM BIODATA MAHASISWA DARI DATABASE */}
+              {currentTemplate.show_student_info && (
+                <div className="p-3 bg-card border rounded-lg space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b pb-2">
+                    <Label className="text-xs font-semibold flex items-center gap-1.5 text-slate-900">
+                      <Database className="h-3.5 w-3.5 text-primary" />
+                      Item Biodata yang Ditampilkan (Dapat Dipilih & Ditambah dari Database):
+                    </Label>
+                    <span className="text-[10px] text-muted-foreground">
+                      Pasti muncul di kotak identitas mahasiswa
+                    </span>
+                  </div>
+
+                  {/* DAFTAR ITEM BIODATA TERPILIH */}
+                  <div className="space-y-1.5 border rounded-lg p-2.5 bg-slate-50">
+                    {(currentTemplate.student_bio_fields && currentTemplate.student_bio_fields.length > 0
+                      ? currentTemplate.student_bio_fields
+                      : defaultStudentBioFields
+                    ).map((field, idx) => (
+                      <div
+                        key={field.key}
+                        className="flex items-center justify-between gap-2 p-1.5 bg-white border rounded text-xs shadow-xs hover:border-slate-300 transition-colors"
+                      >
+                        <div className="flex items-center gap-2 flex-1">
+                          <Badge variant="outline" className="h-5 w-5 p-0 flex items-center justify-center text-[10px] font-bold text-slate-500 bg-slate-50 shrink-0">
+                            #{idx + 1}
+                          </Badge>
+                          <Input
+                            value={field.label}
+                            onChange={(e) => handleUpdateBioLabel(idx, e.target.value)}
+                            placeholder="Label judul biodata..."
+                            className="h-7 text-xs font-medium max-w-[220px]"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant="secondary" className="text-[10px] font-mono py-0.5 px-2 bg-slate-100 text-slate-700">
+                            {`{{${field.key}}}`}
+                          </Badge>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 rounded"
+                            onClick={() => handleRemoveBioField(idx)}
+                            title={`Hapus item ${field.label}`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* FORM TAMBAH ITEM BIODATA DARI DATABASE */}
+                  <div className="p-2.5 bg-muted/40 border border-dashed rounded-lg space-y-2">
+                    <div className="text-[11px] font-semibold text-slate-800 flex items-center gap-1">
+                      <PlusCircle className="h-3.5 w-3.5 text-primary" />
+                      Tambah Data Baru ke Kotak Biodata:
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                      <div className="sm:col-span-5">
+                        <Select value={selectedBioKey} onValueChange={handleSelectBioKey}>
+                          <SelectTrigger className="h-8 text-xs bg-white">
+                            <SelectValue placeholder="Pilih data dari database..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase">
+                              Data Mahasiswa & Perkuliahan ({activeModule.name}):
+                            </div>
+                            {activeModule.textVariables.map((v) => (
+                              <SelectItem key={v.key} value={v.key} className="text-xs">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span>{v.label}</span>
+                                  <span className="text-[10px] text-muted-foreground font-mono">({`{{${v.key}}}`})</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="sm:col-span-5">
+                        <Input
+                          placeholder="Label judul (misal: Judul Skripsi)..."
+                          value={newBioLabel}
+                          onChange={(e) => setNewBioLabel(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddBioField();
+                            }
+                          }}
+                          className="h-8 text-xs bg-white"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={handleAddBioField}
+                          className="h-8 w-full text-xs gap-1 whitespace-nowrap shadow-xs"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          Tambah
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Orientasi Lembar Kertas */}
               <div className="space-y-1.5 pt-2 border-t">
@@ -1321,13 +1495,23 @@ export function DocumentTemplateCustomizer() {
                       {currentTemplate.document_title}
                     </div>
 
-                    {/* Biodata Mahasiswa Mini */}
+                    {/* Biodata Mahasiswa Mini (Dinamis dari Pilihan Database) */}
                     {currentTemplate.show_student_info && (
-                      <div className="grid grid-cols-2 gap-1 text-[6.5px] text-slate-700 bg-slate-50 p-1 rounded border border-slate-200 mb-1.5">
-                        <div>Nama : <strong>{dummyContext.nama_mahasiswa || 'Ahmad Fauzi'}</strong></div>
-                        <div>NIM : <strong>{dummyContext.nim || '422026'}</strong></div>
-                        <div>Prodi : <strong>{dummyContext.program_studi || 'PBA'}</strong></div>
-                        <div>Angkatan : <strong>{dummyContext.tahun_angkatan || '2023'}</strong></div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-0.5 text-[6.5px] text-slate-700 bg-slate-50 p-1.5 rounded border border-slate-200 mb-1.5">
+                        {(currentTemplate.student_bio_fields && currentTemplate.student_bio_fields.length > 0
+                          ? currentTemplate.student_bio_fields
+                          : defaultStudentBioFields
+                        ).map((field, idx) => {
+                          const val = dummyContext[field.key] || dummyContext[field.key.replace('nama_mahasiswa', 'name')] || 'Data Contoh';
+                          const isLong = String(val).length > 25;
+                          return (
+                            <div key={idx} className={`flex ${isLong ? 'col-span-1 sm:col-span-2' : ''}`}>
+                              <span className="w-16 font-medium text-slate-500 shrink-0 truncate">{field.label}</span>
+                              <span className="w-1.5 text-center shrink-0">:</span>
+                              <strong className="text-slate-900 flex-1 truncate">{val}</strong>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
 
