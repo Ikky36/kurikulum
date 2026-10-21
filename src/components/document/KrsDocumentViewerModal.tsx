@@ -98,41 +98,20 @@ export function KrsDocumentViewerModal({
             <table className="w-full border-collapse border border-slate-400 text-xs text-slate-800">
               <thead>
                 <tr className="bg-slate-100/90 text-slate-900 font-bold border-b border-slate-400 text-center">
-                  {isColEnabled('no') && (
-                    <th className="border border-slate-400 px-2 py-1.5 w-10">
-                      {getColLabel('no', 'No')}
+                  {template.columns.map((col) => (
+                    <th
+                      key={col.id}
+                      className={`border border-slate-400 px-2 py-1.5 ${
+                        col.id === 'no' ? 'w-10 text-center' :
+                        col.id === 'code' ? 'w-24 text-center' :
+                        col.id === 'sks' ? 'w-14 text-center' :
+                        col.id === 'class_group' ? 'w-24 text-center' :
+                        'text-left'
+                      }`}
+                    >
+                      {col.label}
                     </th>
-                  )}
-                  {isColEnabled('code') && (
-                    <th className="border border-slate-400 px-2 py-1.5 w-24">
-                      {getColLabel('code', 'Kode MK')}
-                    </th>
-                  )}
-                  {isColEnabled('name') && (
-                    <th className="border border-slate-400 px-3 py-1.5 text-left">
-                      {getColLabel('name', 'Nama Mata Kuliah')}
-                    </th>
-                  )}
-                  {isColEnabled('sks') && (
-                    <th className="border border-slate-400 px-2 py-1.5 w-14 text-center">
-                      {getColLabel('sks', 'SKS')}
-                    </th>
-                  )}
-                  {isColEnabled('class_group') && (
-                    <th className="border border-slate-400 px-2 py-1.5 w-24 text-center">
-                      {getColLabel('class_group', 'Kelas / Rombel')}
-                    </th>
-                  )}
-                  {isColEnabled('lecturer') && (
-                    <th className="border border-slate-400 px-3 py-1.5 text-left">
-                      {getColLabel('lecturer', 'Dosen Pengampu')}
-                    </th>
-                  )}
-                  {isColEnabled('schedule') && (
-                    <th className="border border-slate-400 px-2 py-1.5 text-center">
-                      {getColLabel('schedule', 'Jadwal Kuliah')}
-                    </th>
-                  )}
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -148,48 +127,77 @@ export function KrsDocumentViewerModal({
 
                     return (
                       <tr key={item.id || index} className="border-b border-slate-300 hover:bg-slate-50/50">
-                        {isColEnabled('no') && (
-                          <td className="border border-slate-400 text-center py-2 px-1 font-medium">
-                            {index + 1}
-                          </td>
-                        )}
-                        {isColEnabled('code') && (
-                          <td className="border border-slate-400 text-center py-2 px-2 font-mono text-[11px] font-semibold">
-                            {course.code || '-'}
-                          </td>
-                        )}
-                        {isColEnabled('name') && (
-                          <td className="border border-slate-400 py-2 px-3 font-medium">
-                            {course.name || '-'}
-                          </td>
-                        )}
-                        {isColEnabled('sks') && (
-                          <td className="border border-slate-400 text-center py-2 px-2 font-semibold">
-                            {sks}
-                          </td>
-                        )}
-                        {isColEnabled('class_group') && (
-                          <td className="border border-slate-400 text-center py-2 px-2">
-                            {className}
-                          </td>
-                        )}
-                        {isColEnabled('lecturer') && (
-                          <td className="border border-slate-400 py-2 px-3 text-[11px]">
-                            {lecturerName}
-                          </td>
-                        )}
-                        {isColEnabled('schedule') && (
-                          <td className="border border-slate-400 py-2 px-2 text-center text-[11px]">
-                            {item.schedule || '-'}
-                          </td>
-                        )}
+                        {template.columns.map((col) => {
+                          const baseId = col.id.split('_')[0];
+                          if (baseId === 'no') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 text-center py-2 px-1 font-medium">
+                                {index + 1}
+                              </td>
+                            );
+                          }
+                          if (baseId === 'code') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 text-center py-2 px-2 font-mono text-[11px] font-semibold">
+                                {course.code || '-'}
+                              </td>
+                            );
+                          }
+                          if (baseId === 'name') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 py-2 px-3 font-medium">
+                                {course.name || '-'}
+                              </td>
+                            );
+                          }
+                          if (baseId === 'sks') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 text-center py-2 px-2 font-semibold">
+                                {sks}
+                              </td>
+                            );
+                          }
+                          if (baseId === 'class' || baseId === 'class_group') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 text-center py-2 px-2">
+                                {className}
+                              </td>
+                            );
+                          }
+                          if (baseId === 'lecturer') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 py-2 px-3 text-[11px]">
+                                {lecturerName}
+                              </td>
+                            );
+                          }
+                          if (baseId === 'schedule') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 py-2 px-2 text-center text-[11px]">
+                                {item.schedule || '-'}
+                              </td>
+                            );
+                          }
+                          if (baseId === 'room') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 py-2 px-2 text-center text-[11px]">
+                                {item.room || '-'}
+                              </td>
+                            );
+                          }
+                          return (
+                            <td key={col.id} className="border border-slate-400 py-2 px-2 text-center text-[11px] text-slate-500">
+                              {item[col.id] || '-'}
+                            </td>
+                          );
+                        })}
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
                     <td
-                      colSpan={template.columns.filter((c) => c.enabled).length}
+                      colSpan={template.columns.length}
                       className="border border-slate-400 text-center py-8 text-slate-400 italic"
                     >
                       Belum ada mata kuliah yang dikontrak dalam KRS ini.
@@ -201,26 +209,18 @@ export function KrsDocumentViewerModal({
                 {krsItems.length > 0 && (
                   <tr className="bg-slate-100/90 font-bold border-t-2 border-slate-400">
                     <td
-                      colSpan={
-                        (isColEnabled('no') ? 1 : 0) +
-                        (isColEnabled('code') ? 1 : 0) +
-                        (isColEnabled('name') ? 1 : 0)
-                      }
+                      colSpan={Math.max(1, template.columns.findIndex((c) => c.id.startsWith('sks')) > 0 ? template.columns.findIndex((c) => c.id.startsWith('sks')) : 1)}
                       className="border border-slate-400 py-2 px-3 text-right"
                     >
                       Total Beban Studi (SKS) :
                     </td>
-                    {isColEnabled('sks') && (
+                    {template.columns.some((c) => c.id.startsWith('sks')) && (
                       <td className="border border-slate-400 py-2 px-2 text-center text-sm font-extrabold text-slate-900">
                         {totalSks}
                       </td>
                     )}
                     <td
-                      colSpan={
-                        (isColEnabled('class_group') ? 1 : 0) +
-                        (isColEnabled('lecturer') ? 1 : 0) +
-                        (isColEnabled('schedule') ? 1 : 0)
-                      }
+                      colSpan={Math.max(1, template.columns.length - (template.columns.findIndex((c) => c.id.startsWith('sks')) + 1))}
                       className="border border-slate-400 py-2 px-2 text-left text-[11px] text-slate-600 font-normal italic"
                     >
                       (Maksimal 24 SKS per semester)

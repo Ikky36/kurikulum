@@ -85,7 +85,11 @@ export const DOCUMENT_DATA_SOURCE_MODULES: Record<string, DocumentModuleDefiniti
           { id: 'topic', label: 'Bab / Pokok Bahasan', defaultEnabled: true },
           { id: 'notes', label: 'Catatan & Arahan Pembimbing', defaultEnabled: true },
           { id: 'advisor_name', label: 'Dosen Pembimbing', defaultEnabled: true },
-          { id: 'paraf', label: 'Paraf Pembimbing', defaultEnabled: true },
+          { id: 'paraf', label: 'Paraf / Validasi', defaultEnabled: true },
+          { id: 'duration', label: 'Waktu / Durasi', defaultEnabled: false },
+          { id: 'status', label: 'Status Bimbingan (ACC/Revisi)', defaultEnabled: false },
+          { id: 'feedback', label: 'Tindak Lanjut Mahasiswa', defaultEnabled: false },
+          { id: 'custom_blank', label: 'Kolom Manual / Kosong (Tulis Tangan)', defaultEnabled: false },
         ],
       },
     ],
@@ -133,6 +137,8 @@ export const DOCUMENT_DATA_SOURCE_MODULES: Record<string, DocumentModuleDefiniti
           { id: 'lecturer', label: 'Dosen Pengampu', defaultEnabled: true },
           { id: 'schedule', label: 'Jadwal Hari & Jam', defaultEnabled: false },
           { id: 'room', label: 'Ruang Kuliah', defaultEnabled: false },
+          { id: 'status_krs', label: 'Status Persetujuan DPA', defaultEnabled: false },
+          { id: 'custom_blank', label: 'Kolom Manual / Kosong (Tulis Tangan)', defaultEnabled: false },
         ],
       },
     ],
@@ -175,6 +181,9 @@ export const DOCUMENT_DATA_SOURCE_MODULES: Record<string, DocumentModuleDefiniti
           { id: 'grade', label: 'Nilai Huruf', defaultEnabled: true },
           { id: 'score_number', label: 'Nilai Angka (Indeks)', defaultEnabled: true },
           { id: 'bobot', label: 'Mutu (SKS x Indeks)', defaultEnabled: true },
+          { id: 'lecturer', label: 'Dosen Pengampu', defaultEnabled: false },
+          { id: 'status', label: 'Keterangan Lulus', defaultEnabled: false },
+          { id: 'custom_blank', label: 'Kolom Manual / Kosong (Tulis Tangan)', defaultEnabled: false },
         ],
       },
     ],
@@ -266,4 +275,60 @@ export function getDummyContextForModule(moduleId: string, customSettings?: any)
   }
 
   return context;
+}
+
+/**
+ * Menyediakan nilai dummy untuk simulasi kolom tabel di pratinjau live
+ */
+export function getDummyValueForColumn(columnId: string, customLabel?: string): string {
+  const baseId = columnId.split('_')[0]; // normalize ids like date_172...
+  switch (baseId) {
+    case 'no':
+      return '1';
+    case 'date':
+      return '14 Okt 2026';
+    case 'code':
+      return 'PBA-301';
+    case 'name':
+      return 'Metodologi Pengajaran';
+    case 'topic':
+      return 'Bab I: Latar Belakang Masalah';
+    case 'notes':
+      return 'Perbaiki fokus rumusan dan instrumen';
+    case 'advisor':
+    case 'advisor_name':
+    case 'lecturer':
+      return 'Dr. H. Ahmad Hidayat, M.A.';
+    case 'paraf':
+      return '[Paraf]';
+    case 'sks':
+      return '3';
+    case 'grade':
+      return 'A';
+    case 'score':
+    case 'score_number':
+      return '4.00';
+    case 'bobot':
+      return '12.00';
+    case 'semester':
+      return 'IV';
+    case 'class':
+    case 'class_group':
+      return 'A';
+    case 'schedule':
+      return 'Senin, 08.00';
+    case 'room':
+      return 'R.201';
+    case 'duration':
+      return '45 Menit';
+    case 'status':
+    case 'status_krs':
+      return 'Disetujui';
+    case 'feedback':
+      return 'Revisi diserahkan pekan depan';
+    case 'custom':
+    case 'custom_blank':
+    default:
+      return customLabel ? `[ ${customLabel} ]` : 'Data Contoh';
+  }
 }

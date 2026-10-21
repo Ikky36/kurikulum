@@ -3,6 +3,7 @@ import {
   useDocumentTemplatesConfig,
   SingleDocumentTemplate,
   defaultDocumentTemplates,
+  DocumentTableColumnConfig,
 } from '@/lib/documentTemplateTypes';
 import {
   DOCUMENT_DATA_SOURCE_MODULES,
@@ -10,6 +11,7 @@ import {
   getDataSourceModuleById,
   interpolateVariables,
   getDummyContextForModule,
+  getDummyValueForColumn,
 } from '@/lib/documentDataSources';
 import { useDocumentSettings } from '@/lib/documentSettings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -44,6 +46,8 @@ import {
   Type,
   AlignLeft,
   LayoutTemplate,
+  PlusCircle,
+  Tag,
 } from 'lucide-react';
 
 export function DocumentTemplateCustomizer() {
@@ -64,8 +68,9 @@ export function DocumentTemplateCustomizer() {
   // Textarea Cursor Ref for Variable Inserter
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  // Input for adding custom table column
-  const [newColumnLabel, setNewColumnLabel] = useState('');
+  // Form State for Adding New Table Column
+  const [selectedFieldForNewCol, setSelectedFieldForNewCol] = useState<string>('');
+  const [newColumnLabel, setNewColumnLabel] = useState<string>('');
 
   // Input for adding Carbon Copy (Tembusan)
   const [newCopyItem, setNewCopyItem] = useState('');
@@ -104,6 +109,10 @@ export function DocumentTemplateCustomizer() {
     }));
   };
 
+  // Active module definition
+  const activeModule = getDataSourceModuleById(currentTemplate.data_source_module || 'tugas_akhir');
+  const allModules = getAllDataSourceModules();
+
   // Variable Inserter Handler: Inserts {{variable}} at cursor position in Textarea
   const handleInsertVariable = (varKey: string) => {
     const tag = `{{${varKey}}}`;
@@ -131,13 +140,6 @@ export function DocumentTemplateCustomizer() {
   };
 
   // Table Column Handlers
-  const toggleColumn = (columnId: string, enabled: boolean) => {
-    setCurrentTemplate((prev) => ({
-      ...prev,
-      columns: prev.columns.map((col) => (col.id === columnId ? { ...col, enabled } : col)),
-    }));
-  };
-
   const updateColumnLabel = (columnId: string, label: string) => {
     setCurrentTemplate((prev) => ({
       ...prev,
@@ -145,29 +147,58 @@ export function DocumentTemplateCustomizer() {
     }));
   };
 
-  const handleAddColumn = () => {
-    if (!newColumnLabel.trim()) {
-      toast.error('Masukkan nama label kolom');
+  // Remove Column handler: replaces switch toggle so any column in list is guaranteed to appear
+  const removeColumn = (columnId: string) => {
+    if (currentTemplate.columns.length <= 1) {
+      toast.warning('Tabel minimal harus memiliki 1 kolom.');
       return;
     }
-    const cleanId = `col_${Date.now()}`;
-    const newCol = {
-      id: cleanId,
-      label: newColumnLabel.trim(),
-      enabled: true,
-      is_custom: true,
-    };
-    updateTemplateField('columns', [...(currentTemplate.columns || []), newCol]);
-    setNewColumnLabel('');
-    toast.success(`Kolom "${newCol.label}" berhasil ditambahkan`);
-  };
-
-  const handleRemoveColumn = (columnId: string) => {
+    const colToDelete = currentTemplate.columns.find((c) => c.id === columnId);
     updateTemplateField(
       'columns',
       currentTemplate.columns.filter((c) => c.id !== columnId)
     );
-    toast.info('Kolom dihapus');
+    toast.info(`Kolom "${colToDelete?.label || columnId}" dihapus dari dokumen`);
+  };
+
+  // Handle selecting field from database dropdown
+  const handleSelectFieldForNewCol = (fieldId: string) => {
+    setSelectedFieldForNewCol(fieldId);
+    if (fieldId === 'custom_blank') {
+      setNewColumnLabel('Keterangan');
+    } else {
+      const availableCols = activeModule.tableDatasets[0]?.availableColumns || [];
+      const found = availableCols.find((c) => c.id === fieldId);
+      if (found) {
+        setNewColumnLabel(found.label);
+      }
+    }
+  };
+
+  // Add new column with database field binding
+  const handleAddColumn = () => {
+    if (!newColumnLabel.trim()) {
+      toast.error('Masukkan nama label judul kolom.');
+      return;
+    }
+
+    const fieldId = selectedFieldForNewCol || 'custom_blank';
+    // If id already exists, make unique
+    const uniqueId = currentTemplate.columns.some((c) => c.id === fieldId)
+      ? `${fieldId}_${Date.now()}`
+      : fieldId;
+
+    const newCol: DocumentTableColumnConfig = {
+      id: uniqueId,
+      label: newColumnLabel.trim(),
+      enabled: true,
+      is_custom: fieldId === 'custom_blank' || fieldId.startsWith('custom_'),
+    };
+
+    updateTemplateField('columns', [...(currentTemplate.columns || []), newCol]);
+    setNewColumnLabel('');
+    setSelectedFieldForNewCol('');
+    toast.success(`Kolom "${newCol.label}" berhasil ditambahkan ke tabel!`);
   };
 
   // Signer Handlers
@@ -262,7 +293,7 @@ export function DocumentTemplateCustomizer() {
       columns: modDef.tableDatasets[0]?.availableColumns.map((c) => ({
         id: c.id,
         label: c.label,
-        enabled: c.defaultEnabled,
+        enabled: true,
       })) || [],
       rules_note_enabled: false,
       rules_note_title: 'Catatan / Ketentuan:',
@@ -312,16 +343,15 @@ export function DocumentTemplateCustomizer() {
     }
   };
 
-  // Active module definition
-  const activeModule = getDataSourceModuleById(currentTemplate.data_source_module || 'tugas_akhir');
-  const allModules = getAllDataSourceModules();
-
   // Dummy context for live preview
   const dummyContext = getDummyContextForModule(activeModule.id, docSettings);
   const previewBodyText = interpolateVariables(currentTemplate.body_text_template || '', dummyContext);
 
   const isPortrait = (currentTemplate.orientation || 'portrait') === 'portrait';
   const currentContentMode = currentTemplate.content_mode || 'all';
+
+  // Available database columns for the active module
+  const availableDbCols = activeModule.tableDatasets[0]?.availableColumns || [];
 
   return (
     <div className="space-y-6">
@@ -622,10 +652,12 @@ export function DocumentTemplateCustomizer() {
                           mod.tableDatasets[0].availableColumns.map((c) => ({
                             id: c.id,
                             label: c.label,
-                            enabled: c.defaultEnabled,
+                            enabled: true,
                           }))
                         );
                       }
+                      setSelectedFieldForNewCol('');
+                      setNewColumnLabel('');
                       toast.success(`Modul data dialihkan ke ${mod.name}`);
                     }}
                   >
@@ -820,9 +852,9 @@ export function DocumentTemplateCustomizer() {
                 </div>
               )}
 
-              {/* B. BAGIAN TABEL BUILDER (DATA BERULANG) */}
+              {/* B. BAGIAN TABEL BUILDER (DATA BERULANG DENGAN TOMBOL DELETE & PEMILIH DATABASE) */}
               {currentContentMode !== 'text_only' && (
-                <div className="p-3.5 border border-primary/20 bg-card rounded-lg space-y-3">
+                <div className="p-3.5 border border-primary/20 bg-card rounded-lg space-y-3.5">
                   <div className="flex items-center justify-between border-b pb-2">
                     <div className="flex items-center gap-1.5 font-semibold text-xs text-slate-900">
                       <TableIcon className="h-3.5 w-3.5 text-primary" />
@@ -835,71 +867,148 @@ export function DocumentTemplateCustomizer() {
                   </div>
 
                   {currentTemplate.table_enabled !== false && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-slate-700">Daftar Kolom Tabel:</span>
-                        <span className="text-[10px] text-muted-foreground">Aktifkan & sesuaikan judul kolom</span>
+                    <div className="space-y-3.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                        <span className="text-xs font-semibold text-slate-800">Daftar Kolom Tabel yang Ditampilkan:</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          Semua kolom di bawah pasti muncul di dokumen. Klik tombol hapus untuk menghilangkan kolom.
+                        </span>
                       </div>
 
+                      {/* DAFTAR BARIS KOLOM (DILENGKAPI TOMBOL DELETE PADA SETIAP BARIS) */}
                       <div className="space-y-2 border rounded-lg p-2.5 bg-slate-50">
-                        {currentTemplate.columns.map((col) => (
-                          <div
-                            key={col.id}
-                            className="flex items-center justify-between gap-3 p-1.5 bg-white border rounded text-xs"
-                          >
-                            <div className="flex items-center gap-2 flex-1">
-                              <Switch
-                                checked={col.enabled}
-                                onCheckedChange={(checked) => toggleColumn(col.id, checked)}
-                              />
-                              <Input
-                                value={col.label}
-                                onChange={(e) => updateColumnLabel(col.id, e.target.value)}
-                                className="h-7 text-xs font-medium max-w-[200px]"
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] text-muted-foreground font-mono">id: {col.id}</span>
-                              {col.is_custom && (
+                        {currentTemplate.columns.map((col, idx) => {
+                          const baseId = col.id.split('_')[0];
+                          const matchedField = availableDbCols.find((c) => c.id === baseId);
+                          const isCustom = col.is_custom || baseId === 'custom' || baseId === 'col';
+
+                          return (
+                            <div
+                              key={col.id}
+                              className="flex items-center justify-between gap-3 p-2 bg-white border rounded-lg shadow-xs text-xs hover:border-slate-300 transition-colors"
+                            >
+                              <div className="flex items-center gap-2.5 flex-1">
+                                <Badge variant="outline" className="h-6 w-6 p-0 flex items-center justify-center text-[10px] font-bold text-slate-600 bg-slate-50 shrink-0">
+                                  #{idx + 1}
+                                </Badge>
+                                <Input
+                                  value={col.label}
+                                  onChange={(e) => updateColumnLabel(col.id, e.target.value)}
+                                  placeholder="Nama judul kolom..."
+                                  className="h-8 text-xs font-semibold max-w-[240px]"
+                                />
+                              </div>
+
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Badge
+                                  variant="secondary"
+                                  className="text-[10px] font-mono py-0.5 px-2 bg-slate-100 text-slate-700 flex items-center gap-1"
+                                >
+                                  {isCustom ? (
+                                    <>
+                                      <Tag className="h-2.5 w-2.5 text-amber-600" />
+                                      <span>Manual / Kosong</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Database className="h-2.5 w-2.5 text-primary" />
+                                      <span>{matchedField?.label || col.id}</span>
+                                    </>
+                                  )}
+                                </Badge>
+
+                                {/* TOMBOL DELETE PADA SETIAP BARIS KOLOM */}
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  className="h-6 w-6 p-0 text-destructive hover:bg-destructive/10"
-                                  onClick={() => handleRemoveColumn(col.id)}
+                                  className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 rounded-md"
+                                  onClick={() => removeColumn(col.id)}
+                                  title={`Hapus kolom ${col.label} dari dokumen`}
                                 >
-                                  <Trash2 className="h-3 w-3" />
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
-                              )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
 
-                      {/* FORM TAMBAH KOLOM BARU (BISA DITAMBAH) */}
-                      <div className="flex items-center gap-2 pt-1 border-t">
-                        <Input
-                          placeholder="Nama kolom baru (contoh: Keterangan / Tindak Lanjut)..."
-                          value={newColumnLabel}
-                          onChange={(e) => setNewColumnLabel(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleAddColumn();
-                            }
-                          }}
-                          className="h-8 text-xs"
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={handleAddColumn}
-                          className="h-8 text-xs gap-1 whitespace-nowrap"
-                        >
-                          <Plus className="h-3.5 w-3.5" />
-                          Tambah Kolom
-                        </Button>
+                      {/* FORM TAMBAH KOLOM BARU (MEMILIH & MENGAITKAN DATA DARI DATABASE) */}
+                      <div className="p-3 bg-muted/40 border border-dashed rounded-lg space-y-2.5">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
+                          <PlusCircle className="h-4 w-4 text-primary" />
+                          Tambah Kolom Baru ke Tabel:
+                        </div>
+                        <p className="text-[11px] text-muted-foreground">
+                          Pilih sumber data dari database atau buat kolom manual/kosong, lalu sesuaikan judul kolomnya.
+                        </p>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2 pt-1">
+                          {/* 1. Pemilih Sumber Field Database */}
+                          <div className="sm:col-span-5">
+                            <Select
+                              value={selectedFieldForNewCol}
+                              onValueChange={handleSelectFieldForNewCol}
+                            >
+                              <SelectTrigger className="h-8 text-xs bg-white">
+                                <SelectValue placeholder="Pilih field database..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase">
+                                  Field Database ({activeModule.name}):
+                                </div>
+                                {availableDbCols.map((c) => (
+                                  <SelectItem key={c.id} value={c.id} className="text-xs">
+                                    <div className="flex items-center gap-1.5">
+                                      <Database className="h-3 w-3 text-primary shrink-0" />
+                                      <span>{c.label}</span>
+                                      <span className="text-[10px] text-muted-foreground font-mono">({c.id})</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                                <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase border-t mt-1">
+                                  Kolom Kustom:
+                                </div>
+                                <SelectItem value="custom_blank" className="text-xs">
+                                  <div className="flex items-center gap-1.5">
+                                    <Tag className="h-3 w-3 text-amber-600 shrink-0" />
+                                    <span>Kolom Manual / Kosong (Tulis Tangan / Paraf)</span>
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {/* 2. Input Label Judul Kolom */}
+                          <div className="sm:col-span-5">
+                            <Input
+                              placeholder="Judul kolom di tabel..."
+                              value={newColumnLabel}
+                              onChange={(e) => setNewColumnLabel(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddColumn();
+                                }
+                              }}
+                              className="h-8 text-xs bg-white"
+                            />
+                          </div>
+
+                          {/* 3. Tombol Tambahkan */}
+                          <div className="sm:col-span-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleAddColumn}
+                              className="h-8 w-full text-xs gap-1 whitespace-nowrap shadow-xs"
+                            >
+                              <Plus className="h-3.5 w-3.5" />
+                              Tambah
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1229,29 +1338,25 @@ export function DocumentTemplateCustomizer() {
                       </div>
                     )}
 
-                    {/* Tabel Data Dummy */}
+                    {/* Tabel Data Dummy (Merender Semua Kolom yang Ada di Daftar) */}
                     {currentContentMode !== 'text_only' && currentTemplate.table_enabled !== false && (
                       <table className="w-full border-collapse border border-slate-300 text-[6px]">
                         <thead>
                           <tr className="bg-slate-100">
-                            {currentTemplate.columns
-                              .filter((c) => c.enabled)
-                              .map((c) => (
-                                <th key={c.id} className="border border-slate-300 p-0.5 text-center font-semibold">
-                                  {c.label}
-                                </th>
-                              ))}
+                            {currentTemplate.columns.map((c) => (
+                              <th key={c.id} className="border border-slate-300 p-0.5 text-center font-semibold">
+                                {c.label}
+                              </th>
+                            ))}
                           </tr>
                         </thead>
                         <tbody>
                           <tr>
-                            {currentTemplate.columns
-                              .filter((c) => c.enabled)
-                              .map((c, i) => (
-                                <td key={c.id} className="border border-slate-300 p-0.5 text-center text-slate-600">
-                                  {i === 0 ? '1' : i === currentTemplate.columns.filter((col) => col.enabled).length - 1 ? '[Paraf]' : 'Data Contoh'}
-                                </td>
-                              ))}
+                            {currentTemplate.columns.map((c) => (
+                              <td key={c.id} className="border border-slate-300 p-0.5 text-center text-slate-600">
+                                {getDummyValueForColumn(c.id, c.label)}
+                              </td>
+                            ))}
                           </tr>
                         </tbody>
                       </table>

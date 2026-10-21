@@ -133,36 +133,20 @@ export function KartuBimbinganViewerModal({
             <table className="w-full border-collapse border border-slate-400 text-xs text-slate-800">
               <thead>
                 <tr className="bg-slate-100/90 text-slate-900 font-bold border-b border-slate-400 text-center">
-                  {isColEnabled('no') && (
-                    <th className="border border-slate-400 px-2 py-1.5 w-10">
-                      {getColLabel('no', 'No')}
+                  {template.columns.map((col) => (
+                    <th
+                      key={col.id}
+                      className={`border border-slate-400 px-2 py-1.5 ${
+                        col.id === 'no' ? 'w-10 text-center' :
+                        col.id === 'date' ? 'w-28 text-center whitespace-nowrap' :
+                        col.id === 'paraf' ? 'w-28 text-center' :
+                        col.id === 'advisor_name' ? 'w-36 text-left' :
+                        'text-left'
+                      }`}
+                    >
+                      {col.label}
                     </th>
-                  )}
-                  {isColEnabled('date') && (
-                    <th className="border border-slate-400 px-2 py-1.5 w-28 whitespace-nowrap">
-                      {getColLabel('date', 'Hari / Tanggal')}
-                    </th>
-                  )}
-                  {isColEnabled('topic') && (
-                    <th className="border border-slate-400 px-3 py-1.5 text-left">
-                      {getColLabel('topic', 'Bab / Pokok Bahasan')}
-                    </th>
-                  )}
-                  {isColEnabled('notes') && (
-                    <th className="border border-slate-400 px-3 py-1.5 text-left">
-                      {getColLabel('notes', 'Catatan & Arahan Pembimbing')}
-                    </th>
-                  )}
-                  {isColEnabled('advisor_name') && (
-                    <th className="border border-slate-400 px-2 py-1.5 text-left w-36">
-                      {getColLabel('advisor_name', 'Dosen Pembimbing')}
-                    </th>
-                  )}
-                  {isColEnabled('paraf') && (
-                    <th className="border border-slate-400 px-2 py-1.5 w-28 text-center">
-                      {getColLabel('paraf', 'Paraf / Validasi')}
-                    </th>
-                  )}
+                  ))}
                 </tr>
               </thead>
               <tbody>
@@ -174,58 +158,97 @@ export function KartuBimbinganViewerModal({
 
                     return (
                       <tr key={log.id || index} className="border-b border-slate-300 hover:bg-slate-50/50">
-                        {isColEnabled('no') && (
-                          <td className="border border-slate-400 text-center py-2 px-1 font-medium">
-                            {index + 1}
-                          </td>
-                        )}
-                        {isColEnabled('date') && (
-                          <td className="border border-slate-400 text-center py-2 px-2 whitespace-nowrap text-[11px]">
-                            {formatDate(log.date)}
-                          </td>
-                        )}
-                        {isColEnabled('topic') && (
-                          <td className="border border-slate-400 py-2 px-3 align-top leading-relaxed font-medium">
-                            {log.problem || '-'}
-                          </td>
-                        )}
-                        {isColEnabled('notes') && (
-                          <td className="border border-slate-400 py-2 px-3 align-top leading-relaxed text-slate-700">
-                            {log.solution || (
-                              <span className="text-slate-400 italic text-[11px]">
-                                {isApproved ? 'Telah disetujui tanpa catatan tambahan' : 'Menunggu tanggapan'}
-                              </span>
-                            )}
-                          </td>
-                        )}
-                        {isColEnabled('advisor_name') && (
-                          <td className="border border-slate-400 py-2 px-2 align-top text-[11px]">
-                            {advisorProfile.full_name || '-'}
-                          </td>
-                        )}
-                        {isColEnabled('paraf') && (
-                          <td className="border border-slate-400 py-1 px-1 text-center align-middle">
-                            {isApproved ? (
-                              parafImg ? (
-                                <div className="h-9 w-full flex items-center justify-center">
-                                  <img
-                                    src={parafImg}
-                                    alt="Paraf Dosen"
-                                    className="max-h-8 max-w-[85px] object-contain drop-shadow-sm"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">
-                                  <Check className="h-3 w-3" /> Valid
-                                </div>
-                              )
-                            ) : (
-                              <span className="text-[10px] text-slate-400 italic">
-                                Belum diparaf
-                              </span>
-                            )}
-                          </td>
-                        )}
+                        {template.columns.map((col) => {
+                          const baseId = col.id.split('_')[0];
+                          if (baseId === 'no') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 text-center py-2 px-1 font-medium">
+                                {index + 1}
+                              </td>
+                            );
+                          }
+                          if (baseId === 'date') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 text-center py-2 px-2 whitespace-nowrap text-[11px]">
+                                {formatDate(log.date)}
+                              </td>
+                            );
+                          }
+                          if (baseId === 'topic') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 py-2 px-3 align-top leading-relaxed font-medium">
+                                {log.problem || '-'}
+                              </td>
+                            );
+                          }
+                          if (baseId === 'notes') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 py-2 px-3 align-top leading-relaxed text-slate-700">
+                                {log.solution || (
+                                  <span className="text-slate-400 italic text-[11px]">
+                                    {isApproved ? 'Telah disetujui tanpa catatan tambahan' : 'Menunggu tanggapan'}
+                                  </span>
+                                )}
+                              </td>
+                            );
+                          }
+                          if (baseId === 'advisor' || baseId === 'advisor_name') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 py-2 px-2 align-top text-[11px]">
+                                {advisorProfile.full_name || '-'}
+                              </td>
+                            );
+                          }
+                          if (baseId === 'paraf') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 py-1 px-1 text-center align-middle">
+                                {isApproved ? (
+                                  parafImg ? (
+                                    <div className="h-9 w-full flex items-center justify-center">
+                                      <img
+                                        src={parafImg}
+                                        alt="Paraf Dosen"
+                                        className="max-h-8 max-w-[85px] object-contain drop-shadow-sm"
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-semibold">
+                                      <Check className="h-3 w-3" /> Valid
+                                    </div>
+                                  )
+                                ) : (
+                                  <span className="text-[10px] text-slate-400 italic">
+                                    Belum diparaf
+                                  </span>
+                                )}
+                              </td>
+                            );
+                          }
+                          if (baseId === 'duration') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 py-2 px-2 text-center text-[11px]">
+                                {log.duration || '-'}
+                              </td>
+                            );
+                          }
+                          if (baseId === 'status') {
+                            return (
+                              <td key={col.id} className="border border-slate-400 py-2 px-2 text-center text-[11px]">
+                                {isApproved ? 'Disetujui' : 'Revisi'}
+                              </td>
+                            );
+                          }
+                          // Custom or manual column
+                          return (
+                            <td key={col.id} className="border border-slate-400 py-2 px-2 text-center text-[11px] text-slate-500">
+                              {log[col.id] || '-'}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })
+                ) : (
                       </tr>
                     );
                   })
