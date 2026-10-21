@@ -79,7 +79,7 @@ export function DocumentSettingsTab() {
     try {
       const fileExt = file.name.split('.').pop() || 'png';
       const timestamp = Date.now();
-      const filePath = `documents/${fieldKey}_${timestamp}.${fileExt}`;
+      const filePath = `app/documents/${fieldKey}_${timestamp}.${fileExt}`;
 
       const { error: uploadError } = await supabase.storage
         .from('avatars')
@@ -88,7 +88,8 @@ export function DocumentSettingsTab() {
       if (uploadError) throw uploadError;
 
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      updateField(fieldKey, urlData.publicUrl);
+      const publicUrl = `${urlData.publicUrl}?t=${timestamp}`;
+      updateField(fieldKey, publicUrl);
       toast.success('Gambar berhasil diunggah');
     } catch (err: any) {
       toast.error('Gagal mengunggah gambar: ' + err.message);
