@@ -111,6 +111,19 @@ export function KartuBimbinganViewerModal({
             program: mhsProgram,
             sistem_kuliah: mhsSistem,
           }}
+          variables={{
+            nama_mahasiswa: mhsName,
+            nim: mhsNim,
+            program_studi: mhsProgram,
+            judul_tugas_akhir: submission.title || '',
+            nama_pembimbing_1: advisor1?.profiles?.full_name || '',
+            nidn_pembimbing_1: advisor1?.profiles?.nip || advisor1?.profiles?.nidn || '',
+            nama_pembimbing_2: advisor2?.profiles?.full_name || '',
+            nidn_pembimbing_2: advisor2?.profiles?.nip || advisor2?.profiles?.nidn || '',
+            jenis_tugas_akhir: submission.ta_types?.name || 'Skripsi',
+            status_tugas_akhir: submission.status || '',
+            total_pertemuan_bimbingan: `${sortedLogs.length} Pertemuan`,
+          }}
           metadataItems={metadataItems}
           signaturesData={signaturesData}
           onClose={() => onOpenChange(false)}

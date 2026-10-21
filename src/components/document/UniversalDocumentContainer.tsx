@@ -26,6 +26,7 @@ export interface UniversalDocumentContainerProps {
     academic_year?: string;
     [key: string]: any;
   };
+  variables?: Record<string, any>;
   metadataItems?: { label: string; value: string | React.ReactNode }[];
   signaturesData?: Record<string, DocumentSignatureData>;
   children: React.ReactNode;
@@ -38,6 +39,7 @@ export function UniversalDocumentContainer({
   documentTitle,
   documentSubtitle,
   studentInfo,
+  variables,
   metadataItems = [],
   signaturesData = {},
   children,
@@ -296,7 +298,12 @@ export function UniversalDocumentContainer({
                 nama_dekan: docSettings.dekan_name || '',
                 nidn_dekan: docSettings.dekan_nidn || '',
                 tanggal_cetak: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
-                ...metadataItems.reduce((acc, curr) => ({ ...acc, [curr.label.toLowerCase().replace(/\s+/g, '_')]: curr.value }), {}),
+                ...Object.fromEntries(
+                  metadataItems
+                    .filter((m) => typeof m.value === 'string' || typeof m.value === 'number')
+                    .map((m) => [m.label.toLowerCase().replace(/\s+/g, '_'), String(m.value)])
+                ),
+                ...(variables || {}),
               })}
             </div>
           )}

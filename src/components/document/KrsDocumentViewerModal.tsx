@@ -77,6 +77,16 @@ export function KrsDocumentViewerModal({
             semester: semesterName,
             academic_year: academicYearName,
           }}
+          variables={{
+            nama_mahasiswa: mhsName,
+            nim: mhsNim,
+            program_studi: mhsProgram,
+            semester_aktif: semesterName || '',
+            tahun_akademik: academicYearName || '',
+            total_sks_semester: `${totalSks} SKS`,
+            nama_dpa: dpaProfile?.full_name || '',
+            nidn_dpa: dpaProfile?.nip || dpaProfile?.nidn || '',
+          }}
           metadataItems={[
             { label: 'Dosen Pembimbing (DPA)', value: dpaProfile?.full_name || 'Belum Ditentukan' },
           ]}
