@@ -98,42 +98,127 @@ export function KartuBimbinganViewerModal({
 
     // Parse status pengesahan dari comments submission
     const approvalState = parseApprovalsFromComments(submission.comments);
-    const adv1Approval = approvalState.signers.advisor_1;
-    const adv2Approval = approvalState.signers.advisor_2;
-    const kaprodiApproval = approvalState.signers.kaprodi;
+    const signers = approvalState.signers || {};
+
+    const adv1Approval =
+      signers.advisor_1 ||
+      Object.values(signers).find(
+        (s: any) =>
+          s.role_key === 'advisor_1' ||
+          s.role_label?.toLowerCase().includes('pembimbing 1') ||
+          s.role_label?.toLowerCase().includes('pembimbing i') ||
+          s.role_label?.toLowerCase().includes('pembimbing utama')
+      );
+
+    const adv2Approval =
+      signers.advisor_2 ||
+      Object.values(signers).find(
+        (s: any) =>
+          s.role_key === 'advisor_2' ||
+          s.role_label?.toLowerCase().includes('pembimbing 2') ||
+          s.role_label?.toLowerCase().includes('pembimbing ii') ||
+          s.role_label?.toLowerCase().includes('pembimbing pendamping')
+      );
+
+    const kaprodiApproval =
+      signers.kaprodi ||
+      Object.values(signers).find(
+        (s: any) =>
+          s.role_key === 'kaprodi' ||
+          s.role_label?.toLowerCase().includes('kaprodi') ||
+          s.role_label?.toLowerCase().includes('ketua program studi') ||
+          s.role_label?.toLowerCase().includes('ketua prodi')
+      );
 
     // Signatures Data: tanda tangan digital hanya disuplai jika masing-masing pihak telah mengesahkan
-    const signaturesData: Record<string, DocumentSignatureData> = {
-      student: {
-        name: mhsName,
-        id_number: mhsNim,
-        signed_at: sortedLogs[0]?.date || submission.created_at,
-        is_approved: true,
-      },
-      advisor_1: {
-        name: adv1Approval?.signer_name || adv1Profile?.full_name || '....................................',
-        id_number: adv1Approval?.signer_nidn || adv1Profile?.nip,
-        signature_url: adv1Approval?.is_approved ? (adv1Approval.signature_url || adv1Profile?.signature_url) : null,
-        paraf_url: adv1Profile?.paraf_url,
-        signed_at: adv1Approval?.is_approved ? (adv1Approval.approved_at || lastApprovedLog?.date) : null,
-        is_approved: !!adv1Approval?.is_approved,
-      },
-      advisor_2: {
-        name: adv2Approval?.signer_name || adv2Profile?.full_name || '....................................',
-        id_number: adv2Approval?.signer_nidn || adv2Profile?.nip,
-        signature_url: adv2Approval?.is_approved ? (adv2Approval.signature_url || adv2Profile?.signature_url) : null,
-        paraf_url: adv2Profile?.paraf_url,
-        signed_at: adv2Approval?.is_approved ? (adv2Approval.approved_at || lastApprovedLog?.date) : null,
-        is_approved: !!adv2Approval?.is_approved,
-      },
-      kaprodi: {
-        name: kaprodiApproval?.signer_name || docSettings.kaprodi_name || '....................................',
-        id_number: kaprodiApproval?.signer_nidn || docSettings.kaprodi_nidn,
-        signature_url: kaprodiApproval?.is_approved ? (kaprodiApproval.signature_url || docSettings.kaprodi_signature_url) : null,
-        signed_at: kaprodiApproval?.is_approved ? (kaprodiApproval.approved_at || submission.approved_at) : null,
-        is_approved: !!kaprodiApproval?.is_approved,
-      },
+    const adv1SigData: DocumentSignatureData = {
+      name: adv1Approval?.signer_name || adv1Profile?.full_name || '....................................',
+      id_number: adv1Approval?.signer_nidn || adv1Profile?.nip,
+      signature_url: adv1Approval?.is_approved
+        ? (adv1Approval.signature_url || adv1Profile?.signature_url || adv1Approval.paraf_url || adv1Profile?.paraf_url)
+        : null,
+      paraf_url: adv1Approval?.paraf_url || adv1Profile?.paraf_url,
+      signed_at: adv1Approval?.is_approved ? (adv1Approval.approved_at || lastApprovedLog?.date) : null,
+      is_approved: !!adv1Approval?.is_approved,
     };
+
+    const adv2SigData: DocumentSignatureData = {
+      name: adv2Approval?.signer_name || adv2Profile?.full_name || '....................................',
+      id_number: adv2Approval?.signer_nidn || adv2Profile?.nip,
+      signature_url: adv2Approval?.is_approved
+        ? (adv2Approval.signature_url || adv2Profile?.signature_url || adv2Approval.paraf_url || adv2Profile?.paraf_url)
+        : null,
+      paraf_url: adv2Approval?.paraf_url || adv2Profile?.paraf_url,
+      signed_at: adv2Approval?.is_approved ? (adv2Approval.approved_at || lastApprovedLog?.date) : null,
+      is_approved: !!adv2Approval?.is_approved,
+    };
+
+    const kaprodiSigData: DocumentSignatureData = {
+      name: kaprodiApproval?.signer_name || docSettings.kaprodi_name || '....................................',
+      id_number: kaprodiApproval?.signer_nidn || docSettings.kaprodi_nidn,
+      signature_url: kaprodiApproval?.is_approved ? (kaprodiApproval.signature_url || docSettings.kaprodi_signature_url) : null,
+      signed_at: kaprodiApproval?.is_approved ? (kaprodiApproval.approved_at || submission.approved_at) : null,
+      is_approved: !!kaprodiApproval?.is_approved,
+    };
+
+    const studentSigData: DocumentSignatureData = {
+      name: mhsName,
+      id_number: mhsNim,
+      signed_at: sortedLogs[0]?.date || submission.created_at,
+      is_approved: true,
+    };
+
+    const signaturesData: Record<string, DocumentSignatureData> = {
+      student: studentSigData,
+      advisor_1: adv1SigData,
+      advisor_2: adv2SigData,
+      kaprodi: kaprodiSigData,
+    };
+
+    // Petakan juga secara eksplisit ke setiap ID signature di konfigurasi template aktif
+    if (Array.isArray(template?.signatures)) {
+      template.signatures.forEach((s) => {
+        if (!s.id) return;
+        const roleType = (s.role_type || '').toLowerCase();
+        const roleLabel = (s.role_label || '').toLowerCase();
+        const idLower = s.id.toLowerCase();
+
+        if (
+          roleType === 'advisor_1' ||
+          idLower.includes('advisor_1') ||
+          idLower.includes('pembimbing_1') ||
+          roleLabel.includes('pembimbing 1') ||
+          roleLabel.includes('pembimbing i') ||
+          roleLabel.includes('pembimbing utama')
+        ) {
+          signaturesData[s.id] = adv1SigData;
+        } else if (
+          roleType === 'advisor_2' ||
+          idLower.includes('advisor_2') ||
+          idLower.includes('pembimbing_2') ||
+          roleLabel.includes('pembimbing 2') ||
+          roleLabel.includes('pembimbing ii') ||
+          roleLabel.includes('pembimbing pendamping')
+        ) {
+          signaturesData[s.id] = adv2SigData;
+        } else if (
+          roleType === 'kaprodi' ||
+          idLower.includes('kaprodi') ||
+          roleLabel.includes('kaprodi') ||
+          roleLabel.includes('ketua program studi') ||
+          roleLabel.includes('ketua prodi')
+        ) {
+          signaturesData[s.id] = kaprodiSigData;
+        } else if (
+          roleType === 'student' ||
+          idLower.includes('student') ||
+          idLower.includes('mahasiswa') ||
+          roleLabel.includes('mahasiswa')
+        ) {
+          signaturesData[s.id] = studentSigData;
+        }
+      });
+    }
 
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>

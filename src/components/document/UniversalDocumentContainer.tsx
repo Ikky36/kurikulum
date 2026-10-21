@@ -445,9 +445,97 @@ export function UniversalDocumentContainer({
                 {(template.signatures || [])
                   .filter((s) => s.enabled)
                   .map((sig) => {
-                    const baseData = signaturesData[sig.id] || {};
-                    const isKaprodi = sig.id === 'kaprodi' || (sig as any).role_type === 'kaprodi';
-                    const isDekan = sig.id === 'dekan' || (sig as any).role_type === 'dekan';
+                    // Resolusi data tanda tangan secara cerdas berdasarkan ID, role_type, atau role_label
+                    const getResolvedBaseData = (): DocumentSignatureData => {
+                      if (!signaturesData) return { name: '' };
+                      if (signaturesData[sig.id]) return signaturesData[sig.id];
+                      if (sig.role_type && signaturesData[sig.role_type]) return signaturesData[sig.role_type];
+
+                      const roleType = (sig.role_type || '').toLowerCase();
+                      const roleLabel = (sig.role_label || '').toLowerCase();
+                      const idLower = (sig.id || '').toLowerCase();
+
+                      // Dosen Pembimbing 1 / Utama
+                      if (
+                        roleType === 'advisor_1' ||
+                        idLower.includes('advisor_1') ||
+                        idLower.includes('pembimbing_1') ||
+                        idLower.includes('pembimbing1') ||
+                        roleLabel.includes('pembimbing 1') ||
+                        roleLabel.includes('pembimbing i') ||
+                        roleLabel.includes('pembimbing utama')
+                      ) {
+                        return signaturesData['advisor_1'] || signaturesData['advisor1'] || { name: '' };
+                      }
+
+                      // Dosen Pembimbing 2 / Pendamping
+                      if (
+                        roleType === 'advisor_2' ||
+                        idLower.includes('advisor_2') ||
+                        idLower.includes('pembimbing_2') ||
+                        idLower.includes('pembimbing2') ||
+                        roleLabel.includes('pembimbing 2') ||
+                        roleLabel.includes('pembimbing ii') ||
+                        roleLabel.includes('pembimbing pendamping')
+                      ) {
+                        return signaturesData['advisor_2'] || signaturesData['advisor2'] || { name: '' };
+                      }
+
+                      // Kaprodi / Ketua Program Studi
+                      if (
+                        roleType === 'kaprodi' ||
+                        idLower.includes('kaprodi') ||
+                        roleLabel.includes('kaprodi') ||
+                        roleLabel.includes('ketua program studi') ||
+                        roleLabel.includes('ketua prodi')
+                      ) {
+                        return signaturesData['kaprodi'] || { name: '' };
+                      }
+
+                      // Dekan Fakultas
+                      if (
+                        roleType === 'dekan' ||
+                        idLower.includes('dekan') ||
+                        roleLabel.includes('dekan')
+                      ) {
+                        return signaturesData['dekan'] || { name: '' };
+                      }
+
+                      // Mahasiswa
+                      if (
+                        roleType === 'student' ||
+                        idLower.includes('student') ||
+                        idLower.includes('mahasiswa') ||
+                        roleLabel.includes('mahasiswa') ||
+                        roleLabel.includes('pemohon')
+                      ) {
+                        return signaturesData['student'] || { name: '' };
+                      }
+
+                      // DPA (Dosen Pembimbing Akademik)
+                      if (
+                        roleType === 'dpa' ||
+                        idLower.includes('dpa') ||
+                        roleLabel.includes('pembimbing akademik') ||
+                        roleLabel.includes('perwalian')
+                      ) {
+                        return signaturesData['dpa'] || { name: '' };
+                      }
+
+                      return { name: '' };
+                    };
+
+                    const baseData = getResolvedBaseData();
+                    const isKaprodi =
+                      sig.id === 'kaprodi' ||
+                      (sig as any).role_type === 'kaprodi' ||
+                      (sig.role_label || '').toLowerCase().includes('kaprodi') ||
+                      (sig.role_label || '').toLowerCase().includes('ketua pro');
+
+                    const isDekan =
+                      sig.id === 'dekan' ||
+                      (sig as any).role_type === 'dekan' ||
+                      (sig.role_label || '').toLowerCase().includes('dekan');
 
                     const resolvedName =
                       baseData.name ||

@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 
 import { TADosenMilestones } from '@/pages/tugas-akhir/TADosenMilestones';
 import { KartuBimbinganViewerModal } from '@/components/document/KartuBimbinganViewerModal';
-import { parseApprovalsFromComments, useTaApprovalActions } from '@/lib/documentApprovals';
+import { parseApprovalsFromComments, serializeApprovalsToComments, useTaApprovalActions } from '@/lib/documentApprovals';
 
 export function BimbinganTugasAkhirTab() {
   const { user, profile } = useAuth();
@@ -57,6 +57,16 @@ export function BimbinganTugasAkhirTab() {
     },
     enabled: !!user?.id
   });
+
+  // Sinkronkan selectedAdvisorship saat query advisorships diperbarui dari server
+  React.useEffect(() => {
+    if (selectedAdvisorship && advisorships) {
+      const refreshed = advisorships.find((a: any) => a.id === selectedAdvisorship.id);
+      if (refreshed) {
+        setSelectedAdvisorship(refreshed);
+      }
+    }
+  }, [advisorships]);
 
   const { data: consultationLogs, isLoading: loadingLogs } = useQuery({
     queryKey: ['ta_consultation_logs', selectedAdvisorship?.ta_submissions?.id],
@@ -317,6 +327,20 @@ export function BimbinganTugasAkhirTab() {
                                   revokeAdvisorApproval.mutate({
                                     submissionId: selectedAdvisorship.ta_submissions.id,
                                     roleKey: myRoleKey,
+                                  }, {
+                                    onSuccess: (updatedApproval) => {
+                                      setSelectedAdvisorship((prev: any) => {
+                                        if (!prev) return prev;
+                                        const newComments = serializeApprovalsToComments(prev.ta_submissions?.comments, updatedApproval);
+                                        return {
+                                          ...prev,
+                                          ta_submissions: {
+                                            ...prev.ta_submissions,
+                                            comments: newComments,
+                                          },
+                                        };
+                                      });
+                                    }
                                   });
                                 }
                               }}
@@ -341,9 +365,23 @@ export function BimbinganTugasAkhirTab() {
                                     id: user?.id,
                                     name: profile?.full_name || user?.email || 'Dosen Pembimbing',
                                     nidn: profile?.nip || '',
-                                    signature_url: profile?.signature_url,
-                                    paraf_url: profile?.paraf_url,
+                                    signature_url: profile?.signature_url || profile?.paraf_url,
+                                    paraf_url: profile?.paraf_url || profile?.signature_url,
                                   },
+                                }, {
+                                  onSuccess: (updatedApproval) => {
+                                    setSelectedAdvisorship((prev: any) => {
+                                      if (!prev) return prev;
+                                      const newComments = serializeApprovalsToComments(prev.ta_submissions?.comments, updatedApproval);
+                                      return {
+                                        ...prev,
+                                        ta_submissions: {
+                                          ...prev.ta_submissions,
+                                          comments: newComments,
+                                        },
+                                      };
+                                    });
+                                  }
                                 });
                               }
                             }}

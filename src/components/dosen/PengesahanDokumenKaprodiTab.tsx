@@ -200,7 +200,7 @@ export function PengesahanDokumenKaprodiTab() {
   const handleApproveTA = (item: any) => {
     const signerName = docSettings.kaprodi_name || profile?.full_name || 'Ketua Program Studi';
     const signerNidn = docSettings.kaprodi_nidn || profile?.nip || '';
-    const signatureUrl = docSettings.kaprodi_signature_url || profile?.signature_url || null;
+    const signatureUrl = docSettings.kaprodi_signature_url || profile?.signature_url || profile?.paraf_url || null;
 
     if (!signatureUrl) {
       toast.warning('Tanda tangan digital Kaprodi belum diunggah di Pengaturan Dokumen atau Profil Anda. Tanda tangan tetap akan disahkan sebagai stempel digital administratif.');
