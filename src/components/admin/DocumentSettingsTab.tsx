@@ -739,27 +739,149 @@ export function DocumentSettingsTab() {
                         />
                       </div>
                     ) : (
-                      <div className="p-3 border rounded text-center space-y-2">
+                      <div className="p-3 border rounded text-center space-y-3">
                         {form.footer_image_url ? (
-                          <div className="space-y-2">
-                            <img src={form.footer_image_url} alt="Footer" className="max-h-16 mx-auto" />
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => footerImageInputRef.current?.click()}
-                            >
-                              Ganti
-                            </Button>
+                          <div className="space-y-3">
+                            <div className="border rounded bg-slate-100 p-1 overflow-hidden">
+                              <img
+                                src={form.footer_image_url}
+                                alt="Footer Banner"
+                                className={`w-full block ${
+                                  form.footer_image_height_mode === 'auto'
+                                    ? 'h-auto max-h-24 object-contain mx-auto'
+                                    : 'object-cover object-bottom'
+                                }`}
+                                style={
+                                  form.footer_image_height_mode === 'auto'
+                                    ? undefined
+                                    : { height: `${Math.round((form.footer_image_height_mm || 20) * 2.2)}px` }
+                                }
+                              />
+                            </div>
+                            <div className="flex justify-center gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                disabled={uploadingField === 'footer_image_url'}
+                                onClick={() => footerImageInputRef.current?.click()}
+                              >
+                                Ganti Banner
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => updateField('footer_image_url', '')}
+                              >
+                                Hapus
+                              </Button>
+                            </div>
+
+                            {/* PENGATURAN LEBAR & TINGGI FOOTER */}
+                            <div className="bg-slate-50 border rounded-lg p-3 text-left space-y-3 mt-3">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                                <div>
+                                  <Label className="text-xs font-semibold">Lebar Banner Footer</Label>
+                                  <p className="text-[11px] text-muted-foreground">Bentang banner terhadap batas kertas</p>
+                                </div>
+                                <div className="flex items-center gap-1 bg-muted p-0.5 rounded text-xs shrink-0">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={form.footer_image_full_bleed ? 'default' : 'ghost'}
+                                    className="h-6 text-[11px] px-2"
+                                    onClick={() => updateField('footer_image_full_bleed', true)}
+                                  >
+                                    Penuh Kertas (Edge-to-Edge)
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={!form.footer_image_full_bleed ? 'default' : 'ghost'}
+                                    className="h-6 text-[11px] px-2"
+                                    onClick={() => updateField('footer_image_full_bleed', false)}
+                                  >
+                                    Di Dalam Margin
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-t pt-2.5">
+                                <div>
+                                  <Label className="text-xs font-semibold">Ketinggian Footer</Label>
+                                  <p className="text-[11px] text-muted-foreground">Penyesuaian tinggi area footer</p>
+                                </div>
+                                <div className="flex items-center gap-1 bg-muted p-0.5 rounded text-xs shrink-0">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={form.footer_image_height_mode === 'custom' ? 'default' : 'ghost'}
+                                    className="h-6 text-[11px] px-2"
+                                    onClick={() => updateField('footer_image_height_mode', 'custom')}
+                                  >
+                                    Atur Tinggi (Presisi mm)
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={form.footer_image_height_mode === 'auto' ? 'default' : 'ghost'}
+                                    className="h-6 text-[11px] px-2"
+                                    onClick={() => updateField('footer_image_height_mode', 'auto')}
+                                  >
+                                    Otomatis (Rasio Asli)
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {form.footer_image_height_mode === 'custom' && (
+                                <div className="space-y-1.5 pt-1 border-t">
+                                  <div className="flex justify-between items-center text-xs">
+                                    <span className="text-muted-foreground font-medium">Tinggi Area Footer:</span>
+                                    <span className="font-bold text-primary">{form.footer_image_height_mm || 20} mm</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <input
+                                      type="range"
+                                      min={10}
+                                      max={50}
+                                      step={1}
+                                      value={form.footer_image_height_mm || 20}
+                                      onChange={(e) => updateField('footer_image_height_mm', Number(e.target.value))}
+                                      className="flex-1 accent-primary"
+                                    />
+                                    <Input
+                                      type="number"
+                                      className="w-16 h-7 text-xs text-center"
+                                      min={10}
+                                      max={50}
+                                      value={form.footer_image_height_mm || 20}
+                                      onChange={(e) => updateField('footer_image_height_mm', Math.max(10, Math.min(60, Number(e.target.value) || 20)))}
+                                    />
+                                    <span className="text-xs text-muted-foreground">mm</span>
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground leading-relaxed pt-1">
+                                    💡 <em>Gambar footer otomatis direntangkan 100% selebar kertas. Bagian grafis bawah ditampilkan utuh dan menempel pas di batas kertas.</em>
+                                  </p>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         ) : (
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={() => footerImageInputRef.current?.click()}
-                          >
-                            <Upload className="h-3.5 w-3.5 mr-1" /> Unggah Banner Footer
-                          </Button>
+                          <div className="py-4 space-y-2">
+                            <ImageIcon className="h-8 w-8 text-muted-foreground mx-auto" />
+                            <p className="text-xs text-muted-foreground">
+                              Upload 1 berkas gambar banner footer resmi (Maks. 1 MB).
+                            </p>
+                            <Button
+                              type="button"
+                              size="sm"
+                              disabled={uploadingField === 'footer_image_url'}
+                              onClick={() => footerImageInputRef.current?.click()}
+                            >
+                              <Upload className="h-3.5 w-3.5 mr-1" /> Unggah Banner Footer
+                            </Button>
+                          </div>
                         )}
                         <input
                           ref={footerImageInputRef}
@@ -1001,9 +1123,51 @@ export function DocumentSettingsTab() {
 
                 {/* 3. FOOTER */}
                 {form.footer_enabled && (
-                  <div className="border-t border-slate-200 pt-1 mt-1 flex justify-between items-center text-[5.5px] text-slate-500">
-                    <p className="truncate max-w-[200px]">{form.footer_text}</p>
-                    {form.show_page_number && <span>Hal. 1/1</span>}
+                  <div
+                    className={`mt-1 overflow-hidden ${
+                      form.footer_mode === 'image' && form.footer_image_full_bleed
+                        ? ''
+                        : 'border-t border-slate-200 pt-1'
+                    }`}
+                    style={
+                      form.footer_mode === 'image' && form.footer_image_full_bleed
+                        ? {
+                            marginBottom: `-${Math.max(form.margin_bottom / 3, 6)}px`,
+                            marginLeft: `-${Math.max(form.margin_left / 3, 8)}px`,
+                            marginRight: `-${Math.max(form.margin_right / 3, 8)}px`,
+                            width: `calc(100% + ${Math.max(form.margin_left / 3, 8) + Math.max(form.margin_right / 3, 8)}px)`,
+                          }
+                        : undefined
+                    }
+                  >
+                    {form.footer_mode === 'text' ? (
+                      <div className="flex justify-between items-center text-[5.5px] text-slate-500">
+                        <p className="truncate max-w-[200px]">{form.footer_text}</p>
+                        {form.show_page_number && <span>Hal. 1/1</span>}
+                      </div>
+                    ) : form.footer_image_url ? (
+                      <div className="relative w-full">
+                        <img
+                          src={form.footer_image_url}
+                          alt="Footer"
+                          className={`w-full block ${
+                            form.footer_image_height_mode === 'auto'
+                              ? 'h-auto'
+                              : 'object-cover object-bottom'
+                          }`}
+                          style={
+                            form.footer_image_height_mode === 'auto'
+                              ? undefined
+                              : { height: `${Math.round((form.footer_image_height_mm || 20) * 1.4)}px` }
+                          }
+                        />
+                        {form.show_page_number && (
+                          <span className="absolute bottom-0.5 right-1 text-[5px] bg-white/80 px-1 rounded text-slate-600">
+                            Hal. 1/1
+                          </span>
+                        )}
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>

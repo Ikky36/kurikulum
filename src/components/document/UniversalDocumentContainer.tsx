@@ -353,16 +353,53 @@ export function UniversalDocumentContainer({
 
         {/* 7. FOOTER RESMI DOKUMEN */}
         {docSettings.footer_enabled && (
-          <div className="mt-6 pt-2 border-t border-slate-300 text-[10px] text-slate-500 flex flex-wrap items-center justify-between gap-2">
+          <div
+            className={`mt-4 ${
+              docSettings.footer_mode === 'image' && docSettings.footer_image_full_bleed
+                ? 'overflow-hidden'
+                : 'pt-2 border-t border-slate-300'
+            }`}
+            style={
+              docSettings.footer_mode === 'image' && docSettings.footer_image_full_bleed
+                ? {
+                    marginBottom: `-${docSettings.margin_bottom}mm`,
+                    marginLeft: `-${docSettings.margin_left}mm`,
+                    marginRight: `-${docSettings.margin_right}mm`,
+                    width: `calc(100% + ${docSettings.margin_left + docSettings.margin_right}mm)`,
+                  }
+                : undefined
+            }
+          >
             {docSettings.footer_mode === 'text' ? (
-              <p className="max-w-md truncate">{docSettings.footer_text}</p>
+              <div className="text-[10px] text-slate-500 flex flex-wrap items-center justify-between gap-2">
+                <p className="max-w-md truncate">{docSettings.footer_text}</p>
+                {docSettings.show_page_number && (
+                  <span className="font-medium">Dokumen Sah Akademik</span>
+                )}
+              </div>
             ) : docSettings.footer_image_url ? (
-              <img src={docSettings.footer_image_url} alt="Footer" className="max-h-8 object-contain" />
+              <div className="relative w-full">
+                <img
+                  src={docSettings.footer_image_url}
+                  alt="Footer"
+                  className={`w-full block ${
+                    docSettings.footer_image_height_mode === 'auto'
+                      ? 'h-auto'
+                      : 'object-cover object-bottom'
+                  }`}
+                  style={
+                    docSettings.footer_image_height_mode === 'auto'
+                      ? undefined
+                      : { height: `${docSettings.footer_image_height_mm || 20}mm` }
+                  }
+                />
+                {docSettings.show_page_number && (
+                  <div className="absolute bottom-1 right-3 text-[9px] text-slate-600 bg-white/80 px-1.5 py-0.5 rounded shadow-xs print:bg-transparent">
+                    Dokumen Sah Akademik
+                  </div>
+                )}
+              </div>
             ) : null}
-
-            {docSettings.show_page_number && (
-              <span className="font-medium">Dokumen Sah Akademik</span>
-            )}
           </div>
         )}
       </div>

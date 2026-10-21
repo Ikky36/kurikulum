@@ -33,6 +33,9 @@ export interface DocumentLayoutSettings {
   footer_mode: 'text' | 'image';
   footer_text: string;
   footer_image_url: string;
+  footer_image_full_bleed?: boolean;   // true: menempel penuh ke batas tepi kertas (0 margin bawah/kiri/kanan), false: di dalam margin
+  footer_image_height_mode?: 'auto' | 'custom'; // 'auto' (rasio asli) vs 'custom' (tinggi mm presisi)
+  footer_image_height_mm?: number;     // tinggi dalam mm jika custom (default: 20)
   show_page_number: boolean;
 
   // Kota & Default Penandatangan
@@ -70,6 +73,9 @@ export const defaultDocumentSettings: DocumentLayoutSettings = {
   footer_mode: 'text',
   footer_text: 'Dokumen ini diterbitkan secara sah melalui Sistem Informasi Akademik dan dapat diverifikasi keasliannya.',
   footer_image_url: '',
+  footer_image_full_bleed: true,
+  footer_image_height_mode: 'custom',
+  footer_image_height_mm: 20,
   show_page_number: true,
 
   default_city: 'Ponorogo',
