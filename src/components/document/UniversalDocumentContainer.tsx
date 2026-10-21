@@ -113,8 +113,33 @@ export function UniversalDocumentContainer({
             <div className="w-full mb-4">
               {/* Mode Gambar Banner Penuh */}
               {docSettings.header_mode === 'image' && docSettings.header_image_url && (
-                <div className="w-full border-b pb-2 mb-2">
-                  <img src={docSettings.header_image_url} alt="Kop Surat" className="w-full h-auto max-h-28 object-contain mx-auto" />
+                <div
+                  className="w-full mb-3"
+                  style={
+                    docSettings.header_image_full_bleed
+                      ? {
+                          marginTop: `-${docSettings.margin_top}mm`,
+                          marginLeft: `-${docSettings.margin_left}mm`,
+                          marginRight: `-${docSettings.margin_right}mm`,
+                          width: `calc(100% + ${docSettings.margin_left + docSettings.margin_right}mm)`,
+                        }
+                      : undefined
+                  }
+                >
+                  <img
+                    src={docSettings.header_image_url}
+                    alt="Kop Surat"
+                    className={`w-full block ${
+                      docSettings.header_image_height_mode === 'auto'
+                        ? 'h-auto'
+                        : 'object-cover object-top'
+                    }`}
+                    style={
+                      docSettings.header_image_height_mode === 'auto'
+                        ? undefined
+                        : { height: `${docSettings.header_image_height_mm || 35}mm` }
+                    }
+                  />
                 </div>
               )}
 

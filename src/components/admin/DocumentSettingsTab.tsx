@@ -523,11 +523,22 @@ export function DocumentSettingsTab() {
                       <div className="p-4 border-2 border-dashed rounded-lg text-center space-y-3">
                         {form.header_image_url ? (
                           <div className="space-y-3">
-                            <img
-                              src={form.header_image_url}
-                              alt="Kop Banner"
-                              className="max-h-28 w-full object-contain mx-auto border rounded bg-white p-1"
-                            />
+                            <div className="border rounded bg-slate-100 p-1 overflow-hidden">
+                              <img
+                                src={form.header_image_url}
+                                alt="Kop Banner"
+                                className={`w-full block ${
+                                  form.header_image_height_mode === 'auto'
+                                    ? 'h-auto max-h-36 object-contain mx-auto'
+                                    : 'object-cover object-top'
+                                }`}
+                                style={
+                                  form.header_image_height_mode === 'auto'
+                                    ? undefined
+                                    : { height: `${Math.round((form.header_image_height_mm || 35) * 2.2)}px` }
+                                }
+                              />
+                            </div>
                             <div className="flex justify-center gap-2">
                               <Button
                                 type="button"
@@ -546,6 +557,95 @@ export function DocumentSettingsTab() {
                               >
                                 Hapus
                               </Button>
+                            </div>
+
+                            {/* PENGATURAN LEBAR & TINGGI BANNER */}
+                            <div className="bg-slate-50 border rounded-lg p-3 text-left space-y-3 mt-3">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                                <div>
+                                  <Label className="text-xs font-semibold">Lebar Banner Kop</Label>
+                                  <p className="text-[11px] text-muted-foreground">Bentang kop terhadap batas kertas</p>
+                                </div>
+                                <div className="flex items-center gap-1 bg-muted p-0.5 rounded text-xs shrink-0">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={form.header_image_full_bleed ? 'default' : 'ghost'}
+                                    className="h-6 text-[11px] px-2"
+                                    onClick={() => updateField('header_image_full_bleed', true)}
+                                  >
+                                    Penuh Kertas (Edge-to-Edge)
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={!form.header_image_full_bleed ? 'default' : 'ghost'}
+                                    className="h-6 text-[11px] px-2"
+                                    onClick={() => updateField('header_image_full_bleed', false)}
+                                  >
+                                    Di Dalam Margin
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 border-t pt-2.5">
+                                <div>
+                                  <Label className="text-xs font-semibold">Ketinggian Kop</Label>
+                                  <p className="text-[11px] text-muted-foreground">Penyesuaian tinggi area kop surat</p>
+                                </div>
+                                <div className="flex items-center gap-1 bg-muted p-0.5 rounded text-xs shrink-0">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={form.header_image_height_mode === 'custom' ? 'default' : 'ghost'}
+                                    className="h-6 text-[11px] px-2"
+                                    onClick={() => updateField('header_image_height_mode', 'custom')}
+                                  >
+                                    Atur Tinggi (Presisi mm)
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={form.header_image_height_mode === 'auto' ? 'default' : 'ghost'}
+                                    className="h-6 text-[11px] px-2"
+                                    onClick={() => updateField('header_image_height_mode', 'auto')}
+                                  >
+                                    Otomatis (Rasio Asli)
+                                  </Button>
+                                </div>
+                              </div>
+
+                              {form.header_image_height_mode === 'custom' && (
+                                <div className="space-y-1.5 pt-1 border-t">
+                                  <div className="flex justify-between items-center text-xs">
+                                    <span className="text-muted-foreground font-medium">Tinggi Area Kop:</span>
+                                    <span className="font-bold text-primary">{form.header_image_height_mm || 35} mm</span>
+                                  </div>
+                                  <div className="flex items-center gap-3">
+                                    <input
+                                      type="range"
+                                      min={15}
+                                      max={60}
+                                      step={1}
+                                      value={form.header_image_height_mm || 35}
+                                      onChange={(e) => updateField('header_image_height_mm', Number(e.target.value))}
+                                      className="flex-1 accent-primary"
+                                    />
+                                    <Input
+                                      type="number"
+                                      className="w-16 h-7 text-xs text-center"
+                                      min={15}
+                                      max={60}
+                                      value={form.header_image_height_mm || 35}
+                                      onChange={(e) => updateField('header_image_height_mm', Math.max(15, Math.min(80, Number(e.target.value) || 35)))}
+                                    />
+                                    <span className="text-xs text-muted-foreground">mm</span>
+                                  </div>
+                                  <p className="text-[11px] text-muted-foreground leading-relaxed pt-1">
+                                    💡 <em>Gambar otomatis direntangkan 100% selebar kertas. Bagian kop atas ditampilkan penuh dan ruang kosong/watermark di bawah kop terpotong rapi.</em>
+                                  </p>
+                                </div>
+                              )}
                             </div>
                           </div>
                         ) : (
@@ -778,8 +878,33 @@ export function DocumentSettingsTab() {
               >
                 {/* 1. KOP SURAT */}
                 {form.header_mode === 'image' && form.header_image_url && (
-                  <div className="w-full border-b pb-1 mb-2">
-                    <img src={form.header_image_url} alt="Kop" className="w-full h-auto object-contain max-h-14" />
+                  <div
+                    className="w-full mb-2 overflow-hidden"
+                    style={
+                      form.header_image_full_bleed
+                        ? {
+                            marginTop: `-${Math.max(form.margin_top / 3, 6)}px`,
+                            marginLeft: `-${Math.max(form.margin_left / 3, 8)}px`,
+                            marginRight: `-${Math.max(form.margin_right / 3, 8)}px`,
+                            width: `calc(100% + ${Math.max(form.margin_left / 3, 8) + Math.max(form.margin_right / 3, 8)}px)`,
+                          }
+                        : undefined
+                    }
+                  >
+                    <img
+                      src={form.header_image_url}
+                      alt="Kop"
+                      className={`w-full block ${
+                        form.header_image_height_mode === 'auto'
+                          ? 'h-auto'
+                          : 'object-cover object-top'
+                      }`}
+                      style={
+                        form.header_image_height_mode === 'auto'
+                          ? undefined
+                          : { height: `${Math.round((form.header_image_height_mm || 35) * 1.4)}px` }
+                      }
+                    />
                   </div>
                 )}
 

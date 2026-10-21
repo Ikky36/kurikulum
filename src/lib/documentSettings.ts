@@ -16,6 +16,9 @@ export interface DocumentLayoutSettings {
   // Kop Surat (Header)
   header_mode: 'text' | 'image' | 'none';
   header_image_url: string;
+  header_image_full_bleed?: boolean;   // true: menempel penuh ke tepi kertas (edge-to-edge), false: di dalam margin
+  header_image_height_mode?: 'auto' | 'custom'; // 'auto' (rasio asli) vs 'custom' (tinggi mm presisi)
+  header_image_height_mm?: number;     // tinggi dalam mm jika custom (default: 35)
   header_logo_left_url: string;
   header_logo_right_url: string;
   institution_line_1: string; // misal: YAYASAN WAKAF PONDOK MODERN GONTOR
@@ -51,6 +54,9 @@ export const defaultDocumentSettings: DocumentLayoutSettings = {
 
   header_mode: 'text',
   header_image_url: '',
+  header_image_full_bleed: true,
+  header_image_height_mode: 'custom',
+  header_image_height_mm: 35,
   header_logo_left_url: '',
   header_logo_right_url: '',
   institution_line_1: 'KEMENTERIAN AGAMA REPUBLIK INDONESIA',
