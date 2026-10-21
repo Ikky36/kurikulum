@@ -56,11 +56,13 @@ export function UniversalDocumentContainer({
   };
 
   const isA4 = docSettings.paper_size === 'A4';
-  const isPortrait = docSettings.orientation === 'portrait';
+  // Orientasi ditentukan oleh konfigurasi template dokumen yang diatur Admin (fallback ke global docSettings)
+  const effectiveOrientation = template.orientation || docSettings.orientation || 'portrait';
+  const isPortrait = effectiveOrientation === 'portrait';
 
   // CSS Page sizing for @media print
   const pageSizeStyle = `@page { 
-    size: ${docSettings.paper_size} ${docSettings.orientation}; 
+    size: ${docSettings.paper_size} ${effectiveOrientation}; 
     margin: ${docSettings.margin_top}mm ${docSettings.margin_right}mm ${docSettings.margin_bottom}mm ${docSettings.margin_left}mm; 
   }`;
 
@@ -72,7 +74,7 @@ export function UniversalDocumentContainer({
       <div className="no-print max-w-4xl mx-auto mb-6 bg-card border shadow-sm rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="text-xs font-semibold">
-            Format: {docSettings.paper_size} ({docSettings.orientation})
+            Format: {docSettings.paper_size} ({effectiveOrientation === 'portrait' ? 'Portrait' : 'Landscape'})
           </Badge>
           <span className="text-xs text-muted-foreground hidden sm:inline">
             Margin: T:{docSettings.margin_top} B:{docSettings.margin_bottom} L:{docSettings.margin_left} R:{docSettings.margin_right} mm

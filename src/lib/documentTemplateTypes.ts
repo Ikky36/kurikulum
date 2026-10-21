@@ -18,6 +18,7 @@ export interface DocumentSignatureConfig {
 export interface SingleDocumentTemplate {
   code: string;
   name: string;
+  orientation?: 'portrait' | 'landscape'; // Orientasi format cetak dokumen (diatur oleh Admin)
   document_title: string;
   document_subtitle: string;
   show_kop: boolean;
@@ -35,6 +36,7 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
   kartu_bimbingan_ta: {
     code: 'kartu_bimbingan_ta',
     name: 'Kartu Bimbingan Tugas Akhir',
+    orientation: 'portrait',
     document_title: 'KARTU KENDALI BIMBINGAN TUGAS AKHIR',
     document_subtitle: 'PROGRAM STUDI PENDIDIKAN BAHASA ARAB',
     show_kop: true,
@@ -62,6 +64,7 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
   krs: {
     code: 'krs',
     name: 'Kartu Rencana Studi (KRS)',
+    orientation: 'portrait',
     document_title: 'KARTU RENCANA STUDI (KRS)',
     document_subtitle: 'SEMESTER PERKULIAHAN AKTIF',
     show_kop: true,
@@ -89,6 +92,7 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
   kartu_bimbingan_dpa: {
     code: 'kartu_bimbingan_dpa',
     name: 'Kartu Bimbingan Akademik (DPA)',
+    orientation: 'portrait',
     document_title: 'KARTU BIMBINGAN AKADEMIK MAHASISWA',
     document_subtitle: 'CATATAN KONSULTASI PERWALIAN STUDI',
     show_kop: true,

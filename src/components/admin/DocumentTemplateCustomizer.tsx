@@ -178,6 +178,40 @@ export function DocumentTemplateCustomizer() {
                   />
                 </div>
 
+                {/* Orientasi Lembar Dokumen (Ditentukan Admin) */}
+                <div className="space-y-1.5 pt-2 border-t">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-xs font-semibold">Orientasi Lembar Dokumen</Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        Ditentukan oleh Admin: posisi lembar saat dokumen ini dicetak oleh civitas.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={(currentTemplate.orientation || 'portrait') === 'portrait' ? 'default' : 'outline'}
+                      className="text-xs justify-center gap-1.5"
+                      onClick={() => updateTemplateField('orientation', 'portrait')}
+                    >
+                      <FileText className="h-3.5 w-3.5" />
+                      Portrait (Tegak)
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={currentTemplate.orientation === 'landscape' ? 'default' : 'outline'}
+                      className="text-xs justify-center gap-1.5"
+                      onClick={() => updateTemplateField('orientation', 'landscape')}
+                    >
+                      <FileText className="h-3.5 w-3.5 rotate-90" />
+                      Landscape (Mendatar)
+                    </Button>
+                  </div>
+                </div>
+
                 <div className="flex items-center justify-between pt-2 border-t">
                   <div className="space-y-0.5">
                     <Label className="text-xs font-semibold">Tampilkan Kop Surat Instansi</Label>
