@@ -37,7 +37,8 @@ import {
   QrCode,
   Smartphone,
   ShieldCheck,
-  Scale
+  Scale,
+  ExternalLink
 } from 'lucide-react';
 import { DocumentTemplateCustomizer } from './DocumentTemplateCustomizer';
 import { UniversalDocumentContainer } from '@/components/document/UniversalDocumentContainer';
