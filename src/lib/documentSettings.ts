@@ -36,10 +36,12 @@ export interface DocumentLayoutSettings {
   footer_image_full_bleed?: boolean;   // true: menempel penuh ke batas tepi kertas (0 margin bawah/kiri/kanan), false: di dalam margin
   footer_image_height_mode?: 'auto' | 'custom'; // 'auto' (rasio asli) vs 'custom' (tinggi mm presisi)
   footer_image_height_mm?: number;     // tinggi dalam mm jika custom (default: 20)
-  show_page_number: boolean;
+  show_page_number: boolean;           // switch aktifkan watermark/keterangan dokumen sah
+  footer_watermark_text?: string;      // misal: 'Dokumen Sah Akademik' atau custom
 
   // Kota & Default Penandatangan
   default_city: string;
+  show_signature_date?: boolean;       // tampilkan tanggal di atas tanda tangan (default: true)
   kaprodi_profile_id?: string;
   kaprodi_name: string;
   kaprodi_nidn: string;
@@ -81,8 +83,10 @@ export const defaultDocumentSettings: DocumentLayoutSettings = {
   footer_image_height_mode: 'custom',
   footer_image_height_mm: 20,
   show_page_number: true,
+  footer_watermark_text: 'Dokumen Sah Akademik',
 
   default_city: 'Ponorogo',
+  show_signature_date: true,
   kaprodi_profile_id: '',
   kaprodi_name: '',
   kaprodi_nidn: '',

@@ -63,6 +63,7 @@ export interface SingleDocumentTemplate {
 
   // Pengesahan (Signatures)
   signatures: DocumentSignatureConfig[];
+  show_signature_date?: boolean; // tampilkan kota & tanggal di atas kolom tanda tangan (default: true)
 
   // Posisi Jarak Blok Tanda Tangan: 'normal' (~2.5 cm setelah konten) | 'compact' (~1.5 cm) | 'spacious' (~4 cm) | 'bottom' (dasar lembar)
   signature_spacing?: 'compact' | 'normal' | 'spacious' | 'bottom';

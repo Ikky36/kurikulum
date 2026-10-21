@@ -975,15 +975,28 @@ export function DocumentSettingsTab() {
                       </div>
                     )}
 
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <div className="space-y-0.5">
-                        <Label className="text-xs font-semibold">Tampilkan Nomor Halaman</Label>
-                        <p className="text-[11px] text-muted-foreground">Contoh: "Halaman 1 dari 1"</p>
+                    <div className="space-y-3 pt-2 border-t">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-xs font-semibold">Tampilkan Keterangan / Validasi Dokumen Sah</Label>
+                          <p className="text-[11px] text-muted-foreground">Teks di sudut kanan bawah footer (misal: "Dokumen Sah Akademik")</p>
+                        </div>
+                        <Switch
+                          checked={form.show_page_number}
+                          onCheckedChange={(checked) => updateField('show_page_number', checked)}
+                        />
                       </div>
-                      <Switch
-                        checked={form.show_page_number}
-                        onCheckedChange={(checked) => updateField('show_page_number', checked)}
-                      />
+                      {form.show_page_number && (
+                        <div className="space-y-1 pl-1">
+                          <Label className="text-xs">Teks Keterangan / Watermark Sah</Label>
+                          <Input
+                            value={form.footer_watermark_text ?? 'Dokumen Sah Akademik'}
+                            onChange={(e) => updateField('footer_watermark_text', e.target.value)}
+                            placeholder="Contoh: Dokumen Sah Akademik"
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 )}
@@ -1005,7 +1018,23 @@ export function DocumentSettingsTab() {
                     <Input
                       value={form.default_city}
                       onChange={(e) => updateField('default_city', e.target.value)}
-                      placeholder="Contoh: Ponorogo"
+                      placeholder="Contoh: Ponorogo atau Bantul"
+                    />
+                    <p className="text-[10px] text-muted-foreground">
+                      Dicantumkan sebelum tanggal pengesahan di atas tanda tangan, contoh: "{form.default_city || 'Ponorogo'}, 21 Oktober 2026"
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t">
+                    <div className="space-y-0.5">
+                      <Label className="text-xs font-semibold">Tampilkan Tanggal Pengesahan</Label>
+                      <p className="text-[11px] text-muted-foreground">
+                        Cantumkan kota dan tanggal otomatis (hari ini) di atas kolom tanda tangan
+                      </p>
+                    </div>
+                    <Switch
+                      checked={form.show_signature_date !== false}
+                      onCheckedChange={(checked) => updateField('show_signature_date', checked)}
                     />
                   </div>
 
@@ -1315,9 +1344,11 @@ export function DocumentSettingsTab() {
 
                   {/* Blok Tanda Tangan Simulasi */}
                   <div className="pt-2 text-[6.5px]">
-                    <p className="text-right text-[6px] text-slate-600 mb-1">
-                      {form.default_city || 'Ponorogo'}, 20 Oktober 2026
-                    </p>
+                    {form.show_signature_date !== false && (
+                      <p className="text-right text-[6px] text-slate-600 mb-1">
+                        {form.default_city || 'Ponorogo'}, 20 Oktober 2026
+                      </p>
+                    )}
                     <div className="grid grid-cols-2 text-center pt-1">
                       <div>
                         <p className="text-[6px] text-slate-500">Mahasiswa,</p>
@@ -1361,7 +1392,7 @@ export function DocumentSettingsTab() {
                     {form.footer_mode === 'text' ? (
                       <div className="flex justify-between items-center text-[5.5px] text-slate-500">
                         <p className="truncate max-w-[200px]">{form.footer_text}</p>
-                        {form.show_page_number && <span>Hal. 1/1</span>}
+                        {form.show_page_number && <span>{form.footer_watermark_text || 'Dokumen Sah Akademik'}</span>}
                       </div>
                     ) : form.footer_image_url ? (
                       <div className="relative w-full">
@@ -1381,7 +1412,7 @@ export function DocumentSettingsTab() {
                         />
                         {form.show_page_number && (
                           <span className="absolute bottom-0.5 right-1 text-[5px] bg-white/80 px-1 rounded text-slate-600">
-                            Hal. 1/1
+                            {form.footer_watermark_text || 'Dokumen Sah Akademik'}
                           </span>
                         )}
                       </div>

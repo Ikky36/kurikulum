@@ -369,14 +369,16 @@ export function UniversalDocumentContainer({
           {/* 6. BLOK TANDA TANGAN & PENGESAHAN (Mengalir proporsional beberapa cm setelah konten terakhir) */}
           {template.signatures.filter((s) => s.enabled).length > 0 && (
             <div className={`${getSignatureSpacingClass(template.signature_spacing)} pt-2 break-inside-avoid page-break-inside-avoid text-xs signature-block`}>
-              <div className="text-right text-xs text-slate-700 mb-2">
-                {docSettings.default_city || 'Ponorogo'},{' '}
-                {new Date().toLocaleDateString('id-ID', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                })}
-              </div>
+              {template.show_signature_date !== false && docSettings.show_signature_date !== false && (
+                <div className="text-right text-xs text-slate-700 mb-2">
+                  {docSettings.default_city || 'Ponorogo'},{' '}
+                  {new Date().toLocaleDateString('id-ID', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                  })}
+                </div>
+              )}
 
               {/* Grid Tanda Tangan */}
               <div className="flex flex-wrap items-start justify-around gap-6 pt-1 text-center">
@@ -486,7 +488,7 @@ export function UniversalDocumentContainer({
               <div className="text-[10px] text-slate-500 flex flex-wrap items-center justify-between gap-2">
                 <p className="max-w-md truncate">{docSettings.footer_text}</p>
                 {docSettings.show_page_number && (
-                  <span className="font-medium">Dokumen Sah Akademik</span>
+                  <span className="font-medium">{docSettings.footer_watermark_text || 'Dokumen Sah Akademik'}</span>
                 )}
               </div>
             ) : docSettings.footer_image_url ? (
@@ -507,7 +509,7 @@ export function UniversalDocumentContainer({
                 />
                 {docSettings.show_page_number && (
                   <div className="absolute bottom-1 right-3 text-[9px] text-slate-600 bg-white/80 px-1.5 py-0.5 rounded shadow-xs print:bg-transparent">
-                    Dokumen Sah Akademik
+                    {docSettings.footer_watermark_text || 'Dokumen Sah Akademik'}
                   </div>
                 )}
               </div>

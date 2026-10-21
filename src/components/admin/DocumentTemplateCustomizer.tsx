@@ -1378,6 +1378,20 @@ export function DocumentTemplateCustomizer() {
                 </div>
               </div>
 
+              {/* TOGGLE TAMPILKAN KOTA & TANGGAL DI ATAS TANDA TANGAN */}
+              <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg border">
+                <div className="space-y-0.5">
+                  <Label className="text-xs font-semibold">Tampilkan Kota & Tanggal Pengesahan</Label>
+                  <p className="text-[10px] text-muted-foreground">
+                    Contoh: "{docSettings.default_city || 'Ponorogo'}, 21 Oktober 2026" di sisi kanan atas tanda tangan
+                  </p>
+                </div>
+                <Switch
+                  checked={currentTemplate.show_signature_date !== false}
+                  onCheckedChange={(checked) => updateTemplateField('show_signature_date', checked)}
+                />
+              </div>
+
               {/* DAFTAR PENANDATANGAN */}
               <div className="space-y-3">
                 {currentTemplate.signatures.map((sig, idx) => (
@@ -1820,9 +1834,11 @@ export function DocumentTemplateCustomizer() {
                       ? 'mt-auto'
                       : 'mt-2.5'
                   }>
-                    <div className="text-right text-[6px] text-slate-500 mb-0.5">
-                      {docSettings.default_city || 'Ponorogo'}, 21 Oktober 2026
-                    </div>
+                    {currentTemplate.show_signature_date !== false && docSettings.show_signature_date !== false && (
+                      <div className="text-right text-[6px] text-slate-500 mb-0.5">
+                        {docSettings.default_city || 'Ponorogo'}, 21 Oktober 2026
+                      </div>
+                    )}
                     <div className="flex justify-around items-end pt-0.5 text-center text-[6px]">
                       {currentTemplate.signatures
                         .filter((s) => s.enabled)
@@ -1869,7 +1885,7 @@ export function DocumentTemplateCustomizer() {
                 {docSettings.footer_enabled && currentTemplate.show_footer !== false && (
                   <div className="border-t border-slate-200 pt-0.5 mt-auto text-[5px] text-slate-500 flex justify-between items-center">
                     <p className="truncate max-w-[200px]">{docSettings.footer_text}</p>
-                    {docSettings.show_page_number && <span>Hal. 1/1</span>}
+                    {docSettings.show_page_number && <span>{docSettings.footer_watermark_text || 'Dokumen Sah Akademik'}</span>}
                   </div>
                 )}
               </div>
