@@ -249,13 +249,9 @@ export function KartuBimbinganViewerModal({
                     );
                   })
                 ) : (
-                      </tr>
-                    );
-                  })
-                ) : (
                   <tr>
                     <td
-                      colSpan={template.columns.filter((c) => c.enabled).length}
+                      colSpan={template.columns.length}
                       className="border border-slate-400 text-center py-8 text-slate-400 italic"
                     >
                       Belum ada riwayat bimbingan tugas akhir yang tercatat.
