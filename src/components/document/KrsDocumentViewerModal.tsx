@@ -25,9 +25,15 @@ export function KrsDocumentViewerModal({
   semesterName,
   academicYearName,
 }: KrsDocumentViewerModalProps) {
-  const { getTemplate } = useDocumentTemplatesConfig();
+  const { templatesMap, getTemplate } = useDocumentTemplatesConfig();
   const { settings: docSettings } = useDocumentSettings();
-  const template = getTemplate('krs');
+  const template =
+    Object.values(templatesMap).find(
+      (t) =>
+        t.code === 'krs' ||
+        t.placement_targets?.includes('mahasiswa_krs') ||
+        t.code.includes('krs')
+    ) || getTemplate('krs', 'akademik');
 
   // Student Info
   const mhsName = studentProfile?.full_name || 'Mahasiswa';
@@ -75,7 +81,8 @@ export function KrsDocumentViewerModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl w-full p-0 max-h-[95vh] overflow-y-auto bg-transparent border-none shadow-none">
         <UniversalDocumentContainer
-          templateCode="krs"
+          templateCode={template.code}
+          templateOverride={template}
           documentDate={latestKrsDate}
           studentInfo={{
             name: mhsName,

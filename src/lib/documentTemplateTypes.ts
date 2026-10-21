@@ -314,9 +314,58 @@ export function useDocumentTemplatesConfig() {
     },
   });
 
-  const getTemplate = (code: string): SingleDocumentTemplate => {
+  const getTemplate = (code: string, fallbackModule?: string): SingleDocumentTemplate => {
     const map = query.data || defaultDocumentTemplates;
+    // 1. Cocokkan kode langsung jika ada di template aktif
     if (map[code]) return map[code];
+
+    // 2. Jika mencari template tugas akhir / bimbingan skripsi
+    if (
+      code === 'kartu_bimbingan_ta' ||
+      code === 'kartu_bimbingan_tugas_akhir' ||
+      fallbackModule === 'tugas_akhir' ||
+      code.includes('tugas_akhir') ||
+      code.includes('bimbingan_ta')
+    ) {
+      const taTemplate = Object.values(map).find(
+        (t) =>
+          t.code === 'kartu_bimbingan_ta' ||
+          t.code === 'kartu_bimbingan_tugas_akhir' ||
+          t.placement_targets?.includes('mahasiswa_tugas_akhir') ||
+          t.data_source_module === 'tugas_akhir' ||
+          t.code.includes('tugas_akhir') ||
+          t.code.includes('bimbingan_ta')
+      );
+      if (taTemplate) return taTemplate;
+    }
+
+    // 3. Jika mencari template KRS
+    if (code === 'krs' || fallbackModule === 'akademik') {
+      const krsTemplate = Object.values(map).find(
+        (t) =>
+          t.code === 'krs' ||
+          t.placement_targets?.includes('mahasiswa_krs') ||
+          t.code.includes('krs')
+      );
+      if (krsTemplate) return krsTemplate;
+    }
+
+    // 4. Jika mencari template DPA
+    if (code === 'kartu_bimbingan_dpa') {
+      const dpaTemplate = Object.values(map).find(
+        (t) =>
+          t.code === 'kartu_bimbingan_dpa' ||
+          t.placement_targets?.includes('dosen_perwalian_dpa') ||
+          t.code.includes('dpa')
+      );
+      if (dpaTemplate) return dpaTemplate;
+    }
+
+    // 5. Fallback ke default sistem bawaan jika belum terhapus
+    if (defaultDocumentTemplates[code]) {
+      return defaultDocumentTemplates[code];
+    }
+
     const available = Object.values(map);
     return available[0] || defaultDocumentTemplates.kartu_bimbingan_ta;
   };

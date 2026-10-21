@@ -20,9 +20,19 @@ export function KartuBimbinganViewerModal({
   consultationLogs = [],
   studentProfile,
 }: KartuBimbinganViewerModalProps) {
-  const { getTemplate } = useDocumentTemplatesConfig();
+  const { templatesMap, getTemplate } = useDocumentTemplatesConfig();
   const { settings: docSettings } = useDocumentSettings();
-  const template = getTemplate('kartu_bimbingan_ta');
+
+  // Cari template aktif yang ditargetkan untuk tugas akhir / bimbingan skripsi
+  const template =
+    Object.values(templatesMap).find(
+      (t) =>
+        t.placement_targets?.includes('mahasiswa_tugas_akhir') ||
+        t.data_source_module === 'tugas_akhir' ||
+        t.code === 'kartu_bimbingan_tugas_akhir' ||
+        t.code === 'kartu_bimbingan_ta' ||
+        t.code.includes('tugas_akhir')
+    ) || getTemplate('kartu_bimbingan_ta', 'tugas_akhir');
 
   if (!submission) return null;
 
@@ -41,15 +51,33 @@ export function KartuBimbinganViewerModal({
   const mhsProgram = submission.profiles?.program || studentProfile?.program || docSettings.program_name || '-';
   const mhsSistem = submission.sistem_kuliah?.name || (studentProfile as any)?.sistem_kuliah?.name || 'Reguler';
 
-  // Metadata items
-  const metadataItems = [
-    { label: 'Judul Tugas Akhir', value: <span className="font-semibold uppercase">{submission.title}</span> },
-    { label: 'Jenis Tugas Akhir', value: submission.ta_types?.name || 'Skripsi' },
-    { label: 'Dosen Pembimbing I', value: advisor1?.profiles?.full_name || '-' },
-  ];
+  // Metadata items (hindari duplikasi jika key sudah ada di student_bio_fields yang dikonfigurasi Admin)
+  const bioKeys = (template.student_bio_fields || []).map((f) => f.key);
+  const metadataItems: { label: string; value: string | React.ReactNode }[] = [];
 
-  if (advisor2?.profiles?.full_name) {
-    metadataItems.push({ label: 'Dosen Pembimbing II', value: advisor2.profiles.full_name });
+  if (!bioKeys.includes('judul_tugas_akhir') && submission.title) {
+    metadataItems.push({
+      label: 'Judul Tugas Akhir',
+      value: <span className="font-semibold uppercase">{submission.title}</span>,
+    });
+  }
+  if (!bioKeys.includes('jenis_tugas_akhir')) {
+    metadataItems.push({
+      label: 'Jenis Tugas Akhir',
+      value: submission.ta_types?.name || 'Skripsi',
+    });
+  }
+  if (!bioKeys.includes('nama_pembimbing_1') && advisor1?.profiles?.full_name) {
+    metadataItems.push({
+      label: 'Dosen Pembimbing I',
+      value: advisor1.profiles.full_name,
+    });
+  }
+  if (!bioKeys.includes('nama_pembimbing_2') && advisor2?.profiles?.full_name) {
+    metadataItems.push({
+      label: 'Dosen Pembimbing II',
+      value: advisor2.profiles.full_name,
+    });
   }
 
   // Sort logs by date ascending for official card view
@@ -109,7 +137,8 @@ export function KartuBimbinganViewerModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl w-full p-0 max-h-[95vh] overflow-y-auto bg-transparent border-none shadow-none">
         <UniversalDocumentContainer
-          templateCode="kartu_bimbingan_ta"
+          templateCode={template.code}
+          templateOverride={template}
           documentDate={latestSignatureDate}
           studentInfo={{
             name: mhsName,
