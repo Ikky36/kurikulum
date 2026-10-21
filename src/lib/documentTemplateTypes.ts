@@ -63,12 +63,29 @@ export interface SingleDocumentTemplate {
   // Pengesahan (Signatures)
   signatures: DocumentSignatureConfig[];
 
+  // Posisi Jarak Blok Tanda Tangan: 'normal' (~2.5 cm setelah konten) | 'compact' (~1.5 cm) | 'spacious' (~4 cm) | 'bottom' (dasar lembar)
+  signature_spacing?: 'compact' | 'normal' | 'spacious' | 'bottom';
+
   // Tembusan (Carbon Copy / CC)
   copies_enabled?: boolean;
   copies_list?: string[];
 
   // Penempatan Tombol Cetak di Aplikasi
   placement_targets?: string[];
+}
+
+export function getSignatureSpacingClass(spacing?: 'compact' | 'normal' | 'spacious' | 'bottom'): string {
+  switch (spacing) {
+    case 'compact':
+      return 'mt-4 sm:mt-5';
+    case 'spacious':
+      return 'mt-12 sm:mt-16';
+    case 'bottom':
+      return 'mt-auto pt-6';
+    case 'normal':
+    default:
+      return 'mt-8 sm:mt-10'; // ~2.5 cm mengalir wajar beberapa cm setelah konten terakhir
+  }
 }
 
 export type AllDocumentTemplatesMap = Record<string, SingleDocumentTemplate>;

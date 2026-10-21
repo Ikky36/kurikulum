@@ -129,10 +129,10 @@ export function KartuBimbinganViewerModal({
           onClose={() => onOpenChange(false)}
         >
           {/* TABEL DATA LOG BIMBINGAN */}
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-slate-400 text-xs text-slate-800">
-              <thead>
-                <tr className="bg-slate-100/90 text-slate-900 font-bold border-b border-slate-400 text-center">
+          <div className="w-full overflow-x-auto print:overflow-visible">
+            <table className="w-full border-collapse border border-slate-400 text-xs text-slate-800 [page-break-inside:auto] [break-inside:auto]">
+              <thead className="table-header-group">
+                <tr className="bg-slate-100/90 text-slate-900 font-bold border-b border-slate-400 text-center [page-break-inside:avoid] [break-inside:avoid]">
                   {template.columns.map((col) => (
                     <th
                       key={col.id}
@@ -149,7 +149,7 @@ export function KartuBimbinganViewerModal({
                   ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="table-row-group">
                 {sortedLogs.length > 0 ? (
                   sortedLogs.map((log, index) => {
                     const isApproved = log.status === 'approved';
@@ -157,7 +157,7 @@ export function KartuBimbinganViewerModal({
                     const parafImg = advisorProfile.paraf_url || advisorProfile.signature_url;
 
                     return (
-                      <tr key={log.id || index} className="border-b border-slate-300 hover:bg-slate-50/50">
+                      <tr key={log.id || index} className="border-b border-slate-300 hover:bg-slate-50/50 [page-break-inside:avoid] [break-inside:avoid]">
                         {template.columns.map((col) => {
                           const baseId = col.id.split('_')[0];
                           if (baseId === 'no') {

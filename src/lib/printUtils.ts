@@ -56,7 +56,7 @@ export async function printHtml(
   const pageCss = `
     @page {
       size: ${widthMm}mm ${heightMm}mm;
-      margin: 0;
+      margin: ${marginTop}mm ${marginRight}mm ${marginBottom}mm ${marginLeft}mm;
     }
     * {
       box-sizing: border-box;
@@ -68,8 +68,9 @@ export async function printHtml(
       padding: 0 !important;
       background: #ffffff !important;
       color: #000000 !important;
-      width: ${widthMm}mm !important;
-      min-height: ${heightMm}mm !important;
+      width: 100% !important;
+      min-height: 0 !important;
+      height: auto !important;
       font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
     }
     .no-print {
@@ -85,20 +86,39 @@ export async function printHtml(
         border: none !important;
         box-shadow: none !important;
         margin: 0 !important;
+        padding: 0 !important;
         width: 100% !important;
         max-width: none !important;
+        min-height: 0 !important;
+        height: auto !important;
+        display: block !important;
       }
     `
         : ''
     }
     table {
-      page-break-inside: avoid;
+      width: 100%;
+      border-collapse: collapse;
+      page-break-inside: auto !important;
+      break-inside: auto !important;
+    }
+    thead {
+      display: table-header-group !important;
+    }
+    tbody {
+      display: table-row-group !important;
     }
     tr {
-      page-break-inside: avoid;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
     }
     .signature-block {
-      page-break-inside: avoid;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+    .print-footer {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
     }
   `;
 

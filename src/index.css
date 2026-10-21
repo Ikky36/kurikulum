@@ -336,7 +336,8 @@
 
   /* Jika mencetak dari dalam Dialog Modal */
   body:has(#printable-document) > #root,
-  body:has(#admin-test-printable-document) > #root {
+  body:has(#admin-test-printable-document) > #root,
+  body:has(#admin-kop-printable-sheet) > #root {
     display: none !important;
   }
 
@@ -360,27 +361,41 @@
     background: transparent !important;
   }
 
-  /* Lembar dokumen resmi */
+  /* Lembar dokumen resmi: mengalir secara alami (blok) tanpa membentang kosong */
   #printable-document,
   #admin-test-printable-document,
+  #admin-kop-printable-sheet,
   .printable-sheet {
-    display: flex !important;
+    display: block !important;
     visibility: visible !important;
     position: relative !important;
     width: 100% !important;
     max-width: none !important;
     margin: 0 !important;
+    padding: 0 !important;
     box-shadow: none !important;
     border: none !important;
     background: #ffffff !important;
     color: #000000 !important;
-    page-break-after: avoid;
-    break-after: avoid;
+    min-height: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
+  /* Tabel multi-halaman: memecah baris secara rapi & mengulang header tabel di halaman berikutnya */
   table {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  tbody {
+    display: table-row-group !important;
   }
 
   tr {
@@ -388,7 +403,13 @@
     break-inside: avoid !important;
   }
 
+  /* Blok tanda tangan & footer tidak boleh terpotong di tengah lembar */
   .signature-block {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .print-footer {
     page-break-inside: avoid !important;
     break-inside: avoid !important;
   }

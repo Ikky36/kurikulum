@@ -1235,6 +1235,58 @@ export function DocumentTemplateCustomizer() {
               </CardDescription>
             </CardHeader>
             <CardContent className="pt-4 space-y-4">
+              {/* PENGATURAN JARAK & POSISI TANDA TANGAN */}
+              <div className="p-3 bg-muted/40 rounded-lg border space-y-2">
+                <div className="space-y-0.5">
+                  <Label className="text-xs font-semibold">Posisi & Jarak Tanda Tangan</Label>
+                  <p className="text-[10px] text-muted-foreground">
+                    Atur posisi blok tanda tangan terhadap konten terakhir (tabel atau catatan) dokumen.
+                  </p>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant={currentTemplate.signature_spacing === 'normal' || !currentTemplate.signature_spacing ? 'default' : 'outline'}
+                    size="sm"
+                    className="text-xs h-auto py-2 flex-col gap-0.5 text-center"
+                    onClick={() => updateTemplateField('signature_spacing', 'normal')}
+                  >
+                    <span className="font-semibold text-xs">Proporsional (~2.5 cm)</span>
+                    <span className="text-[9px] opacity-80">(Mengalir Alami)</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={currentTemplate.signature_spacing === 'compact' ? 'default' : 'outline'}
+                    size="sm"
+                    className="text-xs h-auto py-2 flex-col gap-0.5 text-center"
+                    onClick={() => updateTemplateField('signature_spacing', 'compact')}
+                  >
+                    <span className="font-semibold text-xs">Rapat (~1.5 cm)</span>
+                    <span className="text-[9px] opacity-80">(Lebih Dekat)</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={currentTemplate.signature_spacing === 'spacious' ? 'default' : 'outline'}
+                    size="sm"
+                    className="text-xs h-auto py-2 flex-col gap-0.5 text-center"
+                    onClick={() => updateTemplateField('signature_spacing', 'spacious')}
+                  >
+                    <span className="font-semibold text-xs">Lebar (~4 cm)</span>
+                    <span className="text-[9px] opacity-80">(Jarak Lapang)</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={currentTemplate.signature_spacing === 'bottom' ? 'default' : 'outline'}
+                    size="sm"
+                    className="text-xs h-auto py-2 flex-col gap-0.5 text-center"
+                    onClick={() => updateTemplateField('signature_spacing', 'bottom')}
+                  >
+                    <span className="font-semibold text-xs">Dasar Lembar</span>
+                    <span className="text-[9px] opacity-80">(Paling Bawah)</span>
+                  </Button>
+                </div>
+              </div>
+
               {/* DAFTAR PENANDATANGAN */}
               <div className="space-y-3">
                 {currentTemplate.signatures.map((sig, idx) => (
@@ -1458,7 +1510,9 @@ export function DocumentTemplateCustomizer() {
             <CardContent className="p-3 bg-muted/40 flex justify-center overflow-x-auto">
               {/* LEMBAR KERTAS FISIK SIMULASI */}
               <div
-                className={`w-full bg-white text-slate-900 shadow-md rounded-sm border transition-all flex flex-col justify-between overflow-hidden ${
+                className={`w-full bg-white text-slate-900 shadow-md rounded-sm border transition-all flex flex-col ${
+                  currentTemplate.signature_spacing === 'bottom' ? 'justify-between' : ''
+                } overflow-hidden ${
                   isPortrait ? 'max-w-[340px] aspect-[1/1.414]' : 'max-w-[480px] aspect-[1.414/1]'
                 }`}
                 style={{
@@ -1513,7 +1567,7 @@ export function DocumentTemplateCustomizer() {
                 )}
 
                 {/* 2. AREA KONTEN DOKUMEN */}
-                <div className="flex-1 flex flex-col justify-between py-1 text-[7px] space-y-2">
+                <div className={`py-1 text-[7px] space-y-1.5 ${currentTemplate.signature_spacing === 'bottom' ? 'flex-1 flex flex-col justify-between' : 'w-full flex flex-col'}`}>
                   <div>
                     {/* Judul Dokumen */}
                     <div className="text-center font-bold text-[8.5px] uppercase tracking-wide border-b pb-0.5 mb-1.5">
@@ -1580,8 +1634,16 @@ export function DocumentTemplateCustomizer() {
                     )}
                   </div>
 
-                  {/* Pengesahan Tanda Tangan */}
-                  <div>
+                  {/* Pengesahan Tanda Tangan (Mengalir proporsional di bawah konten) */}
+                  <div className={
+                    currentTemplate.signature_spacing === 'compact'
+                      ? 'mt-1.5'
+                      : currentTemplate.signature_spacing === 'spacious'
+                      ? 'mt-4'
+                      : currentTemplate.signature_spacing === 'bottom'
+                      ? 'mt-auto'
+                      : 'mt-2.5'
+                  }>
                     <div className="text-right text-[6px] text-slate-500 mb-0.5">
                       {docSettings.default_city || 'Ponorogo'}, 21 Oktober 2026
                     </div>
@@ -1619,7 +1681,9 @@ export function DocumentTemplateCustomizer() {
 
                 {/* 3. FOOTER */}
                 {docSettings.footer_enabled && currentTemplate.show_footer !== false && (
-                  <div className="border-t border-slate-200 pt-0.5 mt-1 flex justify-between items-center text-[5px] text-slate-500">
+                  <div className={`border-t border-slate-200 pt-0.5 text-[5px] text-slate-500 flex justify-between items-center ${
+                    currentTemplate.signature_spacing === 'bottom' ? 'mt-1' : 'mt-2'
+                  }`}>
                     <p className="truncate max-w-[200px]">{docSettings.footer_text}</p>
                     {docSettings.show_page_number && <span>Hal. 1/1</span>}
                   </div>

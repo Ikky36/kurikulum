@@ -1,6 +1,11 @@
 import React, { useRef } from 'react';
 import { useDocumentSettings } from '@/lib/documentSettings';
-import { useDocumentTemplatesConfig, SingleDocumentTemplate, defaultStudentBioFields } from '@/lib/documentTemplateTypes';
+import {
+  useDocumentTemplatesConfig,
+  SingleDocumentTemplate,
+  defaultStudentBioFields,
+  getSignatureSpacingClass,
+} from '@/lib/documentTemplateTypes';
 import { interpolateVariables, getDummyValueForColumn } from '@/lib/documentDataSources';
 import { printElementById } from '@/lib/printUtils';
 import { Button } from '@/components/ui/button';
@@ -140,7 +145,7 @@ export function UniversalDocumentContainer({
       {/* LEMBAR DOKUMEN FISIK (A4 / F4) */}
       <div
         id={containerId}
-        className={`bg-white text-slate-900 shadow-xl border mx-auto rounded-sm overflow-hidden flex flex-col justify-between transition-all print:shadow-none print:border-none print:m-0 print:p-0 print:w-full print:max-w-none ${
+        className={`bg-white text-slate-900 shadow-xl border mx-auto rounded-sm transition-all print:shadow-none print:border-none print:m-0 print:p-0 print:w-full print:max-w-none print:min-h-0 print:overflow-visible ${
           isPortrait ? 'max-w-[215mm]' : 'max-w-[330mm]'
         }`}
         style={{
@@ -151,7 +156,7 @@ export function UniversalDocumentContainer({
           paddingRight: `${docSettings.margin_right}mm`,
         }}
       >
-        <div className="flex-1 flex flex-col">
+        <div className="w-full flex flex-col">
           {/* 1. KOP SURAT RESMI */}
           {template.show_kop && docSettings.header_mode !== 'none' && (
             <div className="w-full mb-4">
@@ -314,14 +319,14 @@ export function UniversalDocumentContainer({
 
           {/* 4. ISI UTAMA DOKUMEN (TABEL ATAU KONTEN DARI PROPS) */}
           {template.content_mode !== 'text_only' && template.table_enabled !== false && (
-            <div className="flex-1 my-2 document-content">
+            <div className="w-full my-2 document-content">
               {children ? (
                 children
               ) : template.columns && template.columns.length > 0 ? (
                 <div className="w-full overflow-hidden my-2">
-                  <table className="w-full border-collapse border border-slate-300 text-xs">
-                    <thead>
-                      <tr className="bg-slate-100 font-semibold text-slate-800">
+                  <table className="w-full border-collapse border border-slate-300 text-xs [page-break-inside:auto] [break-inside:auto]">
+                    <thead className="table-header-group">
+                      <tr className="bg-slate-100 font-semibold text-slate-800 [page-break-inside:avoid] [break-inside:avoid]">
                         {template.columns.map((c) => (
                           <th key={c.id} className="border border-slate-300 p-2 text-center text-xs">
                             {c.label}
@@ -329,9 +334,9 @@ export function UniversalDocumentContainer({
                         ))}
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="table-row-group">
                       {[1, 2, 3].map((rowIdx) => (
-                        <tr key={rowIdx} className="hover:bg-slate-50/50">
+                        <tr key={rowIdx} className="hover:bg-slate-50/50 [page-break-inside:avoid] [break-inside:avoid]">
                           {template.columns.map((c) => (
                             <td key={c.id} className="border border-slate-300 p-2 text-center text-xs text-slate-700">
                               {getDummyValueForColumn(c.id, c.label, rowIdx)}
@@ -348,7 +353,7 @@ export function UniversalDocumentContainer({
 
           {/* 5. SUB-BAB CATATAN & TATA TERTIB */}
           {template.rules_note_enabled && template.rules_note_text && (
-            <div className="my-4 p-2.5 bg-slate-50 border border-slate-200 rounded text-[10px] sm:text-xs text-slate-700 leading-normal">
+            <div className="my-4 p-2.5 bg-slate-50 border border-slate-200 rounded text-[10px] sm:text-xs text-slate-700 leading-normal break-inside-avoid page-break-inside-avoid">
               <p className="font-bold text-slate-900 mb-1">{template.rules_note_title}</p>
               <div className="whitespace-pre-line space-y-0.5">
                 {template.rules_note_text}
@@ -356,9 +361,9 @@ export function UniversalDocumentContainer({
             </div>
           )}
 
-          {/* 6. BLOK TANDA TANGAN & PENGESAHAN */}
+          {/* 6. BLOK TANDA TANGAN & PENGESAHAN (Mengalir proporsional beberapa cm setelah konten terakhir) */}
           {template.signatures.filter((s) => s.enabled).length > 0 && (
-            <div className="mt-6 pt-2 break-inside-avoid text-xs signature-block">
+            <div className={`${getSignatureSpacingClass(template.signature_spacing)} pt-2 break-inside-avoid page-break-inside-avoid text-xs signature-block`}>
               <div className="text-right text-xs text-slate-700 mb-2">
                 {docSettings.default_city || 'Ponorogo'},{' '}
                 {new Date().toLocaleDateString('id-ID', {
@@ -420,7 +425,7 @@ export function UniversalDocumentContainer({
 
               {/* 6.b TEMBUSAN (CARBON COPY / CC) */}
               {template.copies_enabled && template.copies_list && template.copies_list.length > 0 && (
-                <div className="mt-5 pt-3 border-t text-[10px] text-slate-600 break-inside-avoid signature-block">
+                <div className="mt-5 pt-3 border-t text-[10px] text-slate-600 break-inside-avoid page-break-inside-avoid signature-block">
                   <p className="font-semibold text-slate-800 mb-1">Tembusan disampaikan kepada Yth:</p>
                   <ol className="list-decimal list-inside space-y-0.5 pl-1">
                     {template.copies_list.map((item, idx) => (
@@ -436,10 +441,10 @@ export function UniversalDocumentContainer({
         {/* 7. FOOTER RESMI DOKUMEN */}
         {docSettings.footer_enabled && template.show_footer !== false && (
           <div
-            className={`mt-4 ${
+            className={`mt-8 break-inside-avoid page-break-inside-avoid print-footer ${
               docSettings.footer_mode === 'image' && docSettings.footer_image_full_bleed
                 ? 'overflow-hidden'
-                : 'pt-2 border-t border-slate-300'
+                : 'pt-2.5 border-t border-slate-300'
             }`}
             style={
               docSettings.footer_mode === 'image' && docSettings.footer_image_full_bleed
