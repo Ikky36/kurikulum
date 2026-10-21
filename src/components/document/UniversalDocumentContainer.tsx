@@ -269,7 +269,7 @@ export function UniversalDocumentContainer({
           {/* 3. BIODATA MAHASISWA & METADATA (DINAMIS DARI DATABASE) */}
           {template.show_student_info && (
             <div className="mb-4 p-3 bg-slate-50 border border-slate-300 rounded text-xs leading-relaxed">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
+              <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
                 {(template.student_bio_fields && template.student_bio_fields.length > 0
                   ? template.student_bio_fields
                   : defaultStudentBioFields
@@ -285,7 +285,7 @@ export function UniversalDocumentContainer({
                   return (
                     <div
                       key={idx}
-                      className={`flex ${isLongValue ? 'col-span-1 sm:col-span-2' : ''}`}
+                      className={`flex ${isLongValue ? 'col-span-2' : ''}`}
                     >
                       <span className="w-32 font-medium text-slate-600 shrink-0">
                         {field.label}
@@ -300,7 +300,7 @@ export function UniversalDocumentContainer({
 
                 {/* Additional Metadata Items */}
                 {metadataItems.map((item, idx) => (
-                  <div key={`meta_${idx}`} className="flex col-span-1 sm:col-span-2">
+                  <div key={`meta_${idx}`} className="flex col-span-2">
                     <span className="w-32 font-medium text-slate-600 shrink-0">{item.label}</span>
                     <span className="w-3 text-center shrink-0">:</span>
                     <span className="text-slate-900 flex-1 font-medium">{item.value}</span>
