@@ -21,6 +21,7 @@ import { ListTodo } from 'lucide-react';
 import { useAcademicPeriod } from '@/hooks/useAcademicPeriod';
 import { calculateSemester } from '@/utils/academicHelpers';
 import { StudentSemesterBadge } from '@/components/ui/semester-badge';
+import { cleanCommentsForDisplay, serializeApprovalsToComments, parseApprovalsFromComments } from '@/lib/documentApprovals';
 
 export default function TugasAkhirAdmin() {
   const { activeAcademicYear, activeSemester } = useAcademicPeriod();
@@ -133,10 +134,14 @@ export default function TugasAkhirAdmin() {
 
   const processMutation = useMutation({
     mutationFn: async () => {
-      let finalComments = selectedSubmission.comments || '';
+      const approvalState = parseApprovalsFromComments(selectedSubmission.comments);
+      const cleanPrev = cleanCommentsForDisplay(selectedSubmission.comments);
+      let humanComments = cleanPrev || '';
+
       if (formComments) {
-        finalComments = `[Catatan Admin]: ${formComments}\n\n[Catatan Mahasiswa]: ${selectedSubmission.comments || '-'}`;
+        humanComments = `[Catatan Admin]: ${formComments}\n\n[Catatan Mahasiswa]: ${cleanPrev || '-'}`;
       }
+      const finalComments = serializeApprovalsToComments(humanComments, approvalState);
 
       let updateData: any = { 
         status: formStatus,
@@ -542,7 +547,7 @@ export default function TugasAkhirAdmin() {
 
                     <div>
                       <Label className="text-muted-foreground text-xs">Catatan Mahasiswa</Label>
-                      <p className="text-sm mt-1 whitespace-pre-wrap">{selectedSubmission.comments || '-'}</p>
+                      <p className="text-sm mt-1 whitespace-pre-wrap">{cleanCommentsForDisplay(selectedSubmission.comments) || '-'}</p>
                     </div>
                     
                     <div className="pt-4 border-t border-border mt-4">

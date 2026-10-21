@@ -3,7 +3,8 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { UniversalDocumentContainer, DocumentSignatureData } from './UniversalDocumentContainer';
 import { useDocumentTemplatesConfig } from '@/lib/documentTemplateTypes';
 import { useDocumentSettings } from '@/lib/documentSettings';
-import { Check } from 'lucide-react';
+import { parseApprovalsFromComments } from '@/lib/documentApprovals';
+import { Check, ShieldCheck } from 'lucide-react';
 
 export interface KartuBimbinganViewerModalProps {
   open: boolean;
@@ -76,32 +77,42 @@ export function KartuBimbinganViewerModal({
     }
   };
 
-  // Signatures Data
+  // Parse status pengesahan dari comments submission
+  const approvalState = parseApprovalsFromComments(submission.comments);
+  const adv1Approval = approvalState.signers.advisor_1;
+  const adv2Approval = approvalState.signers.advisor_2;
+  const kaprodiApproval = approvalState.signers.kaprodi;
+
+  // Signatures Data: tanda tangan digital hanya disuplai jika masing-masing pihak telah mengesahkan
   const signaturesData: Record<string, DocumentSignatureData> = {
     student: {
       name: mhsName,
       id_number: mhsNim,
       signed_at: sortedLogs[0]?.date || submission.created_at,
+      is_approved: true,
     },
     advisor_1: {
-      name: advisor1?.profiles?.full_name || '....................................',
-      id_number: advisor1?.profiles?.nip,
-      signature_url: advisor1?.profiles?.signature_url,
+      name: adv1Approval?.signer_name || advisor1?.profiles?.full_name || '....................................',
+      id_number: adv1Approval?.signer_nidn || advisor1?.profiles?.nip,
+      signature_url: adv1Approval?.is_approved ? (adv1Approval.signature_url || advisor1?.profiles?.signature_url) : null,
       paraf_url: advisor1?.profiles?.paraf_url,
-      signed_at: lastApprovedLog?.date || submission.approved_at,
+      signed_at: adv1Approval?.is_approved ? (adv1Approval.approved_at || lastApprovedLog?.date) : null,
+      is_approved: !!adv1Approval?.is_approved,
     },
     advisor_2: {
-      name: advisor2?.profiles?.full_name || '....................................',
-      id_number: advisor2?.profiles?.nip,
-      signature_url: advisor2?.profiles?.signature_url,
+      name: adv2Approval?.signer_name || advisor2?.profiles?.full_name || '....................................',
+      id_number: adv2Approval?.signer_nidn || advisor2?.profiles?.nip,
+      signature_url: adv2Approval?.is_approved ? (adv2Approval.signature_url || advisor2?.profiles?.signature_url) : null,
       paraf_url: advisor2?.profiles?.paraf_url,
-      signed_at: lastApprovedLog?.date || submission.approved_at,
+      signed_at: adv2Approval?.is_approved ? (adv2Approval.approved_at || lastApprovedLog?.date) : null,
+      is_approved: !!adv2Approval?.is_approved,
     },
     kaprodi: {
-      name: docSettings.kaprodi_name || '....................................',
-      id_number: docSettings.kaprodi_nidn,
-      signature_url: docSettings.kaprodi_signature_url,
-      signed_at: submission.approved_at || lastApprovedLog?.date,
+      name: kaprodiApproval?.signer_name || docSettings.kaprodi_name || '....................................',
+      id_number: kaprodiApproval?.signer_nidn || docSettings.kaprodi_nidn,
+      signature_url: kaprodiApproval?.is_approved ? (kaprodiApproval.signature_url || docSettings.kaprodi_signature_url) : null,
+      signed_at: kaprodiApproval?.is_approved ? (kaprodiApproval.approved_at || submission.approved_at) : null,
+      is_approved: !!kaprodiApproval?.is_approved,
     },
   };
 

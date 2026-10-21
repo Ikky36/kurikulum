@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Calendar, CheckCircle2, FileText, MessageSquare, Plus, Save, Clock, ExternalLink, Printer } from 'lucide-react';
+import { BookOpen, Calendar, CheckCircle2, FileText, MessageSquare, Plus, Save, Clock, ExternalLink, Printer, ShieldCheck, Undo2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,6 +16,7 @@ import { toast } from 'sonner';
 
 import { TADosenMilestones } from '@/pages/tugas-akhir/TADosenMilestones';
 import { KartuBimbinganViewerModal } from '@/components/document/KartuBimbinganViewerModal';
+import { parseApprovalsFromComments, useTaApprovalActions } from '@/lib/documentApprovals';
 
 export function BimbinganTugasAkhirTab() {
   const { user, profile } = useAuth();
@@ -28,6 +29,8 @@ export function BimbinganTugasAkhirTab() {
   // States for consultation response & add
   const [activeLog, setActiveLog] = useState<any>(null);
   const [isAddingLog, setIsAddingLog] = useState(false);
+  
+  const { approveByAdvisor, revokeAdvisorApproval } = useTaApprovalActions();
   
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
   const [logProblem, setLogProblem] = useState('');
@@ -273,20 +276,90 @@ export function BimbinganTugasAkhirTab() {
                 />
               )}
 
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-semibold flex items-center">
-                    <FileText className="w-5 h-5 mr-2" /> Riwayat Log Konsultasi
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setIsPrintModalOpen(true)} className="gap-1.5">
-                      <Printer className="w-4 h-4" /> Cetak Kartu Bimbingan
-                    </Button>
-                    <Button size="sm" onClick={openAddLog}>
-                      <Plus className="w-4 h-4 mr-2" /> Tambah Log Manual
-                    </Button>
-                  </div>
-                </div>
+              {(() => {
+                const isAdvisor2 = selectedAdvisorship?.role?.toLowerCase().includes('2');
+                const myRoleKey = isAdvisor2 ? 'advisor_2' : 'advisor_1';
+                const myRoleLabel = isAdvisor2 ? 'Dosen Pembimbing 2' : 'Dosen Pembimbing 1';
+                const approvalState = parseApprovalsFromComments(selectedAdvisorship?.ta_submissions?.comments);
+                const myApproval = approvalState?.signers?.[myRoleKey];
+                const isMyApproved = !!myApproval?.is_approved;
+                const kaprodiApproval = approvalState?.signers?.kaprodi;
+
+                return (
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                      <div>
+                        <h3 className="text-lg font-semibold flex items-center">
+                          <FileText className="w-5 h-5 mr-2" /> Riwayat Log Konsultasi
+                        </h3>
+                        {kaprodiApproval?.is_approved && (
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1 mt-0.5">
+                            <ShieldCheck className="w-3.5 h-3.5" /> Disahkan Kaprodi ({kaprodiApproval.signer_name})
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {/* Tombol / Status Pengesahan Dosen Pembimbing */}
+                        {isMyApproved ? (
+                          <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-md px-2.5 py-1">
+                            <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-200 flex items-center gap-1">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                              Telah Anda Sahkan ({myApproval?.approved_at ? new Date(myApproval.approved_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : ''})
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 px-1.5 text-xs text-muted-foreground hover:text-destructive gap-1"
+                              disabled={revokeAdvisorApproval.isPending}
+                              onClick={() => {
+                                if (window.confirm('Batalkan pengesahan resmi Anda pada kartu bimbingan mahasiswa ini?')) {
+                                  revokeAdvisorApproval.mutate({
+                                    submissionId: selectedAdvisorship.ta_submissions.id,
+                                    roleKey: myRoleKey,
+                                  });
+                                }
+                              }}
+                            >
+                              <Undo2 className="w-3 h-3" /> Batalkan
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-sm"
+                            disabled={approveByAdvisor.isPending}
+                            onClick={() => {
+                              const mhsName = selectedAdvisorship?.ta_submissions?.profiles?.full_name || 'mahasiswa';
+                              if (window.confirm(`Sahkan seluruh kartu bimbingan mahasiswa ${mhsName}? Tanda tangan digital Anda akan dibubuhkan pada dokumen pengesahan resmi.`)) {
+                                approveByAdvisor.mutate({
+                                  submissionId: selectedAdvisorship.ta_submissions.id,
+                                  roleKey: myRoleKey,
+                                  roleLabel: myRoleLabel,
+                                  signer: {
+                                    id: user?.id,
+                                    name: profile?.full_name || user?.email || 'Dosen Pembimbing',
+                                    nidn: profile?.nip || '',
+                                    signature_url: profile?.signature_url,
+                                    paraf_url: profile?.paraf_url,
+                                  },
+                                });
+                              }
+                            }}
+                          >
+                            <ShieldCheck className="w-4 h-4" /> Sahkan Kartu Bimbingan
+                          </Button>
+                        )}
+
+                        <Button variant="outline" size="sm" onClick={() => setIsPrintModalOpen(true)} className="gap-1.5">
+                          <Printer className="w-4 h-4" /> Cetak Kartu Bimbingan
+                        </Button>
+                        <Button size="sm" onClick={openAddLog}>
+                          <Plus className="w-4 h-4 mr-2" /> Tambah Log Manual
+                        </Button>
+                      </div>
+                    </div>
 
                 {(activeLog || isAddingLog) ? (
                   <Card className="border-primary/50 shadow-sm">
@@ -452,8 +525,10 @@ export function BimbinganTugasAkhirTab() {
                   </Table>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
+          </div>
+        )}
         </DialogContent>
       </Dialog>
 

@@ -18,6 +18,7 @@ export interface DocumentSignatureData {
   signature_url?: string | null;
   paraf_url?: string | null;
   signed_at?: string | Date | null; // Timestamp tanggal pengesahan/tanda tangan
+  is_approved?: boolean; // Menandakan bahwa penandatangan telah menyetujui/mengesahkan secara resmi
 }
 
 export interface UniversalDocumentContainerProps {
@@ -101,10 +102,10 @@ export function UniversalDocumentContainer({
       }
     }
 
-    // Prioritas B: Cari timestamp tanda tangan/persetujuan paling akhir dari signaturesData
+    // Prioritas B: Cari timestamp tanda tangan/persetujuan paling akhir dari signaturesData YANG SUDAH DISETUJUI
     const signedTimestamps = Object.values(signaturesData)
+      .filter((s) => s?.is_approved !== false && Boolean(s?.signed_at))
       .map((s) => s?.signed_at)
-      .filter(Boolean)
       .map((d) => new Date(d!).getTime())
       .filter((t) => !isNaN(t));
 
@@ -117,7 +118,7 @@ export function UniversalDocumentContainer({
       });
     }
 
-    // Prioritas C: Fallback jika belum ada tanda tangan resmi (mengambil tanggal hari ini)
+    // Prioritas C: Fallback jika belum ada tanda tangan resmi yang disetujui (mengambil tanggal hari ini)
     return new Date().toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'long',
@@ -456,13 +457,18 @@ export function UniversalDocumentContainer({
                       sig.custom_id_number ||
                       (isKaprodi ? docSettings.kaprodi_nidn : isDekan ? docSettings.dekan_nidn : undefined);
 
-                    const resolvedSignatureUrl =
-                      baseData.signature_url ||
-                      (isKaprodi ? docSettings.kaprodi_signature_url : isDekan ? docSettings.dekan_signature_url : undefined);
+                    // Tanda tangan digital hanya tertera JIKA:
+                    // 1. Dokumen sedang di-preview di customizer (isPreview), ATAU
+                    // 2. baseData.is_approved bernilai true (telah disahkan secara resmi oleh pemegang akun)
+                    const isApproved = isPreview || baseData.is_approved === true;
 
-                    const signatureImg = sig.use_digital_signature
-                      ? resolvedSignatureUrl || baseData.paraf_url
-                      : null;
+                    let signatureImg: string | null = null;
+                    if (sig.use_digital_signature && isApproved) {
+                      const resolvedSignatureUrl =
+                        baseData.signature_url ||
+                        (isKaprodi ? docSettings.kaprodi_signature_url : isDekan ? docSettings.dekan_signature_url : undefined);
+                      signatureImg = resolvedSignatureUrl || baseData.paraf_url || null;
+                    }
 
                     return (
                       <div key={sig.id} className="min-w-[140px] max-w-[200px] flex flex-col items-center signature-block">

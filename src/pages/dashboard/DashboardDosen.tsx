@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Camera, Loader2, Upload, Download, Save, BookOpen, PenLine } from 'lucide-react';
+import { User, Mail, Camera, Loader2, Upload, Download, Save, BookOpen, PenLine, FileText, FileCheck, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Course, Profile, Grade } from '@/lib/types';
@@ -25,6 +25,9 @@ import { TableFilterHeader } from '@/components/ui/table-column-filter';
 import { DashboardScoreRecap } from '@/components/dashboard/DashboardScoreRecap';
 import { MahasiswaBimbinganTab } from '@/components/dosen/MahasiswaBimbinganTab';
 import { BimbinganTugasAkhirTab } from '@/components/dosen/BimbinganTugasAkhirTab';
+import { PengesahanDokumenKaprodiTab } from '@/components/dosen/PengesahanDokumenKaprodiTab';
+import { useDocumentSettings } from '@/lib/documentSettings';
+import { parseApprovalsFromComments } from '@/lib/documentApprovals';
 
 export default function DashboardDosen() {
   const { user, profile, role, refreshProfile, loading } = useAuth();
@@ -114,6 +117,31 @@ export default function DashboardDosen() {
   });
 
   const totalPending = pendingGuidanceCount + pendingKrsCount;
+
+  // Cek apakah akun dosen ini ditugaskan sebagai Kaprodi
+  const { settings: docSettings } = useDocumentSettings();
+  const isKaprodi = Boolean(
+    (profile?.id && docSettings.kaprodi_profile_id && profile.id === docSettings.kaprodi_profile_id) ||
+    role === 'admin' ||
+    role === 'sub_admin'
+  );
+
+  // Hitung dokumen yang menunggu pengesahan Kaprodi
+  const { data: pendingKaprodiCount = 0 } = useQuery({
+    queryKey: ['kaprodi_pending_approvals_count', isKaprodi],
+    queryFn: async () => {
+      if (!isKaprodi) return 0;
+      const { data, error } = await supabase
+        .from('ta_submissions')
+        .select('comments');
+      if (error) return 0;
+      return (data || []).filter((sub: any) => {
+        const parsed = parseApprovalsFromComments(sub.comments);
+        return !parsed.signers.kaprodi?.is_approved;
+      }).length;
+    },
+    enabled: isKaprodi,
+  });
   useMultiTableRealtimeSubscription([
     { table: 'grades', queryKeys: [['course-grades'], ['grades']] },
     { table: 'enrollments', queryKeys: [['course-enrollments-dosen']] },
@@ -467,7 +495,46 @@ export default function DashboardDosen() {
             window.history.pushState(null, '', `#${value}`);
           }}
           className="space-y-6"
-        >          <TabsContent value="matakuliah">
+        >
+          <TabsList className="flex flex-wrap h-auto p-1 bg-muted/70 border gap-1 max-w-full rounded-lg">
+            <TabsTrigger value="matakuliah" className="gap-2">
+              <BookOpen className="w-4 h-4" /> Mata Kuliah Diampu
+            </TabsTrigger>
+            <TabsTrigger value="bimbingan" className="gap-2 relative">
+              <User className="w-4 h-4" /> Bimbingan Akademik
+              {totalPending > 0 && (
+                <Badge variant="destructive" className="ml-1 px-1.5 py-0 text-[10px]">
+                  {totalPending}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="bimbingan_ta" className="gap-2 relative">
+              <FileText className="w-4 h-4" /> Bimbingan Tugas Akhir
+              {pendingTaLogsCount > 0 && (
+                <Badge variant="destructive" className="ml-1 px-1.5 py-0 text-[10px]">
+                  {pendingTaLogsCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+            {isKaprodi && (
+              <TabsTrigger
+                value="pengesahan"
+                className="gap-2 relative border border-primary/20 bg-background/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold"
+              >
+                <FileCheck className="w-4 h-4" /> Pengesahan Dokumen (Kaprodi)
+                {pendingKaprodiCount > 0 && (
+                  <Badge variant="default" className="ml-1 px-1.5 py-0 text-[10px] bg-amber-500 text-slate-900 font-bold hover:bg-amber-600">
+                    {pendingKaprodiCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="rekap" className="gap-2">
+              <Download className="w-4 h-4" /> Rekap Skor
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="matakuliah">
             <div className="grid gap-6 lg:grid-cols-4 mb-8">
               {/* Profile Card */}
           <Card className="animate-slide-up">
@@ -801,6 +868,16 @@ export default function DashboardDosen() {
 
           <TabsContent value="bimbingan_ta">
             <BimbinganTugasAkhirTab />
+          </TabsContent>
+
+          {isKaprodi && (
+            <TabsContent value="pengesahan">
+              <PengesahanDokumenKaprodiTab />
+            </TabsContent>
+          )}
+
+          <TabsContent value="rekap">
+            <DashboardScoreRecap />
           </TabsContent>
         </Tabs>
       </div>

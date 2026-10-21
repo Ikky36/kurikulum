@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { useDocumentSettings } from '@/lib/documentSettings';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -19,6 +20,12 @@ import { NotificationBell } from './NotificationBell';
 export function Navbar() {
   const { user, profile, signOut } = useAuth();
   const { data: settings } = useAppSettings();
+  const { settings: docSettings } = useDocumentSettings();
+  const isKaprodi = Boolean(
+    (profile?.id && docSettings.kaprodi_profile_id && profile.id === docSettings.kaprodi_profile_id) ||
+    profile?.role === 'admin' ||
+    profile?.role === 'sub-admin'
+  );
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -138,6 +145,11 @@ export function Navbar() {
                     <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#matakuliah')}>Mata Kuliah Diampu</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#bimbingan')}>Bimbingan Akademik</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#bimbingan_ta')}>Bimbingan Tugas Akhir</DropdownMenuItem>
+                    {isKaprodi && (
+                      <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#pengesahan')} className="text-primary font-medium">
+                        Pengesahan Dokumen (Kaprodi)
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#rekap')}>Rekap Skor</DropdownMenuItem>
                   </>
                 )}

@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save, Undo2, Eye, Edit2, Trash2, ArrowLeft, Printer } from 'lucide-react';
+import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save, Undo2, Eye, Edit2, Trash2, ArrowLeft, Printer, ShieldCheck, Send, FileCheck } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -22,11 +22,13 @@ import { calculateSemester } from '@/utils/academicHelpers';
 import { TATimeline } from './TATimeline';
 import { SeminarRegistrationForm } from './SeminarRegistrationForm';
 import { KartuBimbinganViewerModal } from '@/components/document/KartuBimbinganViewerModal';
+import { parseApprovalsFromComments, useTaApprovalActions, cleanCommentsForDisplay } from '@/lib/documentApprovals';
 
 export default function TugasAkhirMahasiswa() {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const { activeAcademicYear, activeSemester } = useAcademicPeriod();
+  const { requestApproval } = useTaApprovalActions();
   
   const [selectedType, setSelectedType] = useState('');
   const [title, setTitle] = useState('');
@@ -572,7 +574,7 @@ export default function TugasAkhirMahasiswa() {
                         <h3 className="text-sm font-semibold mb-2 flex items-center">
                           <MessageSquare className="w-4 h-4 mr-2" /> Catatan Admin / Prodi
                         </h3>
-                        <p className="text-sm whitespace-pre-wrap">{mySubmission.comments}</p>
+                        <p className="text-sm whitespace-pre-wrap">{cleanCommentsForDisplay(mySubmission.comments)}</p>
                       </div>
                     )}
 
@@ -693,28 +695,81 @@ export default function TugasAkhirMahasiswa() {
                   </Card>
                 )}
 
-                {mySubmission.status === 'approved' && (
-                  <Card>
-                    <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                      <div>
-                        <CardTitle>Riwayat Bimbingan</CardTitle>
-                        <CardDescription>Catat dan pantau histori konsultasi Anda dengan dosen pembimbing.</CardDescription>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIsPrintModalOpen(true)}
-                          className="gap-1.5"
-                        >
-                          <Printer className="w-4 h-4" /> Cetak Kartu Bimbingan
-                        </Button>
-                        <Button onClick={() => setIsAddLogOpen(true)} size="sm">
-                          <Plus className="w-4 h-4 mr-2" /> Tambah Log
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
+                {mySubmission.status === 'approved' && (() => {
+                  const approvalState = parseApprovalsFromComments(mySubmission.comments);
+                  const isApprovalRequested = Boolean(approvalState.requested);
+                  const adv1 = approvalState.signers.advisor_1;
+                  const adv2 = approvalState.signers.advisor_2;
+                  const kaprodi = approvalState.signers.kaprodi;
+                  const hasAdvisor2 = mySubmission.ta_advisors?.some((a: any) => a.role === 'Pembimbing 2' || a.role?.includes('2'));
+
+                  return (
+                    <Card>
+                      <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b pb-4">
+                        <div>
+                          <CardTitle>Riwayat Bimbingan</CardTitle>
+                          <CardDescription>Catat dan pantau histori konsultasi Anda dengan dosen pembimbing.</CardDescription>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* Tombol Ajukan Pengesahan Mahasiswa */}
+                          {!isApprovalRequested ? (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5 shadow-sm text-xs"
+                              disabled={requestApproval.isPending}
+                              onClick={() => {
+                                if (window.confirm('Ajukan permohonan pengesahan resmi kartu bimbingan kepada Dosen Pembimbing dan Ketua Program Studi?')) {
+                                  requestApproval.mutate(mySubmission.id);
+                                }
+                              }}
+                            >
+                              <Send className="w-3.5 h-3.5" /> Ajukan Pengesahan
+                            </Button>
+                          ) : (
+                            <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 gap-1 py-1">
+                              <Clock className="w-3.5 h-3.5 text-amber-600" /> Pengajuan Terkirim
+                            </Badge>
+                          )}
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsPrintModalOpen(true)}
+                            className="gap-1.5"
+                          >
+                            <Printer className="w-4 h-4" /> Cetak Kartu Bimbingan
+                          </Button>
+                          <Button onClick={() => setIsAddLogOpen(true)} size="sm">
+                            <Plus className="w-4 h-4 mr-2" /> Tambah Log
+                          </Button>
+                        </div>
+                      </CardHeader>
+
+                      {/* Status Bar Pengesahan Resmi */}
+                      {isApprovalRequested && (
+                        <div className="bg-muted/40 px-6 py-2.5 border-b text-xs flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold text-muted-foreground">Status Pengesahan:</span>
+                            <Badge className={adv1?.is_approved ? 'bg-emerald-600 text-white' : 'bg-secondary text-secondary-foreground'}>
+                              {adv1?.is_approved ? '✓ Pembimbing 1 Disahkan' : 'Pembimbing 1 Menunggu'}
+                            </Badge>
+                            {hasAdvisor2 && (
+                              <Badge className={adv2?.is_approved ? 'bg-emerald-600 text-white' : 'bg-secondary text-secondary-foreground'}>
+                                {adv2?.is_approved ? '✓ Pembimbing 2 Disahkan' : 'Pembimbing 2 Menunggu'}
+                              </Badge>
+                            )}
+                            <Badge className={kaprodi?.is_approved ? 'bg-emerald-600 text-white' : 'bg-secondary text-secondary-foreground'}>
+                              {kaprodi?.is_approved ? '✓ Kaprodi Disahkan' : 'Kaprodi Menunggu'}
+                            </Badge>
+                          </div>
+                          <span className="text-[11px] text-muted-foreground italic">
+                            Tanda tangan digital pengesahan otomatis tercetak saat disetujui masing-masing pejabat.
+                          </span>
+                        </div>
+                      )}
+
+                      <CardContent className="pt-6">
                       <div className="rounded-md border">
                         <Table>
                           <TableHeader>
@@ -774,8 +829,9 @@ export default function TugasAkhirMahasiswa() {
                         </Table>
                       </div>
                     </CardContent>
-                  </Card>
-                )}
+                    </Card>
+                  );
+                })()}
               </div>
             ) : (
               <Card className={generalErrors.length > 0 ? "opacity-50 pointer-events-none" : ""}>
