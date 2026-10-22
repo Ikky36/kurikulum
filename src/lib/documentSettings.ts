@@ -74,6 +74,9 @@ export interface DocumentLayoutSettings {
   qr_verify_header_line_2?: string;
   qr_verify_header_subtitle?: string;
   qr_verify_activity_badge_text?: string;
+  qr_verify_badge_verified_title?: string;
+  qr_verify_badge_verified_label?: string;
+  qr_verify_badge_verified_desc?: string;
 }
 
 export const defaultDocumentSettings: DocumentLayoutSettings = {
@@ -142,6 +145,9 @@ export const defaultDocumentSettings: DocumentLayoutSettings = {
   qr_verify_header_line_2: 'STIT MADANI YOGYAKARTA',
   qr_verify_header_subtitle: 'Layanan Verifikasi Dokumen & Keabsahan Akademik',
   qr_verify_activity_badge_text: 'Terdaftar di SIAKAD',
+  qr_verify_badge_verified_title: 'DOKUMEN RESMI TERVERIFIKASI & SAH',
+  qr_verify_badge_verified_label: 'Autentik ✓',
+  qr_verify_badge_verified_desc: 'Dokumen ini secara resmi tercatat dalam pangkalan data akademik dan telah dibubuhi stempel tanda tangan digital yang sah oleh pejabat berwenang.',
 };
 
 export const SETTING_KEY_DOC_LAYOUT = 'doc_layout_settings';

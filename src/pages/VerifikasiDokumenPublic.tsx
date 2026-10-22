@@ -246,15 +246,19 @@ export default function VerifikasiDokumenPublic() {
                   <span className={`text-sm sm:text-base font-extrabold ${
                     isFullyVerified ? 'text-emerald-900 dark:text-emerald-200' : 'text-amber-900 dark:text-amber-200'
                   }`}>
-                    {isFullyVerified ? 'DOKUMEN RESMI TERVERIFIKASI & SAH' : 'DOKUMEN DALAM PROSES PENGESAHAN'}
+                    {isFullyVerified
+                      ? (docSettings.qr_verify_badge_verified_title || 'DOKUMEN RESMI TERVERIFIKASI & SAH')
+                      : 'DOKUMEN DALAM PROSES PENGESAHAN'}
                   </span>
                   <Badge className={isFullyVerified ? 'bg-emerald-600' : 'bg-amber-600'}>
-                    {isFullyVerified ? 'Autentik ✓' : 'Menunggu'}
+                    {isFullyVerified
+                      ? (docSettings.qr_verify_badge_verified_label || 'Autentik ✓')
+                      : 'Menunggu'}
                   </Badge>
                 </div>
                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                   {isFullyVerified
-                    ? 'Dokumen ini secara resmi tercatat dalam pangkalan data akademik dan telah dibubuhi stempel tanda tangan digital yang sah oleh pejabat berwenang.'
+                    ? (docSettings.qr_verify_badge_verified_desc || 'Dokumen ini secara resmi tercatat dalam pangkalan data akademik dan telah dibubuhi stempel tanda tangan digital yang sah oleh pejabat berwenang.')
                     : 'Dokumen ini sedang dalam proses review/pengesahan bertingkat oleh dosen pembimbing atau pimpinan program studi.'}
                 </p>
               </div>

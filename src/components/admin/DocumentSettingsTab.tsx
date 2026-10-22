@@ -1508,6 +1508,37 @@ export function DocumentSettingsTab() {
                             className="h-8 text-xs"
                           />
                         </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-[11px] font-medium text-slate-700">Judul Status Sah</Label>
+                          <Input
+                            value={form.qr_verify_badge_verified_title ?? 'DOKUMEN RESMI TERVERIFIKASI & SAH'}
+                            onChange={(e) => updateField('qr_verify_badge_verified_title', e.target.value)}
+                            placeholder="Contoh: DOKUMEN RESMI TERVERIFIKASI & SAH"
+                            className="h-8 text-xs font-bold"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-[11px] font-medium text-slate-700">Label Lencana Status</Label>
+                          <Input
+                            value={form.qr_verify_badge_verified_label ?? 'Autentik ✓'}
+                            onChange={(e) => updateField('qr_verify_badge_verified_label', e.target.value)}
+                            placeholder="Contoh: Autentik ✓"
+                            className="h-8 text-xs font-semibold"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2 space-y-1">
+                          <Label className="text-[11px] font-medium text-slate-700">Teks Penjelasan Keabsahan Dokumen (Kotak Hijau)</Label>
+                          <Textarea
+                            value={form.qr_verify_badge_verified_desc ?? 'Dokumen ini secara resmi tercatat dalam pangkalan data akademik dan telah dibubuhi stempel tanda tangan digital yang sah oleh pejabat berwenang.'}
+                            onChange={(e) => updateField('qr_verify_badge_verified_desc', e.target.value)}
+                            placeholder="Tuliskan keterangan resmi keabsahan dokumen..."
+                            rows={2}
+                            className="text-xs"
+                          />
+                        </div>
                       </div>
                     </div>
 
