@@ -102,6 +102,24 @@ export function KrsDocumentViewerModal({
             templateOverride={template}
             documentId={krsData?.id}
             documentDate={latestKrsDate}
+            verificationData={{
+              id: krsData?.id,
+              docType: template.code,
+              studentName: mhsName,
+              studentNim: mhsNim,
+              studentProgram: mhsProgram,
+              topicTitle: `KRS Semester ${semesterName || ''} TA ${academicYearName || ''}`,
+              isFullyApproved: Boolean(krsData?.status === 'approved'),
+              adv1Name: dpaProfile?.full_name || '',
+              adv1Nidn: dpaProfile?.nip || dpaProfile?.nidn || '',
+              adv1Date: latestKrsDate ? String(latestKrsDate) : '',
+              adv1Approved: Boolean(krsData?.status === 'approved'),
+              kaprodiName: docSettings.kaprodi_name || '',
+              kaprodiNidn: docSettings.kaprodi_nidn || '',
+              kaprodiDate: latestKrsDate ? String(latestKrsDate) : '',
+              kaprodiApproved: Boolean(krsData?.status === 'approved'),
+              activityCount: totalSks,
+            }}
             studentInfo={{
               name: mhsName,
               nim: mhsNim,

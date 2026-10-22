@@ -233,6 +233,24 @@ export function KartuBimbinganViewerModal({
             templateOverride={template}
             documentId={submission.id}
             documentDate={latestSignatureDate}
+            verificationData={{
+              id: submission.id,
+              docType: template.code,
+              studentName: mhsName,
+              studentNim: mhsNim,
+              studentProgram: mhsProgram,
+              topicTitle: submission.title || '',
+              isFullyApproved: Boolean(kaprodiApproval?.is_approved),
+              adv1Name: adv1Approval?.signer_name || adv1Profile?.full_name || '',
+              adv1Nidn: adv1Approval?.signer_nidn || adv1Profile?.nip || '',
+              adv1Date: adv1Approval?.approved_at || lastApprovedLog?.date || '',
+              adv1Approved: Boolean(adv1Approval?.is_approved),
+              kaprodiName: kaprodiApproval?.signer_name || docSettings.kaprodi_name || '',
+              kaprodiNidn: kaprodiApproval?.signer_nidn || docSettings.kaprodi_nidn || '',
+              kaprodiDate: kaprodiApproval?.approved_at || submission.approved_at || '',
+              kaprodiApproved: Boolean(kaprodiApproval?.is_approved),
+              activityCount: approvedLogs.length,
+            }}
             studentInfo={{
               name: mhsName,
               nim: mhsNim,

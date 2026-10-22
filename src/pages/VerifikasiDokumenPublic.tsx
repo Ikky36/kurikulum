@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useDocumentSettings } from '@/lib/documentSettings';
 import { parseApprovalsFromComments } from '@/lib/documentApprovals';
+import { decodeVerificationPayload } from '@/components/document/UniversalDocumentContainer';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -28,6 +29,8 @@ export default function VerifikasiDokumenPublic() {
 
   const docType = searchParams.get('doc') || 'kartu_bimbingan_ta';
   const docId = searchParams.get('id') || '';
+  const vParam = searchParams.get('v');
+  const urlPayload = vParam ? decodeVerificationPayload(vParam) : null;
 
   // 1. Fetch data dokumen tugas akhir jika ID tersedia
   const { data: taData, isLoading: loadingTA } = useQuery({
@@ -52,7 +55,7 @@ export default function VerifikasiDokumenPublic() {
       }
       return data;
     },
-    enabled: Boolean(docId && docId !== 'sample'),
+    enabled: Boolean(docId && docId !== 'sample' && !urlPayload),
   });
 
   // 2. Fetch data KRS jika dokumen adalah KRS
@@ -78,23 +81,38 @@ export default function VerifikasiDokumenPublic() {
       }
       return data;
     },
-    enabled: Boolean(docId && docId !== 'sample' && docType === 'krs'),
+    enabled: Boolean(docId && docId !== 'sample' && docType === 'krs' && !urlPayload),
   });
 
-  const isLoading = loadingSettings || loadingTA || loadingKRS;
+  const isLoading = loadingSettings || (!urlPayload && (loadingTA || loadingKRS));
 
   // Resolusi data yang diverifikasi
-  const isSample = !docId || docId === 'sample';
-  const isTA = Boolean(taData || docType.includes('tugas_akhir') || docType.includes('ta') || isSample);
+  const isSample = (!docId || docId === 'sample') && !urlPayload;
+  const isTA = Boolean(
+    urlPayload?.doc?.includes('ta') ||
+    urlPayload?.doc?.includes('bimbingan') ||
+    taData ||
+    docType.includes('tugas_akhir') ||
+    docType.includes('ta') ||
+    isSample
+  );
 
-  // Parse approvals
+  // Parse approvals dari comments database jika ada
   const approvalState = parseApprovalsFromComments(taData?.comments);
   const signers = approvalState?.signers || {};
-  const isKaprodiApproved = Boolean(signers.kaprodi?.is_approved);
-  const isAdvisorApproved = Boolean(signers.advisor_1?.is_approved || signers.advisor_2?.is_approved);
+
+  const isKaprodiApproved = urlPayload
+    ? Boolean(urlPayload.okk || urlPayload.st === 'approved')
+    : Boolean(signers.kaprodi?.is_approved);
+
+  const isAdvisorApproved = urlPayload
+    ? Boolean(urlPayload.ok1)
+    : Boolean(signers.advisor_1?.is_approved || signers.advisor_2?.is_approved);
 
   const isFullyVerified = isSample
     ? true
+    : urlPayload
+    ? urlPayload.st === 'approved'
     : isTA
     ? isKaprodiApproved
     : krsData?.status === 'approved';
@@ -104,6 +122,7 @@ export default function VerifikasiDokumenPublic() {
     if (!isoDate) return '-';
     try {
       const d = new Date(isoDate);
+      if (isNaN(d.getTime())) return isoDate;
       return d.toLocaleDateString('id-ID', {
         day: 'numeric',
         month: 'long',
@@ -115,16 +134,19 @@ export default function VerifikasiDokumenPublic() {
   };
 
   const studentName =
+    urlPayload?.nm ||
     taData?.profiles?.full_name ||
     krsData?.profiles?.full_name ||
     (isSample ? 'Ahmad Fauzi Mubarak' : 'Mahasiswa');
 
   const studentNim =
+    urlPayload?.nim ||
     taData?.profiles?.nim ||
     krsData?.profiles?.nim ||
     (isSample ? '4220261109' : '-');
 
   const studentProgram =
+    urlPayload?.pr ||
     taData?.profiles?.program ||
     krsData?.profiles?.program ||
     docSettings.program_name ||
@@ -135,17 +157,36 @@ export default function VerifikasiDokumenPublic() {
     : 'Kartu Rencana Studi (KRS)';
 
   const topicTitle =
+    urlPayload?.tl ||
     taData?.title ||
     (isSample
       ? 'Analisis Kontrastif Sintaksis Bahasa Arab dan Bahasa Indonesia pada Terjemahan Kitab Matan Al-Ajurrumiyyah'
       : '-');
 
+  const effectiveDocId = urlPayload?.fullId || urlPayload?.id || docId || 'DOC';
   const docCodeNumber = isSample
     ? 'DOC-TA-202610-88492'
-    : `DOC-${(docId || 'DOC').slice(0, 8).toUpperCase()}-${new Date(taData?.created_at || Date.now()).getFullYear()}`;
+    : `DOC-${effectiveDocId.slice(0, 8).toUpperCase()}-${new Date(taData?.created_at || Date.now()).getFullYear()}`;
 
-  const approvedLogsCount = taData?.ta_consultation_logs?.filter((l: any) => l.status === 'approved').length || 0;
-  const totalLogsCount = taData?.ta_consultation_logs?.length || 0;
+  const approvedLogsCount = urlPayload?.cnt ?? (taData?.ta_consultation_logs?.filter((l: any) => l.status === 'approved').length || 0);
+
+  // Signer data terverifikasi
+  const adv1Name =
+    urlPayload?.a1 ||
+    signers.advisor_1?.signer_name ||
+    (isSample ? 'Zulkifli Hayad, M.Pd.' : 'Dosen Pembimbing');
+  const adv1Nidn = urlPayload?.ad1 || signers.advisor_1?.signer_nidn;
+  const adv1Date = urlPayload?.da1 || signers.advisor_1?.approved_at || taData?.updated_at || taData?.created_at;
+  const adv1Approved = urlPayload ? Boolean(urlPayload.ok1) : Boolean(signers.advisor_1?.is_approved);
+
+  const kaprodiName =
+    urlPayload?.kp ||
+    signers.kaprodi?.signer_name ||
+    docSettings.kaprodi_name ||
+    (isSample ? 'Zulkifli Hayad, M.Pd.' : 'Ketua Program Studi');
+  const kaprodiNidn = urlPayload?.kpd || signers.kaprodi?.signer_nidn || docSettings.kaprodi_nidn;
+  const kaprodiDate = urlPayload?.dkp || signers.kaprodi?.approved_at || taData?.approved_at || taData?.updated_at;
+  const kaprodiApproved = urlPayload ? Boolean(urlPayload.okk || urlPayload.st === 'approved') : Boolean(signers.kaprodi?.is_approved);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-100/70 to-slate-200/50 py-6 px-3 sm:px-6 flex flex-col items-center justify-start">
@@ -169,13 +210,13 @@ export default function VerifikasiDokumenPublic() {
             )}
             <div className="text-left">
               <h1 className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                {docSettings.institution_line_1 || 'SEKOLAH TINGGI ILMU TARBIYAH MADANI'}
+                {docSettings.qr_verify_header_line_1 || docSettings.institution_line_1 || 'SEKOLAH TINGGI ILMU TARBIYAH MADANI'}
               </h1>
               <p className="text-sm sm:text-base font-bold text-slate-900 uppercase">
-                {docSettings.institution_line_2 || 'STIT MADANI YOGYAKARTA'}
+                {docSettings.qr_verify_header_line_2 || docSettings.institution_line_2 || 'STIT MADANI YOGYAKARTA'}
               </p>
               <p className="text-[11px] text-muted-foreground">
-                Layanan Verifikasi Dokumen & Keabsahan Akademik
+                {docSettings.qr_verify_header_subtitle || 'Layanan Verifikasi Dokumen & Keabsahan Akademik'}
               </p>
             </div>
           </div>
@@ -290,21 +331,25 @@ export default function VerifikasiDokumenPublic() {
                         Dosen Pembimbing I
                       </span>
                       <p className="font-semibold text-slate-900 text-xs">
-                        {signers.advisor_1?.signer_name || (isSample ? 'Zulkifli Hayad, M.Pd.' : 'Dosen Pembimbing')}
+                        {adv1Name}
                       </p>
-                      {signers.advisor_1?.signer_nidn && (
+                      {adv1Nidn && (
                         <p className="text-[10px] text-muted-foreground font-mono">
-                          NIDN: {signers.advisor_1.signer_nidn}
+                          NIDN: {adv1Nidn}
                         </p>
                       )}
                       {docSettings.qr_verify_show_timestamps !== false && (
-                        <p className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-1 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> Disahkan: {formatDateTime(signers.advisor_1?.approved_at || taData?.updated_at || taData?.created_at)}
+                        <p className={`text-[10px] mt-1 flex items-center gap-1 ${
+                          adv1Approved ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'
+                        }`}>
+                          <CheckCircle2 className="w-3 h-3" /> {adv1Approved ? `Disahkan: ${formatDateTime(adv1Date)}` : 'Menunggu Pengesahan'}
                         </p>
                       )}
                     </div>
-                    <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 text-[10px] shrink-0">
-                      Disahkan ✓
+                    <Badge variant="outline" className={`text-[10px] shrink-0 ${
+                      adv1Approved ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-amber-50 text-amber-800 border-amber-300'
+                    }`}>
+                      {adv1Approved ? 'Disahkan ✓' : 'Menunggu'}
                     </Badge>
                   </div>
 
@@ -315,21 +360,25 @@ export default function VerifikasiDokumenPublic() {
                         Ketua Program Studi
                       </span>
                       <p className="font-semibold text-slate-900 text-xs">
-                        {signers.kaprodi?.signer_name || docSettings.kaprodi_name || (isSample ? 'Zulkifli Hayad, M.Pd.' : 'Ketua Program Studi')}
+                        {kaprodiName}
                       </p>
-                      {(signers.kaprodi?.signer_nidn || docSettings.kaprodi_nidn) && (
+                      {kaprodiNidn && (
                         <p className="text-[10px] text-muted-foreground font-mono">
-                          NIDN: {signers.kaprodi?.signer_nidn || docSettings.kaprodi_nidn}
+                          NIDN: {kaprodiNidn}
                         </p>
                       )}
                       {docSettings.qr_verify_show_timestamps !== false && (
-                        <p className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-1 flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> Disahkan: {formatDateTime(signers.kaprodi?.approved_at || taData?.approved_at || taData?.updated_at)}
+                        <p className={`text-[10px] mt-1 flex items-center gap-1 ${
+                          kaprodiApproved ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'
+                        }`}>
+                          <CheckCircle2 className="w-3 h-3" /> {kaprodiApproved ? `Disahkan: ${formatDateTime(kaprodiDate)}` : 'Menunggu Pengesahan'}
                         </p>
                       )}
                     </div>
-                    <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 text-[10px] shrink-0">
-                      Disahkan ✓
+                    <Badge variant="outline" className={`text-[10px] shrink-0 ${
+                      kaprodiApproved ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-amber-50 text-amber-800 border-amber-300'
+                    }`}>
+                      {kaprodiApproved ? 'Disahkan ✓' : 'Menunggu'}
                     </Badge>
                   </div>
                 </div>
@@ -346,7 +395,7 @@ export default function VerifikasiDokumenPublic() {
                   </span>
                 </div>
                 <Badge variant="secondary" className="font-normal text-[10px]">
-                  Terdaftar di SIAKAD
+                  {docSettings.qr_verify_activity_badge_text || 'Terdaftar di SIAKAD'}
                 </Badge>
               </div>
             )}

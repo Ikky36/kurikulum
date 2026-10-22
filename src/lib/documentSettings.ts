@@ -70,6 +70,10 @@ export interface DocumentLayoutSettings {
   qr_verify_show_activity_summary?: boolean;
   qr_verify_show_legal_note?: boolean;
   qr_verify_custom_footer_message?: string;
+  qr_verify_header_line_1?: string;
+  qr_verify_header_line_2?: string;
+  qr_verify_header_subtitle?: string;
+  qr_verify_activity_badge_text?: string;
 }
 
 export const defaultDocumentSettings: DocumentLayoutSettings = {
@@ -134,6 +138,10 @@ export const defaultDocumentSettings: DocumentLayoutSettings = {
   qr_verify_show_activity_summary: true,
   qr_verify_show_legal_note: true,
   qr_verify_custom_footer_message: 'Dokumen ini diterbitkan secara sah melalui Sistem Informasi Akademik STIT Madani Yogyakarta dan telah diverifikasi keabsahannya.',
+  qr_verify_header_line_1: 'SEKOLAH TINGGI ILMU TARBIYAH MADANI',
+  qr_verify_header_line_2: 'STIT MADANI YOGYAKARTA',
+  qr_verify_header_subtitle: 'Layanan Verifikasi Dokumen & Keabsahan Akademik',
+  qr_verify_activity_badge_text: 'Terdaftar di SIAKAD',
 };
 
 export const SETTING_KEY_DOC_LAYOUT = 'doc_layout_settings';

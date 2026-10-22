@@ -1456,7 +1456,62 @@ export function DocumentSettingsTab() {
                       </div>
                     </div>
 
-                    {/* 3. Teks Pesan Bantuan / Kontak Kampus */}
+                    {/* 3. Kustomisasi Teks & Kop Halaman Verifikasi HP */}
+                    <div className="space-y-3 p-3 bg-muted/20 border rounded-lg">
+                      <div className="space-y-0.5">
+                        <Label className="text-xs font-semibold flex items-center gap-1.5">
+                          <Building className="h-3.5 w-3.5 text-primary" />
+                          Kustomisasi Teks Kop & Label Halaman Verifikasi HP
+                        </Label>
+                        <p className="text-[10px] text-muted-foreground">
+                          Atur nama kampus, lembaga, dan teks yang tampil pada portal verifikasi saat barcode discan kamera HP.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div className="space-y-1">
+                          <Label className="text-[11px] font-medium text-slate-700">Baris 1 Kop (Kementerian / Yayasan)</Label>
+                          <Input
+                            value={form.qr_verify_header_line_1 ?? (form.institution_line_1 || '')}
+                            onChange={(e) => updateField('qr_verify_header_line_1', e.target.value)}
+                            placeholder="Contoh: SEKOLAH TINGGI ILMU TARBIYAH MADANI"
+                            className="h-8 text-xs"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-[11px] font-medium text-slate-700">Baris 2 Kop (Nama Kampus / Perguruan Tinggi)</Label>
+                          <Input
+                            value={form.qr_verify_header_line_2 ?? (form.institution_line_2 || '')}
+                            onChange={(e) => updateField('qr_verify_header_line_2', e.target.value)}
+                            placeholder="Contoh: STIT MADANI YOGYAKARTA"
+                            className="h-8 text-xs font-bold"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-[11px] font-medium text-slate-700">Subtitle Layanan Verifikasi</Label>
+                          <Input
+                            value={form.qr_verify_header_subtitle ?? 'Layanan Verifikasi Dokumen & Keabsahan Akademik'}
+                            onChange={(e) => updateField('qr_verify_header_subtitle', e.target.value)}
+                            placeholder="Layanan Verifikasi Dokumen & Keabsahan Akademik"
+                            className="h-8 text-xs"
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label className="text-[11px] font-medium text-slate-700">Label Status Aktivitas</Label>
+                          <Input
+                            value={form.qr_verify_activity_badge_text ?? 'Terdaftar di SIAKAD'}
+                            onChange={(e) => updateField('qr_verify_activity_badge_text', e.target.value)}
+                            placeholder="Contoh: Terdaftar di SIAKAD"
+                            className="h-8 text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 4. Teks Pesan Bantuan / Kontak Kampus */}
                     <div className="space-y-1.5">
                       <Label className="text-xs font-semibold">Pesan Footer / Kontak Konfirmasi Kampus</Label>
                       <Textarea
@@ -1471,7 +1526,7 @@ export function DocumentSettingsTab() {
                       </p>
                     </div>
 
-                    {/* 4. Link Cek Pratinjau Langsung */}
+                    {/* 5. Link Cek Pratinjau Langsung */}
                     <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <Smartphone className="h-4 w-4 text-primary" />
@@ -1629,7 +1684,15 @@ export function DocumentSettingsTab() {
                         {form.default_city || 'Ponorogo'}, 20 Oktober 2026
                       </p>
                     )}
-                    <div className="grid grid-cols-2 text-center pt-1">
+                    <div className="flex items-center justify-around text-center pt-1 gap-2">
+                      {form.qr_code_enabled !== false && form.qr_code_position !== 'footer' && (
+                        <div className="w-8 h-8 bg-white border border-slate-300 rounded p-0.5 flex flex-col items-center justify-center shrink-0 shadow-xs">
+                          <div className="w-5 h-5 bg-slate-900 rounded-[1px] flex items-center justify-center text-[4px] text-white font-mono">
+                            QR
+                          </div>
+                          <span className="text-[3.5px] text-slate-500 mt-0.5 leading-none">Verifikasi</span>
+                        </div>
+                      )}
                       <div>
                         <p className="text-[6px] text-slate-500">Mahasiswa,</p>
                         <div className="h-6 flex items-center justify-center font-serif text-[7px] italic text-slate-400">
@@ -1671,7 +1734,14 @@ export function DocumentSettingsTab() {
                   >
                     {form.footer_mode === 'text' ? (
                       <div className="flex justify-between items-center text-[5.5px] text-slate-500">
-                        <p className="truncate max-w-[200px]">{form.footer_text}</p>
+                        <div className="flex items-center gap-1">
+                          {form.qr_code_enabled !== false && form.qr_code_position === 'footer' && (
+                            <div className="w-3.5 h-3.5 bg-slate-900 rounded-[1px] flex items-center justify-center text-[4px] text-white font-mono">
+                              QR
+                            </div>
+                          )}
+                          <p className="truncate max-w-[170px]">{form.footer_text}</p>
+                        </div>
                         {form.show_page_number && <span>{form.footer_watermark_text || 'Dokumen Sah Akademik'}</span>}
                       </div>
                     ) : form.footer_image_url ? (
@@ -1690,6 +1760,12 @@ export function DocumentSettingsTab() {
                               : { height: `${Math.round((form.footer_image_height_mm || 20) * 1.4)}px` }
                           }
                         />
+                        {/* QR Code Simuasi di Footer Gambar */}
+                        {form.qr_code_enabled !== false && form.qr_code_position === 'footer' && (
+                          <div className="absolute bottom-0.5 left-1 w-3.5 h-3.5 bg-white border border-slate-400 rounded-[1px] flex items-center justify-center text-[3.5px] text-slate-900 font-bold shadow-xs">
+                            QR
+                          </div>
+                        )}
                         {form.show_page_number && (
                           <span className="absolute bottom-0.5 right-1 text-[5px] bg-white/80 px-1 rounded text-slate-600">
                             {form.footer_watermark_text || 'Dokumen Sah Akademik'}

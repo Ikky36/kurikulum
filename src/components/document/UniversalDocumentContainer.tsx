@@ -22,11 +22,62 @@ export interface DocumentSignatureData {
   is_approved?: boolean; // Menandakan bahwa penandatangan telah menyetujui/mengesahkan secara resmi
 }
 
+export interface DocumentVerificationData {
+  id?: string;
+  docType?: string;
+  studentName?: string;
+  studentNim?: string;
+  studentProgram?: string;
+  topicTitle?: string;
+  isFullyApproved?: boolean;
+  adv1Name?: string;
+  adv1Nidn?: string;
+  adv1Date?: string;
+  adv1Approved?: boolean;
+  kaprodiName?: string;
+  kaprodiNidn?: string;
+  kaprodiDate?: string;
+  kaprodiApproved?: boolean;
+  activityCount?: number;
+}
+
+export function encodeVerificationPayload(obj: any): string {
+  try {
+    const jsonStr = JSON.stringify(obj);
+    const bytes = new TextEncoder().encode(jsonStr);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  } catch (e) {
+    return '';
+  }
+}
+
+export function decodeVerificationPayload(str: string): any {
+  try {
+    let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+    while (base64.length % 4) {
+      base64 += '=';
+    }
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch (e) {
+    return null;
+  }
+}
+
 export interface UniversalDocumentContainerProps {
   templateCode: string;
   templateOverride?: SingleDocumentTemplate;
   containerId?: string;
   documentId?: string; // ID unik dokumen untuk tautan verifikasi keabsahan (QR Code)
+  verificationData?: DocumentVerificationData;
   documentTitle?: string;
   documentSubtitle?: string;
   documentDate?: string | Date | null; // Tanggal penetapan dokumen eksplisit
@@ -53,6 +104,7 @@ export function UniversalDocumentContainer({
   templateOverride,
   containerId = 'printable-document',
   documentId,
+  verificationData,
   documentTitle,
   documentSubtitle,
   documentDate,
@@ -181,9 +233,35 @@ export function UniversalDocumentContainer({
   };
 
   // Tautan URL resmi untuk pemindaian QR Code Verifikasi Keabsahan
-  const verificationUrl = typeof window !== 'undefined'
-    ? `${window.location.origin}/verifikasi-dokumen?doc=${templateCode}&id=${documentId || 'sample'}`
-    : '';
+  const verificationUrl = (() => {
+    if (typeof window === 'undefined') return '';
+    const origin = window.location.origin;
+    const base = `${origin}/verifikasi-dokumen?doc=${templateCode}&id=${documentId || 'sample'}`;
+
+    // Payload ringkas agar dapat diverifikasi instan tanpa terkendala autentikasi RLS Supabase
+    const payload = {
+      id: documentId ? documentId.slice(0, 8) : 'sample',
+      fullId: documentId || '',
+      doc: templateCode,
+      nm: verificationData?.studentName || studentInfo?.name || '',
+      nim: verificationData?.studentNim || studentInfo?.nim || '',
+      pr: verificationData?.studentProgram || studentInfo?.program || '',
+      tl: verificationData?.topicTitle || variables?.['topic_title'] || variables?.['submission_title'] || '',
+      st: (verificationData?.isFullyApproved ?? (signaturesData?.kaprodi?.is_approved || false)) ? 'approved' : 'pending',
+      a1: verificationData?.adv1Name || signaturesData?.advisor_1?.name || '',
+      ad1: verificationData?.adv1Nidn || signaturesData?.advisor_1?.id_number || '',
+      da1: verificationData?.adv1Date || (signaturesData?.advisor_1?.signed_at ? String(signaturesData.advisor_1.signed_at) : ''),
+      ok1: (verificationData?.adv1Approved ?? signaturesData?.advisor_1?.is_approved) ? 1 : 0,
+      kp: verificationData?.kaprodiName || signaturesData?.kaprodi?.name || docSettings.kaprodi_name || '',
+      kpd: verificationData?.kaprodiNidn || signaturesData?.kaprodi?.id_number || docSettings.kaprodi_nidn || '',
+      dkp: verificationData?.kaprodiDate || (signaturesData?.kaprodi?.signed_at ? String(signaturesData.kaprodi.signed_at) : ''),
+      okk: (verificationData?.kaprodiApproved ?? signaturesData?.kaprodi?.is_approved) ? 1 : 0,
+      cnt: verificationData?.activityCount ?? 0,
+    };
+
+    const token = encodeVerificationPayload(payload);
+    return token ? `${base}&v=${token}` : base;
+  })();
 
   return (
     <div className={`relative min-h-screen bg-slate-100 dark:bg-slate-900/90 text-slate-900 py-6 px-2 sm:px-4 ${className}`}>
@@ -697,6 +775,22 @@ export function UniversalDocumentContainer({
                       : { height: `${docSettings.footer_image_height_mm || 20}mm` }
                   }
                 />
+                {/* QR Code di Footer Mode Gambar Banner */}
+                {docSettings.qr_code_enabled !== false && docSettings.qr_code_position === 'footer' && (
+                  <div className="absolute bottom-1.5 left-2.5 z-10 bg-white/95 print:bg-white p-1 rounded shadow-xs border border-slate-300 flex items-center gap-1.5">
+                    <QRCodeSVG
+                      value={verificationUrl}
+                      size={docSettings.qr_code_size === 'small' ? 36 : 46}
+                      level="M"
+                      includeMargin={false}
+                    />
+                    {docSettings.qr_code_show_label !== false && (
+                      <span className="text-[7.5px] text-slate-700 font-semibold leading-tight max-w-[70px] text-left">
+                        Pindai Verifikasi
+                      </span>
+                    )}
+                  </div>
+                )}
                 {docSettings.show_page_number && (
                   <div className="absolute bottom-1 right-3 text-[9px] text-slate-600 bg-white/80 px-1.5 py-0.5 rounded shadow-xs print:bg-transparent">
                     {docSettings.footer_watermark_text || 'Dokumen Sah Akademik'}
@@ -706,6 +800,28 @@ export function UniversalDocumentContainer({
             ) : null}
           </div>
         )}
+
+        {/* Jika footer dinonaktifkan tetapi posisi QR Code dipilih di footer */}
+        {(!docSettings.footer_enabled || template.show_footer === false) &&
+          docSettings.qr_code_enabled !== false &&
+          docSettings.qr_code_position === 'footer' && (
+            <div className="mt-auto pt-2 flex items-center justify-between border-t border-slate-300">
+              <div className="flex items-center gap-1.5 bg-white/90 p-1 rounded border border-slate-300">
+                <QRCodeSVG
+                  value={verificationUrl}
+                  size={docSettings.qr_code_size === 'small' ? 36 : 46}
+                  level="M"
+                  includeMargin={false}
+                />
+                {docSettings.qr_code_show_label !== false && (
+                  <span className="text-[8px] text-slate-600 font-medium">Pindai untuk verifikasi keaslian</span>
+                )}
+              </div>
+              {docSettings.show_page_number && (
+                <span className="text-[10px] text-slate-500 font-medium">{docSettings.footer_watermark_text || 'Dokumen Sah Akademik'}</span>
+              )}
+            </div>
+          )}
       </div>
     </div>
   );
