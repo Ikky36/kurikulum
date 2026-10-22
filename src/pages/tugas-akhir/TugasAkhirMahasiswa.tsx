@@ -728,7 +728,8 @@ export default function TugasAkhirMahasiswa() {
                       </CardHeader>
 
                       <CardContent className="pt-6 space-y-6">
-                        <div className="rounded-md border">
+                        {/* Desktop Table View */}
+                        <div className="rounded-md border hidden md:block overflow-x-auto">
                           <Table>
                             <TableHeader>
                               <TableRow>
@@ -787,14 +788,62 @@ export default function TugasAkhirMahasiswa() {
                           </Table>
                         </div>
 
+                        {/* Mobile Card View */}
+                        <div className="md:hidden space-y-3">
+                          {logsLoading ? (
+                            <div className="text-center py-6 text-sm text-muted-foreground">Memuat log...</div>
+                          ) : !consultationLogs || consultationLogs.length === 0 ? (
+                            <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg">
+                              Belum ada log bimbingan yang tercatat.
+                            </div>
+                          ) : (
+                            consultationLogs.map((log: any) => (
+                              <Card key={log.id} className="p-3.5 space-y-2 border shadow-2xs">
+                                <div className="flex items-center justify-between gap-2 border-b pb-2">
+                                  <span className="text-xs font-semibold flex items-center">
+                                    <Calendar className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                                    {new Date(log.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                  </span>
+                                  <Badge variant={
+                                    log.status === 'approved' ? 'default' :
+                                    log.status === 'rejected' ? 'destructive' :
+                                    log.status === 'revision' ? 'secondary' : 'outline'
+                                  } className="text-[11px] px-2 py-0.5">
+                                    {log.status === 'approved' ? 'Disetujui' :
+                                     log.status === 'rejected' ? 'Ditolak' :
+                                     log.status === 'revision' ? 'Revisi' : 'Menunggu'}
+                                  </Badge>
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  <span className="font-medium text-foreground">Pembimbing:</span> {log.profiles?.full_name}
+                                </div>
+                                <div className="space-y-1 text-xs">
+                                  <div>
+                                    <span className="font-medium text-muted-foreground">Pembahasan & Masalah:</span>
+                                    <p className="mt-0.5 text-foreground leading-relaxed">{log.problem}</p>
+                                  </div>
+                                  <div>
+                                    <span className="font-medium text-muted-foreground">Solusi / Feedback Dosen:</span>
+                                    {log.solution ? (
+                                      <p className="mt-0.5 text-primary leading-relaxed">{log.solution}</p>
+                                    ) : (
+                                      <p className="mt-0.5 text-muted-foreground italic">Menunggu tanggapan</p>
+                                    )}
+                                  </div>
+                                </div>
+                              </Card>
+                            ))
+                          )}
+                        </div>
+
                         {/* 3 Tombol Pengesahan Dokumen Tugas Akhir */}
-                        <div className="pt-4 border-t flex flex-wrap items-center justify-end gap-2.5">
+                        <div className="pt-4 border-t flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-2.5">
                           {/* 1. Ajukan Pengesahan Proposal TA (Belum aktif karena dokumennya belum dikostum) */}
                           <Button 
                             variant="outline" 
                             size="sm" 
                             disabled 
-                            className="gap-1.5 text-xs text-muted-foreground"
+                            className="w-full sm:w-auto justify-center gap-1.5 text-xs text-muted-foreground h-9"
                             title="Belum aktif karena dokumennya belum dikostum"
                           >
                             <Send className="w-3.5 h-3.5" /> Ajukan Pengesahan Proposal TA
@@ -805,7 +854,7 @@ export default function TugasAkhirMahasiswa() {
                             variant="outline" 
                             size="sm" 
                             disabled 
-                            className="gap-1.5 text-xs text-muted-foreground"
+                            className="w-full sm:w-auto justify-center gap-1.5 text-xs text-muted-foreground h-9"
                             title="Belum aktif karena dokumennya belum dikostum"
                           >
                             <Send className="w-3.5 h-3.5" /> Ajukan Pengesahan Laporan TA
@@ -816,7 +865,7 @@ export default function TugasAkhirMahasiswa() {
                             <Button
                               variant="default"
                               size="sm"
-                              className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5 shadow-sm text-xs"
+                              className="w-full sm:w-auto justify-center bg-amber-600 hover:bg-amber-700 text-white gap-1.5 shadow-sm text-xs h-9"
                               disabled={requestApproval.isPending}
                               onClick={() => {
                                 if (approvedLogsCount === 0) {
@@ -831,12 +880,12 @@ export default function TugasAkhirMahasiswa() {
                               <Send className="w-3.5 h-3.5" /> Ajukan Pengesahan Kartu Bimbingan TA
                             </Button>
                           ) : (
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 w-full sm:w-auto">
                               <Button
                                 variant="secondary"
                                 size="sm"
                                 disabled
-                                className="gap-1.5 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800"
+                                className="w-full sm:w-auto justify-center gap-1.5 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800 h-9"
                               >
                                 <Clock className="w-3.5 h-3.5 text-amber-600" /> Pengajuan Kartu Bimbingan TA Terkirim
                               </Button>
@@ -844,7 +893,7 @@ export default function TugasAkhirMahasiswa() {
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
+                                  className="w-full sm:w-auto justify-center h-9 sm:h-8 px-2 text-xs text-muted-foreground hover:text-destructive gap-1"
                                   disabled={cancelRequestApproval.isPending}
                                   title="Tarik kembali permohonan pengesahan"
                                   onClick={() => {

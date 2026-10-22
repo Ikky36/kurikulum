@@ -169,12 +169,13 @@ export function BimbinganTugasAkhirTab() {
   return (
     <div className="space-y-6 animate-slide-up">
       <Card>
-        <CardHeader>
-          <CardTitle>Daftar Mahasiswa Bimbingan TA</CardTitle>
-          <CardDescription>Daftar mahasiswa Tugas Akhir yang diplot kepada Anda sebagai dosen pembimbing.</CardDescription>
+        <CardHeader className="p-4 sm:p-6">
+          <CardTitle className="text-lg sm:text-xl">Daftar Mahasiswa Bimbingan TA</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">Daftar mahasiswa Tugas Akhir yang diplot kepada Anda sebagai dosen pembimbing.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
+        <CardContent className="p-4 sm:p-6 pt-0 sm:pt-0">
+          {/* Desktop Table View */}
+          <div className="rounded-md border hidden md:block overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -235,6 +236,65 @@ export function BimbinganTugasAkhirTab() {
               </TableBody>
             </Table>
           </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            {isLoading ? (
+              <div className="text-center py-8 text-sm text-muted-foreground">Memuat data...</div>
+            ) : !advisorships || advisorships.length === 0 ? (
+              <div className="text-center py-8 text-sm text-muted-foreground border border-dashed rounded-lg">
+                Belum ada mahasiswa bimbingan Tugas Akhir yang diplot ke Anda.
+              </div>
+            ) : (
+              advisorships.map((adv: any) => (
+                <div key={adv.id} className="p-4 rounded-xl border bg-card shadow-2xs space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-semibold text-sm text-foreground truncate">
+                        {adv.ta_submissions?.profiles?.full_name}
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        NIM: {adv.ta_submissions?.profiles?.nim || '-'}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                      <Badge variant={adv.ta_submissions?.status === 'approved' ? 'default' : 'secondary'} className="text-[11px] px-2 py-0.5">
+                        {adv.ta_submissions?.status === 'approved' ? 'Berjalan' : adv.ta_submissions?.status}
+                      </Badge>
+                      <span className="text-[11px] font-medium text-muted-foreground">{adv.role}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Badge variant="outline" className="text-[10px] py-0 px-1.5">
+                      {adv.ta_submissions?.ta_types?.name || 'Tugas Akhir'}
+                    </Badge>
+                    <p className="text-xs text-foreground font-medium line-clamp-2 leading-relaxed" title={adv.ta_submissions?.title}>
+                      {adv.ta_submissions?.title}
+                    </p>
+                  </div>
+
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full relative justify-center text-xs h-9 mt-1" 
+                    onClick={() => {
+                      setSelectedAdvisorship(adv);
+                      setIsDetailOpen(true);
+                    }}
+                  >
+                    <BookOpen className="w-3.5 h-3.5 mr-1.5" /> Kelola Bimbingan
+                    {hasPendingLog(adv.ta_submissions?.id) && (
+                      <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-destructive opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-destructive"></span>
+                      </span>
+                    )}
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -244,20 +304,20 @@ export function BimbinganTugasAkhirTab() {
           resetLogForm();
         }
       }}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Detail & Log Bimbingan</DialogTitle>
-            <DialogDescription>
+        <DialogContent className="w-[95vw] sm:w-full max-w-4xl h-[90vh] sm:h-[85vh] p-4 sm:p-6 flex flex-col overflow-hidden">
+          <DialogHeader className="text-left">
+            <DialogTitle className="text-base sm:text-lg">Detail & Log Bimbingan</DialogTitle>
+            <DialogDescription className="text-xs sm:text-sm">
               Kelola aktivitas bimbingan untuk mahasiswa {selectedAdvisorship?.ta_submissions?.profiles?.full_name}
             </DialogDescription>
           </DialogHeader>
 
           {selectedAdvisorship && (
-            <div className="flex-1 overflow-y-auto pr-2 space-y-6">
-              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-lg border">
+            <div className="flex-1 min-w-0 max-w-full overflow-y-auto overflow-x-hidden pr-1 sm:pr-2 space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3.5 sm:p-4 bg-muted/30 rounded-lg border min-w-0">
                 <div>
                   <Label className="text-muted-foreground text-xs">Topik Tugas Akhir</Label>
-                  <p className="font-medium mt-1">{selectedAdvisorship.ta_submissions?.title}</p>
+                  <p className="font-medium text-sm mt-1">{selectedAdvisorship.ta_submissions?.title}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground text-xs">Link Dokumen / Draft</Label>
@@ -279,11 +339,13 @@ export function BimbinganTugasAkhirTab() {
               </div>
 
               {selectedAdvisorship.ta_submissions && (
-                <TADosenMilestones 
-                  submissionId={selectedAdvisorship.ta_submissions.id} 
-                  typeId={selectedAdvisorship.ta_submissions.ta_types?.id || selectedAdvisorship.ta_submissions.type_id} 
-                  dosenId={profile?.id || user?.id || ''} 
-                />
+                <div className="min-w-0 max-w-full">
+                  <TADosenMilestones 
+                    submissionId={selectedAdvisorship.ta_submissions.id} 
+                    typeId={selectedAdvisorship.ta_submissions.ta_types?.id || selectedAdvisorship.ta_submissions.type_id} 
+                    dosenId={profile?.id || user?.id || ''} 
+                  />
+                </div>
               )}
 
               {(() => {
@@ -298,28 +360,32 @@ export function BimbinganTugasAkhirTab() {
                 const approvedLogsCount = consultationLogs?.filter((l: any) => l.status === 'approved').length || 0;
 
                 return (
-                  <div className="space-y-4">
+                  <div className="space-y-4 min-w-0 max-w-full">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                       <div>
-                        <h3 className="text-lg font-semibold flex items-center">
-                          <FileText className="w-5 h-5 mr-2" /> Riwayat Log Konsultasi
+                        <h3 className="text-base sm:text-lg font-semibold flex items-center">
+                          <FileText className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-primary" /> Riwayat Log Konsultasi
                         </h3>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           Kelola dan berikan tanggapan atau evaluasi terhadap setiap sesi bimbingan mahasiswa.
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 w-full sm:w-auto">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => setIsPrintModalOpen(true)}
-                          className="gap-1.5"
+                          className="gap-1.5 flex-1 sm:flex-initial justify-center text-xs h-9"
                         >
-                          <Printer className="w-4 h-4" /> Cetak Kartu Bimbingan
+                          <Printer className="w-3.5 h-3.5" /> Cetak Kartu Bimbingan
                         </Button>
-                        <Button size="sm" onClick={openAddLog}>
-                          <Plus className="w-4 h-4 mr-2" /> Tambah Log Manual
+                        <Button 
+                          size="sm" 
+                          onClick={openAddLog}
+                          className="gap-1.5 flex-1 sm:flex-initial justify-center text-xs h-9"
+                        >
+                          <Plus className="w-3.5 h-3.5" /> Tambah Log Manual
                         </Button>
                       </div>
                     </div>
@@ -367,7 +433,7 @@ export function BimbinganTugasAkhirTab() {
                         </>
                       ) : (
                         <>
-                          <div className="grid grid-cols-2 gap-4 p-3 bg-muted rounded-md text-sm mb-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3 bg-muted rounded-md text-sm mb-4">
                             <div>
                               <span className="text-muted-foreground block text-xs">Tanggal Konsultasi:</span>
                               <span className="font-medium flex items-center mt-1">
@@ -378,7 +444,7 @@ export function BimbinganTugasAkhirTab() {
                               <span className="text-muted-foreground block text-xs">Status Saat Ini:</span>
                               <Badge variant="outline" className="mt-1">{activeLog.status}</Badge>
                             </div>
-                            <div className="col-span-2 mt-2">
+                            <div className="col-span-1 sm:col-span-2 mt-2">
                               <span className="text-muted-foreground block text-xs mb-1">Catatan / Laporan Mahasiswa:</span>
                               <p className="font-medium whitespace-pre-wrap">{activeLog.problem}</p>
                             </div>
@@ -427,7 +493,8 @@ export function BimbinganTugasAkhirTab() {
                   </Card>
                 ) : null}
 
-                <div className="rounded-md border">
+                {/* Desktop Table View */}
+                <div className="rounded-md border hidden md:block overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -488,14 +555,69 @@ export function BimbinganTugasAkhirTab() {
                   </Table>
                 </div>
 
+                {/* Mobile Card View: Log Konsultasi */}
+                <div className="md:hidden space-y-3">
+                  {loadingLogs ? (
+                    <div className="text-center py-6 text-sm text-muted-foreground">Memuat riwayat...</div>
+                  ) : !consultationLogs || consultationLogs.length === 0 ? (
+                    <div className="text-center py-6 text-sm text-muted-foreground border border-dashed rounded-lg">
+                      Belum ada log konsultasi.
+                    </div>
+                  ) : (
+                    consultationLogs.map((log: any) => (
+                      <Card key={log.id} className="p-3.5 space-y-2.5 border shadow-2xs">
+                        <div className="flex items-center justify-between gap-2 border-b pb-2">
+                          <span className="text-xs font-semibold flex items-center text-foreground">
+                            <Calendar className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                            {new Date(log.date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                          <Badge variant={
+                            log.status === 'approved' ? 'default' :
+                            log.status === 'rejected' ? 'destructive' :
+                            log.status === 'revision' ? 'secondary' : 'outline'
+                          } className="text-[11px] px-2 py-0.5">
+                            {log.status === 'approved' ? 'Disetujui' :
+                             log.status === 'rejected' ? 'Ditolak' :
+                             log.status === 'revision' ? 'Revisi' : 'Menunggu'}
+                          </Badge>
+                        </div>
+
+                        <div className="space-y-1.5 text-xs">
+                          <div>
+                            <span className="text-[11px] font-medium text-muted-foreground">Laporan Kemajuan:</span>
+                            <p className="font-medium text-foreground mt-0.5 leading-relaxed">{log.problem}</p>
+                          </div>
+                          <div>
+                            <span className="text-[11px] font-medium text-muted-foreground">Tanggapan / Arahan Anda:</span>
+                            {log.solution ? (
+                              <p className="font-medium text-primary mt-0.5 leading-relaxed">{log.solution}</p>
+                            ) : (
+                              <p className="text-muted-foreground italic mt-0.5">Belum ditanggapi</p>
+                            )}
+                          </div>
+                        </div>
+
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="w-full justify-center text-xs h-8 mt-1" 
+                          onClick={() => openLogResponse(log)}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 mr-1.5" /> Beri Tanggapan / Respons
+                        </Button>
+                      </Card>
+                    ))
+                  )}
+                </div>
+
                 {/* 3 Tombol Pengesahan Dokumen Tugas Akhir */}
-                <div className="pt-4 border-t flex flex-wrap items-center justify-end gap-2.5">
+                <div className="pt-4 border-t flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-2.5">
                   {/* 1. Sahkan Proposal TA (Belum aktif karena dokumennya belum dikostum) */}
                   <Button
                     variant="outline"
                     size="sm"
                     disabled
-                    className="gap-1.5 text-xs text-muted-foreground"
+                    className="w-full sm:w-auto justify-center gap-1.5 text-xs text-muted-foreground h-9"
                     title="Belum aktif karena dokumennya belum dikostum"
                   >
                     <ShieldCheck className="w-3.5 h-3.5" /> Sahkan Proposal TA
@@ -506,7 +628,7 @@ export function BimbinganTugasAkhirTab() {
                     variant="outline"
                     size="sm"
                     disabled
-                    className="gap-1.5 text-xs text-muted-foreground"
+                    className="w-full sm:w-auto justify-center gap-1.5 text-xs text-muted-foreground h-9"
                     title="Belum aktif karena dokumennya belum dikostum"
                   >
                     <ShieldCheck className="w-3.5 h-3.5" /> Sahkan Laporan TA
@@ -514,19 +636,19 @@ export function BimbinganTugasAkhirTab() {
 
                   {/* 3. Sahkan Kartu Bimbingan TA */}
                   {isMyApproved ? (
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 w-full sm:w-auto">
                       <Button
                         variant="secondary"
                         size="sm"
                         disabled
-                        className="gap-1.5 text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800"
+                        className="w-full sm:w-auto justify-center gap-1.5 text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 h-9"
                       >
                         <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Sahkan Kartu Bimbingan TA (Telah Disahkan)
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive gap-1"
+                        className="w-full sm:w-auto justify-center h-9 sm:h-8 px-2 text-xs text-muted-foreground hover:text-destructive gap-1"
                         disabled={revokeAdvisorApproval.isPending}
                         onClick={() => {
                           if (window.confirm('Batalkan pengesahan resmi Anda pada kartu bimbingan mahasiswa ini?')) {
@@ -558,7 +680,7 @@ export function BimbinganTugasAkhirTab() {
                     <Button
                       variant="default"
                       size="sm"
-                      className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-sm text-xs"
+                      className="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-sm text-xs h-9"
                       disabled={approveByAdvisor.isPending}
                       onClick={() => {
                         const mhsName = selectedAdvisorship?.ta_submissions?.profiles?.full_name || 'mahasiswa';
@@ -605,7 +727,7 @@ export function BimbinganTugasAkhirTab() {
                       variant="outline"
                       size="sm"
                       disabled
-                      className="gap-1.5 text-xs text-muted-foreground"
+                      className="w-full sm:w-auto justify-center gap-1.5 text-xs text-muted-foreground h-9"
                       title="Mahasiswa belum mengajukan permohonan pengesahan"
                     >
                       <Clock className="w-3.5 h-3.5 text-amber-500" /> Sahkan Kartu Bimbingan TA (Belum Diajukan)

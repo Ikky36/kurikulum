@@ -342,12 +342,14 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
           <CardDescription>Pantau perjalanan tugas akhir mahasiswa dan berikan target mingguan/bulanan.</CardDescription>
         </CardHeader>
         <CardContent>
-          <TATimeline 
-            phases={phases || []} 
-            currentPhaseId={submission?.current_phase_id} 
-            allowRevertClick={true}
-            onSelectPhase={(phase) => handleOpenRollbackDialog(phase.id)}
-          />
+          <div className="w-full max-w-full min-w-0 overflow-hidden">
+            <TATimeline 
+              phases={phases || []} 
+              currentPhaseId={submission?.current_phase_id} 
+              allowRevertClick={true}
+              onSelectPhase={(phase) => handleOpenRollbackDialog(phase.id)}
+            />
+          </div>
           
           <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
@@ -360,7 +362,7 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
               )}
             </div>
             
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
               {/* Tombol Kembalikan Fase jika sudah melewati fase pertama */}
               {currentPhaseIndex !== undefined && currentPhaseIndex > 0 && (
                 <Button
@@ -368,7 +370,7 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
                   variant="outline"
                   size="default"
                   onClick={() => handleOpenRollbackDialog()}
-                  className="text-amber-600 border-amber-300 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-700 dark:hover:bg-amber-950/40"
+                  className="w-full sm:w-auto justify-center text-amber-600 border-amber-300 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-700 dark:hover:bg-amber-950/40"
                   title="Kembalikan mahasiswa ke fase sebelumnya jika ada perbaikan"
                 >
                   <Undo2 className="w-4 h-4 mr-2" />
@@ -377,11 +379,12 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
               )}
 
               {(submission?.current_phase_id && currentPhaseIndex !== -1) && (
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 w-full sm:w-auto">
                   <Button 
                     onClick={() => approvePhase.mutate()} 
                     disabled={iHaveApproved || approvePhase.isPending}
                     variant={iHaveApproved ? "secondary" : "default"}
+                    className="w-full sm:w-auto justify-center"
                   >
                     {iHaveApproved ? (
                       <><Check className="w-4 h-4 mr-2" /> Anda Sudah Menyetujui</>
@@ -402,7 +405,7 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
                         }
                       }}
                       disabled={cancelMyApproval.isPending}
-                      className="text-destructive hover:bg-destructive/10 h-10 px-3"
+                      className="w-full sm:w-auto justify-center text-destructive hover:bg-destructive/10 h-10 px-3"
                       title="Batalkan persetujuan saya pada fase ini"
                     >
                       <X className="w-4 h-4 mr-1" />
@@ -415,6 +418,7 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
                 <Button 
                   onClick={() => startPhaseMutation.mutate()} 
                   disabled={startPhaseMutation.isPending}
+                  className="w-full sm:w-auto justify-center"
                 >
                   <CheckCircle2 className="w-4 h-4 mr-2" /> 
                   {startPhaseMutation.isPending ? 'Memproses...' : 'Mulai Fase Pertama'}
