@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { TATimeline } from './TATimeline';
 import { CheckCircle2, Check, Plus, Save, X, Clock, Calendar, Edit2, Trash2, Undo2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -24,6 +27,11 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDate, setEditDate] = useState('');
+
+  // States for Phase Rollback
+  const [showRollbackDialog, setShowRollbackDialog] = useState(false);
+  const [selectedTargetPhaseId, setSelectedTargetPhaseId] = useState<string>('');
+  const [rollbackReason, setRollbackReason] = useState<string>('');
 
   // Get current submission to know current_phase_id
   const { data: submission } = useQuery({
@@ -217,6 +225,83 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
     onError: (e: any) => toast.error('Gagal menyetujui fase: ' + e.message)
   });
 
+  const cancelMyApproval = useMutation({
+    mutationFn: async () => {
+      if (!submission?.current_phase_id) throw new Error("Tidak ada fase saat ini");
+
+      const { error } = await supabase
+        .from('ta_phase_approvals')
+        .delete()
+        .eq('submission_id', submissionId)
+        .eq('phase_id', submission.current_phase_id)
+        .eq('dosen_id', dosenId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.info('Persetujuan Anda untuk fase ini telah dibatalkan');
+      queryClient.invalidateQueries({ queryKey: ['ta_phase_approvals', submissionId] });
+    },
+    onError: (e: any) => toast.error('Gagal membatalkan persetujuan: ' + e.message)
+  });
+
+  const rollbackPhaseMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedTargetPhaseId) throw new Error("Pilih fase tujuan terlebih dahulu");
+      if (!phases) throw new Error("Daftar fase tidak ditemukan");
+
+      const targetIndex = phases.findIndex(p => p.id === selectedTargetPhaseId);
+      if (targetIndex === -1) throw new Error("Fase tujuan tidak valid");
+
+      // Phases to clear approvals for: targetIndex and all subsequent
+      const phaseIdsToClear = phases.slice(targetIndex).map(p => p.id);
+
+      // 1. Update current_phase_id on ta_submissions
+      const { error: updateErr } = await supabase
+        .from('ta_submissions')
+        .update({ current_phase_id: selectedTargetPhaseId })
+        .eq('id', submissionId);
+      if (updateErr) throw updateErr;
+
+      // 2. Remove approvals for target phase and subsequent phases
+      if (phaseIdsToClear.length > 0) {
+        const { error: deleteErr } = await supabase
+          .from('ta_phase_approvals')
+          .delete()
+          .eq('submission_id', submissionId)
+          .in('phase_id', phaseIdsToClear);
+        if (deleteErr) throw deleteErr;
+      }
+
+      // 3. If reason provided, add an entry to ta_consultation_logs so there's an audit trail
+      if (rollbackReason.trim()) {
+        const targetPhase = phases[targetIndex];
+        const { error: logErr } = await supabase
+          .from('ta_consultation_logs')
+          .insert({
+            submission_id: submissionId,
+            dosen_id: dosenId,
+            date: new Date().toISOString().split('T')[0],
+            problem: `[Pembatalan/Revisi Fase] Status dikembalikan ke fase: ${targetPhase?.name || 'Fase Sebelumnya'}`,
+            solution: rollbackReason.trim(),
+            status: 'approved'
+          });
+        if (logErr) {
+          console.warn('Gagal mencatat log pembatalan ke bimbingan:', logErr);
+        }
+      }
+    },
+    onSuccess: () => {
+      toast.success('Fase tugas akhir berhasil dikembalikan');
+      setShowRollbackDialog(false);
+      setRollbackReason('');
+      queryClient.invalidateQueries({ queryKey: ['ta_submission', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['ta_phase_approvals', submissionId] });
+      queryClient.invalidateQueries({ queryKey: ['ta_consultation_logs', submissionId] });
+    },
+    onError: (e: any) => toast.error('Gagal mengembalikan fase: ' + e.message)
+  });
+
   const startPhaseMutation = useMutation({
     mutationFn: async () => {
       if (!phases || phases.length === 0) throw new Error("Belum ada master fase");
@@ -240,6 +325,15 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
     ? phases[currentPhaseIndex].name 
     : 'Belum diatur';
 
+  const handleOpenRollbackDialog = (targetId?: string) => {
+    if (targetId) {
+      setSelectedTargetPhaseId(targetId);
+    } else if (currentPhaseIndex !== undefined && currentPhaseIndex > 0 && phases) {
+      setSelectedTargetPhaseId(phases[currentPhaseIndex - 1].id);
+    }
+    setShowRollbackDialog(true);
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -248,9 +342,14 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
           <CardDescription>Pantau perjalanan tugas akhir mahasiswa dan berikan target mingguan/bulanan.</CardDescription>
         </CardHeader>
         <CardContent>
-          <TATimeline phases={phases || []} currentPhaseId={submission?.current_phase_id} />
+          <TATimeline 
+            phases={phases || []} 
+            currentPhaseId={submission?.current_phase_id} 
+            allowRevertClick={true}
+            onSelectPhase={(phase) => handleOpenRollbackDialog(phase.id)}
+          />
           
-          <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-lg flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="mt-6 p-4 bg-primary/5 border border-primary/20 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Fase Saat Ini</p>
               <h4 className="text-lg font-semibold text-primary">{currentPhaseName}</h4>
@@ -261,28 +360,67 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
               )}
             </div>
             
-            {(submission?.current_phase_id && currentPhaseIndex !== -1) && (
-              <Button 
-                onClick={() => approvePhase.mutate()} 
-                disabled={iHaveApproved || approvePhase.isPending}
-                variant={iHaveApproved ? "secondary" : "default"}
-              >
-                {iHaveApproved ? (
-                  <><Check className="w-4 h-4 mr-2" /> Anda Sudah Menyetujui</>
-                ) : (
-                  <><CheckCircle2 className="w-4 h-4 mr-2" /> Setujui Lanjut Fase</>
-                )}
-              </Button>
-            )}
-            {(!submission?.current_phase_id || currentPhaseIndex === -1) && phases && phases.length > 0 && (
-              <Button 
-                onClick={() => startPhaseMutation.mutate()} 
-                disabled={startPhaseMutation.isPending}
-              >
-                <CheckCircle2 className="w-4 h-4 mr-2" /> 
-                {startPhaseMutation.isPending ? 'Memproses...' : 'Mulai Fase Pertama'}
-              </Button>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Tombol Kembalikan Fase jika sudah melewati fase pertama */}
+              {currentPhaseIndex !== undefined && currentPhaseIndex > 0 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="default"
+                  onClick={() => handleOpenRollbackDialog()}
+                  className="text-amber-600 border-amber-300 hover:bg-amber-50 hover:text-amber-700 dark:border-amber-700 dark:hover:bg-amber-950/40"
+                  title="Kembalikan mahasiswa ke fase sebelumnya jika ada perbaikan"
+                >
+                  <Undo2 className="w-4 h-4 mr-2" />
+                  Kembalikan Fase
+                </Button>
+              )}
+
+              {(submission?.current_phase_id && currentPhaseIndex !== -1) && (
+                <div className="flex items-center gap-1.5">
+                  <Button 
+                    onClick={() => approvePhase.mutate()} 
+                    disabled={iHaveApproved || approvePhase.isPending}
+                    variant={iHaveApproved ? "secondary" : "default"}
+                  >
+                    {iHaveApproved ? (
+                      <><Check className="w-4 h-4 mr-2" /> Anda Sudah Menyetujui</>
+                    ) : (
+                      <><CheckCircle2 className="w-4 h-4 mr-2" /> Setujui Lanjut Fase</>
+                    )}
+                  </Button>
+
+                  {/* Tombol Batalkan Persetujuan Saya pada fase ini */}
+                  {iHaveApproved && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (confirm('Apakah Anda yakin ingin membatalkan persetujuan Anda pada fase ini?')) {
+                          cancelMyApproval.mutate();
+                        }
+                      }}
+                      disabled={cancelMyApproval.isPending}
+                      className="text-destructive hover:bg-destructive/10 h-10 px-3"
+                      title="Batalkan persetujuan saya pada fase ini"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      Batalkan
+                    </Button>
+                  )}
+                </div>
+              )}
+              {(!submission?.current_phase_id || currentPhaseIndex === -1) && phases && phases.length > 0 && (
+                <Button 
+                  onClick={() => startPhaseMutation.mutate()} 
+                  disabled={startPhaseMutation.isPending}
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-2" /> 
+                  {startPhaseMutation.isPending ? 'Memproses...' : 'Mulai Fase Pertama'}
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -448,6 +586,81 @@ export function TADosenMilestones({ submissionId, typeId, dosenId }: TADosenMile
           )}
         </CardContent>
       </Card>
+
+      {/* Dialog Konfirmasi Kembalikan Fase */}
+      <Dialog open={showRollbackDialog} onOpenChange={setShowRollbackDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
+              <Undo2 className="w-5 h-5" />
+              Kembalikan Fase Tugas Akhir
+            </DialogTitle>
+            <DialogDescription>
+              Kembalikan progres mahasiswa ke fase sebelumnya jika terdapat bab yang perlu direvisi ulang atau terjadi kesalahan persetujuan.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="target-phase">Pilih Fase Tujuan</Label>
+              <Select 
+                value={selectedTargetPhaseId} 
+                onValueChange={setSelectedTargetPhaseId}
+              >
+                <SelectTrigger id="target-phase">
+                  <SelectValue placeholder="Pilih fase..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {phases
+                    ?.filter((_, idx) => currentPhaseIndex !== undefined && idx < currentPhaseIndex)
+                    .map((phase) => (
+                      <SelectItem key={phase.id} value={phase.id}>
+                        Fase {phase.order_num}: {phase.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900 rounded-md text-xs text-amber-800 dark:text-amber-300">
+              <strong>Catatan:</strong> Mengembalikan progres ke fase ini akan membatalkan persetujuan dosen pada fase yang dipilih dan fase-fase berikutnya. Mahasiswa harus mengulang dan mendapatkan persetujuan kembali untuk dapat lanjut ke fase berikutnya.
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="rollback-reason">Catatan / Alasan Pembatalan (Opsional)</Label>
+              <Textarea
+                id="rollback-reason"
+                placeholder="Misal: Perlu perbaikan metodologi penelitian pada BAB 1 sebelum lanjut..."
+                value={rollbackReason}
+                onChange={(e) => setRollbackReason(e.target.value)}
+                rows={3}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                Catatan ini akan otomatis didokumentasikan ke log bimbingan mahasiswa.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowRollbackDialog(false)}
+            >
+              Batal
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => rollbackPhaseMutation.mutate()}
+              disabled={!selectedTargetPhaseId || rollbackPhaseMutation.isPending}
+            >
+              <Undo2 className="w-4 h-4 mr-2" />
+              {rollbackPhaseMutation.isPending ? 'Mengembalikan...' : 'Konfirmasi Kembalikan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
