@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save, Undo2, Eye, Edit2, Trash2, ArrowLeft, Printer, ShieldCheck, Send, FileCheck } from 'lucide-react';
+import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save, Undo2, Eye, Edit2, Trash2, ArrowLeft, Printer, ShieldCheck, Send, FileCheck, BookOpen, GraduationCap } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -712,147 +712,248 @@ export default function TugasAkhirMahasiswa() {
                           <CardTitle>Riwayat Bimbingan</CardTitle>
                           <CardDescription>Catat dan pantau histori konsultasi Anda dengan dosen pembimbing.</CardDescription>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          {/* Tombol Ajukan Pengesahan Mahasiswa */}
-                          {!isApprovalRequested ? (
-                            <Button
-                              variant="default"
-                              size="sm"
-                              className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5 shadow-sm text-xs"
-                              disabled={requestApproval.isPending}
-                              onClick={() => {
-                                if (approvedLogsCount === 0) {
-                                  toast.error('Anda belum memiliki log bimbingan yang disetujui dosen. Lakukan bimbingan dan pastikan log telah disetujui oleh dosen pembimbing sebelum mengajukan pengesahan.');
-                                  return;
-                                }
-                                if (window.confirm(`Ajukan permohonan pengesahan resmi kartu bimbingan (${approvedLogsCount} sesi bimbingan disetujui) kepada Dosen Pembimbing dan Ketua Program Studi?`)) {
-                                  requestApproval.mutate(mySubmission.id);
-                                }
-                              }}
-                            >
-                              <Send className="w-3.5 h-3.5" /> Ajukan Pengesahan
-                            </Button>
-                          ) : (
-                            <div className="flex items-center gap-1.5">
-                              <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 gap-1 py-1">
-                                <Clock className="w-3.5 h-3.5 text-amber-600" /> Pengajuan Terkirim
-                              </Badge>
-                              {!hasAnyApprovalSigned && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 px-1.5 text-xs text-muted-foreground hover:text-destructive"
-                                  disabled={cancelRequestApproval.isPending}
-                                  title="Tarik kembali permohonan pengesahan"
-                                  onClick={() => {
-                                    if (window.confirm('Tarik kembali permohonan pengesahan? Anda dapat mengajukannya lagi setelah berkonsultasi.')) {
-                                      cancelRequestApproval.mutate(mySubmission.id);
-                                    }
-                                  }}
-                                >
-                                  <Undo2 className="w-3 h-3 mr-1" /> Tarik
-                                </Button>
-                              )}
-                            </div>
-                          )}
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setIsPrintModalOpen(true)}
-                            className="gap-1.5"
-                          >
-                            <Printer className="w-4 h-4" /> Cetak Kartu Bimbingan
-                          </Button>
+                        <div className="flex items-center gap-2">
                           <Button onClick={() => setIsAddLogOpen(true)} size="sm">
                             <Plus className="w-4 h-4 mr-2" /> Tambah Log
                           </Button>
                         </div>
                       </CardHeader>
 
-                      {/* Status Bar Pengesahan Resmi */}
-                      {isApprovalRequested && (
-                        <div className="bg-muted/40 px-6 py-2.5 border-b text-xs flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className="font-semibold text-muted-foreground">Status Pengesahan:</span>
-                            <Badge className={adv1?.is_approved ? 'bg-emerald-600 text-white' : 'bg-secondary text-secondary-foreground'}>
-                              {adv1?.is_approved ? '✓ Pembimbing 1 Disahkan' : 'Pembimbing 1 Menunggu'}
-                            </Badge>
-                            {hasAdvisor2 && (
-                              <Badge className={adv2?.is_approved ? 'bg-emerald-600 text-white' : 'bg-secondary text-secondary-foreground'}>
-                                {adv2?.is_approved ? '✓ Pembimbing 2 Disahkan' : 'Pembimbing 2 Menunggu'}
-                              </Badge>
-                            )}
-                            <Badge className={kaprodi?.is_approved ? 'bg-emerald-600 text-white' : 'bg-secondary text-secondary-foreground'}>
-                              {kaprodi?.is_approved ? '✓ Kaprodi Disahkan' : 'Kaprodi Menunggu'}
-                            </Badge>
-                          </div>
-                          <span className="text-[11px] text-muted-foreground italic">
-                            Tanda tangan digital pengesahan otomatis tercetak saat disetujui masing-masing pejabat.
-                          </span>
-                        </div>
-                      )}
-
-                      <CardContent className="pt-6">
-                      <div className="rounded-md border">
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead>Tanggal</TableHead>
-                              <TableHead>Pembimbing</TableHead>
-                              <TableHead>Pembahasan & Masalah</TableHead>
-                              <TableHead>Solusi / Feedback Dosen</TableHead>
-                              <TableHead>Status</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {logsLoading ? (
+                      <CardContent className="pt-6 space-y-6">
+                        <div className="rounded-md border">
+                          <Table>
+                            <TableHeader>
                               <TableRow>
-                                <TableCell colSpan={5} className="text-center py-6">Memuat log...</TableCell>
+                                <TableHead>Tanggal</TableHead>
+                                <TableHead>Pembimbing</TableHead>
+                                <TableHead>Pembahasan & Masalah</TableHead>
+                                <TableHead>Solusi / Feedback Dosen</TableHead>
+                                <TableHead>Status</TableHead>
                               </TableRow>
-                            ) : !consultationLogs || consultationLogs.length === 0 ? (
-                              <TableRow>
-                                <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
-                                  Belum ada log bimbingan yang tercatat.
-                                </TableCell>
-                              </TableRow>
-                            ) : (
-                              consultationLogs.map((log: any) => (
-                                <TableRow key={log.id}>
-                                  <TableCell className="whitespace-nowrap text-sm">
-                                    {new Date(log.date).toLocaleDateString('id-ID')}
-                                  </TableCell>
-                                  <TableCell className="text-sm font-medium">
-                                    {log.profiles?.full_name}
-                                  </TableCell>
-                                  <TableCell>
-                                    <p className="text-sm line-clamp-3">{log.problem}</p>
-                                  </TableCell>
-                                  <TableCell>
-                                    {log.solution ? (
-                                      <p className="text-sm line-clamp-3 text-primary">{log.solution}</p>
-                                    ) : (
-                                      <span className="text-xs italic text-muted-foreground">Menunggu tanggapan</span>
-                                    )}
-                                  </TableCell>
-                                  <TableCell>
-                                    <Badge variant={
-                                      log.status === 'approved' ? 'default' :
-                                      log.status === 'rejected' ? 'destructive' :
-                                      log.status === 'revision' ? 'secondary' : 'outline'
-                                    }>
-                                      {log.status === 'approved' ? 'Disetujui' :
-                                       log.status === 'rejected' ? 'Ditolak' :
-                                       log.status === 'revision' ? 'Revisi' : 'Menunggu'}
-                                    </Badge>
+                            </TableHeader>
+                            <TableBody>
+                              {logsLoading ? (
+                                <TableRow>
+                                  <TableCell colSpan={5} className="text-center py-6">Memuat log...</TableCell>
+                                </TableRow>
+                              ) : !consultationLogs || consultationLogs.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                                    Belum ada log bimbingan yang tercatat.
                                   </TableCell>
                                 </TableRow>
-                              ))
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
+                              ) : (
+                                consultationLogs.map((log: any) => (
+                                  <TableRow key={log.id}>
+                                    <TableCell className="whitespace-nowrap text-sm">
+                                      {new Date(log.date).toLocaleDateString('id-ID')}
+                                    </TableCell>
+                                    <TableCell className="text-sm font-medium">
+                                      {log.profiles?.full_name}
+                                    </TableCell>
+                                    <TableCell>
+                                      <p className="text-sm line-clamp-3">{log.problem}</p>
+                                    </TableCell>
+                                    <TableCell>
+                                      {log.solution ? (
+                                        <p className="text-sm line-clamp-3 text-primary">{log.solution}</p>
+                                      ) : (
+                                        <span className="text-xs italic text-muted-foreground">Menunggu tanggapan</span>
+                                      )}
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge variant={
+                                        log.status === 'approved' ? 'default' :
+                                        log.status === 'rejected' ? 'destructive' :
+                                        log.status === 'revision' ? 'secondary' : 'outline'
+                                      }>
+                                        {log.status === 'approved' ? 'Disetujui' :
+                                         log.status === 'rejected' ? 'Ditolak' :
+                                         log.status === 'revision' ? 'Revisi' : 'Menunggu'}
+                                      </Badge>
+                                    </TableCell>
+                                  </TableRow>
+                                ))
+                              )}
+                            </TableBody>
+                          </Table>
+                        </div>
+
+                        {/* SECTION LAYANAN PENGESAHAN & PENCETAKAN DOKUMEN MAHASISWA */}
+                        <div className="pt-4 border-t space-y-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                            <div>
+                              <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                                <FileCheck className="w-4 h-4 text-primary" />
+                                Pengesahan & Pencetakan Dokumen Akademik
+                              </h4>
+                              <p className="text-xs text-muted-foreground">
+                                Ajukan permohonan pengesahan resmi dan cetak dokumen tugas akhir setelah bimbingan Anda disetujui.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* DOKUMEN 1: KARTU BIMBINGAN */}
+                            <div className="rounded-xl border border-border bg-card p-4 flex flex-col justify-between shadow-xs hover:border-primary/50 transition-all">
+                              <div className="space-y-3">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded-lg bg-primary/10 text-primary">
+                                      <FileText className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                      <h5 className="font-semibold text-sm leading-tight">Kartu Bimbingan</h5>
+                                      <span className="text-[11px] text-muted-foreground">Log konsultasi & kendali</span>
+                                    </div>
+                                  </div>
+                                  {isApprovalRequested ? (
+                                    <Badge variant="outline" className="text-[11px] bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 gap-1 py-0.5">
+                                      <Clock className="w-3 h-3 text-amber-600" /> Terkirim
+                                    </Badge>
+                                  ) : (
+                                    <Badge variant="secondary" className="text-[11px]">
+                                      Belum Diajukan
+                                    </Badge>
+                                  )}
+                                </div>
+
+                                {/* Status Bar Pengesahan Ringkas per Pejabat */}
+                                <div className="p-2.5 bg-muted/40 rounded-lg text-[11px] space-y-1.5 border border-muted">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-muted-foreground">Pembimbing 1:</span>
+                                    <span className={adv1?.is_approved ? "text-emerald-600 font-medium flex items-center gap-1" : "text-muted-foreground"}>
+                                      {adv1?.is_approved ? <><CheckCircle2 className="w-3.5 h-3.5" /> Disahkan</> : 'Menunggu'}
+                                    </span>
+                                  </div>
+                                  {hasAdvisor2 && (
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-muted-foreground">Pembimbing 2:</span>
+                                      <span className={adv2?.is_approved ? "text-emerald-600 font-medium flex items-center gap-1" : "text-muted-foreground"}>
+                                        {adv2?.is_approved ? <><CheckCircle2 className="w-3.5 h-3.5" /> Disahkan</> : 'Menunggu'}
+                                      </span>
+                                    </div>
+                                  )}
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-muted-foreground">Ketua Program Studi:</span>
+                                    <span className={kaprodi?.is_approved ? "text-emerald-600 font-medium flex items-center gap-1" : "text-muted-foreground"}>
+                                      {kaprodi?.is_approved ? <><CheckCircle2 className="w-3.5 h-3.5" /> Disahkan</> : 'Menunggu'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 pt-3 border-t flex flex-wrap items-center justify-between gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setIsPrintModalOpen(true)}
+                                  className="gap-1 text-xs"
+                                >
+                                  <Printer className="w-3.5 h-3.5" /> Cetak Kartu
+                                </Button>
+
+                                {!isApprovalRequested ? (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    className="bg-amber-600 hover:bg-amber-700 text-white gap-1 shadow-sm text-xs"
+                                    disabled={requestApproval.isPending}
+                                    onClick={() => {
+                                      if (approvedLogsCount === 0) {
+                                        toast.error('Anda belum memiliki log bimbingan yang disetujui dosen. Lakukan bimbingan dan pastikan log telah disetujui oleh dosen pembimbing sebelum mengajukan pengesahan.');
+                                        return;
+                                      }
+                                      if (window.confirm(`Ajukan permohonan pengesahan resmi kartu bimbingan (${approvedLogsCount} sesi bimbingan disetujui) kepada Dosen Pembimbing dan Ketua Program Studi?`)) {
+                                        requestApproval.mutate(mySubmission.id);
+                                      }
+                                    }}
+                                  >
+                                    <Send className="w-3.5 h-3.5" /> Ajukan Pengesahan
+                                  </Button>
+                                ) : (
+                                  !hasAnyApprovalSigned && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive"
+                                      disabled={cancelRequestApproval.isPending}
+                                      title="Tarik kembali permohonan pengesahan"
+                                      onClick={() => {
+                                        if (window.confirm('Tarik kembali permohonan pengesahan? Anda dapat mengajukannya lagi setelah berkonsultasi.')) {
+                                          cancelRequestApproval.mutate(mySubmission.id);
+                                        }
+                                      }}
+                                    >
+                                      <Undo2 className="w-3 h-3 mr-1" /> Tarik
+                                    </Button>
+                                  )
+                                )}
+                              </div>
+                            </div>
+
+                            {/* DOKUMEN 2: PENGESAHAN PROPOSAL */}
+                            <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 p-4 flex flex-col justify-between">
+                              <div className="space-y-3">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded-lg bg-muted text-muted-foreground">
+                                      <BookOpen className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                      <h5 className="font-semibold text-sm leading-tight">Pengesahan Proposal</h5>
+                                      <span className="text-[11px] text-muted-foreground">Naskah Seminar Proposal</span>
+                                    </div>
+                                  </div>
+                                  <Badge variant="outline" className="text-[10px] text-muted-foreground">Segera Hadir</Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                  Pengesahan naskah proposal skripsi pasca ujian seminar proposal dan revisi dosen penguji.
+                                </p>
+                              </div>
+
+                              <div className="mt-4 pt-3 border-t flex flex-wrap items-center justify-between gap-2">
+                                <Button variant="outline" size="sm" disabled className="gap-1 text-xs">
+                                  <Printer className="w-3.5 h-3.5" /> Cetak Proposal
+                                </Button>
+                                <Button variant="secondary" size="sm" disabled className="gap-1 text-xs">
+                                  <Send className="w-3.5 h-3.5" /> Ajukan Pengesahan
+                                </Button>
+                              </div>
+                            </div>
+
+                            {/* DOKUMEN 3: PENGESAHAN TUGAS AKHIR */}
+                            <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 p-4 flex flex-col justify-between">
+                              <div className="space-y-3">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <div className="p-2 rounded-lg bg-muted text-muted-foreground">
+                                      <GraduationCap className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                      <h5 className="font-semibold text-sm leading-tight">Pengesahan Tugas Akhir</h5>
+                                      <span className="text-[11px] text-muted-foreground">Naskah Skripsi / TA Final</span>
+                                    </div>
+                                  </div>
+                                  <Badge variant="outline" className="text-[10px] text-muted-foreground">Segera Hadir</Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground leading-relaxed">
+                                  Lembar pengesahan naskah skripsi lengkap dan kelulusan yudisium tugas akhir.
+                                </p>
+                              </div>
+
+                              <div className="mt-4 pt-3 border-t flex flex-wrap items-center justify-between gap-2">
+                                <Button variant="outline" size="sm" disabled className="gap-1 text-xs">
+                                  <Printer className="w-3.5 h-3.5" /> Cetak Naskah TA
+                                </Button>
+                                <Button variant="secondary" size="sm" disabled className="gap-1 text-xs">
+                                  <Send className="w-3.5 h-3.5" /> Ajukan Pengesahan
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
                     </Card>
                   );
                 })()}
