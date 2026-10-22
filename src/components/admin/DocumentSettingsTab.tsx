@@ -1289,7 +1289,7 @@ export function DocumentSettingsTab() {
                               Di Samping Blok Tanda Tangan (Rekomendasi)
                             </SelectItem>
                             <SelectItem value="footer" className="text-xs">
-                              Di Sudut Footer Dokumen
+                              Tepat 1 cm di Atas Sudut Kiri Footer
                             </SelectItem>
                           </SelectContent>
                         </Select>
@@ -1713,10 +1713,21 @@ export function DocumentSettingsTab() {
                   </div>
                 </div>
 
+                {/* QR Code Simulasi Tepat 1 cm di atas Sudut Kiri Footer */}
+                {form.qr_code_enabled !== false && form.qr_code_position === 'footer' && (
+                  <div className="w-full flex justify-start items-end mb-2.5">
+                    <div className="w-5 h-5 bg-white border border-slate-400 rounded-[1px] p-0.5 flex flex-col items-center justify-center shadow-xs">
+                      <div className="w-3.5 h-3.5 bg-slate-900 rounded-[1px] flex items-center justify-center text-[3.5px] text-white font-mono">
+                        QR
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* 3. FOOTER */}
                 {form.footer_enabled && (
                   <div
-                    className={`mt-1 overflow-hidden ${
+                    className={`overflow-hidden ${
                       form.footer_mode === 'image' && form.footer_image_full_bleed
                         ? ''
                         : 'border-t border-slate-200 pt-1'
@@ -1734,14 +1745,7 @@ export function DocumentSettingsTab() {
                   >
                     {form.footer_mode === 'text' ? (
                       <div className="flex justify-between items-center text-[5.5px] text-slate-500">
-                        <div className="flex items-center gap-1">
-                          {form.qr_code_enabled !== false && form.qr_code_position === 'footer' && (
-                            <div className="w-3.5 h-3.5 bg-slate-900 rounded-[1px] flex items-center justify-center text-[4px] text-white font-mono">
-                              QR
-                            </div>
-                          )}
-                          <p className="truncate max-w-[170px]">{form.footer_text}</p>
-                        </div>
+                        <p className="truncate max-w-[200px]">{form.footer_text}</p>
                         {form.show_page_number && <span>{form.footer_watermark_text || 'Dokumen Sah Akademik'}</span>}
                       </div>
                     ) : form.footer_image_url ? (
@@ -1760,12 +1764,6 @@ export function DocumentSettingsTab() {
                               : { height: `${Math.round((form.footer_image_height_mm || 20) * 1.4)}px` }
                           }
                         />
-                        {/* QR Code Simuasi di Footer Gambar */}
-                        {form.qr_code_enabled !== false && form.qr_code_position === 'footer' && (
-                          <div className="absolute bottom-0.5 left-1 w-3.5 h-3.5 bg-white border border-slate-400 rounded-[1px] flex items-center justify-center text-[3.5px] text-slate-900 font-bold shadow-xs">
-                            QR
-                          </div>
-                        )}
                         {form.show_page_number && (
                           <span className="absolute bottom-0.5 right-1 text-[5px] bg-white/80 px-1 rounded text-slate-600">
                             {form.footer_watermark_text || 'Dokumen Sah Akademik'}

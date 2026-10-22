@@ -720,10 +720,34 @@ export function UniversalDocumentContainer({
           )}
         </div>
 
+        {/* QR CODE TEPAT 1 CM (10mm) DI ATAS SUDUT KIRI ATAS FOOTER */}
+        {docSettings.qr_code_enabled !== false && docSettings.qr_code_position === 'footer' && (
+          <div className="mt-auto mb-[10mm] flex justify-start items-end z-10 print:mb-[10mm] break-inside-avoid page-break-inside-avoid">
+            <div className="flex items-center gap-2 p-1.5 rounded border border-slate-300 bg-white/95 print:bg-transparent print:border-slate-400 shadow-xs">
+              <QRCodeSVG
+                value={verificationUrl}
+                size={docSettings.qr_code_size === 'small' ? 44 : 54}
+                level="M"
+                includeMargin={false}
+              />
+              {docSettings.qr_code_show_label !== false && (
+                <div className="flex flex-col text-left">
+                  <span className="text-[8px] font-bold text-slate-800 leading-tight">
+                    Pindai Verifikasi
+                  </span>
+                  <span className="text-[7px] text-slate-500 leading-tight max-w-[85px]">
+                    Keabsahan Dokumen Digital
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 7. FOOTER RESMI DOKUMEN */}
         {docSettings.footer_enabled && template.show_footer !== false && (
           <div
-            className={`mt-auto break-inside-avoid page-break-inside-avoid print-footer ${
+            className={`break-inside-avoid page-break-inside-avoid print-footer ${
               docSettings.footer_mode === 'image' && docSettings.footer_image_full_bleed
                 ? 'footer-full-bleed overflow-hidden'
                 : 'pt-2.5 border-t border-slate-300'
@@ -742,19 +766,7 @@ export function UniversalDocumentContainer({
           >
             {docSettings.footer_mode === 'text' ? (
               <div className="text-[10px] text-slate-500 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  {docSettings.qr_code_enabled !== false && docSettings.qr_code_position === 'footer' && (
-                    <div className="flex items-center gap-1.5 shrink-0 bg-white/80 p-0.5 rounded border border-slate-300">
-                      <QRCodeSVG
-                        value={verificationUrl}
-                        size={docSettings.qr_code_size === 'small' ? 36 : 46}
-                        level="M"
-                        includeMargin={false}
-                      />
-                    </div>
-                  )}
-                  <p className="max-w-md truncate">{docSettings.footer_text}</p>
-                </div>
+                <p className="max-w-md truncate">{docSettings.footer_text}</p>
                 {docSettings.show_page_number && (
                   <span className="font-medium">{docSettings.footer_watermark_text || 'Dokumen Sah Akademik'}</span>
                 )}
@@ -775,22 +787,6 @@ export function UniversalDocumentContainer({
                       : { height: `${docSettings.footer_image_height_mm || 20}mm` }
                   }
                 />
-                {/* QR Code di Footer Mode Gambar Banner */}
-                {docSettings.qr_code_enabled !== false && docSettings.qr_code_position === 'footer' && (
-                  <div className="absolute bottom-1.5 left-2.5 z-10 bg-white/95 print:bg-white p-1 rounded shadow-xs border border-slate-300 flex items-center gap-1.5">
-                    <QRCodeSVG
-                      value={verificationUrl}
-                      size={docSettings.qr_code_size === 'small' ? 36 : 46}
-                      level="M"
-                      includeMargin={false}
-                    />
-                    {docSettings.qr_code_show_label !== false && (
-                      <span className="text-[7.5px] text-slate-700 font-semibold leading-tight max-w-[70px] text-left">
-                        Pindai Verifikasi
-                      </span>
-                    )}
-                  </div>
-                )}
                 {docSettings.show_page_number && (
                   <div className="absolute bottom-1 right-3 text-[9px] text-slate-600 bg-white/80 px-1.5 py-0.5 rounded shadow-xs print:bg-transparent">
                     {docSettings.footer_watermark_text || 'Dokumen Sah Akademik'}
@@ -800,28 +796,6 @@ export function UniversalDocumentContainer({
             ) : null}
           </div>
         )}
-
-        {/* Jika footer dinonaktifkan tetapi posisi QR Code dipilih di footer */}
-        {(!docSettings.footer_enabled || template.show_footer === false) &&
-          docSettings.qr_code_enabled !== false &&
-          docSettings.qr_code_position === 'footer' && (
-            <div className="mt-auto pt-2 flex items-center justify-between border-t border-slate-300">
-              <div className="flex items-center gap-1.5 bg-white/90 p-1 rounded border border-slate-300">
-                <QRCodeSVG
-                  value={verificationUrl}
-                  size={docSettings.qr_code_size === 'small' ? 36 : 46}
-                  level="M"
-                  includeMargin={false}
-                />
-                {docSettings.qr_code_show_label !== false && (
-                  <span className="text-[8px] text-slate-600 font-medium">Pindai untuk verifikasi keaslian</span>
-                )}
-              </div>
-              {docSettings.show_page_number && (
-                <span className="text-[10px] text-slate-500 font-medium">{docSettings.footer_watermark_text || 'Dokumen Sah Akademik'}</span>
-              )}
-            </div>
-          )}
       </div>
     </div>
   );
