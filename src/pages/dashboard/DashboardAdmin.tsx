@@ -19,7 +19,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target, Eye, EyeOff, Settings, CheckSquare, LogIn, FileText } from 'lucide-react';
+import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target, Eye, EyeOff, Settings, CheckSquare, LogIn, FileText, RefreshCw } from 'lucide-react';
 import { Navigate, Link, useLocation } from 'react-router-dom';
 import { Course, Profile, AppRole, Program } from '@/lib/types';
 import { useProgramFilter } from '@/hooks/useProgramFilter';
@@ -192,10 +192,22 @@ export default function DashboardAdmin() {
       if (rolesError) throw rolesError;
       
       // Map roles to users
-      const usersWithRoles = (profiles as Profile[]).map(p => ({
-        ...p,
-        roles: userRoles?.filter(r => r.user_id === p.id).map(r => r.role as AppRole) || [p.role],
-      }));
+      const usersWithRoles = (profiles as Profile[]).map(p => {
+        let userRoleList = userRoles?.filter(r => r.user_id === p.id).map(r => r.role as AppRole) || [];
+        // Heal role mismatch: if profile has a designated non-mahasiswa role (e.g. dosen, admin, sub_admin)
+        // but user_roles only contains 'mahasiswa', prioritize the profile role
+        if (p.role && p.role !== 'mahasiswa') {
+          if (userRoleList.length === 0 || (userRoleList.length === 1 && userRoleList[0] === 'mahasiswa')) {
+            userRoleList = [p.role];
+          } else if (!userRoleList.includes(p.role)) {
+            userRoleList.push(p.role);
+          }
+        }
+        return {
+          ...p,
+          roles: userRoleList.length > 0 ? userRoleList : [p.role],
+        };
+      });
       
       return usersWithRoles;
     },
@@ -556,6 +568,21 @@ export default function DashboardAdmin() {
       const { error } = await supabase.from('profiles').update(userData).eq('id', id);
       if (error) throw error;
       
+      // Synchronize role with user_roles table
+      if (userData.role) {
+        await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', id);
+
+        const { error: roleInsertError } = await supabase
+          .from('user_roles')
+          .insert({ user_id: id, role: userData.role });
+        if (roleInsertError) {
+          console.error('Error inserting user_role on update:', roleInsertError);
+        }
+      }
+      
       // If email changed, update via edge function
       if (email && originalEmail && email !== originalEmail) {
         const { data, error: emailError } = await supabase.functions.invoke('admin-update-email', {
@@ -582,6 +609,41 @@ export default function DashboardAdmin() {
     },
     onError: (error: any) => {
       toast({ title: 'Gagal', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const syncMismatchedRolesMutation = useMutation({
+    mutationFn: async () => {
+      const { data: rawProfiles, error: pErr } = await supabase.from('profiles').select('id, full_name, role');
+      if (pErr) throw pErr;
+      const { data: rawRoles, error: rErr } = await supabase.from('user_roles').select('*');
+      if (rErr) throw rErr;
+
+      let fixedCount = 0;
+      for (const p of rawProfiles || []) {
+        if (!p.role) continue;
+        const currentRoles = rawRoles?.filter(r => r.user_id === p.id).map(r => r.role) || [];
+        const hasCorrectRole = currentRoles.includes(p.role);
+        // If user_roles doesn't have p.role, or if p.role is non-mahasiswa but user_roles has 'mahasiswa'
+        if (!hasCorrectRole || (p.role !== 'mahasiswa' && currentRoles.includes('mahasiswa'))) {
+          await supabase.from('user_roles').delete().eq('user_id', p.id);
+          await supabase.from('user_roles').insert({ user_id: p.id, role: p.role });
+          fixedCount++;
+        }
+      }
+      return fixedCount;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-dosen'] });
+      if (count > 0) {
+        toast({ title: 'Sinkronisasi Berhasil', description: `${count} akun berhasil diperbaiki dan disinkronkan rolenya di database.` });
+      } else {
+        toast({ title: 'Role Sudah Sinkron', description: 'Semua role akun sudah sinkron dengan benar.' });
+      }
+    },
+    onError: (error: any) => {
+      toast({ title: 'Gagal Sinkronisasi', description: error.message, variant: 'destructive' });
     },
   });
 
@@ -934,7 +996,12 @@ export default function DashboardAdmin() {
     setEditingUser(userProfile);
     setUserFullName(userProfile.full_name);
     setUserEmail(userProfile.email);
-    setUserRole(userProfile.role as 'mahasiswa' | 'dosen' | 'admin' | 'sub_admin');
+    const effectiveRole = (userProfile.role && userProfile.role !== 'mahasiswa')
+      ? userProfile.role
+      : (userProfile.roles && userProfile.roles.length > 0)
+        ? (userProfile.roles.includes('admin') ? 'admin' : userProfile.roles.includes('sub_admin') ? 'sub_admin' : userProfile.roles.includes('dosen') ? 'dosen' : 'mahasiswa')
+        : (userProfile.role || 'mahasiswa');
+    setUserRole(effectiveRole as 'mahasiswa' | 'dosen' | 'admin' | 'sub_admin');
     setUserNim(userProfile.nim || '');
     setUserNip(userProfile.nip || '');
     setUserProgram(userProfile.program || '');
@@ -1066,13 +1133,24 @@ export default function DashboardAdmin() {
                 <div className="flex flex-col gap-4">
                   <div className="flex flex-wrap items-center justify-between gap-4">
                     <CardTitle>Kelola Akun Pengguna</CardTitle>
-                    <Dialog open={showUserDialog} onOpenChange={(open) => { if (!open) resetUserForm(); setShowUserDialog(open); }}>
-                      <DialogTrigger asChild>
-                        <Button size="sm">
-                          <Plus className="h-4 w-4 mr-2" />
-                          Tambah Akun
-                        </Button>
-                      </DialogTrigger>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => syncMismatchedRolesMutation.mutate()}
+                        disabled={syncMismatchedRolesMutation.isPending}
+                        title="Sinkronkan role profil dengan tabel user_roles di database"
+                      >
+                        <RefreshCw className={`h-4 w-4 mr-2 ${syncMismatchedRolesMutation.isPending ? 'animate-spin' : ''}`} />
+                        Sinkronkan Role
+                      </Button>
+                      <Dialog open={showUserDialog} onOpenChange={(open) => { if (!open) resetUserForm(); setShowUserDialog(open); }}>
+                        <DialogTrigger asChild>
+                          <Button size="sm">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Tambah Akun
+                          </Button>
+                        </DialogTrigger>
                       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                         <DialogHeader>
                           <DialogTitle>{editingUser ? 'Edit Akun' : 'Tambah Akun Baru'}</DialogTitle>
@@ -1080,7 +1158,7 @@ export default function DashboardAdmin() {
                         <div className="space-y-4">
                           <div className="space-y-2">
                             <Label>Tipe Akun</Label>
-                            <Select value={userRole} onValueChange={(v) => setUserRole(v as any)} disabled={!!editingUser}>
+                            <Select value={userRole} onValueChange={(v) => setUserRole(v as any)} disabled={editingUser?.id === user?.id}>
                               <SelectTrigger><SelectValue /></SelectTrigger>
                               <SelectContent>
                                 {getRoleOptions().map(opt => (
@@ -1088,6 +1166,9 @@ export default function DashboardAdmin() {
                                 ))}
                               </SelectContent>
                             </Select>
+                            {editingUser?.id === user?.id && (
+                              <p className="text-xs text-muted-foreground">Role akun Anda sendiri tidak dapat diubah di sini.</p>
+                            )}
                           </div>
                           <div className="space-y-2">
                             <Label>Nama Lengkap</Label>
@@ -1212,6 +1293,7 @@ export default function DashboardAdmin() {
                         </DialogFooter>
                       </DialogContent>
                     </Dialog>
+                    </div>
                   </div>
                   
                   {/* Import/Export buttons */}

@@ -56,9 +56,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const userRoles = await fetchUserRoles(userId);
     
     if (data) {
+      let resolvedRoles = userRoles.length > 0 ? [...userRoles] : [data.role];
+      // Defensive heal: if profile has a privileged role (dosen, admin, sub_admin)
+      // but user_roles only contains 'mahasiswa', prioritize data.role
+      if (data.role && data.role !== 'mahasiswa') {
+        if (!resolvedRoles.includes(data.role)) {
+          if (resolvedRoles.length === 1 && resolvedRoles[0] === 'mahasiswa') {
+            resolvedRoles = [data.role];
+          } else {
+            resolvedRoles.push(data.role);
+          }
+        }
+      }
+
       return {
         ...data,
-        roles: userRoles.length > 0 ? userRoles : [data.role], // Fallback to profile.role if no user_roles
+        roles: resolvedRoles,
       } as Profile;
     }
     return null;

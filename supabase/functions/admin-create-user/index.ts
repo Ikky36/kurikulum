@@ -131,6 +131,7 @@ serve(async (req) => {
     const { error: updateError } = await supabaseAdmin
       .from("profiles")
       .update({
+        role: primaryRole,
         nim: nim || null,
         nip: nip || null,
         program: program || null,
@@ -144,17 +145,22 @@ serve(async (req) => {
       console.error("Profile update error:", updateError);
     }
 
-    // Insert additional roles into user_roles table (trigger already inserts primary role)
+    // Delete any default role inserted by handle_new_user trigger
+    await supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", newUser.user.id);
+
+    // Insert user roles
     if (userRoles.length > 0) {
       const rolesToInsert = userRoles.map((r: string) => ({ 
         user_id: newUser.user.id, 
         role: r 
       }));
       
-      // Use upsert to avoid duplicate key errors (handle_new_user trigger may have already inserted primary role)
       const { error: rolesError } = await supabaseAdmin
         .from("user_roles")
-        .upsert(rolesToInsert, { onConflict: 'user_id,role', ignoreDuplicates: true });
+        .insert(rolesToInsert);
       
       if (rolesError) {
         console.error("User roles insert error:", rolesError);

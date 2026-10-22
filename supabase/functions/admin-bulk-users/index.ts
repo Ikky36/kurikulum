@@ -164,6 +164,10 @@ serve(async (req) => {
       };
 
       const updateProfileById = async (profileId: string, userData: UserData) => {
+        if (userData.role) {
+          await supabaseAdmin.from("user_roles").delete().eq("user_id", profileId);
+          await supabaseAdmin.from("user_roles").insert({ user_id: profileId, role: userData.role as any });
+        }
         return await supabaseAdmin
           .from("profiles")
           .update({
@@ -287,6 +291,7 @@ serve(async (req) => {
         const { error: profileUpdateError } = await supabaseAdmin
           .from("profiles")
           .update({
+            role: userData.role as any,
             nim: userData.nim || null,
             nip: userData.nip || null,
             program: userData.program || null,
@@ -299,6 +304,21 @@ serve(async (req) => {
 
         if (profileUpdateError) {
           return { email, success: false, error: profileUpdateError.message };
+        }
+
+        // Sync user_roles: remove default 'mahasiswa' inserted by handle_new_user trigger
+        await supabaseAdmin
+          .from("user_roles")
+          .delete()
+          .eq("user_id", newUser.user.id);
+
+        if (userData.role) {
+          await supabaseAdmin
+            .from("user_roles")
+            .insert({
+              user_id: newUser.user.id,
+              role: userData.role as any,
+            });
         }
 
         return { email, success: true, userId: newUser.user.id, action: "created" };
