@@ -310,6 +310,14 @@ export function BimbinganTugasAkhirTab() {
                       </div>
 
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsPrintModalOpen(true)}
+                          className="gap-1.5"
+                        >
+                          <Printer className="w-4 h-4" /> Cetak Kartu Bimbingan
+                        </Button>
                         <Button size="sm" onClick={openAddLog}>
                           <Plus className="w-4 h-4 mr-2" /> Tambah Log Manual
                         </Button>
@@ -480,223 +488,129 @@ export function BimbinganTugasAkhirTab() {
                   </Table>
                 </div>
 
-                {/* SECTION LAYANAN PENGESAHAN & PENCETAKAN DOKUMEN MAHASISWA OLEH DOSEN */}
-                <div className="pt-4 border-t space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                    <div>
-                      <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                        <FileCheck className="w-4 h-4 text-primary" />
-                        Pengesahan & Pencetakan Dokumen Mahasiswa
-                      </h4>
-                      <p className="text-xs text-muted-foreground">
-                        Bubuhkan pengesahan tanda tangan digital pada dokumen resmi mahasiswa dan cetak berkas bimbingan.
-                      </p>
-                    </div>
-                  </div>
+                {/* 3 Tombol Pengesahan Dokumen Tugas Akhir */}
+                <div className="pt-4 border-t flex flex-wrap items-center justify-end gap-2.5">
+                  {/* 1. Sahkan Proposal TA (Belum aktif karena dokumennya belum dikostum) */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled
+                    className="gap-1.5 text-xs text-muted-foreground"
+                    title="Belum aktif karena dokumennya belum dikostum"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" /> Sahkan Proposal TA
+                  </Button>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* DOKUMEN 1: KARTU BIMBINGAN */}
-                    <div className="rounded-xl border border-border bg-card p-4 flex flex-col justify-between shadow-xs hover:border-primary/50 transition-all">
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                              <FileText className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <h5 className="font-semibold text-sm leading-tight">Kartu Bimbingan</h5>
-                              <span className="text-[11px] text-muted-foreground">Log konsultasi & kendali</span>
-                            </div>
-                          </div>
-                          {isMyApproved ? (
-                            <Badge className="bg-emerald-600 text-white text-[11px] gap-1 py-0.5">
-                              <ShieldCheck className="w-3 h-3" /> Disahkan
-                            </Badge>
-                          ) : isApprovalRequested ? (
-                            <Badge variant="outline" className="text-[11px] bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 gap-1 py-0.5">
-                              <Clock className="w-3 h-3 text-amber-600" /> Perlu Disahkan
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary" className="text-[11px]">
-                              Belum Diajukan
-                            </Badge>
-                          )}
-                        </div>
+                  {/* 2. Sahkan Laporan TA (Belum aktif karena dokumennya belum dikostum) */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled
+                    className="gap-1.5 text-xs text-muted-foreground"
+                    title="Belum aktif karena dokumennya belum dikostum"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5" /> Sahkan Laporan TA
+                  </Button>
 
-                        {/* Status Pengesahan Ringkas per Pejabat */}
-                        <div className="p-2.5 bg-muted/40 rounded-lg text-[11px] space-y-1.5 border border-muted">
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Status Anda ({myRoleLabel}):</span>
-                            <span className={isMyApproved ? "text-emerald-600 font-semibold" : isApprovalRequested ? "text-amber-600 font-medium" : "text-muted-foreground"}>
-                              {isMyApproved 
-                                ? `Disahkan (${myApproval?.approved_at ? new Date(myApproval.approved_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : ''})` 
-                                : isApprovalRequested ? 'Menunggu Anda' : 'Belum Diajukan'}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Pengesahan Kaprodi:</span>
-                            <span className={kaprodiApproval?.is_approved ? "text-emerald-600 font-medium flex items-center gap-1" : "text-muted-foreground"}>
-                              {kaprodiApproval?.is_approved ? <><CheckCircle2 className="w-3.5 h-3.5" /> Disahkan ({kaprodiApproval.signer_name})</> : 'Belum Disahkan'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t flex flex-wrap items-center justify-between gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIsPrintModalOpen(true)}
-                          className="gap-1 text-xs"
-                        >
-                          <Printer className="w-3.5 h-3.5" /> Cetak Kartu
-                        </Button>
-
-                        {isMyApproved ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive gap-1"
-                            disabled={revokeAdvisorApproval.isPending}
-                            onClick={() => {
-                              if (window.confirm('Batalkan pengesahan resmi Anda pada kartu bimbingan mahasiswa ini?')) {
-                                revokeAdvisorApproval.mutate({
-                                  submissionId: selectedAdvisorship.ta_submissions.id,
-                                  roleKey: myRoleKey,
-                                }, {
-                                  onSuccess: (updatedApproval) => {
-                                    setSelectedAdvisorship((prev: any) => {
-                                      if (!prev) return prev;
-                                      const newComments = serializeApprovalsToComments(prev.ta_submissions?.comments, updatedApproval);
-                                      return {
-                                        ...prev,
-                                        ta_submissions: {
-                                          ...prev.ta_submissions,
-                                          comments: newComments,
-                                        },
-                                      };
-                                    });
-                                  }
+                  {/* 3. Sahkan Kartu Bimbingan TA */}
+                  {isMyApproved ? (
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        disabled
+                        className="gap-1.5 text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Sahkan Kartu Bimbingan TA (Telah Disahkan)
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-xs text-muted-foreground hover:text-destructive gap-1"
+                        disabled={revokeAdvisorApproval.isPending}
+                        onClick={() => {
+                          if (window.confirm('Batalkan pengesahan resmi Anda pada kartu bimbingan mahasiswa ini?')) {
+                            revokeAdvisorApproval.mutate({
+                              submissionId: selectedAdvisorship.ta_submissions.id,
+                              roleKey: myRoleKey,
+                            }, {
+                              onSuccess: (updatedApproval) => {
+                                setSelectedAdvisorship((prev: any) => {
+                                  if (!prev) return prev;
+                                  const newComments = serializeApprovalsToComments(prev.ta_submissions?.comments, updatedApproval);
+                                  return {
+                                    ...prev,
+                                    ta_submissions: {
+                                      ...prev.ta_submissions,
+                                      comments: newComments,
+                                    },
+                                  };
                                 });
                               }
-                            }}
-                          >
-                            <Undo2 className="w-3 h-3" /> Batalkan Sahkan
-                          </Button>
-                        ) : isApprovalRequested ? (
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1 text-xs shadow-sm"
-                            disabled={approveByAdvisor.isPending}
-                            onClick={() => {
-                              const mhsName = selectedAdvisorship?.ta_submissions?.profiles?.full_name || 'mahasiswa';
-                              if (approvedLogsCount === 0) {
-                                if (!window.confirm(`Perhatian: Mahasiswa ${mhsName} belum memiliki riwayat bimbingan yang disetujui (0 log approved). Apakah Anda yakin ingin tetap mengesahkan kartu bimbingan ini?`)) {
-                                  return;
-                                }
-                              } else if (!window.confirm(`Sahkan seluruh kartu bimbingan mahasiswa ${mhsName} (${approvedLogsCount} pertemuan bimbingan disetujui)? Tanda tangan digital Anda akan dibubuhkan pada dokumen pengesahan resmi.`)) {
-                                return;
-                              }
+                            });
+                          }
+                        }}
+                      >
+                        <Undo2 className="w-3.5 h-3.5" /> Batalkan
+                      </Button>
+                    </div>
+                  ) : isApprovalRequested ? (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-sm text-xs"
+                      disabled={approveByAdvisor.isPending}
+                      onClick={() => {
+                        const mhsName = selectedAdvisorship?.ta_submissions?.profiles?.full_name || 'mahasiswa';
+                        if (approvedLogsCount === 0) {
+                          if (!window.confirm(`Perhatian: Mahasiswa ${mhsName} belum memiliki riwayat bimbingan yang disetujui (0 log approved). Apakah Anda yakin ingin tetap mengesahkan kartu bimbingan ini?`)) {
+                            return;
+                          }
+                        } else if (!window.confirm(`Sahkan seluruh kartu bimbingan mahasiswa ${mhsName} (${approvedLogsCount} pertemuan bimbingan disetujui)? Tanda tangan digital Anda akan dibubuhkan pada dokumen pengesahan resmi.`)) {
+                          return;
+                        }
 
-                              approveByAdvisor.mutate({
-                                submissionId: selectedAdvisorship.ta_submissions.id,
-                                roleKey: myRoleKey,
-                                roleLabel: myRoleLabel,
-                                signer: {
-                                  id: user?.id,
-                                  name: profile?.full_name || user?.email || 'Dosen Pembimbing',
-                                  nidn: profile?.nip || '',
-                                  signature_url: profile?.signature_url || profile?.paraf_url,
-                                  paraf_url: profile?.paraf_url || profile?.signature_url,
+                        approveByAdvisor.mutate({
+                          submissionId: selectedAdvisorship.ta_submissions.id,
+                          roleKey: myRoleKey,
+                          roleLabel: myRoleLabel,
+                          signer: {
+                            id: user?.id,
+                            name: profile?.full_name || user?.email || 'Dosen Pembimbing',
+                            nidn: profile?.nip || '',
+                            signature_url: profile?.signature_url || profile?.paraf_url,
+                            paraf_url: profile?.paraf_url || profile?.signature_url,
+                          },
+                        }, {
+                          onSuccess: (updatedApproval) => {
+                            setSelectedAdvisorship((prev: any) => {
+                              if (!prev) return prev;
+                              const newComments = serializeApprovalsToComments(prev.ta_submissions?.comments, updatedApproval);
+                              return {
+                                ...prev,
+                                ta_submissions: {
+                                  ...prev.ta_submissions,
+                                  comments: newComments,
                                 },
-                              }, {
-                                onSuccess: (updatedApproval) => {
-                                  setSelectedAdvisorship((prev: any) => {
-                                    if (!prev) return prev;
-                                    const newComments = serializeApprovalsToComments(prev.ta_submissions?.comments, updatedApproval);
-                                    return {
-                                      ...prev,
-                                      ta_submissions: {
-                                        ...prev.ta_submissions,
-                                        comments: newComments,
-                                      },
-                                    };
-                                  });
-                                }
-                              });
-                            }}
-                          >
-                            <ShieldCheck className="w-3.5 h-3.5" /> Sahkan Kartu
-                          </Button>
-                        ) : (
-                          <Badge variant="outline" className="text-[11px] text-muted-foreground gap-1 py-1">
-                            <Clock className="w-3 h-3 text-amber-500" /> Belum Diajukan Mhs
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* DOKUMEN 2: PENGESAHAN PROPOSAL */}
-                    <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 p-4 flex flex-col justify-between">
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <div className="p-2 rounded-lg bg-muted text-muted-foreground">
-                              <BookOpen className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <h5 className="font-semibold text-sm leading-tight">Pengesahan Proposal</h5>
-                              <span className="text-[11px] text-muted-foreground">Naskah Seminar Proposal</span>
-                            </div>
-                          </div>
-                          <Badge variant="outline" className="text-[10px] text-muted-foreground">Segera Hadir</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          Pengesahan perbaikan naskah proposal skripsi pasca ujian seminar proposal mahasiswa.
-                        </p>
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t flex flex-wrap items-center justify-between gap-2">
-                        <Button variant="outline" size="sm" disabled className="gap-1 text-xs">
-                          <Printer className="w-3.5 h-3.5" /> Cetak Proposal
-                        </Button>
-                        <Button variant="secondary" size="sm" disabled className="gap-1 text-xs">
-                          <ShieldCheck className="w-3.5 h-3.5" /> Sahkan Proposal
-                        </Button>
-                      </div>
-                    </div>
-
-                    {/* DOKUMEN 3: PENGESAHAN TUGAS AKHIR */}
-                    <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 p-4 flex flex-col justify-between">
-                      <div className="space-y-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <div className="p-2 rounded-lg bg-muted text-muted-foreground">
-                              <GraduationCap className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <h5 className="font-semibold text-sm leading-tight">Pengesahan Tugas Akhir</h5>
-                              <span className="text-[11px] text-muted-foreground">Naskah Skripsi / TA Final</span>
-                            </div>
-                          </div>
-                          <Badge variant="outline" className="text-[10px] text-muted-foreground">Segera Hadir</Badge>
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          Lembar pengesahan naskah skripsi lengkap dan kelulusan yudisium tugas akhir.
-                        </p>
-                      </div>
-
-                      <div className="mt-4 pt-3 border-t flex flex-wrap items-center justify-between gap-2">
-                        <Button variant="outline" size="sm" disabled className="gap-1 text-xs">
-                          <Printer className="w-3.5 h-3.5" /> Cetak Naskah TA
-                        </Button>
-                        <Button variant="secondary" size="sm" disabled className="gap-1 text-xs">
-                          <ShieldCheck className="w-3.5 h-3.5" /> Sahkan Tugas Akhir
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+                              };
+                            });
+                          }
+                        });
+                      }}
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5" /> Sahkan Kartu Bimbingan TA
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled
+                      className="gap-1.5 text-xs text-muted-foreground"
+                      title="Mahasiswa belum mengajukan permohonan pengesahan"
+                    >
+                      <Clock className="w-3.5 h-3.5 text-amber-500" /> Sahkan Kartu Bimbingan TA (Belum Diajukan)
+                    </Button>
+                  )}
                 </div>
               </div>
             );
