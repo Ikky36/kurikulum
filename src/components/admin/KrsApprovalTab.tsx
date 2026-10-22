@@ -189,60 +189,63 @@ export function KrsApprovalTab() {
       {/* Detail & Action Modal */}
       {selectedKrs && (
         <Dialog open={!!selectedKrs} onOpenChange={(open) => !open && setSelectedKrs(null)}>
-          <DialogContent className="max-w-3xl">
-            <DialogHeader>
+          <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-6 overflow-hidden">
+            <DialogHeader className="shrink-0">
               <DialogTitle>Detail Pengajuan KRS</DialogTitle>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Nama Mahasiswa</p>
-                <p className="font-semibold">{selectedKrs.profiles?.full_name}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">NIM</p>
-                <p className="font-semibold">{selectedKrs.profiles?.nim || '-'}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Semester</p>
-                <p className="font-semibold">{selectedKrs.semesters?.name}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Batas Maksimal SKS</p>
-                <p className="font-semibold">{selectedKrs.semesters?.max_sks || 24}</p>
-              </div>
-            </div>
 
-            <div className="border rounded-md">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Kode</TableHead>
-                    <TableHead>Mata Kuliah</TableHead>
-                    <TableHead className="text-right">SKS</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {selectedKrs.krs_items?.map((item: any) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.courses?.code}</TableCell>
-                      <TableCell>{item.courses?.name}</TableCell>
-                      <TableCell className="text-right">{item.courses?.sks}</TableCell>
+            <div className="overflow-y-auto pr-1 space-y-4 flex-1">
+              <div className="grid grid-cols-2 gap-4 text-sm bg-muted/40 p-3 rounded-lg border">
+                <div>
+                  <p className="text-muted-foreground text-xs">Nama Mahasiswa</p>
+                  <p className="font-semibold text-sm">{selectedKrs.profiles?.full_name}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">NIM</p>
+                  <p className="font-semibold text-sm">{selectedKrs.profiles?.nim || '-'}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Semester</p>
+                  <p className="font-semibold text-sm">{selectedKrs.semesters?.name}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-xs">Batas Maksimal SKS</p>
+                  <p className="font-semibold text-sm">{selectedKrs.semesters?.max_sks || 24}</p>
+                </div>
+              </div>
+
+              <div className="border rounded-md overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead className="w-24">Kode</TableHead>
+                      <TableHead>Mata Kuliah</TableHead>
+                      <TableHead className="text-right w-20">SKS</TableHead>
                     </TableRow>
-                  ))}
-                  <TableRow className="bg-muted/50 font-bold">
-                    <TableCell colSpan={2} className="text-right">Total SKS</TableCell>
-                    <TableCell className="text-right">
-                      <span className={selectedKrs.total_sks > (selectedKrs.semesters?.max_sks || 24) ? "text-red-500" : "text-primary"}>
-                        {selectedKrs.total_sks}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {selectedKrs.krs_items?.map((item: any) => (
+                      <TableRow key={item.id}>
+                        <TableCell className="font-mono text-xs">{item.courses?.code}</TableCell>
+                        <TableCell className="font-medium text-sm">{item.courses?.name}</TableCell>
+                        <TableCell className="text-right">{item.courses?.sks}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-muted/50 font-bold">
+                      <TableCell colSpan={2} className="text-right">Total SKS</TableCell>
+                      <TableCell className="text-right">
+                        <span className={selectedKrs.total_sks > (selectedKrs.semesters?.max_sks || 24) ? "text-destructive font-bold" : "text-primary font-bold"}>
+                          {selectedKrs.total_sks} / {selectedKrs.semesters?.max_sks || 24}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
             </div>
 
             {selectedKrs.status === 'pending' && (
-              <DialogFooter className="mt-4 gap-2 sm:gap-0">
+              <DialogFooter className="mt-3 pt-3 border-t shrink-0 gap-2 sm:gap-0">
                 <Button 
                   variant="destructive" 
                   onClick={() => {
@@ -261,7 +264,7 @@ export function KrsApprovalTab() {
             )}
 
             {selectedKrs.status === 'approved' && (
-              <DialogFooter className="mt-4">
+              <DialogFooter className="mt-3 pt-3 border-t shrink-0">
                 <Button 
                   variant="destructive" 
                   onClick={() => {
@@ -279,31 +282,31 @@ export function KrsApprovalTab() {
       {/* Reject Notes Modal */}
       {rejectDialog && (
         <Dialog open={rejectDialog} onOpenChange={setRejectDialog}>
-          <DialogContent>
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Tolak KRS</DialogTitle>
             </DialogHeader>
-              <div className="space-y-4 py-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Catatan / Alasan (Opsional)</label>
-                  <Textarea 
-                    placeholder="Misal: SKS terlalu banyak, kurangi mata kuliah pilihan..."
-                    value={rejectNotes}
-                    onChange={(e) => setRejectNotes(e.target.value)}
-                    className="min-h-[100px]"
-                  />
-                </div>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Catatan / Alasan (Opsional)</label>
+                <Textarea 
+                  placeholder="Misal: SKS terlalu banyak, kurangi mata kuliah pilihan..."
+                  value={rejectNotes}
+                  onChange={(e) => setRejectNotes(e.target.value)}
+                  className="min-h-[100px]"
+                />
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setRejectDialog(false)}>Batal</Button>
-                <Button 
-                  variant="destructive" 
-                  disabled={rejectMutation.isPending}
-                  onClick={() => rejectMutation.mutate({ id: selectedKrs?.id, notes: rejectNotes })}
-                >
-                  Kirim
-                </Button>
-              </DialogFooter>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRejectDialog(false)}>Batal</Button>
+              <Button 
+                variant="destructive" 
+                disabled={rejectMutation.isPending}
+                onClick={() => rejectMutation.mutate({ id: selectedKrs?.id, notes: rejectNotes })}
+              >
+                Kirim
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}
