@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { User, Mail, Camera, Loader2, Upload, Download, Save, BookOpen, PenLine, FileText, FileCheck, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -479,13 +479,24 @@ export default function DashboardDosen() {
   return (
     <Layout>
       <div className="container py-8 lg:py-12 px-4 sm:px-6 lg:px-10 xl:px-16">
-        <div className="mb-8 animate-fade-in">
-          <h1 className="font-display text-3xl font-bold lg:text-4xl mb-2">
-            Dashboard Dosen
-          </h1>
-          <p className="text-muted-foreground">
-            Selamat datang, {profile?.full_name}
-          </p>
+        <div className="mb-6 animate-fade-in flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold lg:text-4xl mb-1">
+              Dashboard Dosen
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Selamat datang, {profile?.full_name}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="w-fit text-xs px-3 py-1 font-medium bg-muted/50 border-primary/20 flex items-center gap-1.5">
+              {activeTab === 'bimbingan' && <><User className="w-3.5 h-3.5 text-primary" /> Bimbingan Akademik</>}
+              {activeTab === 'bimbingan_ta' && <><FileText className="w-3.5 h-3.5 text-primary" /> Bimbingan Tugas Akhir</>}
+              {activeTab === 'pengesahan' && <><FileCheck className="w-3.5 h-3.5 text-primary" /> Pengesahan Dokumen (Kaprodi)</>}
+              {activeTab === 'rekap' && <><Download className="w-3.5 h-3.5 text-primary" /> Rekap Skor</>}
+              {(activeTab === 'matakuliah' || !activeTab) && <><BookOpen className="w-3.5 h-3.5 text-primary" /> Mata Kuliah Diampu</>}
+            </Badge>
+          </div>
         </div>
 
         <Tabs 
@@ -496,43 +507,7 @@ export default function DashboardDosen() {
           }}
           className="space-y-6"
         >
-          <TabsList className="flex flex-wrap h-auto p-1 bg-muted/70 border gap-1 max-w-full rounded-lg">
-            <TabsTrigger value="matakuliah" className="gap-2">
-              <BookOpen className="w-4 h-4" /> Mata Kuliah Diampu
-            </TabsTrigger>
-            <TabsTrigger value="bimbingan" className="gap-2 relative">
-              <User className="w-4 h-4" /> Bimbingan Akademik
-              {totalPending > 0 && (
-                <Badge variant="destructive" className="ml-1 px-1.5 py-0 text-[10px]">
-                  {totalPending}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="bimbingan_ta" className="gap-2 relative">
-              <FileText className="w-4 h-4" /> Bimbingan Tugas Akhir
-              {pendingTaLogsCount > 0 && (
-                <Badge variant="destructive" className="ml-1 px-1.5 py-0 text-[10px]">
-                  {pendingTaLogsCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-            {isKaprodi && (
-              <TabsTrigger
-                value="pengesahan"
-                className="gap-2 relative border border-primary/20 bg-background/50 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground font-semibold"
-              >
-                <FileCheck className="w-4 h-4" /> Pengesahan Dokumen (Kaprodi)
-                {pendingKaprodiCount > 0 && (
-                  <Badge variant="default" className="ml-1 px-1.5 py-0 text-[10px] bg-amber-500 text-slate-900 font-bold hover:bg-amber-600">
-                    {pendingKaprodiCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-            )}
-            <TabsTrigger value="rekap" className="gap-2">
-              <Download className="w-4 h-4" /> Rekap Skor
-            </TabsTrigger>
-          </TabsList>
+          
 
           <TabsContent value="matakuliah">
             <div className="grid gap-6 lg:grid-cols-4 mb-8">

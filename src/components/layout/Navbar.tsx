@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { GraduationCap, BookOpen, LayoutDashboard, LogOut, User, Menu, X, FileText, MonitorPlay, KeyRound, Settings } from 'lucide-react';
+import { GraduationCap, BookOpen, LayoutDashboard, LogOut, User, Menu, X, FileText, MonitorPlay, KeyRound, Settings, FileCheck, Download } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { NotificationBell } from './NotificationBell';
@@ -142,15 +142,23 @@ export function Navbar() {
                 {profile?.role === 'dosen' && (
                   <>
                     <DropdownMenuLabel className="text-xs text-muted-foreground uppercase">Dashboard</DropdownMenuLabel>
-                    <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#matakuliah')}>Mata Kuliah Diampu</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#bimbingan')}>Bimbingan Akademik</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#bimbingan_ta')}>Bimbingan Tugas Akhir</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#matakuliah')}>
+                      <BookOpen className="mr-2 h-4 w-4" /> Mata Kuliah Diampu
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#bimbingan')}>
+                      <User className="mr-2 h-4 w-4" /> Bimbingan Akademik
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#bimbingan_ta')}>
+                      <FileText className="mr-2 h-4 w-4" /> Bimbingan Tugas Akhir
+                    </DropdownMenuItem>
                     {isKaprodi && (
                       <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#pengesahan')} className="text-primary font-medium">
-                        Pengesahan Dokumen (Kaprodi)
+                        <FileCheck className="mr-2 h-4 w-4" /> Pengesahan Dokumen (Kaprodi)
                       </DropdownMenuItem>
                     )}
-                    <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#rekap')}>Rekap Skor</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleNav('/dashboard/dosen#rekap')}>
+                      <Download className="mr-2 h-4 w-4" /> Rekap Skor
+                    </DropdownMenuItem>
                   </>
                 )}
 
