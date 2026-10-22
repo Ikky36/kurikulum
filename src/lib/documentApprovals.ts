@@ -135,6 +135,30 @@ export function useTaApprovalActions() {
     },
   });
 
+  // 1b. Mahasiswa menarik/membatalkan permohonan pengesahan (jika belum disahkan)
+  const cancelRequestApproval = useMutation({
+    mutationFn: async (submissionId: string) => {
+      return mutateSubmissionApprovals(submissionId, (current) => {
+        const anyApproved = Object.values(current.signers || {}).some(s => s.is_approved);
+        if (anyApproved) {
+          throw new Error('Tidak dapat menarik permohonan karena dokumen telah disahkan');
+        }
+        return {
+          ...current,
+          requested: false,
+          requested_at: null,
+        };
+      });
+    },
+    onSuccess: () => {
+      toast.info('Permohonan pengesahan berhasil ditarik');
+      invalidateAll();
+    },
+    onError: (err: any) => {
+      toast.error('Gagal menarik permohonan: ' + err.message);
+    },
+  });
+
   // 2. Pembimbing memberikan pengesahan
   const approveByAdvisor = useMutation({
     mutationFn: async ({
@@ -154,23 +178,28 @@ export function useTaApprovalActions() {
         paraf_url?: string | null;
       };
     }) => {
-      return mutateSubmissionApprovals(submissionId, (current) => ({
-        ...current,
-        signers: {
-          ...current.signers,
-          [roleKey]: {
-            role_key: roleKey,
-            role_label: roleLabel || (roleKey === 'advisor_2' ? 'Dosen Pembimbing 2' : 'Dosen Pembimbing 1'),
-            signer_id: signer.id,
-            signer_name: signer.name,
-            signer_nidn: signer.nidn,
-            signature_url: signer.signature_url,
-            paraf_url: signer.paraf_url,
-            is_approved: true,
-            approved_at: new Date().toISOString(),
+      return mutateSubmissionApprovals(submissionId, (current) => {
+        if (!current.requested) {
+          throw new Error('Mahasiswa belum mengajukan permohonan pengesahan resmi');
+        }
+        return {
+          ...current,
+          signers: {
+            ...current.signers,
+            [roleKey]: {
+              role_key: roleKey,
+              role_label: roleLabel || (roleKey === 'advisor_2' ? 'Dosen Pembimbing 2' : 'Dosen Pembimbing 1'),
+              signer_id: signer.id,
+              signer_name: signer.name,
+              signer_nidn: signer.nidn,
+              signature_url: signer.signature_url,
+              paraf_url: signer.paraf_url,
+              is_approved: true,
+              approved_at: new Date().toISOString(),
+            },
           },
-        },
-      }));
+        };
+      });
     },
     onSuccess: () => {
       toast.success('Kartu bimbingan berhasil disahkan oleh Pembimbing');
@@ -228,22 +257,27 @@ export function useTaApprovalActions() {
         signature_url?: string | null;
       };
     }) => {
-      return mutateSubmissionApprovals(submissionId, (current) => ({
-        ...current,
-        signers: {
-          ...current.signers,
-          kaprodi: {
-            role_key: 'kaprodi',
-            role_label: 'Ketua Program Studi',
-            signer_id: signer.id,
-            signer_name: signer.name,
-            signer_nidn: signer.nidn,
-            signature_url: signer.signature_url,
-            is_approved: true,
-            approved_at: new Date().toISOString(),
+      return mutateSubmissionApprovals(submissionId, (current) => {
+        if (!current.requested) {
+          throw new Error('Mahasiswa belum mengajukan permohonan pengesahan dokumen');
+        }
+        return {
+          ...current,
+          signers: {
+            ...current.signers,
+            kaprodi: {
+              role_key: 'kaprodi',
+              role_label: 'Ketua Program Studi',
+              signer_id: signer.id,
+              signer_name: signer.name,
+              signer_nidn: signer.nidn,
+              signature_url: signer.signature_url,
+              is_approved: true,
+              approved_at: new Date().toISOString(),
+            },
           },
-        },
-      }));
+        };
+      });
     },
     onSuccess: () => {
       toast.success('Dokumen berhasil disahkan oleh Ketua Program Studi');
@@ -283,6 +317,7 @@ export function useTaApprovalActions() {
 
   return {
     requestApproval,
+    cancelRequestApproval,
     approveByAdvisor,
     revokeAdvisorApproval,
     approveByKaprodi,

@@ -28,7 +28,7 @@ export default function TugasAkhirMahasiswa() {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   const { activeAcademicYear, activeSemester } = useAcademicPeriod();
-  const { requestApproval } = useTaApprovalActions();
+  const { requestApproval, cancelRequestApproval } = useTaApprovalActions();
   
   const [selectedType, setSelectedType] = useState('');
   const [title, setTitle] = useState('');
@@ -702,6 +702,8 @@ export default function TugasAkhirMahasiswa() {
                   const adv2 = approvalState.signers.advisor_2;
                   const kaprodi = approvalState.signers.kaprodi;
                   const hasAdvisor2 = mySubmission.ta_advisors?.some((a: any) => a.role === 'Pembimbing 2' || a.role?.includes('2'));
+                  const approvedLogsCount = consultationLogs?.filter((l: any) => l.status === 'approved').length || 0;
+                  const hasAnyApprovalSigned = Boolean(adv1?.is_approved || adv2?.is_approved || kaprodi?.is_approved);
 
                   return (
                     <Card>
@@ -719,7 +721,11 @@ export default function TugasAkhirMahasiswa() {
                               className="bg-amber-600 hover:bg-amber-700 text-white gap-1.5 shadow-sm text-xs"
                               disabled={requestApproval.isPending}
                               onClick={() => {
-                                if (window.confirm('Ajukan permohonan pengesahan resmi kartu bimbingan kepada Dosen Pembimbing dan Ketua Program Studi?')) {
+                                if (approvedLogsCount === 0) {
+                                  toast.error('Anda belum memiliki log bimbingan yang disetujui dosen. Lakukan bimbingan dan pastikan log telah disetujui oleh dosen pembimbing sebelum mengajukan pengesahan.');
+                                  return;
+                                }
+                                if (window.confirm(`Ajukan permohonan pengesahan resmi kartu bimbingan (${approvedLogsCount} sesi bimbingan disetujui) kepada Dosen Pembimbing dan Ketua Program Studi?`)) {
                                   requestApproval.mutate(mySubmission.id);
                                 }
                               }}
@@ -727,9 +733,27 @@ export default function TugasAkhirMahasiswa() {
                               <Send className="w-3.5 h-3.5" /> Ajukan Pengesahan
                             </Button>
                           ) : (
-                            <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 gap-1 py-1">
-                              <Clock className="w-3.5 h-3.5 text-amber-600" /> Pengajuan Terkirim
-                            </Badge>
+                            <div className="flex items-center gap-1.5">
+                              <Badge variant="outline" className="text-xs bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200 gap-1 py-1">
+                                <Clock className="w-3.5 h-3.5 text-amber-600" /> Pengajuan Terkirim
+                              </Badge>
+                              {!hasAnyApprovalSigned && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 px-1.5 text-xs text-muted-foreground hover:text-destructive"
+                                  disabled={cancelRequestApproval.isPending}
+                                  title="Tarik kembali permohonan pengesahan"
+                                  onClick={() => {
+                                    if (window.confirm('Tarik kembali permohonan pengesahan? Anda dapat mengajukannya lagi setelah berkonsultasi.')) {
+                                      cancelRequestApproval.mutate(mySubmission.id);
+                                    }
+                                  }}
+                                >
+                                  <Undo2 className="w-3 h-3 mr-1" /> Tarik
+                                </Button>
+                              )}
+                            </div>
                           )}
 
                           <Button

@@ -291,9 +291,11 @@ export function BimbinganTugasAkhirTab() {
                 const myRoleKey = isAdvisor2 ? 'advisor_2' : 'advisor_1';
                 const myRoleLabel = isAdvisor2 ? 'Dosen Pembimbing 2' : 'Dosen Pembimbing 1';
                 const approvalState = parseApprovalsFromComments(selectedAdvisorship?.ta_submissions?.comments);
+                const isApprovalRequested = Boolean(approvalState?.requested);
                 const myApproval = approvalState?.signers?.[myRoleKey];
                 const isMyApproved = !!myApproval?.is_approved;
                 const kaprodiApproval = approvalState?.signers?.kaprodi;
+                const approvedLogsCount = consultationLogs?.filter((l: any) => l.status === 'approved').length || 0;
 
                 return (
                   <div className="space-y-4">
@@ -348,7 +350,7 @@ export function BimbinganTugasAkhirTab() {
                               <Undo2 className="w-3 h-3" /> Batalkan
                             </Button>
                           </div>
-                        ) : (
+                        ) : isApprovalRequested ? (
                           <Button
                             variant="default"
                             size="sm"
@@ -356,38 +358,52 @@ export function BimbinganTugasAkhirTab() {
                             disabled={approveByAdvisor.isPending}
                             onClick={() => {
                               const mhsName = selectedAdvisorship?.ta_submissions?.profiles?.full_name || 'mahasiswa';
-                              if (window.confirm(`Sahkan seluruh kartu bimbingan mahasiswa ${mhsName}? Tanda tangan digital Anda akan dibubuhkan pada dokumen pengesahan resmi.`)) {
-                                approveByAdvisor.mutate({
-                                  submissionId: selectedAdvisorship.ta_submissions.id,
-                                  roleKey: myRoleKey,
-                                  roleLabel: myRoleLabel,
-                                  signer: {
-                                    id: user?.id,
-                                    name: profile?.full_name || user?.email || 'Dosen Pembimbing',
-                                    nidn: profile?.nip || '',
-                                    signature_url: profile?.signature_url || profile?.paraf_url,
-                                    paraf_url: profile?.paraf_url || profile?.signature_url,
-                                  },
-                                }, {
-                                  onSuccess: (updatedApproval) => {
-                                    setSelectedAdvisorship((prev: any) => {
-                                      if (!prev) return prev;
-                                      const newComments = serializeApprovalsToComments(prev.ta_submissions?.comments, updatedApproval);
-                                      return {
-                                        ...prev,
-                                        ta_submissions: {
-                                          ...prev.ta_submissions,
-                                          comments: newComments,
-                                        },
-                                      };
-                                    });
-                                  }
-                                });
+                              if (approvedLogsCount === 0) {
+                                if (!window.confirm(`Perhatian: Mahasiswa ${mhsName} belum memiliki riwayat bimbingan yang disetujui (0 log approved). Apakah Anda yakin ingin tetap mengesahkan kartu bimbingan ini?`)) {
+                                  return;
+                                }
+                              } else if (!window.confirm(`Sahkan seluruh kartu bimbingan mahasiswa ${mhsName} (${approvedLogsCount} pertemuan bimbingan disetujui)? Tanda tangan digital Anda akan dibubuhkan pada dokumen pengesahan resmi.`)) {
+                                return;
                               }
+
+                              approveByAdvisor.mutate({
+                                submissionId: selectedAdvisorship.ta_submissions.id,
+                                roleKey: myRoleKey,
+                                roleLabel: myRoleLabel,
+                                signer: {
+                                  id: user?.id,
+                                  name: profile?.full_name || user?.email || 'Dosen Pembimbing',
+                                  nidn: profile?.nip || '',
+                                  signature_url: profile?.signature_url || profile?.paraf_url,
+                                  paraf_url: profile?.paraf_url || profile?.signature_url,
+                                },
+                              }, {
+                                onSuccess: (updatedApproval) => {
+                                  setSelectedAdvisorship((prev: any) => {
+                                    if (!prev) return prev;
+                                    const newComments = serializeApprovalsToComments(prev.ta_submissions?.comments, updatedApproval);
+                                    return {
+                                      ...prev,
+                                      ta_submissions: {
+                                        ...prev.ta_submissions,
+                                        comments: newComments,
+                                      },
+                                    };
+                                  });
+                                }
+                              });
                             }}
                           >
                             <ShieldCheck className="w-4 h-4" /> Sahkan Kartu Bimbingan
                           </Button>
+                        ) : (
+                          <div 
+                            className="flex items-center gap-1.5 bg-muted/60 border border-muted-foreground/20 rounded-md px-2.5 py-1 text-xs text-muted-foreground"
+                            title="Mahasiswa belum mengajukan permohonan pengesahan kartu bimbingan dari portal mahasiswa"
+                          >
+                            <Clock className="w-3.5 h-3.5 text-amber-500" />
+                            <span>Belum Diajukan Mahasiswa</span>
+                          </div>
                         )}
 
                         <Button variant="outline" size="sm" onClick={() => setIsPrintModalOpen(true)} className="gap-1.5">

@@ -198,6 +198,11 @@ export function PengesahanDokumenKaprodiTab() {
 
   // Handle Sahkan Dokumen TA
   const handleApproveTA = (item: any) => {
+    if (!item.requested) {
+      toast.error('Mahasiswa belum mengajukan permohonan pengesahan dokumen.');
+      return;
+    }
+
     const signerName = docSettings.kaprodi_name || profile?.full_name || 'Ketua Program Studi';
     const signerNidn = docSettings.kaprodi_nidn || profile?.nip || '';
     const signatureUrl = docSettings.kaprodi_signature_url || profile?.signature_url || profile?.paraf_url || null;
@@ -496,8 +501,9 @@ export function PengesahanDokumenKaprodiTab() {
                               <Button
                                 variant="default"
                                 size="sm"
-                                className="h-8 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1 shadow-sm"
-                                disabled={approveByKaprodi.isPending}
+                                className="h-8 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1 shadow-sm disabled:opacity-50"
+                                disabled={!item.requested || approveByKaprodi.isPending}
+                                title={!item.requested ? 'Mahasiswa belum mengajukan permohonan pengesahan' : 'Sahkan Dokumen'}
                                 onClick={() => handleApproveTA(item)}
                               >
                                 <ShieldCheck className="w-3.5 h-3.5" /> Sahkan
