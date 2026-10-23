@@ -1273,10 +1273,10 @@ export function DocumentSettingsTab() {
 
                 {form.qr_code_enabled !== false && (
                   <CardContent className="space-y-5 pt-4">
-                    {/* 1. Posisi & Ukuran QR Code pada Lembar Cetak */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-muted/30 rounded-lg border">
+                    {/* 1. Posisi, Ukuran, & Model Kerapatan QR Code pada Lembar Cetak */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3 bg-muted/30 rounded-lg border">
                       <div className="space-y-1">
-                        <Label className="text-xs font-semibold">Posisi QR Code di Dokumen</Label>
+                        <Label className="text-xs font-semibold">Posisi QR Code</Label>
                         <Select
                           value={form.qr_code_position || 'signature_side'}
                           onValueChange={(val: any) => updateField('qr_code_position', val)}
@@ -1286,17 +1286,17 @@ export function DocumentSettingsTab() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="signature_side" className="text-xs">
-                              Di Samping Blok Tanda Tangan (Rekomendasi)
+                              Di Samping Blok Tanda Tangan
                             </SelectItem>
                             <SelectItem value="footer" className="text-xs">
-                              Tepat 1 cm di Atas Sudut Kiri Footer
+                              Tepat di Atas Sudut Kiri Footer
                             </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-xs font-semibold">Ukuran QR Code</Label>
+                        <Label className="text-xs font-semibold">Ukuran Fisik Barcode</Label>
                         <Select
                           value={form.qr_code_size || 'medium'}
                           onValueChange={(val: any) => updateField('qr_code_size', val)}
@@ -1305,15 +1305,33 @@ export function DocumentSettingsTab() {
                             <SelectValue placeholder="Pilih ukuran..." />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="medium" className="text-xs">Sedang (24 mm x 24 mm)</SelectItem>
-                            <SelectItem value="small" className="text-xs">Kecil (18 mm x 18 mm)</SelectItem>
+                            <SelectItem value="large" className="text-xs">Besar (30 mm - Modul Mantap)</SelectItem>
+                            <SelectItem value="medium" className="text-xs">Sedang (24 mm - Standar)</SelectItem>
+                            <SelectItem value="small" className="text-xs">Kecil (18 mm - Ringkas)</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
 
-                      <div className="sm:col-span-2 flex items-center justify-between pt-1">
+                      <div className="space-y-1">
+                        <Label className="text-xs font-semibold">Model Kotak Barcode</Label>
+                        <Select
+                          value={form.qr_code_density || 'compact'}
+                          onValueChange={(val: any) => updateField('qr_code_density', val)}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder="Pilih model..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="compact" className="text-xs">Kotak Besar Elegan (Rekomendasi)</SelectItem>
+                            <SelectItem value="ultra_clean" className="text-xs">Kotak Super Besar (Ultra Bersih)</SelectItem>
+                            <SelectItem value="detailed" className="text-xs">Tradisional Padat (Banyak Kotak)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="sm:col-span-3 flex items-center justify-between pt-1">
                         <Label className="text-xs font-normal text-muted-foreground">
-                          Sertakan teks label keterangan di bawah QR Code ("Pindai untuk verifikasi")
+                          Sertakan teks label keterangan di bawah QR Code ("Pindai untuk verifikasi keaslian")
                         </Label>
                         <Switch
                           checked={form.qr_code_show_label !== false}

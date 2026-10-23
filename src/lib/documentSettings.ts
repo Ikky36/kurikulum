@@ -55,7 +55,8 @@ export interface DocumentLayoutSettings {
   // QR Code & Verifikasi Keabsahan Dokumen
   qr_code_enabled?: boolean;
   qr_code_position?: 'signature_side' | 'footer';
-  qr_code_size?: 'small' | 'medium';
+  qr_code_size?: 'small' | 'medium' | 'large';
+  qr_code_density?: 'compact' | 'ultra_clean' | 'detailed';
   qr_code_show_label?: boolean;
 
   // Kontrol Tampilan Halaman Verifikasi Publik (Saat QR Code discan)
@@ -128,6 +129,7 @@ export const defaultDocumentSettings: DocumentLayoutSettings = {
   qr_code_enabled: true,
   qr_code_position: 'signature_side',
   qr_code_size: 'medium',
+  qr_code_density: 'compact',
   qr_code_show_label: true,
 
   qr_verify_show_badge: true,

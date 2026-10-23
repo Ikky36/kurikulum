@@ -66,7 +66,32 @@ export function decodeVerificationPayload(str: string): any {
     for (let i = 0; i < binary.length; i++) {
       bytes[i] = binary.charCodeAt(i);
     }
-    return JSON.parse(new TextDecoder().decode(bytes));
+    const parsed = JSON.parse(new TextDecoder().decode(bytes));
+
+    // Handle model array ringkas: [id, nm, nim, pr, st, a1, kp, cnt, tl]
+    if (Array.isArray(parsed)) {
+      const [id, nm, nim, pr, isApproved, a1, kp, cnt, tl] = parsed;
+      const approved = isApproved === 1 || isApproved === '1' || isApproved === 'approved';
+      return {
+        id: id || 'DOC',
+        fullId: id || '',
+        doc: 'kartu_bimbingan_ta',
+        nm: nm || '',
+        nim: nim || '',
+        pr: pr || '',
+        tl: tl || '',
+        st: approved ? 'approved' : 'pending',
+        a1: a1 || '',
+        ad1: '',
+        ok1: approved ? 1 : 0,
+        kp: kp || '',
+        kpd: '',
+        okk: approved ? 1 : 0,
+        cnt: cnt || 0,
+      };
+    }
+
+    return parsed;
   } catch (e) {
     return null;
   }
@@ -238,28 +263,54 @@ export function UniversalDocumentContainer({
     const origin = window.location.origin;
     const base = `${origin}/verifikasi-dokumen?doc=${templateCode}&id=${documentId || 'sample'}`;
 
-    // Payload ringkas agar dapat diverifikasi instan tanpa terkendala autentikasi RLS Supabase
-    const payload = {
-      id: documentId ? documentId.slice(0, 8) : 'sample',
-      fullId: documentId || '',
-      doc: templateCode,
-      nm: verificationData?.studentName || studentInfo?.name || '',
-      nim: verificationData?.studentNim || studentInfo?.nim || '',
-      pr: verificationData?.studentProgram || studentInfo?.program || '',
-      tl: verificationData?.topicTitle || variables?.['topic_title'] || variables?.['submission_title'] || '',
-      st: (verificationData?.isFullyApproved ?? (signaturesData?.kaprodi?.is_approved || false)) ? 'approved' : 'pending',
-      a1: verificationData?.adv1Name || signaturesData?.advisor_1?.name || '',
-      ad1: verificationData?.adv1Nidn || signaturesData?.advisor_1?.id_number || '',
-      da1: verificationData?.adv1Date || (signaturesData?.advisor_1?.signed_at ? String(signaturesData.advisor_1.signed_at) : ''),
-      ok1: (verificationData?.adv1Approved ?? signaturesData?.advisor_1?.is_approved) ? 1 : 0,
-      kp: verificationData?.kaprodiName || signaturesData?.kaprodi?.name || docSettings.kaprodi_name || '',
-      kpd: verificationData?.kaprodiNidn || signaturesData?.kaprodi?.id_number || docSettings.kaprodi_nidn || '',
-      dkp: verificationData?.kaprodiDate || (signaturesData?.kaprodi?.signed_at ? String(signaturesData.kaprodi.signed_at) : ''),
-      okk: (verificationData?.kaprodiApproved ?? signaturesData?.kaprodi?.is_approved) ? 1 : 0,
-      cnt: verificationData?.activityCount ?? 0,
-    };
+    // 1. Opsi Ultra-Clean: Hanya URL ber-ID murni (menghasilkan matriks QR Code paling besar 25x25)
+    if (docSettings.qr_code_density === 'ultra_clean') {
+      return base;
+    }
 
-    const token = encodeVerificationPayload(payload);
+    // 2. Opsi Tradisional Padat (Legacy Object format)
+    if (docSettings.qr_code_density === 'detailed') {
+      const legacyPayload = {
+        id: documentId ? documentId.slice(0, 8) : 'sample',
+        fullId: documentId || '',
+        doc: templateCode,
+        nm: verificationData?.studentName || studentInfo?.name || '',
+        nim: verificationData?.studentNim || studentInfo?.nim || '',
+        pr: verificationData?.studentProgram || studentInfo?.program || '',
+        tl: verificationData?.topicTitle || variables?.['topic_title'] || variables?.['submission_title'] || '',
+        st: (verificationData?.isFullyApproved ?? (signaturesData?.kaprodi?.is_approved || false)) ? 'approved' : 'pending',
+        a1: verificationData?.adv1Name || signaturesData?.advisor_1?.name || '',
+        ad1: verificationData?.adv1Nidn || signaturesData?.advisor_1?.id_number || '',
+        da1: verificationData?.adv1Date || (signaturesData?.advisor_1?.signed_at ? String(signaturesData.advisor_1.signed_at) : ''),
+        ok1: (verificationData?.adv1Approved ?? signaturesData?.advisor_1?.is_approved) ? 1 : 0,
+        kp: verificationData?.kaprodiName || signaturesData?.kaprodi?.name || docSettings.kaprodi_name || '',
+        kpd: verificationData?.kaprodiNidn || signaturesData?.kaprodi?.id_number || docSettings.kaprodi_nidn || '',
+        dkp: verificationData?.kaprodiDate || (signaturesData?.kaprodi?.signed_at ? String(signaturesData.kaprodi.signed_at) : ''),
+        okk: (verificationData?.kaprodiApproved ?? signaturesData?.kaprodi?.is_approved) ? 1 : 0,
+        cnt: verificationData?.activityCount ?? 0,
+      };
+      const token = encodeVerificationPayload(legacyPayload);
+      return token ? `${base}&v=${token}` : base;
+    }
+
+    // 3. Default (Rekomendasi Utama): Payload Ringkas Minimalis
+    // Menghasilkan kotak-kotak barcode yang bermodel besar, renggang, tegas, dan elegan
+    const isApproved = (verificationData?.isFullyApproved ?? (signaturesData?.kaprodi?.is_approved || false)) ? 1 : 0;
+    const shortTitle = (verificationData?.topicTitle || variables?.['topic_title'] || variables?.['submission_title'] || '').slice(0, 40);
+
+    const compactArray = [
+      documentId ? documentId.slice(0, 8) : 'sample',
+      (verificationData?.studentName || studentInfo?.name || '').slice(0, 32),
+      verificationData?.studentNim || studentInfo?.nim || '',
+      verificationData?.studentProgram || studentInfo?.program || '',
+      isApproved,
+      (verificationData?.adv1Name || signaturesData?.advisor_1?.name || '').slice(0, 28),
+      (verificationData?.kaprodiName || signaturesData?.kaprodi?.name || docSettings.kaprodi_name || '').slice(0, 28),
+      verificationData?.activityCount ?? 0,
+      shortTitle
+    ];
+
+    const token = encodeVerificationPayload(compactArray);
     return token ? `${base}&v=${token}` : base;
   })();
 
@@ -530,15 +581,18 @@ export function UniversalDocumentContainer({
               <div className="flex flex-wrap items-start justify-around gap-6 pt-1 text-center">
                 {/* Stempel QR Code Verifikasi di Samping Tanda Tangan */}
                 {docSettings.qr_code_enabled !== false && docSettings.qr_code_position !== 'footer' && (
-                  <div className="min-w-[85px] max-w-[110px] flex flex-col items-center justify-center p-2 rounded border border-slate-300 bg-white/70 print:bg-transparent text-center self-center signature-block">
+                  <div className="min-w-[95px] max-w-[130px] flex flex-col items-center justify-center p-2 rounded-lg border border-slate-300 bg-white/80 print:bg-transparent text-center self-center signature-block shadow-2xs">
                     <QRCodeSVG
                       value={verificationUrl}
-                      size={docSettings.qr_code_size === 'small' ? 56 : 70}
+                      size={
+                        docSettings.qr_code_size === 'small' ? 64 :
+                        docSettings.qr_code_size === 'large' ? 96 : 80
+                      }
                       level="M"
                       includeMargin={false}
                     />
                     {docSettings.qr_code_show_label !== false && (
-                      <span className="text-[8px] text-slate-500 font-medium mt-1 leading-tight text-center max-w-[90px]">
+                      <span className="text-[8px] text-slate-600 font-medium mt-1 leading-tight text-center max-w-[110px]">
                         Pindai untuk verifikasi keaslian
                       </span>
                     )}
@@ -734,7 +788,10 @@ export function UniversalDocumentContainer({
             <div className="flex items-center gap-2 p-1.5 rounded border border-slate-300 bg-white/95 print:bg-transparent print:border-slate-400 shadow-xs">
               <QRCodeSVG
                 value={verificationUrl}
-                size={docSettings.qr_code_size === 'small' ? 44 : 54}
+                size={
+                  docSettings.qr_code_size === 'small' ? 48 :
+                  docSettings.qr_code_size === 'large' ? 76 : 62
+                }
                 level="M"
                 includeMargin={false}
               />
@@ -743,7 +800,7 @@ export function UniversalDocumentContainer({
                   <span className="text-[8px] font-bold text-slate-800 leading-tight">
                     Pindai Verifikasi
                   </span>
-                  <span className="text-[7px] text-slate-500 leading-tight max-w-[85px]">
+                  <span className="text-[7px] text-slate-500 leading-tight max-w-[95px]">
                     Keabsahan Dokumen Digital
                   </span>
                 </div>
