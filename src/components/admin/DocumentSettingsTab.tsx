@@ -1322,8 +1322,8 @@ export function DocumentSettingsTab() {
                             <SelectValue placeholder="Pilih model..." />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="compact" className="text-xs">Kotak Besar Elegan (Rekomendasi)</SelectItem>
-                            <SelectItem value="ultra_clean" className="text-xs">Kotak Super Besar (Ultra Bersih)</SelectItem>
+                            <SelectItem value="compact" className="text-xs">Kotak Besar Dinamis (Mengikuti Data Aktif)</SelectItem>
+                            <SelectItem value="ultra_clean" className="text-xs">Kotak Super Besar (Ultra Bersih - Hanya ID)</SelectItem>
                             <SelectItem value="detailed" className="text-xs">Tradisional Padat (Banyak Kotak)</SelectItem>
                           </SelectContent>
                         </Select>
@@ -1349,6 +1349,17 @@ export function DocumentSettingsTab() {
                         <p className="text-[11px] text-muted-foreground">
                           Pilih data apa saja yang diizinkan tampil di layar HP penguji / publik saat memindai dokumen.
                         </p>
+                      </div>
+
+                      {/* Petunjuk Efek Pemangkasan Data terhadap Barcode */}
+                      <div className="p-2.5 rounded-lg bg-emerald-50/80 border border-emerald-200 text-emerald-900 text-xs flex items-start gap-2">
+                        <span className="text-base leading-none">💡</span>
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-[11px]">Pengaruh Terhadap Ukuran Kotak Barcode:</p>
+                          <p className="text-[10px] text-emerald-800 leading-relaxed">
+                            Setiap opsi di bawah yang dinonaktifkan (misalnya Judul Skripsi, Pejabat Pengesah, NIM, atau Ringkasan Aktivitas) secara otomatis akan <strong>memangkas muatan data barcode</strong>, sehingga kisi kotak-kotak QR Code pada lembar cetak otomatis menjadi <strong>jauh lebih besar, renggang, tebal, dan sangat mudah dipindai</strong>.
+                          </p>
+                        </div>
                       </div>
 
                       <div className="space-y-2 border rounded-lg p-3 bg-card divide-y divide-border/60">

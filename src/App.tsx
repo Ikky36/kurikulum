@@ -59,6 +59,7 @@ function AppContent() {
           <Route path="/tugas-akhir" element={<TugasAkhir />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/verifikasi-dokumen" element={<VerifikasiDokumenPublic />} />
+          <Route path="/v" element={<VerifikasiDokumenPublic />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

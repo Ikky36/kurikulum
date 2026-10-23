@@ -261,17 +261,21 @@ export function UniversalDocumentContainer({
   const verificationUrl = (() => {
     if (typeof window === 'undefined') return '';
     const origin = window.location.origin;
-    const base = `${origin}/verifikasi-dokumen?doc=${templateCode}&id=${documentId || 'sample'}`;
 
-    // 1. Opsi Ultra-Clean: Hanya URL ber-ID murni (menghasilkan matriks QR Code paling besar 25x25)
+    // Slug ringkas agar menghemat puluhan karakter URL (misal 'ta' atau 'krs')
+    const shortDoc = (templateCode?.includes('ta') || templateCode?.includes('bimbingan')) ? 'ta' : templateCode;
+    const shortId = documentId ? documentId.slice(0, 8) : 'sample';
+
+    // 1. Opsi Ultra-Clean: Hanya URL ber-ID murni (menghasilkan matriks QR Code paling besar 25x25 hingga 29x29)
     if (docSettings.qr_code_density === 'ultra_clean') {
-      return base;
+      return `${origin}/v?doc=${shortDoc}&id=${documentId || 'sample'}`;
     }
 
     // 2. Opsi Tradisional Padat (Legacy Object format)
     if (docSettings.qr_code_density === 'detailed') {
+      const legacyBase = `${origin}/verifikasi-dokumen?doc=${templateCode}&id=${documentId || 'sample'}`;
       const legacyPayload = {
-        id: documentId ? documentId.slice(0, 8) : 'sample',
+        id: shortId,
         fullId: documentId || '',
         doc: templateCode,
         nm: verificationData?.studentName || studentInfo?.name || '',
@@ -290,27 +294,62 @@ export function UniversalDocumentContainer({
         cnt: verificationData?.activityCount ?? 0,
       };
       const token = encodeVerificationPayload(legacyPayload);
-      return token ? `${base}&v=${token}` : base;
+      return token ? `${legacyBase}&v=${token}` : legacyBase;
     }
 
-    // 3. Default (Rekomendasi Utama): Payload Ringkas Minimalis
-    // Menghasilkan kotak-kotak barcode yang bermodel besar, renggang, tegas, dan elegan
+    // 3. Default (Rekomendasi Utama): Payload Ringkas Dinamis yang Menghormati Sakelar Pengaturan Tampilan
+    // JIKA PENGGUNA MEMATIKAN BEBERAPA PILIHAN DATA (MISAL JUDUL, PENGESAH, ATAU LOG AKTIVITAS),
+    // DATA TERSEBUT DIBUANG DARI PAYLOAD SEHINGGA KOTAK-KOTAK BARCODE MENJADI JAUH LEBIH BESAR!
     const isApproved = (verificationData?.isFullyApproved ?? (signaturesData?.kaprodi?.is_approved || false)) ? 1 : 0;
-    const shortTitle = (verificationData?.topicTitle || variables?.['topic_title'] || variables?.['submission_title'] || '').slice(0, 40);
 
-    const compactArray = [
-      documentId ? documentId.slice(0, 8) : 'sample',
-      (verificationData?.studentName || studentInfo?.name || '').slice(0, 32),
-      verificationData?.studentNim || studentInfo?.nim || '',
-      verificationData?.studentProgram || studentInfo?.program || '',
+    const studentName = docSettings.qr_verify_show_student_name !== false
+      ? (verificationData?.studentName || studentInfo?.name || '').slice(0, 28)
+      : '';
+    const studentNim = docSettings.qr_verify_show_student_nim !== false
+      ? (verificationData?.studentNim || studentInfo?.nim || '')
+      : '';
+    const studentProgram = docSettings.qr_verify_show_student_prodi !== false
+      ? (verificationData?.studentProgram || studentInfo?.program || '')
+      : '';
+
+    const adv1Name = docSettings.qr_verify_show_signers !== false
+      ? (verificationData?.adv1Name || signaturesData?.advisor_1?.name || '').slice(0, 24)
+      : '';
+    const kaprodiName = docSettings.qr_verify_show_signers !== false
+      ? (verificationData?.kaprodiName || signaturesData?.kaprodi?.name || docSettings.kaprodi_name || '').slice(0, 24)
+      : '';
+
+    const activityCount = docSettings.qr_verify_show_activity_summary !== false
+      ? (verificationData?.activityCount ?? 0)
+      : 0;
+
+    const shortTitle = docSettings.qr_verify_show_topic_title !== false
+      ? (verificationData?.topicTitle || variables?.['topic_title'] || variables?.['submission_title'] || '').slice(0, 36)
+      : '';
+
+    // Susun array minimalis: [id, nm, nim, pr, isApproved, a1, kp, cnt, tl]
+    const compactArray: (string | number)[] = [
+      shortId,
+      studentName,
+      studentNim,
+      studentProgram,
       isApproved,
-      (verificationData?.adv1Name || signaturesData?.advisor_1?.name || '').slice(0, 28),
-      (verificationData?.kaprodiName || signaturesData?.kaprodi?.name || docSettings.kaprodi_name || '').slice(0, 28),
-      verificationData?.activityCount ?? 0,
+      adv1Name,
+      kaprodiName,
+      activityCount,
       shortTitle
     ];
 
+    // Pangkas trailing empty/zero values dari belakang agar muatan data sepadat dan seringkas mungkin
+    while (
+      compactArray.length > 2 &&
+      (compactArray[compactArray.length - 1] === '' || compactArray[compactArray.length - 1] === 0)
+    ) {
+      compactArray.pop();
+    }
+
     const token = encodeVerificationPayload(compactArray);
+    const base = `${origin}/v?doc=${shortDoc}&id=${shortId}`;
     return token ? `${base}&v=${token}` : base;
   })();
 
@@ -581,14 +620,14 @@ export function UniversalDocumentContainer({
               <div className="flex flex-wrap items-start justify-around gap-6 pt-1 text-center">
                 {/* Stempel QR Code Verifikasi di Samping Tanda Tangan */}
                 {docSettings.qr_code_enabled !== false && docSettings.qr_code_position !== 'footer' && (
-                  <div className="min-w-[95px] max-w-[130px] flex flex-col items-center justify-center p-2 rounded-lg border border-slate-300 bg-white/80 print:bg-transparent text-center self-center signature-block shadow-2xs">
+                  <div className="min-w-[100px] max-w-[145px] flex flex-col items-center justify-center p-2 rounded-lg border border-slate-300 bg-white/80 print:bg-transparent text-center self-center signature-block shadow-2xs">
                     <QRCodeSVG
                       value={verificationUrl}
                       size={
-                        docSettings.qr_code_size === 'small' ? 64 :
-                        docSettings.qr_code_size === 'large' ? 96 : 80
+                        docSettings.qr_code_size === 'small' ? 72 :
+                        docSettings.qr_code_size === 'large' ? 112 : 92
                       }
-                      level="M"
+                      level="L"
                       includeMargin={false}
                     />
                     {docSettings.qr_code_show_label !== false && (
@@ -789,10 +828,10 @@ export function UniversalDocumentContainer({
               <QRCodeSVG
                 value={verificationUrl}
                 size={
-                  docSettings.qr_code_size === 'small' ? 48 :
-                  docSettings.qr_code_size === 'large' ? 76 : 62
+                  docSettings.qr_code_size === 'small' ? 52 :
+                  docSettings.qr_code_size === 'large' ? 84 : 68
                 }
-                level="M"
+                level="L"
                 includeMargin={false}
               />
               {docSettings.qr_code_show_label !== false && (
