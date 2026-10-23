@@ -84,7 +84,7 @@ export function decodeVerificationPayload(str: string): any {
         a1: a1 || '',
         ad1: '',
         ok1: approved ? 1 : 0,
-        kp: kp || '',
+        kp: kp || a1 || '',
         kpd: '',
         okk: approved ? 1 : 0,
         cnt: cnt || 0,
@@ -308,15 +308,20 @@ export function UniversalDocumentContainer({
     const studentNim = docSettings.qr_verify_show_student_nim !== false
       ? (verificationData?.studentNim || studentInfo?.nim || '')
       : '';
-    const studentProgram = docSettings.qr_verify_show_student_prodi !== false
-      ? (verificationData?.studentProgram || studentInfo?.program || '')
+    const rawProgram = verificationData?.studentProgram || studentInfo?.program || '';
+    // Jika nama prodi sama persis dengan docSettings.program_name, kosongkan string di barcode
+    // karena halaman verifikasi otomatis mengambil nama prodi dari docSettings kampus
+    const studentProgram = (docSettings.qr_verify_show_student_prodi !== false && rawProgram !== docSettings.program_name)
+      ? rawProgram
       : '';
 
     const adv1Name = docSettings.qr_verify_show_signers !== false
       ? (verificationData?.adv1Name || signaturesData?.advisor_1?.name || '').slice(0, 24)
       : '';
-    const kaprodiName = docSettings.qr_verify_show_signers !== false
-      ? (verificationData?.kaprodiName || signaturesData?.kaprodi?.name || docSettings.kaprodi_name || '').slice(0, 24)
+    const rawKaprodi = verificationData?.kaprodiName || signaturesData?.kaprodi?.name || docSettings.kaprodi_name || '';
+    // Jika Kaprodi sama dengan pembimbing atau sama dengan docSettings.kaprodi_name, kosongkan di barcode
+    const kaprodiName = (docSettings.qr_verify_show_signers !== false && rawKaprodi !== adv1Name && rawKaprodi !== docSettings.kaprodi_name)
+      ? rawKaprodi.slice(0, 24)
       : '';
 
     const activityCount = docSettings.qr_verify_show_activity_summary !== false
