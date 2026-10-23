@@ -34,15 +34,15 @@ export function SubTargetViewer({ isOpen, setIsOpen, submissionId, studentName }
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Riwayat Sub-Target (To-Do List)</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full max-w-2xl max-h-[85vh] p-4 sm:p-6 overflow-hidden flex flex-col">
+        <DialogHeader className="pr-6 text-left">
+          <DialogTitle className="text-base sm:text-xl font-bold">Riwayat Sub-Target (To-Do List)</DialogTitle>
+          <DialogDescription className="text-xs sm:text-sm">
             Memantau riwayat target bimbingan untuk mahasiswa <strong>{studentName}</strong>
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 space-y-4">
+        <div className="py-2 sm:py-4 space-y-3 sm:space-y-4 overflow-y-auto overflow-x-hidden min-w-0 max-w-full flex-1 pr-1">
           {isLoading ? (
             <div className="text-center py-8 text-muted-foreground">Memuat data target...</div>
           ) : !milestones || milestones.length === 0 ? (
@@ -52,7 +52,7 @@ export function SubTargetViewer({ isOpen, setIsOpen, submissionId, studentName }
           ) : (
             <div className="space-y-3">
               {milestones.map((milestone) => (
-                <div key={milestone.id} className="p-4 border rounded-lg bg-card shadow-sm flex items-start gap-4">
+                <div key={milestone.id} className="p-3 sm:p-4 border rounded-lg bg-card shadow-sm flex items-start gap-3 sm:gap-4">
                   <div className="mt-1">
                     {milestone.status === 'completed' ? (
                       <CheckCircle2 className="w-5 h-5 text-green-500" />
@@ -62,10 +62,10 @@ export function SubTargetViewer({ isOpen, setIsOpen, submissionId, studentName }
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-start">
-                      <h4 className={`font-medium ${milestone.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
+                      <h4 className={`font-medium text-xs sm:text-sm break-words ${milestone.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
                         {milestone.title}
                       </h4>
-                      <Badge variant={milestone.status === 'completed' ? 'outline' : 'secondary'} className={milestone.status === 'completed' ? 'text-green-600 border-green-200 bg-green-50' : ''}>
+                      <Badge variant={milestone.status === 'completed' ? 'outline' : 'secondary'} className={`text-[10px] sm:text-xs shrink-0 ${milestone.status === 'completed' ? 'text-green-600 border-green-200 bg-green-50' : ''}`}>
                         {milestone.status === 'completed' ? 'Selesai' : 'Belum Selesai'}
                       </Badge>
                     </div>

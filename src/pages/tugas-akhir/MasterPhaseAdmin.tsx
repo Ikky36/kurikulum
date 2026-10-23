@@ -190,7 +190,7 @@ export function MasterPhaseAdmin() {
         </div>
 
         {selectedType && (
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -268,8 +268,8 @@ export function MasterPhaseAdmin() {
         )}
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
+          <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full max-w-lg p-4 sm:p-6">
+            <DialogHeader className="pr-6 text-left">
               <DialogTitle>{editingPhase ? 'Edit Fase' : 'Tambah Fase Baru'}</DialogTitle>
               <DialogDescription>Masukkan nama fase dan urutannya.</DialogDescription>
             </DialogHeader>
@@ -303,9 +303,9 @@ export function MasterPhaseAdmin() {
                 <Label htmlFor="active-switch">Fase Aktif</Label>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Batal</Button>
-              <Button onClick={() => saveMutation.mutate()} disabled={!formName.trim() || saveMutation.isPending}>
+            <DialogFooter className="mt-3 pt-3 border-t flex flex-col-reverse sm:flex-row gap-2">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsDialogOpen(false)}>Batal</Button>
+              <Button className="w-full sm:w-auto" onClick={() => saveMutation.mutate()} disabled={!formName.trim() || saveMutation.isPending}>
                 {saveMutation.isPending ? 'Menyimpan...' : 'Simpan'}
               </Button>
             </DialogFooter>

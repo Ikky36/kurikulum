@@ -264,25 +264,25 @@ export default function TugasAkhirAdmin() {
 
   return (
     <Layout>
-      <div className="container py-8 max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+      <div className="container px-3 sm:px-6 py-6 sm:py-8 max-w-6xl mx-auto">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">Kelola Tugas Akhir</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">Kelola Tugas Akhir</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               Review pengajuan, plotting dosen, dan jadwal sidang mahasiswa.
             </p>
           </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-muted/50 p-1">
-            <TabsTrigger value="pengajuan" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6">
+          <TabsList className="bg-muted/50 p-1 w-full flex overflow-x-auto justify-start sm:justify-start h-auto scrollbar-none">
+            <TabsTrigger value="pengajuan" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap">
               Pengajuan
             </TabsTrigger>
-            <TabsTrigger value="seminar" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6">
+            <TabsTrigger value="seminar" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap">
               Pendaftaran Seminar & Sidang
             </TabsTrigger>
-            <TabsTrigger value="fase" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-6">
+            <TabsTrigger value="fase" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap">
               Pengaturan Master Fase
             </TabsTrigger>
           </TabsList>
@@ -293,10 +293,10 @@ export default function TugasAkhirAdmin() {
               <CardHeader>
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div>
-                    <CardTitle>Daftar Pengajuan Tugas Akhir</CardTitle>
-                    <CardDescription>Persetujuan judul dan penugasan dosen pembimbing.</CardDescription>
+                    <CardTitle className="text-lg sm:text-xl">Daftar Pengajuan Tugas Akhir</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm">Persetujuan judul dan penugasan dosen pembimbing.</CardDescription>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-row gap-2 w-full md:w-auto">
                     <div className="relative w-full sm:w-[250px]">
                       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                       <Input
@@ -346,8 +346,106 @@ export default function TugasAkhirAdmin() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="rounded-md border overflow-x-auto">
+              <CardContent className="p-3 sm:p-6">
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
+                  {isLoading ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">Memuat data pengajuan...</div>
+                  ) : sortedSubmissions?.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">Belum ada data pengajuan yang sesuai filter</div>
+                  ) : (
+                    sortedSubmissions?.map((sub: any) => (
+                      <div key={sub.id} className="p-3.5 border rounded-lg bg-card shadow-sm space-y-2.5">
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm truncate">{sub.profiles?.full_name}</div>
+                            <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-1.5 mt-0.5">
+                              <span>{sub.profiles?.nim}</span>
+                              {sub.profiles?.program && (
+                                <span className="text-[10px] font-medium text-primary/80 uppercase">({sub.profiles.program})</span>
+                              )}
+                            </div>
+                          </div>
+                          <Badge variant={
+                            sub.status === 'approved' ? 'default' :
+                            sub.status === 'rejected' ? 'destructive' :
+                            sub.status === 'revision' ? 'secondary' : 'outline'
+                          } className="text-xs shrink-0">
+                            {sub.status === 'approved' ? 'Diterima' :
+                             sub.status === 'rejected' ? 'Ditolak' :
+                             sub.status === 'revision' ? 'Revisi' : 'Menunggu'}
+                          </Badge>
+                        </div>
+
+                        <div>
+                          <Badge variant="outline" className="mb-1 text-[11px] font-normal">{sub.ta_types?.name}</Badge>
+                          <p className="text-xs font-medium text-foreground/90 line-clamp-2">{sub.title}</p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-border/50">
+                          <div>
+                            <span className="text-muted-foreground block text-[10px]">Pembimbing:</span>
+                            {sub.ta_advisors?.length > 0 ? (
+                              <span className="font-medium text-foreground line-clamp-1">
+                                {sub.ta_advisors.map((a: any) => a.profiles?.full_name).filter(Boolean).join(', ')}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground italic text-[11px]">Belum diplot</span>
+                            )}
+                          </div>
+                          <div>
+                            <span className="text-muted-foreground block text-[10px]">Fase Saat Ini:</span>
+                            {sub.current_phase ? (
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-[10px] px-1.5 py-0 mt-0.5">
+                                {sub.current_phase.name}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground text-[11px]">-</span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-2 border-t">
+                          <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => {
+                            setSubTargetData({ id: sub.id, name: sub.profiles?.full_name || 'Mahasiswa' });
+                            setIsSubTargetOpen(true);
+                          }}>
+                            <ListTodo className="w-3.5 h-3.5 mr-1" /> Target
+                          </Button>
+                          <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => {
+                            setSelectedSubmission(sub);
+                            setFormStatus(sub.status === 'pending' ? 'approved' : sub.status);
+                            setFormComments('');
+                            if (sub.ta_advisors && sub.ta_advisors.length > 0) {
+                              setFormAdvisors(sub.ta_advisors.map((a: any) => ({ id: a.dosen_id || '', role: a.role })));
+                            } else {
+                              setFormAdvisors([{ id: '', role: 'Pembimbing 1' }]);
+                            }
+                            setIsDetailOpen(true);
+                          }}>
+                            <Eye className="w-3.5 h-3.5 mr-1" /> Detail
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="text-destructive hover:bg-destructive hover:text-white h-8 w-8 p-0 shrink-0" 
+                            onClick={() => {
+                              if (window.confirm('Yakin ingin menghapus pengajuan Tugas Akhir ini? Semua data terkait (bimbingan, seminar, file) juga mungkin akan terhapus.')) {
+                                deleteSubmissionMutation.mutate(sub.id);
+                              }
+                            }} 
+                            disabled={deleteSubmissionMutation.isPending}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="rounded-md border overflow-x-auto hidden md:block">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -493,61 +591,61 @@ export default function TugasAkhirAdmin() {
             </Card>
 
             <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-                <DialogHeader>
-                  <DialogTitle>Detail Pengajuan Tugas Akhir</DialogTitle>
-                  <DialogDescription>
+              <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6 overflow-hidden">
+                <DialogHeader className="pr-6 text-left">
+                  <DialogTitle className="text-base sm:text-xl font-bold">Detail Pengajuan Tugas Akhir</DialogTitle>
+                  <DialogDescription className="text-xs sm:text-sm">
                     Informasi lengkap mengenai pengajuan mahasiswa.
                   </DialogDescription>
                 </DialogHeader>
                 
                 {selectedSubmission && (
-                  <div className="space-y-4 py-4 overflow-y-auto overflow-x-auto pr-2">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
+                  <div className="space-y-4 py-2 sm:py-4 flex-1 min-w-0 max-w-full overflow-y-auto overflow-x-hidden pr-1 sm:pr-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 p-3 bg-muted/40 rounded-lg border">
+                      <div className="min-w-0">
                         <Label className="text-muted-foreground text-xs">Nama Mahasiswa</Label>
-                        <p className="font-medium">{selectedSubmission.profiles?.full_name}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {selectedSubmission.profiles?.nim}
+                        <p className="font-semibold text-sm sm:text-base break-words">{selectedSubmission.profiles?.full_name}</p>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+                          <span className="text-xs sm:text-sm text-muted-foreground">{selectedSubmission.profiles?.nim}</span>
                           {selectedSubmission.profiles?.id && (
-                            <span className="ml-2">
-                              <StudentSemesterBadge studentId={selectedSubmission.profiles.id} />
-                            </span>
+                            <StudentSemesterBadge studentId={selectedSubmission.profiles.id} />
                           )}
-                        </p>
+                        </div>
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <Label className="text-muted-foreground text-xs">Jenis Tugas Akhir</Label>
-                        <p className="font-medium"><Badge variant="outline">{selectedSubmission.ta_types?.name}</Badge></p>
+                        <div className="mt-1">
+                          <Badge variant="outline" className="font-medium text-xs sm:text-sm">{selectedSubmission.ta_types?.name}</Badge>
+                        </div>
                       </div>
                     </div>
                     
-                    <div>
+                    <div className="min-w-0">
                       <Label className="text-muted-foreground text-xs">Topik / Judul</Label>
-                      <p className="font-medium mt-1 p-3 bg-muted rounded-md break-words whitespace-pre-wrap">{selectedSubmission.title}</p>
+                      <p className="font-medium text-xs sm:text-sm mt-1 p-3 bg-muted rounded-md break-words whitespace-pre-wrap">{selectedSubmission.title}</p>
                     </div>
 
-                    <div className="w-full overflow-hidden">
+                    <div className="w-full min-w-0 overflow-hidden">
                       <Label className="text-muted-foreground text-xs">Link Dokumen</Label>
                       {selectedSubmission.document_link ? (
-                        <div className="mt-1 break-words">
+                        <div className="mt-1">
                           <a 
                             href={selectedSubmission.document_link.startsWith('http') ? selectedSubmission.document_link : `https://${selectedSubmission.document_link}`} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="inline-flex items-center text-primary hover:underline text-sm font-medium break-all"
+                            className="inline-flex items-center text-primary hover:underline text-xs sm:text-sm font-medium break-all max-w-full"
                           >
-                            <ExternalLink className="w-4 h-4 mr-1 flex-shrink-0" /> <span className="line-clamp-2">Buka Dokumen Pengajuan</span>
+                            <ExternalLink className="w-3.5 h-3.5 mr-1.5 shrink-0" /> <span className="truncate">Buka Dokumen Pengajuan</span>
                           </a>
                         </div>
                       ) : (
-                        <p className="text-sm italic mt-1">Tidak ada dokumen yang dilampirkan.</p>
+                        <p className="text-xs sm:text-sm italic mt-1 text-muted-foreground">Tidak ada dokumen yang dilampirkan.</p>
                       )}
                     </div>
 
-                    <div>
+                    <div className="min-w-0">
                       <Label className="text-muted-foreground text-xs">Catatan Mahasiswa</Label>
-                      <p className="text-sm mt-1 whitespace-pre-wrap">{cleanCommentsForDisplay(selectedSubmission.comments) || '-'}</p>
+                      <p className="text-xs sm:text-sm mt-1 p-2.5 bg-muted/30 border rounded-md whitespace-pre-wrap break-words">{cleanCommentsForDisplay(selectedSubmission.comments) || '-'}</p>
                     </div>
                     
                     <div className="pt-4 border-t border-border mt-4">
@@ -555,7 +653,7 @@ export default function TugasAkhirAdmin() {
                       
                       <div className="space-y-4">
                         <div>
-                          <Label>Status Pengajuan</Label>
+                          <Label className="text-xs sm:text-sm">Status Pengajuan</Label>
                           <Select value={formStatus} onValueChange={setFormStatus}>
                             <SelectTrigger className="w-full mt-1">
                               <SelectValue placeholder="Pilih status" />
@@ -570,22 +668,23 @@ export default function TugasAkhirAdmin() {
                         </div>
 
                         {formStatus === 'approved' && (
-                          <div className="p-4 bg-muted/30 border rounded-md space-y-3">
-                            <div className="flex justify-between items-center">
-                              <Label>Plotting Dosen Pembimbing</Label>
+                          <div className="p-3 sm:p-4 bg-muted/30 border rounded-md space-y-3">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                              <Label className="font-medium text-xs sm:text-sm">Plotting Dosen Pembimbing</Label>
                               <Button 
                                 type="button" 
                                 variant="outline" 
                                 size="sm" 
+                                className="w-full sm:w-auto h-8 text-xs"
                                 onClick={() => setFormAdvisors([...formAdvisors, { id: '', role: `Pembimbing ${formAdvisors.length + 1}` }])}
                               >
-                                <Plus className="w-3 h-3 mr-1" /> Tambah Pembimbing
+                                <Plus className="w-3.5 h-3.5 mr-1" /> Tambah Pembimbing
                               </Button>
                             </div>
                             
                             {formAdvisors.map((adv, index) => (
                               <div key={index} className="flex gap-2 items-end">
-                                <div className="flex-1">
+                                <div className="flex-1 min-w-0">
                                   <Label className="text-xs text-muted-foreground">{adv.role}</Label>
                                   <Select 
                                     value={adv.id} 
@@ -595,10 +694,10 @@ export default function TugasAkhirAdmin() {
                                       setFormAdvisors(newAdvisors);
                                     }}
                                   >
-                                    <SelectTrigger>
+                                    <SelectTrigger className="w-full min-w-0">
                                       <SelectValue placeholder="Pilih dosen pembimbing" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
                                       {dosenList?.map((dosen) => (
                                         <SelectItem key={dosen.id} value={dosen.id}>
                                           {dosen.full_name}
@@ -611,7 +710,7 @@ export default function TugasAkhirAdmin() {
                                   type="button" 
                                   variant="ghost" 
                                   size="icon" 
-                                  className="text-destructive"
+                                  className="text-destructive shrink-0 h-10 w-10"
                                   onClick={() => {
                                     const newAdvisors = [...formAdvisors];
                                     newAdvisors.splice(index, 1);
@@ -627,9 +726,10 @@ export default function TugasAkhirAdmin() {
                         )}
 
                         <div>
-                          <Label>Catatan Admin {formStatus !== 'approved' && <span className="text-destructive">*</span>}</Label>
+                          <Label className="text-xs sm:text-sm">Catatan Admin {formStatus !== 'approved' && <span className="text-destructive">*</span>}</Label>
                           <Textarea 
-                            className="mt-1" 
+                            className="mt-1 text-xs sm:text-sm" 
+                            rows={3}
                             placeholder={formStatus === 'approved' ? "Catatan opsional..." : "Berikan alasan mengapa direvisi atau ditolak..."}
                             value={formComments}
                             onChange={(e) => setFormComments(e.target.value)}
@@ -640,9 +740,16 @@ export default function TugasAkhirAdmin() {
                   </div>
                 )}
                 
-                <DialogFooter className="mt-4">
-                  <Button variant="outline" onClick={() => setIsDetailOpen(false)}>Batal</Button>
+                <DialogFooter className="mt-3 pt-3 border-t flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2">
                   <Button 
+                    variant="outline" 
+                    className="w-full sm:w-auto"
+                    onClick={() => setIsDetailOpen(false)}
+                  >
+                    Batal
+                  </Button>
+                  <Button 
+                    className="w-full sm:w-auto"
                     onClick={() => processMutation.mutate()} 
                     disabled={processMutation.isPending || (formStatus !== 'approved' && !formComments.trim())}
                   >
@@ -657,11 +764,85 @@ export default function TugasAkhirAdmin() {
           <TabsContent value="seminar" className="mt-0">
             <Card>
               <CardHeader>
-                <CardTitle>Jadwal Ujian & Seminar</CardTitle>
-                <CardDescription>Atur jadwal ujian, lokasi, dan tetapkan dosen penguji.</CardDescription>
+                <CardTitle className="text-lg sm:text-xl">Jadwal Ujian & Seminar</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Atur jadwal ujian, lokasi, dan tetapkan dosen penguji.</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="rounded-md border overflow-x-auto">
+              <CardContent className="p-3 sm:p-6">
+                {/* Mobile View */}
+                <div className="md:hidden space-y-3">
+                  {seminarsLoading ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">Memuat data seminar...</div>
+                  ) : !seminars || seminars.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground text-sm">Belum ada pengajuan seminar atau ujian</div>
+                  ) : (
+                    seminars.map((sem: any) => (
+                      <div key={sem.id} className="p-3.5 border rounded-lg bg-card shadow-sm space-y-2.5">
+                        <div className="flex justify-between items-start gap-2">
+                          <div className="min-w-0">
+                            <div className="font-semibold text-sm truncate">{sem.ta_submissions?.profiles?.full_name}</div>
+                            <div className="text-xs text-muted-foreground">{sem.ta_submissions?.profiles?.nim}</div>
+                          </div>
+                          <Badge variant={
+                            sem.status === 'scheduled' ? 'default' :
+                            sem.status === 'finished' ? 'secondary' :
+                            sem.status === 'rejected' ? 'destructive' : 'outline'
+                          } className="text-xs shrink-0">
+                            {sem.status === 'scheduled' ? 'Terjadwal' :
+                             sem.status === 'finished' ? 'Selesai' :
+                             sem.status === 'rejected' ? 'Ditolak' : 'Menunggu'}
+                          </Badge>
+                        </div>
+
+                        <div>
+                          <Badge className="capitalize text-xs font-normal mb-1">{sem.type}</Badge>
+                          <p className="text-xs font-medium text-foreground/90 line-clamp-2">{sem.ta_submissions?.title}</p>
+                        </div>
+
+                        <div className="p-2.5 bg-muted/40 rounded-md text-xs space-y-1">
+                          {sem.schedule_date ? (
+                            <>
+                              <div className="flex items-center font-medium">
+                                <Calendar className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                                {new Date(sem.schedule_date).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                              </div>
+                              <div className="flex items-center text-muted-foreground">
+                                <Clock className="w-3.5 h-3.5 mr-1.5" />
+                                {new Date(sem.schedule_date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                              {sem.room && (
+                                <div className="flex items-center font-medium text-primary mt-0.5">
+                                  <MapPin className="w-3.5 h-3.5 mr-1.5 shrink-0" /> {sem.room}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground italic">Belum dijadwalkan</span>
+                          )}
+                        </div>
+
+                        <div className="text-xs">
+                          <span className="text-muted-foreground block text-[10px]">Dosen Penguji:</span>
+                          {sem.ta_examiners?.length > 0 ? (
+                            <span className="font-medium text-foreground">
+                              {sem.ta_examiners.map((ex: any) => ex.profiles?.full_name).filter(Boolean).join(', ')}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground italic">Belum diplot</span>
+                          )}
+                        </div>
+
+                        <div className="pt-2 border-t">
+                          <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => openSeminarDetail(sem)}>
+                            <Calendar className="w-3.5 h-3.5 mr-1.5" /> Atur Jadwal & Penguji
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Desktop Table View */}
+                <div className="rounded-md border overflow-x-auto hidden md:block">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -752,52 +933,52 @@ export default function TugasAkhirAdmin() {
             </Card>
 
             <Dialog open={isSeminarDetailOpen} onOpenChange={setIsSeminarDetailOpen}>
-              <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
-                <DialogHeader>
-                  <DialogTitle>Atur Jadwal Ujian & Penguji</DialogTitle>
-                  <DialogDescription>
+              <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6 overflow-hidden">
+                <DialogHeader className="pr-6 text-left">
+                  <DialogTitle className="text-base sm:text-xl font-bold">Atur Jadwal Ujian & Penguji</DialogTitle>
+                  <DialogDescription className="text-xs sm:text-sm">
                     Atur waktu, tempat, dan dosen penguji untuk ujian ini.
                   </DialogDescription>
                 </DialogHeader>
 
                 {selectedSeminar && (
-                  <div className="space-y-6 py-4 overflow-y-auto overflow-x-auto pr-2">
-                    <div className="p-4 bg-muted/50 rounded-lg border">
+                  <div className="space-y-4 py-2 sm:py-4 flex-1 min-w-0 max-w-full overflow-y-auto overflow-x-hidden pr-1 sm:pr-2">
+                    <div className="p-3 sm:p-4 bg-muted/50 rounded-lg border">
                       <Label className="text-xs text-muted-foreground">Mahasiswa</Label>
-                      <p className="font-medium text-base">{selectedSeminar.ta_submissions?.profiles?.full_name}</p>
-                      <p className="text-sm text-muted-foreground mb-3">{selectedSeminar.ta_submissions?.profiles?.nim}</p>
+                      <p className="font-semibold text-sm sm:text-base">{selectedSeminar.ta_submissions?.profiles?.full_name}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground mb-3">{selectedSeminar.ta_submissions?.profiles?.nim}</p>
                       
                       <Label className="text-xs text-muted-foreground">Jenis Ujian</Label>
-                      <p className="font-medium capitalize">{selectedSeminar.type}</p>
+                      <p className="font-medium capitalize text-sm">{selectedSeminar.type}</p>
                       
                       <Label className="text-xs text-muted-foreground mt-3 block">Topik / Judul</Label>
-                      <p className="text-sm font-medium whitespace-normal text-justify">{selectedSeminar.ta_submissions?.title}</p>
+                      <p className="text-xs sm:text-sm font-medium whitespace-normal text-justify mt-1 break-words">{selectedSeminar.ta_submissions?.title}</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                       <div>
-                        <Label>Tanggal & Waktu Ujian</Label>
+                        <Label className="text-xs sm:text-sm">Tanggal & Waktu Ujian</Label>
                         <Input 
                           type="datetime-local" 
                           value={seminarScheduleDate} 
                           onChange={(e) => setSeminarScheduleDate(e.target.value)}
-                          className="mt-1"
+                          className="mt-1 text-sm"
                         />
                       </div>
                       <div>
-                        <Label>Ruangan / Lokasi</Label>
+                        <Label className="text-xs sm:text-sm">Ruangan / Lokasi</Label>
                         <Input 
                           type="text" 
                           placeholder="Cth: Ruang Sidang 1" 
                           value={seminarRoom} 
                           onChange={(e) => setSeminarRoom(e.target.value)}
-                          className="mt-1"
+                          className="mt-1 text-sm"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <Label>Status Ujian</Label>
+                      <Label className="text-xs sm:text-sm">Status Ujian</Label>
                       <Select value={seminarStatus} onValueChange={setSeminarStatus}>
                         <SelectTrigger className="mt-1">
                           <SelectValue />
@@ -812,22 +993,23 @@ export default function TugasAkhirAdmin() {
                     </div>
 
                     <div className="pt-4 border-t border-border">
-                      <div className="flex justify-between items-center mb-4">
-                        <Label className="text-base">Plotting Dosen Penguji</Label>
+                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3">
+                        <Label className="text-sm font-semibold">Plotting Dosen Penguji</Label>
                         <Button 
                           type="button" 
                           variant="outline" 
                           size="sm" 
+                          className="w-full sm:w-auto h-8 text-xs"
                           onClick={() => setFormExaminers([...formExaminers, { id: '', role: `Penguji ${formExaminers.length + 1}` }])}
                         >
-                          <Plus className="w-3 h-3 mr-1" /> Tambah Penguji
+                          <Plus className="w-3.5 h-3.5 mr-1" /> Tambah Penguji
                         </Button>
                       </div>
 
                       <div className="space-y-3">
                         {formExaminers.map((ex, index) => (
                           <div key={index} className="flex gap-2 items-end">
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <Label className="text-xs text-muted-foreground">{ex.role}</Label>
                               <Select 
                                 value={ex.id} 
@@ -837,10 +1019,10 @@ export default function TugasAkhirAdmin() {
                                   setFormExaminers(newExs);
                                 }}
                               >
-                                <SelectTrigger>
+                                <SelectTrigger className="w-full min-w-0">
                                   <SelectValue placeholder="Pilih dosen penguji" />
                                 </SelectTrigger>
-                                <SelectContent>
+                                <SelectContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
                                   {dosenList?.map((dosen) => (
                                     <SelectItem key={dosen.id} value={dosen.id}>
                                       {dosen.full_name}
@@ -853,7 +1035,7 @@ export default function TugasAkhirAdmin() {
                               type="button" 
                               variant="ghost" 
                               size="icon" 
-                              className="text-destructive border border-transparent hover:border-destructive/20"
+                              className="text-destructive shrink-0 h-10 w-10 border border-transparent hover:border-destructive/20"
                               onClick={() => {
                                 const newExs = [...formExaminers];
                                 newExs.splice(index, 1);
@@ -870,9 +1052,19 @@ export default function TugasAkhirAdmin() {
                   </div>
                 )}
 
-                <DialogFooter className="mt-2">
-                  <Button variant="outline" onClick={() => setIsSeminarDetailOpen(false)}>Batal</Button>
-                  <Button onClick={() => seminarMutation.mutate()} disabled={seminarMutation.isPending}>
+                <DialogFooter className="mt-3 pt-3 border-t flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2">
+                  <Button 
+                    variant="outline" 
+                    className="w-full sm:w-auto"
+                    onClick={() => setIsSeminarDetailOpen(false)}
+                  >
+                    Batal
+                  </Button>
+                  <Button 
+                    className="w-full sm:w-auto"
+                    onClick={() => seminarMutation.mutate()} 
+                    disabled={seminarMutation.isPending}
+                  >
                     {seminarMutation.isPending ? 'Menyimpan...' : <><Save className="w-4 h-4 mr-2" /> Simpan Penjadwalan</>}
                   </Button>
                 </DialogFooter>
