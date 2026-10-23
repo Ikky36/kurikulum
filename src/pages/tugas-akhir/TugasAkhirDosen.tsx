@@ -15,12 +15,16 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { TADosenMilestones } from './TADosenMilestones';
+import { RekapitulasiFaseView } from './RekapitulasiFaseView';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BarChart3, Users } from 'lucide-react';
 
 export default function TugasAkhirDosen() {
   const { user, profile } = useAuth();
   const queryClient = useQueryClient();
   
   const [selectedAdvisorship, setSelectedAdvisorship] = useState<any>(null);
+  const [subTab, setSubTab] = useState('daftar');
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   
   // States for consultation response & add
@@ -145,9 +149,20 @@ export default function TugasAkhirDosen() {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Daftar Mahasiswa Bimbingan</CardTitle>
+        <Tabs value={subTab} onValueChange={setSubTab} className="space-y-6">
+          <TabsList className="bg-muted/50 p-1 w-full sm:w-auto flex overflow-x-auto justify-start h-auto scrollbar-none">
+            <TabsTrigger value="daftar" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2 text-xs sm:text-sm">
+              <Users className="w-3.5 h-3.5 mr-1.5" /> Daftar Mahasiswa Bimbingan
+            </TabsTrigger>
+            <TabsTrigger value="rekapitulasi" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2 text-xs sm:text-sm">
+              <BarChart3 className="w-3.5 h-3.5 mr-1.5" /> Rekapitulasi Progres Fase
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="daftar" className="mt-0 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Daftar Mahasiswa Bimbingan</CardTitle>
             <CardDescription>Daftar mahasiswa yang diplot kepada Anda sebagai dosen pembimbing.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -208,6 +223,12 @@ export default function TugasAkhirDosen() {
             </div>
           </CardContent>
         </Card>
+          </TabsContent>
+
+          <TabsContent value="rekapitulasi" className="mt-0">
+            <RekapitulasiFaseView scope="dosen" dosenId={profile?.id || user?.id} />
+          </TabsContent>
+        </Tabs>
 
         <Dialog open={isDetailOpen} onOpenChange={(open) => {
           if (!open) {

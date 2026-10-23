@@ -15,6 +15,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 
 import { TADosenMilestones } from '@/pages/tugas-akhir/TADosenMilestones';
+import { RekapitulasiFaseView } from '@/pages/tugas-akhir/RekapitulasiFaseView';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { BarChart3, Users } from 'lucide-react';
 import { KartuBimbinganViewerModal } from '@/components/document/KartuBimbinganViewerModal';
 import { parseApprovalsFromComments, serializeApprovalsToComments, useTaApprovalActions } from '@/lib/documentApprovals';
 
@@ -23,6 +26,7 @@ export function BimbinganTugasAkhirTab() {
   const queryClient = useQueryClient();
   
   const [selectedAdvisorship, setSelectedAdvisorship] = useState<any>(null);
+  const [dosenSubTab, setDosenSubTab] = useState('daftar');
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   
@@ -45,8 +49,9 @@ export function BimbinganTugasAkhirTab() {
         .select(`
           id, role,
           ta_submissions (
-            id, title, type_id, status, document_link, comments, created_at,
+            id, title, type_id, status, document_link, comments, created_at, current_phase_id,
             ta_types (id, name),
+            current_phase:ta_master_phases (id, name, order_num),
             profiles:student_id (id, full_name, nim, program),
             ta_advisors (id, role, profiles (id, full_name, nip, signature_url, paraf_url))
           )
@@ -168,7 +173,18 @@ export function BimbinganTugasAkhirTab() {
 
   return (
     <div className="space-y-6 animate-slide-up">
-      <Card>
+      <Tabs value={dosenSubTab} onValueChange={setDosenSubTab} className="space-y-6">
+        <TabsList className="bg-muted/50 p-1 w-full sm:w-auto flex overflow-x-auto justify-start h-auto scrollbar-none">
+          <TabsTrigger value="daftar" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2 text-xs sm:text-sm">
+            <Users className="w-3.5 h-3.5 mr-1.5" /> Daftar Mahasiswa Bimbingan
+          </TabsTrigger>
+          <TabsTrigger value="rekapitulasi" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2 text-xs sm:text-sm">
+            <BarChart3 className="w-3.5 h-3.5 mr-1.5" /> Rekapitulasi Progres Fase
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="daftar" className="mt-0 space-y-6">
+          <Card>
         <CardHeader className="p-4 sm:p-6">
           <CardTitle className="text-lg sm:text-xl">Daftar Mahasiswa Bimbingan TA</CardTitle>
           <CardDescription className="text-xs sm:text-sm">Daftar mahasiswa Tugas Akhir yang diplot kepada Anda sebagai dosen pembimbing.</CardDescription>
@@ -297,6 +313,12 @@ export function BimbinganTugasAkhirTab() {
           </div>
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="rekapitulasi" className="mt-0">
+          <RekapitulasiFaseView scope="dosen" dosenId={profile?.id || user?.id} />
+        </TabsContent>
+      </Tabs>
 
       <Dialog open={isDetailOpen} onOpenChange={(open) => {
         if (!open) {

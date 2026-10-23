@@ -16,6 +16,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { MasterPhaseAdmin } from './MasterPhaseAdmin';
+import { RekapitulasiFaseView } from './RekapitulasiFaseView';
+import { BarChart3 } from 'lucide-react';
 import { SubTargetViewer } from './SubTargetViewer';
 import { ListTodo } from 'lucide-react';
 import { useAcademicPeriod } from '@/hooks/useAcademicPeriod';
@@ -284,6 +286,9 @@ export default function TugasAkhirAdmin() {
             </TabsTrigger>
             <TabsTrigger value="fase" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap">
               Pengaturan Master Fase
+            </TabsTrigger>
+            <TabsTrigger value="rekapitulasi" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-3 sm:px-6 text-xs sm:text-sm whitespace-nowrap">
+              <BarChart3 className="w-3.5 h-3.5 mr-1.5" /> Rekapitulasi Progres
             </TabsTrigger>
           </TabsList>
 
@@ -1075,6 +1080,11 @@ export default function TugasAkhirAdmin() {
           {/* TAB 3: PENGATURAN FASE */}
           <TabsContent value="fase" className="mt-0">
             <MasterPhaseAdmin />
+          </TabsContent>
+
+          {/* TAB 4: REKAPITULASI PROGRES FASE */}
+          <TabsContent value="rekapitulasi" className="mt-0">
+            <RekapitulasiFaseView scope="admin" />
           </TabsContent>
         </Tabs>
         
