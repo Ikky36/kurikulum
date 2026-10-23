@@ -46,6 +46,11 @@ export default function TugasAkhirMahasiswa() {
   const [logDate, setLogDate] = useState(new Date().toISOString().split('T')[0]);
   const [logDosenId, setLogDosenId] = useState('');
   const [logProblem, setLogProblem] = useState('');
+  const [logSolution, setLogSolution] = useState('');
+
+  // Edit Response Log State (Mahasiswa)
+  const [editingLog, setEditingLog] = useState<any>(null);
+  const [editSolution, setEditSolution] = useState('');
 
   // Revision & Rejection State
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -371,6 +376,7 @@ export default function TugasAkhirMahasiswa() {
           dosen_id: logDosenId,
           date: logDate,
           problem: logProblem,
+          solution: logSolution.trim() || null,
           status: 'pending'
         });
       if (error) throw error;
@@ -380,10 +386,36 @@ export default function TugasAkhirMahasiswa() {
       queryClient.invalidateQueries({ queryKey: ['my_ta_logs'] });
       setIsAddLogOpen(false);
       setLogProblem('');
+      setLogSolution('');
       setLogDosenId('');
     },
     onError: (e: any) => toast.error('Gagal menambahkan log: ' + e.message)
   });
+
+  const updateLogResponseMutation = useMutation({
+    mutationFn: async () => {
+      if (!editingLog) return;
+      const { error } = await supabase
+        .from('ta_consultation_logs')
+        .update({
+          solution: editSolution.trim() || null,
+        })
+        .eq('id', editingLog.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Respons bimbingan berhasil disimpan.');
+      queryClient.invalidateQueries({ queryKey: ['my_ta_logs'] });
+      setEditingLog(null);
+      setEditSolution('');
+    },
+    onError: (e: any) => toast.error('Gagal menyimpan respons: ' + e.message)
+  });
+
+  const openStudentLogResponse = (log: any) => {
+    setEditingLog(log);
+    setEditSolution(log.solution || '');
+  };
 
   const openReviseModal = () => {
     setTitle(mySubmission.title);
@@ -738,16 +770,17 @@ export default function TugasAkhirMahasiswa() {
                                 <TableHead>Pembahasan & Masalah</TableHead>
                                 <TableHead>Solusi / Feedback Dosen</TableHead>
                                 <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Aksi</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
                               {logsLoading ? (
                                 <TableRow>
-                                  <TableCell colSpan={5} className="text-center py-6">Memuat log...</TableCell>
+                                  <TableCell colSpan={6} className="text-center py-6">Memuat log...</TableCell>
                                 </TableRow>
                               ) : !consultationLogs || consultationLogs.length === 0 ? (
                                 <TableRow>
-                                  <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                                  <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
                                     Belum ada log bimbingan yang tercatat.
                                   </TableCell>
                                 </TableRow>
@@ -780,6 +813,16 @@ export default function TugasAkhirMahasiswa() {
                                          log.status === 'rejected' ? 'Ditolak' :
                                          log.status === 'revision' ? 'Revisi' : 'Menunggu'}
                                       </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => openStudentLogResponse(log)}
+                                        className="text-xs gap-1"
+                                      >
+                                        <MessageSquare className="w-3.5 h-3.5" /> Respons
+                                      </Button>
                                     </TableCell>
                                   </TableRow>
                                 ))
@@ -831,6 +874,15 @@ export default function TugasAkhirMahasiswa() {
                                     )}
                                   </div>
                                 </div>
+
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="w-full justify-center text-xs h-8 mt-1" 
+                                  onClick={() => openStudentLogResponse(log)}
+                                >
+                                  <MessageSquare className="w-3.5 h-3.5 mr-1.5" /> {log.solution ? 'Edit Respons / Solusi' : 'Isi Respons / Solusi'}
+                                </Button>
                               </Card>
                             ))
                           )}
@@ -1160,8 +1212,22 @@ export default function TugasAkhirMahasiswa() {
                   placeholder="Apa saja yang dibahas pada pertemuan ini?"
                   value={logProblem}
                   onChange={(e) => setLogProblem(e.target.value)}
-                  className="min-h-[100px]"
+                  className="min-h-[80px]"
                 />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Arahan / Tanggapan Dosen (Solusi) <span className="text-xs font-normal text-muted-foreground">(Opsional)</span></Label>
+                </div>
+                <Textarea 
+                  placeholder="Tuliskan arahan, revisi, atau solusi dari dosen jika sesi konsultasi sudah berlangsung..."
+                  value={logSolution}
+                  onChange={(e) => setLogSolution(e.target.value)}
+                  className="min-h-[80px]"
+                />
+                <p className="text-[11px] text-muted-foreground italic">
+                  * Catatan: Status validasi resmi tetap ditentukan oleh dosen pembimbing.
+                </p>
               </div>
             </div>
             <DialogFooter>
@@ -1171,6 +1237,90 @@ export default function TugasAkhirMahasiswa() {
                 disabled={addLogMutation.isPending || !logDosenId || !logProblem.trim()}
               >
                 {addLogMutation.isPending ? 'Menyimpan...' : <><Save className="w-4 h-4 mr-2" /> Simpan Log</>}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Modal Respons Log Bimbingan oleh Mahasiswa */}
+        <Dialog open={!!editingLog} onOpenChange={(open) => !open && setEditingLog(null)}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <MessageSquare className="w-5 h-5 text-primary" />
+                Respons & Solusi Bimbingan
+              </DialogTitle>
+              <DialogDescription>
+                Catat arahan, revisi, atau solusi yang diberikan dosen saat sesi bimbingan.
+              </DialogDescription>
+            </DialogHeader>
+
+            {editingLog && (
+              <div className="space-y-4 py-2 text-sm">
+                <div className="grid grid-cols-2 gap-3 p-3 bg-muted/40 rounded-lg border text-xs">
+                  <div>
+                    <span className="text-muted-foreground block">Tanggal Konsultasi:</span>
+                    <span className="font-semibold text-foreground flex items-center mt-0.5">
+                      <Calendar className="w-3 h-3 mr-1 text-primary" />
+                      {new Date(editingLog.date).toLocaleDateString('id-ID')}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">Dosen Pembimbing:</span>
+                    <span className="font-semibold text-foreground mt-0.5 block truncate">
+                      {editingLog.profiles?.full_name}
+                    </span>
+                  </div>
+                  <div className="col-span-2 pt-2 border-t flex items-center justify-between">
+                    <span className="text-muted-foreground">Status Validasi Dosen:</span>
+                    <Badge variant={
+                      editingLog.status === 'approved' ? 'default' :
+                      editingLog.status === 'rejected' ? 'destructive' :
+                      editingLog.status === 'revision' ? 'secondary' : 'outline'
+                    } className="text-[11px]">
+                      {editingLog.status === 'approved' ? 'Disetujui' :
+                       editingLog.status === 'rejected' ? 'Ditolak' :
+                       editingLog.status === 'revision' ? 'Revisi' : 'Menunggu Validasi'}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-xs text-muted-foreground">Laporan Kemajuan / Pembahasan Anda:</Label>
+                  <p className="mt-1 p-2.5 bg-muted/20 border rounded-md text-xs leading-relaxed max-h-24 overflow-y-auto whitespace-pre-wrap">
+                    {editingLog.problem}
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="font-medium text-xs">Arahan / Tanggapan Dosen (Solusi)</Label>
+                    <span className="text-[10px] text-muted-foreground">Dapat diisi mahasiswa / dosen</span>
+                  </div>
+                  <Textarea
+                    placeholder="Tuliskan arahan, feedback, revisi, atau solusi yang disampaikan dosen pembimbing..."
+                    value={editSolution}
+                    onChange={(e) => setEditSolution(e.target.value)}
+                    className="min-h-[110px] text-sm"
+                  />
+                  <p className="text-[11px] text-muted-foreground italic">
+                    * Catatan: Status validasi resmi (Disetujui/Revisi/Ditolak) hanya dapat ditentukan oleh dosen pembimbing.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" size="sm" onClick={() => setEditingLog(null)}>
+                Batal
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={() => updateLogResponseMutation.mutate()} 
+                disabled={updateLogResponseMutation.isPending}
+              >
+                <Save className="w-4 h-4 mr-1.5" />
+                {updateLogResponseMutation.isPending ? 'Menyimpan...' : 'Simpan Respons'}
               </Button>
             </DialogFooter>
           </DialogContent>
