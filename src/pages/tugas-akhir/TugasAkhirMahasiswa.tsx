@@ -40,6 +40,7 @@ export default function TugasAkhirMahasiswa() {
 
   // Print Card State
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [printTemplateCode, setPrintTemplateCode] = useState<string>('kartu_bimbingan_tugas_akhir');
 
   // Add Log State
   const [isAddLogOpen, setIsAddLogOpen] = useState(false);
@@ -748,7 +749,7 @@ export default function TugasAkhirMahasiswa() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setIsPrintModalOpen(true)}
+                            onClick={() => { setPrintTemplateCode('kartu_bimbingan_tugas_akhir'); setIsPrintModalOpen(true); }}
                             className="gap-1.5"
                           >
                             <Printer className="w-4 h-4" /> Cetak Kartu Bimbingan
@@ -890,15 +891,18 @@ export default function TugasAkhirMahasiswa() {
 
                         {/* 3 Tombol Pengesahan Dokumen Tugas Akhir */}
                         <div className="pt-4 border-t flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-2.5">
-                          {/* 1. Ajukan Pengesahan Proposal TA (Belum aktif karena dokumennya belum dikostum) */}
+                          {/* 1. Ajukan Pengesahan Proposal TA (Nota Dinas) */}
                           <Button 
                             variant="outline" 
                             size="sm" 
-                            disabled 
-                            className="w-full sm:w-auto justify-center gap-1.5 text-xs text-muted-foreground h-9"
-                            title="Belum aktif karena dokumennya belum dikostum"
+                            className="w-full sm:w-auto justify-center gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5 h-9"
+                            onClick={() => {
+                              setPrintTemplateCode('surat_pengesahan_proposal');
+                              setIsPrintModalOpen(true);
+                            }}
+                            title="Pratinjau & Cetak Surat Pengesahan Proposal (Nota Dinas)"
                           >
-                            <Send className="w-3.5 h-3.5" /> Ajukan Pengesahan Proposal TA
+                            <FileText className="w-3.5 h-3.5" /> Ajukan Pengesahan Proposal TA
                           </Button>
 
                           {/* 2. Ajukan Pengesahan Laporan TA (Belum aktif karena dokumennya belum dikostum) */}
@@ -1358,7 +1362,7 @@ export default function TugasAkhirMahasiswa() {
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Modal Cetak Kartu Bimbingan Tugas Akhir */}
+        {/* Modal Cetak Dokumen Tugas Akhir */}
         {mySubmission && (
           <KartuBimbinganViewerModal
             open={isPrintModalOpen}
@@ -1366,6 +1370,7 @@ export default function TugasAkhirMahasiswa() {
             submission={mySubmission}
             consultationLogs={consultationLogs || []}
             studentProfile={profile}
+            templateCode={printTemplateCode}
           />
         )}
 

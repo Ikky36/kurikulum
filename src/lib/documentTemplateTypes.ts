@@ -223,6 +223,95 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     copies_list: ['Ketua Program Studi', 'Arsip DPA'],
     placement_targets: ['mahasiswa_krs', 'dosen_perwalian_dpa'],
   },
+
+  surat_pengesahan_proposal: {
+    code: 'surat_pengesahan_proposal',
+    name: 'Surat Pengesahan Proposal (Nota Dinas)',
+    orientation: 'portrait',
+    data_source_module: 'tugas_akhir',
+    document_title: 'NOTA DINAS',
+    document_subtitle: '',
+    show_kop: false,
+    show_footer: false,
+    show_student_info: false,
+    content_mode: 'text_only',
+    body_text_enabled: true,
+    body_text_template: `<div style="display: flex; justify-content: flex-end; margin-bottom: 1.25rem; font-size: 13px;">
+  <span>{{kota_institusi}}, {{tanggal_cetak}}</span>
+</div>
+
+<div style="margin-bottom: 1.5rem; line-height: 1.6; font-size: 13px;">
+  <div>Lamp : -</div>
+  <div>Hal : Proposal Skripsi Sdri. {{nama_mahasiswa}}</div>
+</div>
+
+<div style="margin-bottom: 1.5rem; line-height: 1.5; font-size: 13px;">
+  <div>Kepada Yth.</div>
+  <div style="font-weight: 700;">Ketua {{nama_kampus}}</div>
+  <div>Di tempat</div>
+</div>
+
+<div style="margin-bottom: 1rem; font-style: italic; font-size: 13px;">
+  Assalamu'alaikum Warahmatullahi Wabarakatuh
+</div>
+
+<div style="text-indent: 2.5rem; text-align: justify; margin-bottom: 1rem; line-height: 1.7; font-size: 13px;">
+  Setelah membaca, meneliti, dan memberikan bimbingan, perbaikan dan penyempurnaan terhadap proposal skripsi saudari:
+</div>
+
+<table style="margin: 0.5rem 0 1rem 2.5rem; border-collapse: collapse; line-height: 1.8; font-size: 13px;">
+  <tbody>
+    <tr>
+      <td style="width: 85px; vertical-align: top;">Nama</td>
+      <td style="width: 15px; text-align: center; vertical-align: top;">:</td>
+      <td style="font-weight: 600; vertical-align: top;">{{nama_mahasiswa}}</td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">NIM</td>
+      <td style="text-align: center; vertical-align: top;">:</td>
+      <td style="vertical-align: top;">{{nim}}</td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">Prodi</td>
+      <td style="text-align: center; vertical-align: top;">:</td>
+      <td style="vertical-align: top;">{{program_studi}}</td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">Judul</td>
+      <td style="text-align: center; vertical-align: top;">:</td>
+      <td style="vertical-align: top; font-style: italic;">"{{judul_tugas_akhir}}".</td>
+    </tr>
+  </tbody>
+</table>
+
+<div style="text-align: justify; margin-bottom: 1rem; line-height: 1.7; font-size: 13px;">
+  Kami berpendapat bahwa proposal skripsi tersebut telah memenuhi syarat dan layak untuk diajukan dalam seminar proposal skripsi.
+</div>
+
+<div style="margin-top: 1rem; font-style: italic; font-size: 13px;">
+  Wassalamu'alaikum Warahmatullahi Wabarakatuh
+</div>`,
+    table_enabled: false,
+    rules_note_enabled: false,
+    rules_note_title: '',
+    rules_note_text: '',
+    columns: [],
+    show_signature_date: false,
+    signature_spacing: 'normal',
+    signatures: [
+      {
+        id: 'advisor_1',
+        role_type: 'advisor_1',
+        role_label: 'Dosen Pembimbing',
+        enabled: true,
+        use_digital_signature: true,
+        signer_status: 'menyetujui',
+      },
+    ],
+    copies_enabled: false,
+    copies_list: [],
+    placement_targets: ['mahasiswa_tugas_akhir', 'dosen_bimbingan_ta', 'admin_tugas_akhir'],
+  },
 };
 
 export const SETTING_KEY_DOC_TEMPLATES = 'doc_templates_config';
@@ -261,6 +350,15 @@ export function useDocumentTemplatesConfig() {
           for (const key of Object.keys(parsed)) {
             if (key === '_deleted_codes') continue;
             if (deletedCodes.includes(key)) continue;
+
+            // Jika template surat_pengesahan_proposal di database masih memakai template generik awal
+            if (
+              key === 'surat_pengesahan_proposal' &&
+              (parsed[key]?.body_text_template?.includes('Dengan ini menerangkan bahwa mahasiswa') || parsed[key]?.document_title === 'SURAT PENGESAHAN PROPOSAL')
+            ) {
+              merged[key] = { ...defaultDocumentTemplates.surat_pengesahan_proposal, ...parsed[key], document_title: 'NOTA DINAS', show_kop: false, show_footer: false, show_student_info: false, content_mode: 'text_only', table_enabled: false, show_signature_date: false, body_text_template: defaultDocumentTemplates.surat_pengesahan_proposal.body_text_template };
+              continue;
+            }
 
             if (merged[key]) {
               merged[key] = {

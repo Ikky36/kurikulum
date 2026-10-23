@@ -29,6 +29,7 @@ export function BimbinganTugasAkhirTab() {
   const [dosenSubTab, setDosenSubTab] = useState('daftar');
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [printTemplateCode, setPrintTemplateCode] = useState<string>('kartu_bimbingan_tugas_akhir');
   
   // States for consultation response & add
   const [activeLog, setActiveLog] = useState<any>(null);
@@ -397,7 +398,7 @@ export function BimbinganTugasAkhirTab() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => setIsPrintModalOpen(true)}
+                          onClick={() => { setPrintTemplateCode('kartu_bimbingan_tugas_akhir'); setIsPrintModalOpen(true); }}
                           className="gap-1.5 flex-1 sm:flex-initial justify-center text-xs h-9"
                         >
                           <Printer className="w-3.5 h-3.5" /> Cetak Kartu Bimbingan
@@ -634,13 +635,16 @@ export function BimbinganTugasAkhirTab() {
 
                 {/* 3 Tombol Pengesahan Dokumen Tugas Akhir */}
                 <div className="pt-4 border-t flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-2.5">
-                  {/* 1. Sahkan Proposal TA (Belum aktif karena dokumennya belum dikostum) */}
+                  {/* 1. Sahkan Proposal TA (Nota Dinas) */}
                   <Button
                     variant="outline"
                     size="sm"
-                    disabled
-                    className="w-full sm:w-auto justify-center gap-1.5 text-xs text-muted-foreground h-9"
-                    title="Belum aktif karena dokumennya belum dikostum"
+                    className="w-full sm:w-auto justify-center gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5 h-9"
+                    onClick={() => {
+                      setPrintTemplateCode('surat_pengesahan_proposal');
+                      setIsPrintModalOpen(true);
+                    }}
+                    title="Pratinjau & Sahkan Surat Pengesahan Proposal (Nota Dinas)"
                   >
                     <ShieldCheck className="w-3.5 h-3.5" /> Sahkan Proposal TA
                   </Button>
@@ -764,7 +768,7 @@ export function BimbinganTugasAkhirTab() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Cetak Kartu Bimbingan Tugas Akhir */}
+      {/* Modal Cetak Dokumen Tugas Akhir */}
       {selectedAdvisorship?.ta_submissions && (
         <KartuBimbinganViewerModal
           open={isPrintModalOpen}
@@ -772,6 +776,7 @@ export function BimbinganTugasAkhirTab() {
           submission={selectedAdvisorship.ta_submissions}
           consultationLogs={consultationLogs || []}
           studentProfile={selectedAdvisorship.ta_submissions?.profiles}
+          templateCode={printTemplateCode}
         />
       )}
     </div>

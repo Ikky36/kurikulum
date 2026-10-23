@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Printer, X, Download, ShieldCheck, Info, QrCode } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import DOMPurify from 'dompurify';
 
 export interface DocumentSignatureData {
   name: string;
@@ -558,9 +559,20 @@ export function UniversalDocumentContainer({
 
           {/* 3.b TEKS NARASI / SURAT KETERANGAN */}
           {template.content_mode !== 'table_only' && template.body_text_enabled !== false && template.body_text_template && (
-            <div className="my-3 text-xs leading-relaxed text-slate-800 text-justify whitespace-pre-line">
-              {interpolateVariables(template.body_text_template, resolvedVariables)}
-            </div>
+            template.body_text_template.includes('<') && template.body_text_template.includes('>') ? (
+              <div
+                className="my-3 text-xs sm:text-sm leading-relaxed text-slate-800"
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(
+                    interpolateVariables(template.body_text_template, resolvedVariables)
+                  ),
+                }}
+              />
+            ) : (
+              <div className="my-3 text-xs sm:text-sm leading-relaxed text-slate-800 whitespace-pre-wrap text-justify">
+                {interpolateVariables(template.body_text_template, resolvedVariables)}
+              </div>
+            )
           )}
 
           {/* 4. ISI UTAMA DOKUMEN (TABEL ATAU KONTEN DARI PROPS) */}

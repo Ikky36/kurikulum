@@ -13,6 +13,7 @@ export interface KartuBimbinganViewerModalProps {
   submission: any;
   consultationLogs: any[];
   studentProfile?: any;
+  templateCode?: string;
 }
 
 export function KartuBimbinganViewerModal({
@@ -21,6 +22,7 @@ export function KartuBimbinganViewerModal({
   submission,
   consultationLogs = [],
   studentProfile,
+  templateCode,
 }: KartuBimbinganViewerModalProps) {
   const { templatesMap, getTemplate } = useDocumentTemplatesConfig();
   const { settings: docSettings } = useDocumentSettings();
@@ -28,10 +30,13 @@ export function KartuBimbinganViewerModal({
   if (!submission) return null;
 
   try {
-    // Cari template aktif yang ditargetkan untuk tugas akhir / bimbingan skripsi
+    const targetCode = templateCode || 'kartu_bimbingan_tugas_akhir';
+    // Cari template aktif yang sesuai kode dokumen yang diminta
     const template =
+      (templateCode && (templatesMap[templateCode] || defaultDocumentTemplates[templateCode] || getTemplate(templateCode, 'tugas_akhir'))) ||
       Object.values(templatesMap).find(
         (t) =>
+          t?.code === targetCode ||
           t?.placement_targets?.includes('mahasiswa_tugas_akhir') ||
           t?.data_source_module === 'tugas_akhir' ||
           t?.code === 'kartu_bimbingan_tugas_akhir' ||
