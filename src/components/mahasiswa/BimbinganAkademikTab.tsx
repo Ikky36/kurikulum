@@ -135,7 +135,7 @@ export function BimbinganAkademikTab() {
                     </span>
                   </div>
                   <h3 className="font-bold">{dpaInfo.dosen?.full_name}</h3>
-                  <p className="text-xs text-muted-foreground mt-1">{dpaInfo.dosen?.nip || 'NIP/NIDN tidak tersedia'}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{dpaInfo.dosen?.nip ? `NIDN: ${dpaInfo.dosen.nip}` : 'NIDN tidak tersedia'}</p>
                 </div>
                 <div className="text-sm space-y-2 text-muted-foreground">
                   <p>DPA bertugas untuk memberikan pertimbangan, persetujuan KRS, dan membimbing Anda dalam masalah akademik.</p>

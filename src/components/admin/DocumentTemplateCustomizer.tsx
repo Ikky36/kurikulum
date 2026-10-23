@@ -1567,7 +1567,7 @@ export function DocumentTemplateCustomizer() {
                       </div>
 
                       <div className="space-y-1">
-                        <Label className="text-[11px]">NIDN / NUPTK / NIP</Label>
+                        <Label className="text-[11px]">NIDN</Label>
                         <Input
                           value={sig.custom_id_number || ''}
                           onChange={(e) => updateSignerField(sig.id, 'custom_id_number', e.target.value)}

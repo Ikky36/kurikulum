@@ -695,11 +695,19 @@ export function UniversalDocumentContainer({
                         <p className="font-bold text-slate-900 text-xs border-b border-slate-900 pb-0.5 px-1 inline-block">
                           {resolvedName}
                         </p>
-                        {resolvedIdNumber && (
-                          <p className="text-[10px] text-slate-600 mt-0.5">
-                            NIDN/NIM. {resolvedIdNumber}
-                          </p>
-                        )}
+                        {resolvedIdNumber && (() => {
+                          const isStudent =
+                            sig.id === 'student' ||
+                            sig.role_type === 'student' ||
+                            (sig.role_label || '').toLowerCase().includes('mahasiswa');
+                          const prefix = isStudent ? 'NIM' : 'NIDN';
+                          const cleanId = String(resolvedIdNumber).replace(/^(nidn|nim|nip|nuptk)[\s.:]*/i, '');
+                          return (
+                            <p className="text-[10px] text-slate-600 mt-0.5">
+                              {prefix}. {cleanId}
+                            </p>
+                          );
+                        })()}
                       </div>
                     );
                   })}

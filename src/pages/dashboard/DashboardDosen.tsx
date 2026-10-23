@@ -563,7 +563,7 @@ export default function DashboardDosen() {
                     <Input value={fullName} onChange={(e) => setFullName(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label>NIDN/NIDK</Label>
+                    <Label>NIDN</Label>
                     <Input value={nip} onChange={(e) => setNip(e.target.value)} />
                   </div>
                   <div className="space-y-2">
@@ -588,7 +588,7 @@ export default function DashboardDosen() {
                   {profile?.nip && (
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
-                      <span>NIDN/NIDK: {profile.nip}</span>
+                      <span>NIDN: {profile.nip}</span>
                     </div>
                   )}
                   {profile?.gender && (

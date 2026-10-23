@@ -117,7 +117,7 @@ export default function Profile() {
                 <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                   <GraduationCap className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-muted-foreground">NIP</p>
+                    <p className="text-sm text-muted-foreground">NIDN</p>
                     <p className="font-medium">{profile.nip}</p>
                   </div>
                 </div>

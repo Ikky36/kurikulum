@@ -508,7 +508,7 @@ export default function CourseDetail() {
                                 {instructor.nip && (
                                   <p className="text-sm text-muted-foreground flex items-center gap-1">
                                     <User className="h-3 w-3" />
-                                    NIDN/NIDK: {instructor.nip}
+                                    NIDN: {instructor.nip}
                                   </p>
                                 )}
                                 <p className="text-sm text-muted-foreground flex items-center gap-1 truncate">

@@ -1278,7 +1278,7 @@ export default function DashboardAdmin() {
                           )}
                           {userRole === 'dosen' && (
                             <div className="space-y-2">
-                              <Label>NIDN/NIDK</Label>
+                              <Label>NIDN</Label>
                               <Input value={userNip} onChange={(e) => setUserNip(e.target.value)} placeholder="Nomor Induk Dosen Nasional/Khusus" />
                             </div>
                           )}
@@ -1450,7 +1450,7 @@ export default function DashboardAdmin() {
                           </TableSortHeader>
                         </TableHead>
                       )}
-                      {/* NIDN/NIDK/NIPY column for dosen */}
+                      {/* NIDN column for dosen */}
                       {(userRoleFilter === 'all' || userRoleFilter === 'dosen') && (
                         <TableHead className="text-primary-foreground">
                           <TableSortHeader

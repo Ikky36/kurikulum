@@ -1136,7 +1136,7 @@ export function DocumentSettingsTab() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[11px] font-medium text-slate-600">NIDN / NIP</Label>
+                        <Label className="text-[11px] font-medium text-slate-600">NIDN</Label>
                         <Input
                           value={form.kaprodi_nidn}
                           onChange={(e) => updateField('kaprodi_nidn', e.target.value)}
@@ -1223,7 +1223,7 @@ export function DocumentSettingsTab() {
                         />
                       </div>
                       <div className="space-y-1">
-                        <Label className="text-[11px] font-medium text-slate-600">NIDN / NIP</Label>
+                        <Label className="text-[11px] font-medium text-slate-600">NIDN</Label>
                         <Input
                           value={form.dekan_nidn}
                           onChange={(e) => updateField('dekan_nidn', e.target.value)}
