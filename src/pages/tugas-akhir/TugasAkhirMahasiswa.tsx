@@ -22,7 +22,7 @@ import { calculateSemester } from '@/utils/academicHelpers';
 import { TATimeline } from './TATimeline';
 import { SeminarRegistrationForm } from './SeminarRegistrationForm';
 import { KartuBimbinganViewerModal } from '@/components/document/KartuBimbinganViewerModal';
-import { parseApprovalsFromComments, useTaApprovalActions, cleanCommentsForDisplay } from '@/lib/documentApprovals';
+import { parseApprovalsFromComments, useTaApprovalActions, cleanCommentsForDisplay, getDocApproval } from '@/lib/documentApprovals';
 
 export default function TugasAkhirMahasiswa() {
   const { user, profile } = useAuth();
@@ -730,13 +730,18 @@ export default function TugasAkhirMahasiswa() {
 
                 {mySubmission.status === 'approved' && (() => {
                   const approvalState = parseApprovalsFromComments(mySubmission.comments);
-                  const isApprovalRequested = Boolean(approvalState.requested);
-                  const adv1 = approvalState.signers.advisor_1;
-                  const adv2 = approvalState.signers.advisor_2;
-                  const kaprodi = approvalState.signers.kaprodi;
+                  const kartuApproval = getDocApproval(approvalState, 'kartu_bimbingan_ta');
+                  const isApprovalRequested = Boolean(kartuApproval.requested);
+                  const adv1 = kartuApproval.signers?.advisor_1;
+                  const adv2 = kartuApproval.signers?.advisor_2;
+                  const kaprodi = kartuApproval.signers?.kaprodi;
                   const hasAdvisor2 = mySubmission.ta_advisors?.some((a: any) => a.role === 'Pembimbing 2' || a.role?.includes('2'));
                   const approvedLogsCount = consultationLogs?.filter((l: any) => l.status === 'approved').length || 0;
                   const hasAnyApprovalSigned = Boolean(adv1?.is_approved || adv2?.is_approved || kaprodi?.is_approved);
+
+                  const proposalApproval = getDocApproval(approvalState, 'surat_pengesahan_proposal');
+                  const isProposalRequested = Boolean(proposalApproval.requested);
+                  const isProposalApproved = Boolean(proposalApproval.signers?.advisor_1?.is_approved);
 
                   return (
                     <Card>
@@ -891,19 +896,93 @@ export default function TugasAkhirMahasiswa() {
 
                         {/* 3 Tombol Pengesahan Dokumen Tugas Akhir */}
                         <div className="pt-4 border-t flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-2.5">
-                          {/* 1. Ajukan Pengesahan Proposal TA (Nota Dinas) */}
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="w-full sm:w-auto justify-center gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5 h-9"
-                            onClick={() => {
-                              setPrintTemplateCode('surat_pengesahan_proposal');
-                              setIsPrintModalOpen(true);
-                            }}
-                            title="Pratinjau & Cetak Surat Pengesahan Proposal (Nota Dinas)"
-                          >
-                            <FileText className="w-3.5 h-3.5" /> Ajukan Pengesahan Proposal TA
-                          </Button>
+                          {/* 1. Pengesahan Proposal TA (Nota Dinas) */}
+                          {isProposalApproved ? (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="w-full sm:w-auto justify-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-9"
+                              onClick={() => {
+                                setPrintTemplateCode('surat_pengesahan_proposal');
+                                setIsPrintModalOpen(true);
+                              }}
+                              title="Cetak Surat Pengesahan Proposal TA yang telah disahkan resmi oleh Dosen Pembimbing"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5" /> Cetak Proposal TA (Telah Disahkan ✓)
+                            </Button>
+                          ) : isProposalRequested ? (
+                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 w-full sm:w-auto">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                disabled
+                                className="w-full sm:w-auto justify-center gap-1.5 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800 h-9"
+                              >
+                                <Clock className="w-3.5 h-3.5 text-amber-600" /> Proposal TA Diajukan (Menunggu Dosen)
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                title="Lihat Pratinjau Draf Surat Pengesahan Proposal"
+                                onClick={() => {
+                                  setPrintTemplateCode('surat_pengesahan_proposal');
+                                  setIsPrintModalOpen(true);
+                                }}
+                              >
+                                <Eye className="w-3.5 h-3.5 mr-1" /> Draf
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="w-full sm:w-auto justify-center h-9 sm:h-8 px-2 text-xs text-muted-foreground hover:text-destructive gap-1"
+                                disabled={cancelRequestApproval.isPending}
+                                title="Tarik kembali permohonan pengesahan proposal TA"
+                                onClick={() => {
+                                  if (window.confirm('Tarik kembali permohonan pengesahan proposal TA?')) {
+                                    cancelRequestApproval.mutate({
+                                      submissionId: mySubmission.id,
+                                      docCode: 'surat_pengesahan_proposal',
+                                    });
+                                  }
+                                }}
+                              >
+                                <Undo2 className="w-3.5 h-3.5 mr-1" /> Tarik
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 w-full sm:w-auto">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full sm:w-auto justify-center gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5 h-9"
+                                disabled={requestApproval.isPending}
+                                onClick={() => {
+                                  if (window.confirm('Ajukan permohonan pengesahan Proposal TA (Nota Dinas) kepada Dosen Pembimbing? Setelah diajukan, Dosen Pembimbing dapat memeriksa dan memberikan pengesahan resmi.')) {
+                                    requestApproval.mutate({
+                                      submissionId: mySubmission.id,
+                                      docCode: 'surat_pengesahan_proposal',
+                                    });
+                                  }
+                                }}
+                                title="Ajukan permohonan pengesahan Proposal TA kepada Dosen Pembimbing"
+                              >
+                                <Send className="w-3.5 h-3.5" /> Ajukan Pengesahan Proposal TA
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                title="Lihat Pratinjau Draf Surat Pengesahan Proposal"
+                                onClick={() => {
+                                  setPrintTemplateCode('surat_pengesahan_proposal');
+                                  setIsPrintModalOpen(true);
+                                }}
+                              >
+                                <Eye className="w-3.5 h-3.5 mr-1" /> Draf
+                              </Button>
+                            </div>
+                          )}
 
                           {/* 2. Ajukan Pengesahan Laporan TA (Belum aktif karena dokumennya belum dikostum) */}
                           <Button 

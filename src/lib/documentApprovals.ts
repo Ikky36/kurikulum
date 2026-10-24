@@ -15,13 +15,64 @@ export interface ApprovalSigner {
   notes?: string;
 }
 
-export interface DocumentApprovalState {
+export interface SingleDocApproval {
   requested: boolean;
   requested_at?: string | null;
   signers: Record<string, ApprovalSigner>;
 }
 
+export interface DocumentApprovalState {
+  // Legacy / root fields (dipertahankan untuk kompatibilitas kartu_bimbingan_ta)
+  requested: boolean;
+  requested_at?: string | null;
+  signers: Record<string, ApprovalSigner>;
+  // Pengesahan per dokumen spesifik: kartu_bimbingan_ta, surat_pengesahan_proposal, surat_pengesahan_laporan
+  documents?: Record<string, SingleDocApproval>;
+}
+
 export const APPROVALS_MARKER_REGEX = /<!--\s*DOC_APPROVALS:\s*([\s\S]*?)\s*-->/;
+
+/**
+ * Normalisasi kode dokumen ke key kanonikal dokumen tugas akhir.
+ */
+export function normalizeDocKey(docCode?: string | null): string {
+  if (!docCode) return 'kartu_bimbingan_ta';
+  const lower = docCode.toLowerCase();
+  if (lower.includes('proposal')) return 'surat_pengesahan_proposal';
+  if (lower.includes('laporan')) return 'surat_pengesahan_laporan';
+  if (lower.includes('kartu') || lower.includes('bimbingan')) return 'kartu_bimbingan_ta';
+  return lower;
+}
+
+/**
+ * Mengambil status pengesahan untuk dokumen tertentu dari DocumentApprovalState.
+ * Jika dokumen belum memiliki entri spesifik:
+ * - Untuk 'kartu_bimbingan_ta', membaca fallback ke root state (backward compatibility).
+ * - Untuk dokumen lain (misal: 'surat_pengesahan_proposal'), menghasilkan state default kosong (belum diajukan / belum disahkan).
+ */
+export function getDocApproval(
+  state: DocumentApprovalState | null | undefined,
+  docCode?: string | null
+): SingleDocApproval {
+  const empty: SingleDocApproval = { requested: false, requested_at: null, signers: {} };
+  if (!state) return empty;
+
+  const key = normalizeDocKey(docCode);
+  if (state.documents && state.documents[key]) {
+    return state.documents[key];
+  }
+
+  // Fallback untuk kartu_bimbingan_ta: gunakan root state jika belum ada di state.documents
+  if (key === 'kartu_bimbingan_ta') {
+    return {
+      requested: Boolean(state.requested),
+      requested_at: state.requested_at || null,
+      signers: state.signers || {},
+    };
+  }
+
+  return empty;
+}
 
 /**
  * Membersihkan komentar dari marker internal pengesahan agar teks yang ditampilkan ke pengguna rapi.
@@ -36,11 +87,11 @@ export function cleanCommentsForDisplay(comments: string | null | undefined): st
  */
 export function parseApprovalsFromComments(comments: string | null | undefined): DocumentApprovalState {
   if (!comments) {
-    return { requested: false, signers: {} };
+    return { requested: false, signers: {}, documents: {} };
   }
   const match = comments.match(APPROVALS_MARKER_REGEX);
   if (!match || !match[1]) {
-    return { requested: false, signers: {} };
+    return { requested: false, signers: {}, documents: {} };
   }
   try {
     const parsed = JSON.parse(match[1]);
@@ -48,10 +99,11 @@ export function parseApprovalsFromComments(comments: string | null | undefined):
       requested: Boolean(parsed.requested),
       requested_at: parsed.requested_at || null,
       signers: parsed.signers || {},
+      documents: parsed.documents || {},
     };
   } catch (e) {
     console.error('Failed to parse doc approvals from comments:', e);
-    return { requested: false, signers: {} };
+    return { requested: false, signers: {}, documents: {} };
   }
 }
 
@@ -102,6 +154,59 @@ export async function mutateSubmissionApprovals(
   return updatedApproval;
 }
 
+export type RequestApprovalArgs =
+  | string
+  | {
+      submissionId: string;
+      docCode?: string;
+      docTitle?: string;
+    };
+
+export type CancelRequestApprovalArgs =
+  | string
+  | {
+      submissionId: string;
+      docCode?: string;
+    };
+
+export interface ApproveAdvisorArgs {
+  submissionId: string;
+  roleKey: 'advisor_1' | 'advisor_2';
+  roleLabel?: string;
+  signer: {
+    id?: string;
+    name: string;
+    nidn?: string;
+    signature_url?: string | null;
+    paraf_url?: string | null;
+  };
+  docCode?: string;
+}
+
+export interface RevokeAdvisorArgs {
+  submissionId: string;
+  roleKey: 'advisor_1' | 'advisor_2';
+  docCode?: string;
+}
+
+export interface ApproveKaprodiArgs {
+  submissionId: string;
+  signer: {
+    id?: string;
+    name: string;
+    nidn?: string;
+    signature_url?: string | null;
+  };
+  docCode?: string;
+}
+
+export type RevokeKaprodiArgs =
+  | string
+  | {
+      submissionId: string;
+      docCode?: string;
+    };
+
 /**
  * Hook untuk aksi pengesahan dokumen tugas akhir (Pembimbing & Kaprodi & Mahasiswa).
  */
@@ -119,15 +224,36 @@ export function useTaApprovalActions() {
 
   // 1. Mahasiswa mengajukan pengesahan
   const requestApproval = useMutation({
-    mutationFn: async (submissionId: string) => {
-      return mutateSubmissionApprovals(submissionId, (current) => ({
-        ...current,
-        requested: true,
-        requested_at: new Date().toISOString(),
-      }));
+    mutationFn: async (args: RequestApprovalArgs) => {
+      const submissionId = typeof args === 'string' ? args : args.submissionId;
+      const docCode = typeof args === 'string' ? 'kartu_bimbingan_ta' : (args.docCode || 'kartu_bimbingan_ta');
+      const key = normalizeDocKey(docCode);
+
+      return mutateSubmissionApprovals(submissionId, (current) => {
+        const currentDoc = getDocApproval(current, key);
+        const updatedDoc: SingleDocApproval = {
+          ...currentDoc,
+          requested: true,
+          requested_at: new Date().toISOString(),
+        };
+        const nextDocuments = {
+          ...(current.documents || {}),
+          [key]: updatedDoc,
+        };
+        return {
+          ...current,
+          requested: key === 'kartu_bimbingan_ta' ? true : current.requested,
+          requested_at: key === 'kartu_bimbingan_ta' ? updatedDoc.requested_at : current.requested_at,
+          documents: nextDocuments,
+        };
+      });
     },
-    onSuccess: () => {
-      toast.success('Permohonan pengesahan kartu bimbingan berhasil diajukan');
+    onSuccess: (_data, variables) => {
+      const docCode = typeof variables === 'string' ? 'kartu_bimbingan_ta' : (variables.docCode || 'kartu_bimbingan_ta');
+      const isProposal = docCode.includes('proposal');
+      const isLaporan = docCode.includes('laporan');
+      const label = isProposal ? 'surat pengesahan proposal' : isLaporan ? 'surat pengesahan laporan' : 'kartu bimbingan';
+      toast.success(`Permohonan pengesahan ${label} berhasil diajukan`);
       invalidateAll();
     },
     onError: (err: any) => {
@@ -137,21 +263,40 @@ export function useTaApprovalActions() {
 
   // 1b. Mahasiswa menarik/membatalkan permohonan pengesahan (jika belum disahkan)
   const cancelRequestApproval = useMutation({
-    mutationFn: async (submissionId: string) => {
+    mutationFn: async (args: CancelRequestApprovalArgs) => {
+      const submissionId = typeof args === 'string' ? args : args.submissionId;
+      const docCode = typeof args === 'string' ? 'kartu_bimbingan_ta' : (args.docCode || 'kartu_bimbingan_ta');
+      const key = normalizeDocKey(docCode);
+
       return mutateSubmissionApprovals(submissionId, (current) => {
-        const anyApproved = Object.values(current.signers || {}).some(s => s.is_approved);
+        const currentDoc = getDocApproval(current, key);
+        const anyApproved = Object.values(currentDoc.signers || {}).some((s) => s.is_approved);
         if (anyApproved) {
           throw new Error('Tidak dapat menarik permohonan karena dokumen telah disahkan');
         }
-        return {
-          ...current,
+        const updatedDoc: SingleDocApproval = {
+          ...currentDoc,
           requested: false,
           requested_at: null,
         };
+        const nextDocuments = {
+          ...(current.documents || {}),
+          [key]: updatedDoc,
+        };
+        return {
+          ...current,
+          requested: key === 'kartu_bimbingan_ta' ? false : current.requested,
+          requested_at: key === 'kartu_bimbingan_ta' ? null : current.requested_at,
+          documents: nextDocuments,
+        };
       });
     },
-    onSuccess: () => {
-      toast.info('Permohonan pengesahan berhasil ditarik');
+    onSuccess: (_data, variables) => {
+      const docCode = typeof variables === 'string' ? 'kartu_bimbingan_ta' : (variables.docCode || 'kartu_bimbingan_ta');
+      const isProposal = docCode.includes('proposal');
+      const isLaporan = docCode.includes('laporan');
+      const label = isProposal ? 'surat pengesahan proposal' : isLaporan ? 'surat pengesahan laporan' : 'kartu bimbingan';
+      toast.info(`Permohonan pengesahan ${label} berhasil ditarik`);
       invalidateAll();
     },
     onError: (err: any) => {
@@ -166,26 +311,16 @@ export function useTaApprovalActions() {
       roleKey, // 'advisor_1' | 'advisor_2'
       roleLabel,
       signer,
-    }: {
-      submissionId: string;
-      roleKey: 'advisor_1' | 'advisor_2';
-      roleLabel?: string;
-      signer: {
-        id?: string;
-        name: string;
-        nidn?: string;
-        signature_url?: string | null;
-        paraf_url?: string | null;
-      };
-    }) => {
+      docCode = 'kartu_bimbingan_ta',
+    }: ApproveAdvisorArgs) => {
+      const key = normalizeDocKey(docCode);
       return mutateSubmissionApprovals(submissionId, (current) => {
-        if (!current.requested) {
-          throw new Error('Mahasiswa belum mengajukan permohonan pengesahan resmi');
-        }
-        return {
-          ...current,
+        const currentDoc = getDocApproval(current, key);
+        const updatedDoc: SingleDocApproval = {
+          ...currentDoc,
+          requested: true,
           signers: {
-            ...current.signers,
+            ...currentDoc.signers,
             [roleKey]: {
               role_key: roleKey,
               role_label: roleLabel || (roleKey === 'advisor_2' ? 'Dosen Pembimbing 2' : 'Dosen Pembimbing 1'),
@@ -199,10 +334,26 @@ export function useTaApprovalActions() {
             },
           },
         };
+        const nextDocuments = {
+          ...(current.documents || {}),
+          [key]: updatedDoc,
+        };
+        return {
+          ...current,
+          ...(key === 'kartu_bimbingan_ta' ? {
+            requested: true,
+            signers: updatedDoc.signers,
+          } : {}),
+          documents: nextDocuments,
+        };
       });
     },
-    onSuccess: () => {
-      toast.success('Kartu bimbingan berhasil disahkan oleh Pembimbing');
+    onSuccess: (_data, variables) => {
+      const docCode = variables.docCode || 'kartu_bimbingan_ta';
+      const isProposal = docCode.includes('proposal');
+      const isLaporan = docCode.includes('laporan');
+      const label = isProposal ? 'Surat pengesahan proposal' : isLaporan ? 'Surat pengesahan laporan' : 'Kartu bimbingan';
+      toast.success(`${label} berhasil disahkan oleh Pembimbing`);
       invalidateAll();
     },
     onError: (err: any) => {
@@ -215,12 +366,12 @@ export function useTaApprovalActions() {
     mutationFn: async ({
       submissionId,
       roleKey,
-    }: {
-      submissionId: string;
-      roleKey: 'advisor_1' | 'advisor_2';
-    }) => {
+      docCode = 'kartu_bimbingan_ta',
+    }: RevokeAdvisorArgs) => {
+      const key = normalizeDocKey(docCode);
       return mutateSubmissionApprovals(submissionId, (current) => {
-        const nextSigners = { ...current.signers };
+        const currentDoc = getDocApproval(current, key);
+        const nextSigners = { ...currentDoc.signers };
         if (nextSigners[roleKey]) {
           nextSigners[roleKey] = {
             ...nextSigners[roleKey],
@@ -228,14 +379,27 @@ export function useTaApprovalActions() {
             approved_at: null,
           };
         }
+        const updatedDoc: SingleDocApproval = {
+          ...currentDoc,
+          signers: nextSigners,
+        };
+        const nextDocuments = {
+          ...(current.documents || {}),
+          [key]: updatedDoc,
+        };
         return {
           ...current,
-          signers: nextSigners,
+          ...(key === 'kartu_bimbingan_ta' ? { signers: nextSigners } : {}),
+          documents: nextDocuments,
         };
       });
     },
-    onSuccess: () => {
-      toast.info('Pengesahan Pembimbing telah dibatalkan');
+    onSuccess: (_data, variables) => {
+      const docCode = variables.docCode || 'kartu_bimbingan_ta';
+      const isProposal = docCode.includes('proposal');
+      const isLaporan = docCode.includes('laporan');
+      const label = isProposal ? 'surat pengesahan proposal' : isLaporan ? 'surat pengesahan laporan' : 'kartu bimbingan';
+      toast.info(`Pengesahan Pembimbing pada ${label} telah dibatalkan`);
       invalidateAll();
     },
     onError: (err: any) => {
@@ -248,23 +412,16 @@ export function useTaApprovalActions() {
     mutationFn: async ({
       submissionId,
       signer,
-    }: {
-      submissionId: string;
-      signer: {
-        id?: string;
-        name: string;
-        nidn?: string;
-        signature_url?: string | null;
-      };
-    }) => {
+      docCode = 'kartu_bimbingan_ta',
+    }: ApproveKaprodiArgs) => {
+      const key = normalizeDocKey(docCode);
       return mutateSubmissionApprovals(submissionId, (current) => {
-        if (!current.requested) {
-          throw new Error('Mahasiswa belum mengajukan permohonan pengesahan dokumen');
-        }
-        return {
-          ...current,
+        const currentDoc = getDocApproval(current, key);
+        const updatedDoc: SingleDocApproval = {
+          ...currentDoc,
+          requested: true,
           signers: {
-            ...current.signers,
+            ...currentDoc.signers,
             kaprodi: {
               role_key: 'kaprodi',
               role_label: 'Ketua Program Studi',
@@ -277,10 +434,26 @@ export function useTaApprovalActions() {
             },
           },
         };
+        const nextDocuments = {
+          ...(current.documents || {}),
+          [key]: updatedDoc,
+        };
+        return {
+          ...current,
+          ...(key === 'kartu_bimbingan_ta' ? {
+            requested: true,
+            signers: updatedDoc.signers,
+          } : {}),
+          documents: nextDocuments,
+        };
       });
     },
-    onSuccess: () => {
-      toast.success('Dokumen berhasil disahkan oleh Ketua Program Studi');
+    onSuccess: (_data, variables) => {
+      const docCode = variables.docCode || 'kartu_bimbingan_ta';
+      const isProposal = docCode.includes('proposal');
+      const isLaporan = docCode.includes('laporan');
+      const label = isProposal ? 'Surat pengesahan proposal' : isLaporan ? 'Surat pengesahan laporan' : 'Dokumen';
+      toast.success(`${label} berhasil disahkan oleh Ketua Program Studi`);
       invalidateAll();
     },
     onError: (err: any) => {
@@ -290,9 +463,14 @@ export function useTaApprovalActions() {
 
   // 5. Kaprodi membatalkan pengesahan
   const revokeKaprodiApproval = useMutation({
-    mutationFn: async (submissionId: string) => {
+    mutationFn: async (args: RevokeKaprodiArgs) => {
+      const submissionId = typeof args === 'string' ? args : args.submissionId;
+      const docCode = typeof args === 'string' ? 'kartu_bimbingan_ta' : (args.docCode || 'kartu_bimbingan_ta');
+      const key = normalizeDocKey(docCode);
+
       return mutateSubmissionApprovals(submissionId, (current) => {
-        const nextSigners = { ...current.signers };
+        const currentDoc = getDocApproval(current, key);
+        const nextSigners = { ...currentDoc.signers };
         if (nextSigners.kaprodi) {
           nextSigners.kaprodi = {
             ...nextSigners.kaprodi,
@@ -300,14 +478,27 @@ export function useTaApprovalActions() {
             approved_at: null,
           };
         }
+        const updatedDoc: SingleDocApproval = {
+          ...currentDoc,
+          signers: nextSigners,
+        };
+        const nextDocuments = {
+          ...(current.documents || {}),
+          [key]: updatedDoc,
+        };
         return {
           ...current,
-          signers: nextSigners,
+          ...(key === 'kartu_bimbingan_ta' ? { signers: nextSigners } : {}),
+          documents: nextDocuments,
         };
       });
     },
-    onSuccess: () => {
-      toast.info('Pengesahan Ketua Program Studi telah dibatalkan');
+    onSuccess: (_data, variables) => {
+      const docCode = typeof variables === 'string' ? 'kartu_bimbingan_ta' : (variables.docCode || 'kartu_bimbingan_ta');
+      const isProposal = docCode.includes('proposal');
+      const isLaporan = docCode.includes('laporan');
+      const label = isProposal ? 'surat pengesahan proposal' : isLaporan ? 'surat pengesahan laporan' : 'dokumen';
+      toast.info(`Pengesahan Ketua Program Studi pada ${label} telah dibatalkan`);
       invalidateAll();
     },
     onError: (err: any) => {

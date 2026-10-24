@@ -3,7 +3,7 @@ import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useDocumentSettings } from '@/lib/documentSettings';
-import { parseApprovalsFromComments } from '@/lib/documentApprovals';
+import { parseApprovalsFromComments, getDocApproval } from '@/lib/documentApprovals';
 import { decodeVerificationPayload } from '@/components/document/UniversalDocumentContainer';
 import {
   ShieldCheck,
@@ -99,7 +99,8 @@ export default function VerifikasiDokumenPublic() {
 
   // Parse approvals dari comments database jika ada
   const approvalState = parseApprovalsFromComments(taData?.comments);
-  const signers = approvalState?.signers || {};
+  const docApproval = getDocApproval(approvalState, docType || urlPayload?.doc);
+  const signers = docApproval?.signers || {};
 
   const isKaprodiApproved = urlPayload
     ? Boolean(urlPayload.okk || urlPayload.st === 'approved')
@@ -109,12 +110,13 @@ export default function VerifikasiDokumenPublic() {
     ? Boolean(urlPayload.ok1)
     : Boolean(signers.advisor_1?.is_approved || signers.advisor_2?.is_approved);
 
+  const isProposal = (docType || urlPayload?.doc || '').includes('proposal');
   const isFullyVerified = isSample
     ? true
     : urlPayload
     ? urlPayload.st === 'approved'
     : isTA
-    ? isKaprodiApproved
+    ? (isProposal ? isAdvisorApproved : isKaprodiApproved)
     : krsData?.status === 'approved';
 
   // Format Helper

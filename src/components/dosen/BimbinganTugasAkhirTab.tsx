@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Calendar, CheckCircle2, FileText, MessageSquare, Plus, Save, Clock, ExternalLink, Printer, ShieldCheck, Undo2, FileCheck, GraduationCap, Send } from 'lucide-react';
+import { BookOpen, Calendar, CheckCircle2, FileText, MessageSquare, Plus, Save, Clock, ExternalLink, Printer, ShieldCheck, Undo2, FileCheck, GraduationCap, Send, Eye } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,7 +19,7 @@ import { RekapitulasiFaseView } from '@/pages/tugas-akhir/RekapitulasiFaseView';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart3, Users } from 'lucide-react';
 import { KartuBimbinganViewerModal } from '@/components/document/KartuBimbinganViewerModal';
-import { parseApprovalsFromComments, serializeApprovalsToComments, useTaApprovalActions } from '@/lib/documentApprovals';
+import { parseApprovalsFromComments, serializeApprovalsToComments, useTaApprovalActions, getDocApproval } from '@/lib/documentApprovals';
 
 export function BimbinganTugasAkhirTab() {
   const { user, profile } = useAuth();
@@ -376,11 +376,18 @@ export function BimbinganTugasAkhirTab() {
                 const myRoleKey = isAdvisor2 ? 'advisor_2' : 'advisor_1';
                 const myRoleLabel = isAdvisor2 ? 'Dosen Pembimbing 2' : 'Dosen Pembimbing 1';
                 const approvalState = parseApprovalsFromComments(selectedAdvisorship?.ta_submissions?.comments);
-                const isApprovalRequested = Boolean(approvalState?.requested);
-                const myApproval = approvalState?.signers?.[myRoleKey];
+
+                const kartuApproval = getDocApproval(approvalState, 'kartu_bimbingan_ta');
+                const isApprovalRequested = Boolean(kartuApproval?.requested);
+                const myApproval = kartuApproval?.signers?.[myRoleKey];
                 const isMyApproved = !!myApproval?.is_approved;
-                const kaprodiApproval = approvalState?.signers?.kaprodi;
+                const kaprodiApproval = kartuApproval?.signers?.kaprodi;
                 const approvedLogsCount = consultationLogs?.filter((l: any) => l.status === 'approved').length || 0;
+
+                const proposalApproval = getDocApproval(approvalState, 'surat_pengesahan_proposal');
+                const isProposalRequested = Boolean(proposalApproval?.requested);
+                const proposalMyApproval = proposalApproval?.signers?.[myRoleKey];
+                const isProposalApproved = !!proposalMyApproval?.is_approved;
 
                 return (
                   <div className="space-y-4 min-w-0 max-w-full">
@@ -635,19 +642,167 @@ export function BimbinganTugasAkhirTab() {
 
                 {/* 3 Tombol Pengesahan Dokumen Tugas Akhir */}
                 <div className="pt-4 border-t flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-2.5">
-                  {/* 1. Sahkan Proposal TA (Nota Dinas) */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full sm:w-auto justify-center gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5 h-9"
-                    onClick={() => {
-                      setPrintTemplateCode('surat_pengesahan_proposal');
-                      setIsPrintModalOpen(true);
-                    }}
-                    title="Pratinjau & Sahkan Surat Pengesahan Proposal (Nota Dinas)"
-                  >
-                    <ShieldCheck className="w-3.5 h-3.5" /> Sahkan Proposal TA
-                  </Button>
+                  {/* 1. Pengesahan Proposal TA (Nota Dinas) */}
+                  {isProposalApproved ? (
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 w-full sm:w-auto">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="w-full sm:w-auto justify-center gap-1.5 text-xs bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-800 h-9"
+                        onClick={() => {
+                          setPrintTemplateCode('surat_pengesahan_proposal');
+                          setIsPrintModalOpen(true);
+                        }}
+                        title="Lihat Surat Pengesahan Proposal TA yang telah Anda sahkan"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Proposal TA (Telah Disahkan ✓)
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full sm:w-auto justify-center h-9 sm:h-8 px-2 text-xs text-muted-foreground hover:text-destructive gap-1"
+                        disabled={revokeAdvisorApproval.isPending}
+                        title="Batalkan pengesahan proposal TA"
+                        onClick={() => {
+                          if (window.confirm('Batalkan pengesahan resmi Anda pada proposal TA mahasiswa ini?')) {
+                            revokeAdvisorApproval.mutate({
+                              submissionId: selectedAdvisorship.ta_submissions.id,
+                              roleKey: myRoleKey,
+                              docCode: 'surat_pengesahan_proposal',
+                            }, {
+                              onSuccess: (updatedApproval) => {
+                                setSelectedAdvisorship((prev: any) => {
+                                  if (!prev) return prev;
+                                  const newComments = serializeApprovalsToComments(prev.ta_submissions?.comments, updatedApproval);
+                                  return {
+                                    ...prev,
+                                    ta_submissions: {
+                                      ...prev.ta_submissions,
+                                      comments: newComments,
+                                    },
+                                  };
+                                });
+                              }
+                            });
+                          }
+                        }}
+                      >
+                        <Undo2 className="w-3.5 h-3.5 mr-1" /> Batal Sahkan
+                      </Button>
+                    </div>
+                  ) : isProposalRequested ? (
+                    <div className="flex items-center gap-1 w-full sm:w-auto">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="w-full sm:w-auto justify-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-9"
+                        disabled={approveByAdvisor.isPending}
+                        onClick={() => {
+                          const mhsName = selectedAdvisorship?.ta_submissions?.profiles?.full_name || 'mahasiswa';
+                          if (window.confirm(`Sahkan secara resmi Proposal Tugas Akhir (Nota Dinas) untuk mahasiswa ${mhsName}? Tanda tangan digital Anda akan dibubuhkan pada dokumen resmi.`)) {
+                            approveByAdvisor.mutate({
+                              submissionId: selectedAdvisorship.ta_submissions.id,
+                              roleKey: myRoleKey,
+                              roleLabel: myRoleLabel,
+                              docCode: 'surat_pengesahan_proposal',
+                              signer: {
+                                id: user?.id,
+                                name: profile?.full_name || user?.email || 'Dosen Pembimbing',
+                                nidn: profile?.nip || '',
+                                signature_url: profile?.signature_url || profile?.paraf_url,
+                                paraf_url: profile?.paraf_url || profile?.signature_url,
+                              },
+                            }, {
+                              onSuccess: (updatedApproval) => {
+                                setSelectedAdvisorship((prev: any) => {
+                                  if (!prev) return prev;
+                                  const newComments = serializeApprovalsToComments(prev.ta_submissions?.comments, updatedApproval);
+                                  return {
+                                    ...prev,
+                                    ta_submissions: {
+                                      ...prev.ta_submissions,
+                                      comments: newComments,
+                                    },
+                                  };
+                                });
+                              }
+                            });
+                          }
+                        }}
+                        title="Mahasiswa telah mengajukan permohonan. Klik untuk mengesahkan Proposal TA."
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" /> Sahkan Proposal TA (Ada Pengajuan)
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          setPrintTemplateCode('surat_pengesahan_proposal');
+                          setIsPrintModalOpen(true);
+                        }}
+                        title="Pratinjau draf proposal sebelum disahkan"
+                      >
+                        <Eye className="w-3.5 h-3.5 mr-1" /> Draf
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 w-full sm:w-auto">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:w-auto justify-center gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5 h-9"
+                        disabled={approveByAdvisor.isPending}
+                        onClick={() => {
+                          const mhsName = selectedAdvisorship?.ta_submissions?.profiles?.full_name || 'mahasiswa';
+                          if (window.confirm(`Mahasiswa belum menekan tombol ajukan pengesahan. Apakah Anda ingin langsung mengesahkan Proposal Tugas Akhir (Nota Dinas) untuk mahasiswa ${mhsName} ini?`)) {
+                            approveByAdvisor.mutate({
+                              submissionId: selectedAdvisorship.ta_submissions.id,
+                              roleKey: myRoleKey,
+                              roleLabel: myRoleLabel,
+                              docCode: 'surat_pengesahan_proposal',
+                              signer: {
+                                id: user?.id,
+                                name: profile?.full_name || user?.email || 'Dosen Pembimbing',
+                                nidn: profile?.nip || '',
+                                signature_url: profile?.signature_url || profile?.paraf_url,
+                                paraf_url: profile?.paraf_url || profile?.signature_url,
+                              },
+                            }, {
+                              onSuccess: (updatedApproval) => {
+                                setSelectedAdvisorship((prev: any) => {
+                                  if (!prev) return prev;
+                                  const newComments = serializeApprovalsToComments(prev.ta_submissions?.comments, updatedApproval);
+                                  return {
+                                    ...prev,
+                                    ta_submissions: {
+                                      ...prev.ta_submissions,
+                                      comments: newComments,
+                                    },
+                                  };
+                                });
+                              }
+                            });
+                          }
+                        }}
+                        title="Sahkan Proposal Tugas Akhir"
+                      >
+                        <ShieldCheck className="w-3.5 h-3.5" /> Sahkan Proposal TA
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
+                        onClick={() => {
+                          setPrintTemplateCode('surat_pengesahan_proposal');
+                          setIsPrintModalOpen(true);
+                        }}
+                        title="Pratinjau draf proposal"
+                      >
+                        <Eye className="w-3.5 h-3.5 mr-1" /> Draf
+                      </Button>
+                    </div>
+                  )}
 
                   {/* 2. Sahkan Laporan TA (Belum aktif karena dokumennya belum dikostum) */}
                   <Button

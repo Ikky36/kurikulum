@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { UniversalDocumentContainer, DocumentSignatureData } from './UniversalDocumentContainer';
 import { useDocumentTemplatesConfig, defaultDocumentTemplates } from '@/lib/documentTemplateTypes';
 import { useDocumentSettings } from '@/lib/documentSettings';
-import { parseApprovalsFromComments } from '@/lib/documentApprovals';
+import { parseApprovalsFromComments, getDocApproval } from '@/lib/documentApprovals';
 import { Check, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -103,7 +103,8 @@ export function KartuBimbinganViewerModal({
 
     // Parse status pengesahan dari comments submission
     const approvalState = parseApprovalsFromComments(submission.comments);
-    const signers = approvalState.signers || {};
+    const docApproval = getDocApproval(approvalState, template.code);
+    const signers = docApproval.signers || {};
 
     const adv1Approval =
       signers.advisor_1 ||
@@ -245,7 +246,7 @@ export function KartuBimbinganViewerModal({
               studentNim: mhsNim,
               studentProgram: mhsProgram,
               topicTitle: submission.title || '',
-              isFullyApproved: Boolean(kaprodiApproval?.is_approved),
+              isFullyApproved: template.code.includes('proposal') ? Boolean(adv1Approval?.is_approved) : Boolean(kaprodiApproval?.is_approved),
               adv1Name: adv1Approval?.signer_name || adv1Profile?.full_name || '',
               adv1Nidn: adv1Approval?.signer_nidn || adv1Profile?.nip || '',
               adv1Date: adv1Approval?.approved_at || lastApprovedLog?.date || '',
