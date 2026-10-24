@@ -68,6 +68,10 @@ export interface SingleDocumentTemplate {
 
   // Posisi Jarak Blok Tanda Tangan: 'normal' (~2.5 cm setelah konten) | 'compact' (~1.5 cm) | 'spacious' (~4 cm) | 'bottom' (dasar lembar)
   signature_spacing?: 'compact' | 'normal' | 'spacious' | 'bottom';
+  // Tata letak pengesahan tunggal jika hanya ada 1 tanda tangan: 'left' | 'center' | 'right' (default: 'center')
+  single_signature_align?: 'left' | 'center' | 'right';
+  // Jenis Huruf Dokumen (misal: 'Times New Roman' | 'Arial' | 'Calibri' | 'inherit')
+  font_family?: string;
 
   // Tembusan (Carbon Copy / CC)
   copies_enabled?: boolean;
@@ -298,6 +302,8 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     columns: [],
     show_signature_date: false,
     signature_spacing: 'normal',
+    single_signature_align: 'right',
+    font_family: 'Times New Roman',
     signatures: [
       {
         id: 'advisor_1',
@@ -366,6 +372,8 @@ export function useDocumentTemplatesConfig() {
                 ...parsed[key],
                 columns: parsed[key].columns || merged[key].columns,
                 signatures: parsed[key].signatures || merged[key].signatures,
+                single_signature_align: parsed[key].single_signature_align || merged[key].single_signature_align,
+                font_family: parsed[key].font_family || merged[key].font_family,
               };
             } else {
               merged[key] = parsed[key];

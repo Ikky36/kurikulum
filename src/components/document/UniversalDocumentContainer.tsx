@@ -162,6 +162,17 @@ export function UniversalDocumentContainer({
   // Resolve effective date mechanism: 'last_signature' vs 'today'
   const effectiveDateSource = template.date_source || docSettings.date_source || 'last_signature';
 
+  // Resolusi tata letak tanda tangan tunggal (kiri, tengah, kanan)
+  const enabledSignatures = (template.signatures || []).filter((s) => s.enabled);
+  const singleAlign = template.single_signature_align || 'center';
+  const singleSignatureClass =
+    singleAlign === 'right'
+      ? 'justify-end pr-2 sm:pr-8'
+      : singleAlign === 'left'
+      ? 'justify-start pl-2 sm:pl-8'
+      : 'justify-center';
+  const signatureLayoutClass = enabledSignatures.length === 1 ? singleSignatureClass : 'justify-around';
+
   const resolvedDate = React.useMemo(() => {
     // 1. Jika mode paksa tanggal hari ini (real-time cetak)
     if (effectiveDateSource === 'today') {
@@ -397,6 +408,9 @@ export function UniversalDocumentContainer({
           paddingBottom: `${docSettings.margin_bottom}mm`,
           paddingLeft: `${docSettings.margin_left}mm`,
           paddingRight: `${docSettings.margin_right}mm`,
+          fontFamily: template.font_family && template.font_family !== 'inherit'
+            ? `"${template.font_family}", Times New Roman, Times, serif`
+            : undefined,
         }}
       >
         <div className="w-full flex flex-col">
@@ -623,13 +637,13 @@ export function UniversalDocumentContainer({
           {(template.signatures || []).filter((s) => s.enabled).length > 0 && (
             <div className={`${getSignatureSpacingClass(template.signature_spacing)} pt-2 break-inside-avoid page-break-inside-avoid text-xs signature-block`}>
               {template.show_signature_date !== false && docSettings.show_signature_date !== false && (
-                <div className="text-right text-xs text-slate-700 mb-2">
+                <div className={`text-xs text-slate-700 mb-2 ${enabledSignatures.length === 1 && singleAlign === 'left' ? 'text-left pl-2 sm:pl-8' : enabledSignatures.length === 1 && singleAlign === 'center' ? 'text-center' : 'text-right'}`}>
                   {docSettings.default_city || 'Ponorogo'}, {resolvedDate}
                 </div>
               )}
 
               {/* Grid Tanda Tangan */}
-              <div className="flex flex-wrap items-start justify-around gap-6 pt-1 text-center">
+              <div className={`flex flex-wrap items-start gap-6 pt-1 text-center ${signatureLayoutClass}`}>
                 {/* Stempel QR Code Verifikasi di Samping Tanda Tangan */}
                 {docSettings.qr_code_enabled !== false && docSettings.qr_code_position !== 'footer' && (
                   <div className="min-w-[100px] max-w-[145px] flex flex-col items-center justify-center p-2 rounded-lg border border-slate-300 bg-white/80 print:bg-transparent text-center self-center signature-block shadow-2xs">

@@ -347,6 +347,18 @@
   margin-bottom: 0.2rem;
 }
 
+.document-rich-content table.borderless-table,
+.document-rich-content table.borderless-table tr,
+.document-rich-content table.borderless-table td,
+.document-rich-content table.borderless-table th,
+.document-rich-content table[data-borderless="true"],
+.document-rich-content table[data-borderless="true"] td,
+.document-rich-content table[data-borderless="true"] th,
+.document-rich-content table[style*="border: none"] td,
+.document-rich-content table[style*="border:none"] td {
+  border: none !important;
+}
+
 .document-rich-content table {
   width: 100%;
   border-collapse: collapse;

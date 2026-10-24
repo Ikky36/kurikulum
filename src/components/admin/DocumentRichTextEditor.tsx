@@ -34,6 +34,9 @@ import {
   Trash2,
   PlusCircle,
   HelpCircle,
+  Type,
+  EyeOff,
+  Grid,
 } from 'lucide-react';
 
 export interface DatabaseVariable {
@@ -43,12 +46,25 @@ export interface DatabaseVariable {
   exampleValue?: string;
 }
 
+export const DOCUMENT_FONTS = [
+  { label: 'Times New Roman (Standar Surat & Skripsi)', value: 'Times New Roman' },
+  { label: 'Arial', value: 'Arial' },
+  { label: 'Calibri', value: 'Calibri' },
+  { label: 'Cambria', value: 'Cambria' },
+  { label: 'Georgia', value: 'Georgia' },
+  { label: 'Garamond', value: 'Garamond' },
+  { label: 'Tahoma', value: 'Tahoma' },
+  { label: 'Verdana', value: 'Verdana' },
+  { label: 'Inter (Bawaan Sistem)', value: 'Inter' },
+];
+
 interface DocumentRichTextEditorProps {
   value: string;
   onChange: (html: string) => void;
   availableVariables?: DatabaseVariable[];
   placeholder?: string;
   className?: string;
+  fontFamily?: string;
 }
 
 export function DocumentRichTextEditor({
@@ -57,6 +73,7 @@ export function DocumentRichTextEditor({
   availableVariables = [],
   placeholder = 'Ketik isi surat di sini...',
   className = '',
+  fontFamily = 'Times New Roman',
 }: DocumentRichTextEditorProps) {
   const editorRef = useRef<HTMLDivElement>(null);
   const codeTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -67,11 +84,19 @@ export function DocumentRichTextEditor({
   const [searchTerm, setSearchTerm] = useState('');
   const [isTablePopoverOpen, setIsTablePopoverOpen] = useState(false);
   const [isVarPopoverOpen, setIsVarPopoverOpen] = useState(false);
+  const [selectedFont, setSelectedFont] = useState<string>(fontFamily || 'Times New Roman');
 
   // Custom Table configuration state
   const [customRows, setCustomRows] = useState(3);
   const [customCols, setCustomCols] = useState(3);
-  const [useBorder, setUseBorder] = useState(true);
+  const [useBorder, setUseBorder] = useState(false); // default false: most letter tables (biodata) are borderless
+
+  // Sync external fontFamily prop changes
+  useEffect(() => {
+    if (fontFamily) {
+      setSelectedFont(fontFamily);
+    }
+  }, [fontFamily]);
 
   // Sync external value to visual editor without resetting cursor on user typing
   useEffect(() => {
@@ -124,6 +149,18 @@ export function DocumentRichTextEditor({
     },
     [mode, restoreSelection, saveSelection, handleInput]
   );
+
+  // Apply Font Family
+  const handleFontChange = (fontName: string) => {
+    setSelectedFont(fontName);
+    if (mode === 'visual') {
+      restoreSelection();
+      document.execCommand('fontName', false, fontName);
+      saveSelection();
+      handleInput();
+    }
+    toast.success(`Font diubah ke ${fontName}`);
+  };
 
   // Insert arbitrary HTML fragment at cursor position
   const insertHtmlAtCursor = useCallback(
@@ -193,33 +230,33 @@ export function DocumentRichTextEditor({
 
   // Table presets
   const insertBiodataTable = () => {
-    const tableHtml = `<table style="width: 100%; border-collapse: collapse; margin: 8px 0; font-size: inherit;">
+    const tableHtml = `<table class="borderless-table" data-borderless="true" style="width: 100%; border-collapse: collapse; margin: 8px 0; border: none; font-size: inherit;">
   <tbody>
     <tr>
-      <td style="width: 26%; padding: 4px 6px; vertical-align: top;">Nama Mahasiswa</td>
-      <td style="width: 3%; padding: 4px 2px; vertical-align: top; text-align: center;">:</td>
-      <td style="padding: 4px 6px; vertical-align: top;"><strong>{{nama_mahasiswa}}</strong></td>
+      <td style="width: 26%; padding: 4px 6px; vertical-align: top; border: none;">Nama Mahasiswa</td>
+      <td style="width: 3%; padding: 4px 2px; vertical-align: top; text-align: center; border: none;">:</td>
+      <td style="padding: 4px 6px; vertical-align: top; border: none;"><strong>{{nama_mahasiswa}}</strong></td>
     </tr>
     <tr>
-      <td style="padding: 4px 6px; vertical-align: top;">NIM</td>
-      <td style="padding: 4px 2px; vertical-align: top; text-align: center;">:</td>
-      <td style="padding: 4px 6px; vertical-align: top;">{{nim}}</td>
+      <td style="padding: 4px 6px; vertical-align: top; border: none;">NIM</td>
+      <td style="padding: 4px 2px; vertical-align: top; text-align: center; border: none;">:</td>
+      <td style="padding: 4px 6px; vertical-align: top; border: none;">{{nim}}</td>
     </tr>
     <tr>
-      <td style="padding: 4px 6px; vertical-align: top;">Program Studi</td>
-      <td style="padding: 4px 2px; vertical-align: top; text-align: center;">:</td>
-      <td style="padding: 4px 6px; vertical-align: top;">{{program_studi}}</td>
+      <td style="padding: 4px 6px; vertical-align: top; border: none;">Program Studi</td>
+      <td style="padding: 4px 2px; vertical-align: top; text-align: center; border: none;">:</td>
+      <td style="padding: 4px 6px; vertical-align: top; border: none;">{{program_studi}}</td>
     </tr>
     <tr>
-      <td style="padding: 4px 6px; vertical-align: top;">Judul Tugas Akhir</td>
-      <td style="padding: 4px 2px; vertical-align: top; text-align: center;">:</td>
-      <td style="padding: 4px 6px; vertical-align: top;">"{{judul_tugas_akhir}}"</td>
+      <td style="padding: 4px 6px; vertical-align: top; border: none;">Judul Tugas Akhir</td>
+      <td style="padding: 4px 2px; vertical-align: top; text-align: center; border: none;">:</td>
+      <td style="padding: 4px 6px; vertical-align: top; border: none;">"{{judul_tugas_akhir}}"</td>
     </tr>
   </tbody>
 </table><p><br></p>`;
     insertHtmlAtCursor(tableHtml);
     setIsTablePopoverOpen(false);
-    toast.success('Tabel format biodata mahasiswa berhasil disisipkan');
+    toast.success('Tabel format biodata mahasiswa (tanpa garis) berhasil disisipkan');
   };
 
   const insertFormalBorderedTable = () => {
@@ -259,9 +296,10 @@ export function DocumentRichTextEditor({
     const cols = Math.max(1, Math.min(8, customCols));
     const borderStyle = useBorder ? 'border: 1px solid #64748b;' : 'border: none;';
     const cellBorder = useBorder ? 'border: 1px solid #64748b;' : 'border: none;';
+    const classAttr = useBorder ? '' : 'class="borderless-table" data-borderless="true"';
 
-    let tableHtml = `<table style="width: 100%; border-collapse: collapse; margin: 8px 0; ${borderStyle} font-size: inherit;">`;
-    tableHtml += '<thead><tr style="background-color: #f8fafc;">';
+    let tableHtml = `<table ${classAttr} style="width: 100%; border-collapse: collapse; margin: 8px 0; ${borderStyle} font-size: inherit;">`;
+    tableHtml += `<thead style="${useBorder ? '' : 'display: none;'}"><tr style="background-color: #f8fafc;">`;
     for (let c = 0; c < cols; c++) {
       tableHtml += `<th style="${cellBorder} padding: 6px 8px; text-align: left;">Kolom ${c + 1}</th>`;
     }
@@ -278,7 +316,47 @@ export function DocumentRichTextEditor({
 
     insertHtmlAtCursor(tableHtml);
     setIsTablePopoverOpen(false);
-    toast.success(`Tabel kustom (${rows} baris x ${cols} kolom) disisipkan`);
+    toast.success(`Tabel kustom (${rows} baris x ${cols} kolom, ${useBorder ? 'bergaris' : 'tanpa garis'}) disisipkan`);
+  };
+
+  // Toggle Table Border on active table or all tables in editor
+  const handleToggleTableBorder = (showBorder: boolean) => {
+    if (!editorRef.current) return;
+    restoreSelection();
+    const sel = window.getSelection();
+    let targetTable: HTMLTableElement | null =
+      sel?.anchorNode instanceof Element
+        ? sel.anchorNode.closest('table')
+        : (sel?.anchorNode?.parentElement?.closest('table') as HTMLTableElement | null);
+
+    if (!targetTable) {
+      targetTable = editorRef.current.querySelector('table');
+    }
+
+    if (!targetTable) {
+      toast.info('Belum ada tabel di dalam editor untuk diatur bordernya');
+      return;
+    }
+
+    if (showBorder) {
+      targetTable.style.border = '1px solid #64748b';
+      targetTable.classList.remove('borderless-table');
+      targetTable.removeAttribute('data-borderless');
+      targetTable.querySelectorAll('td, th').forEach((cell) => {
+        (cell as HTMLElement).style.border = '1px solid #64748b';
+      });
+      toast.success('Garis tabel berhasil ditampilkan (bergaris)');
+    } else {
+      targetTable.style.border = 'none';
+      targetTable.classList.add('borderless-table');
+      targetTable.setAttribute('data-borderless', 'true');
+      targetTable.querySelectorAll('td, th').forEach((cell) => {
+        (cell as HTMLElement).style.border = 'none';
+      });
+      toast.success('Garis tabel berhasil disembunyikan (tanpa garis / borderless)');
+    }
+
+    handleInput();
   };
 
   // Helper actions on current active table cell
@@ -387,6 +465,34 @@ export function DocumentRichTextEditor({
 
           <Separator orientation="vertical" className="h-5 mx-0.5" />
 
+          {/* FONT FAMILY SELECTOR (Times New Roman, Arial, dll) */}
+          <div className="flex items-center">
+            <Select
+              disabled={mode !== 'visual'}
+              value={selectedFont}
+              onValueChange={handleFontChange}
+            >
+              <SelectTrigger className="h-7 w-[130px] sm:w-[150px] text-xs px-2 bg-white gap-1" title="Pilih Jenis Huruf (Font)">
+                <Type className="h-3.5 w-3.5 text-primary shrink-0" />
+                <SelectValue placeholder="Font" />
+              </SelectTrigger>
+              <SelectContent>
+                {DOCUMENT_FONTS.map((font) => (
+                  <SelectItem
+                    key={font.value}
+                    value={font.value}
+                    className="text-xs"
+                    style={{ fontFamily: font.value }}
+                  >
+                    {font.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Separator orientation="vertical" className="h-5 mx-0.5" />
+
           {/* PARAGRAPH / HEADING SELECT */}
           <Select
             disabled={mode !== 'visual'}
@@ -397,21 +503,21 @@ export function DocumentRichTextEditor({
               else if (val === 'h3') execCmd('formatBlock', '<h3>');
             }}
           >
-            <SelectTrigger className="h-7 w-[105px] text-xs px-2 bg-white">
+            <SelectTrigger className="h-7 w-[95px] text-xs px-2 bg-white">
               <SelectValue placeholder="Paragraf" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="p" className="text-xs">
-                Paragraf Normal
+                Paragraf
               </SelectItem>
               <SelectItem value="h1" className="text-sm font-bold">
-                Judul 1 (Besar)
+                Judul 1
               </SelectItem>
               <SelectItem value="h2" className="text-xs font-bold">
-                Judul 2 (Sedang)
+                Judul 2
               </SelectItem>
               <SelectItem value="h3" className="text-xs font-semibold">
-                Judul 3 (Kecil)
+                Judul 3
               </SelectItem>
             </SelectContent>
           </Select>
@@ -557,7 +663,7 @@ export function DocumentRichTextEditor({
 
           <Separator orientation="vertical" className="h-5 mx-0.5" />
 
-          {/* INSERT TABLE POPOVER */}
+          {/* INSERT & MANAGE TABLE POPOVER */}
           <Popover open={isTablePopoverOpen} onOpenChange={setIsTablePopoverOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -573,37 +679,76 @@ export function DocumentRichTextEditor({
                 <ChevronDown className="h-3 w-3 opacity-60" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 p-3" align="start">
+            <PopoverContent className="w-84 p-3" align="start">
               <div className="space-y-3">
-                <div className="border-b pb-1.5">
-                  <p className="font-semibold text-xs text-foreground flex items-center gap-1.5">
-                    <TableIcon className="h-3.5 w-3.5 text-primary" />
-                    Sisipkan Tabel Dokumen
+                <div className="border-b pb-1.5 flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-xs text-foreground flex items-center gap-1.5">
+                      <TableIcon className="h-3.5 w-3.5 text-primary" />
+                      Pengaturan & Sisip Tabel
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Pilih format tabel, atur garis (border), atau tambah baris.
+                    </p>
+                  </div>
+                </div>
+
+                {/* TOGGLE BORDER PADA TABEL YANG ADA */}
+                <div className="p-2 border rounded-md bg-amber-50/60 border-amber-200/80 space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-semibold text-amber-900 flex items-center gap-1">
+                      <Grid className="h-3.5 w-3.5 text-amber-700" />
+                      Garis Tepi Tabel (Border):
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-amber-800 leading-tight">
+                    Ubah tabel yang ada agar garis kotaknya tidak terlihat (polos/biodata) atau bergaris.
                   </p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Pilih format tabel siap pakai atau atur baris & kolom secara kustom.
-                  </p>
+                  <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-6 text-[10.5px] bg-white text-slate-800 hover:bg-slate-100 border-slate-300 gap-1 font-medium shadow-2xs"
+                      onClick={() => handleToggleTableBorder(false)}
+                      title="Jadikan tabel polos tanpa garis (cocok untuk format biodata surat)"
+                    >
+                      <EyeOff className="h-3 w-3 text-rose-500" />
+                      Tanpa Garis (Polos)
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-6 text-[10.5px] bg-white text-slate-800 hover:bg-slate-100 border-slate-300 gap-1 font-medium shadow-2xs"
+                      onClick={() => handleToggleTableBorder(true)}
+                      title="Beri garis bingkai pada semua sel tabel"
+                    >
+                      <Grid className="h-3 w-3 text-blue-600" />
+                      Tampilkan Garis
+                    </Button>
+                  </div>
                 </div>
 
                 {/* PRESET 1: BIODATA FORMAT (BORDERLESS) */}
                 <div className="p-2 border rounded-md bg-slate-50 space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-semibold text-slate-800">Tabel Biodata Mahasiswa</p>
-                    <Badge variant="secondary" className="text-[9px] py-0">
+                    <p className="text-xs font-semibold text-slate-800">Tabel Biodata Mahasiswa (Tanpa Garis)</p>
+                    <Badge variant="secondary" className="text-[9px] py-0 bg-emerald-100 text-emerald-800">
                       Rekomendasi Surat
                     </Badge>
                   </div>
                   <p className="text-[10px] text-slate-600">
-                    Tabel 3 kolom tanpa garis: Label, titik dua (:), dan variabel nama/nim/judul.
+                    Tabel 3 kolom tanpa border: Label, titik dua (:), dan variabel nama/nim/judul.
                   </p>
                   <Button
                     type="button"
                     size="sm"
-                    className="w-full h-6 text-xs gap-1"
+                    className="w-full h-6 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
                     onClick={insertBiodataTable}
                   >
                     <Plus className="h-3 w-3" />
-                    Sisipkan Format Biodata
+                    Sisipkan Format Biodata Polos
                   </Button>
                 </div>
 
@@ -653,13 +798,29 @@ export function DocumentRichTextEditor({
                     </div>
                   </div>
                   <div className="flex items-center justify-between text-xs pt-1">
-                    <span className="text-[11px] text-slate-700">Gunakan Garis Tabel (Border):</span>
-                    <input
-                      type="checkbox"
-                      checked={useBorder}
-                      onChange={(e) => setUseBorder(e.target.checked)}
-                      className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4"
-                    />
+                    <span className="text-[11px] text-slate-700 font-medium">Garis Tabel (Border):</span>
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-1 text-[11px] cursor-pointer">
+                        <input
+                          type="radio"
+                          name="customTableBorder"
+                          checked={!useBorder}
+                          onChange={() => setUseBorder(false)}
+                          className="h-3.5 w-3.5 text-primary"
+                        />
+                        <span>Tanpa Garis</span>
+                      </label>
+                      <label className="flex items-center gap-1 text-[11px] cursor-pointer">
+                        <input
+                          type="radio"
+                          name="customTableBorder"
+                          checked={useBorder}
+                          onChange={() => setUseBorder(true)}
+                          className="h-3.5 w-3.5 text-primary"
+                        />
+                        <span>Bergaris</span>
+                      </label>
+                    </div>
                   </div>
                   <Button
                     type="button"
@@ -827,13 +988,41 @@ export function DocumentRichTextEditor({
         </div>
       </div>
 
-      {/* 2. QUICK SHORTCUT CHIPS (BARIS CEPAT SISIPKAN VARIABEL PALING SERING DIGUNAKAN) */}
+      {/* 2. QUICK SHORTCUT CHIPS (BARIS CEPAT SISIPKAN VARIABEL & AKSI BORDER TABEL) */}
       <div className="px-2.5 py-1.5 bg-slate-100/70 border-b flex flex-wrap items-center gap-1.5 text-[11px]">
         <span className="text-muted-foreground font-medium flex items-center gap-1">
           <Sparkles className="h-3 w-3 text-amber-500" />
-          Sisip Cepat:
+          Aksi Cepat:
         </span>
-        {availableVariables.slice(0, 6).map((v) => (
+
+        {/* Tombol Cepat Sembunyikan Garis Tabel */}
+        <button
+          type="button"
+          onClick={() => handleToggleTableBorder(false)}
+          className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-300 transition-colors shadow-2xs flex items-center gap-1"
+          title="Hilangkan garis tepi dari tabel agar polos (borderless)"
+        >
+          <EyeOff className="h-3 w-3 text-amber-600" />
+          Sembunyikan Garis Tabel
+        </button>
+
+        {/* Tombol Cepat Sisip Tabel Biodata */}
+        <button
+          type="button"
+          onClick={() => {
+            saveSelection();
+            insertBiodataTable();
+          }}
+          className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-300 transition-colors shadow-2xs flex items-center gap-1"
+          title="Sisipkan tabel biodata mahasiswa lengkap 3 kolom tanpa garis"
+        >
+          <Plus className="h-3 w-3 text-emerald-600" />
+          + Biodata (Tanpa Garis)
+        </button>
+
+        <span className="text-slate-300">|</span>
+
+        {availableVariables.slice(0, 5).map((v) => (
           <button
             key={v.key}
             type="button"
@@ -847,17 +1036,6 @@ export function DocumentRichTextEditor({
             + {v.label}
           </button>
         ))}
-        <button
-          type="button"
-          onClick={() => {
-            saveSelection();
-            insertBiodataTable();
-          }}
-          className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-300 transition-colors shadow-2xs"
-          title="Sisipkan tabel biodata mahasiswa lengkap 3 kolom"
-        >
-          + Format Biodata Mahasiswa (Tabel)
-        </button>
       </div>
 
       {/* 3. EDITOR CONTENT AREA */}
@@ -872,6 +1050,11 @@ export function DocumentRichTextEditor({
             onMouseUp={saveSelection}
             onSelect={saveSelection}
             onBlur={saveSelection}
+            style={{
+              fontFamily: selectedFont && selectedFont !== 'inherit'
+                ? `"${selectedFont}", Times New Roman, Times, serif`
+                : undefined,
+            }}
             className="document-rich-content document-rich-editor-content min-h-[170px] max-h-[460px] overflow-y-auto p-3 text-xs leading-relaxed focus:outline-none"
             data-placeholder={placeholder}
           />
@@ -894,8 +1077,7 @@ export function DocumentRichTextEditor({
           <span>
             {mode === 'visual' ? (
               <>
-                Ketik teks bebas, atur rata kiri/tengah/kanan/justify, buat daftar poin/nomor, dan sisipkan
-                tabel atau variabel database.
+                Font: <strong className="text-slate-800">{selectedFont}</strong>. Klik <em>"Sembunyikan Garis Tabel"</em> jika ingin tabel biodata tanpa border.
               </>
             ) : (
               <>Mode kode HTML aktif. Anda dapat mengedit tag HTML atau menyisipkan variabel langsung.</>

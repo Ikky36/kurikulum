@@ -912,6 +912,50 @@ export function DocumentTemplateCustomizer() {
                   className="text-xs"
                 />
               </div>
+
+              <div className="space-y-1.5 pt-2 border-t">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium flex items-center gap-1.5">
+                    <Type className="h-3.5 w-3.5 text-primary" />
+                    Jenis Huruf Dokumen (Font Family)
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground font-mono">Times New Roman / Arial / dll</span>
+                </div>
+                <Select
+                  value={currentTemplate.font_family || 'Times New Roman'}
+                  onValueChange={(val) => updateTemplateField('font_family', val)}
+                >
+                  <SelectTrigger className="text-xs h-8 bg-white">
+                    <SelectValue placeholder="Pilih Jenis Huruf..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Times New Roman" className="text-xs" style={{ fontFamily: 'Times New Roman' }}>
+                      Times New Roman (Standar Surat Dinas & Skripsi)
+                    </SelectItem>
+                    <SelectItem value="Arial" className="text-xs" style={{ fontFamily: 'Arial' }}>
+                      Arial (Formal Sans)
+                    </SelectItem>
+                    <SelectItem value="Calibri" className="text-xs" style={{ fontFamily: 'Calibri' }}>
+                      Calibri (Modern)
+                    </SelectItem>
+                    <SelectItem value="Cambria" className="text-xs" style={{ fontFamily: 'Cambria' }}>
+                      Cambria (Serif Elegan)
+                    </SelectItem>
+                    <SelectItem value="Georgia" className="text-xs" style={{ fontFamily: 'Georgia' }}>
+                      Georgia (Serif Klasik)
+                    </SelectItem>
+                    <SelectItem value="Garamond" className="text-xs" style={{ fontFamily: 'Garamond' }}>
+                      Garamond (Prestisius)
+                    </SelectItem>
+                    <SelectItem value="Inter" className="text-xs" style={{ fontFamily: 'Inter' }}>
+                      Inter (Bawaan Sistem)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground">
+                  Jenis huruf ini akan diterapkan ke seluruh lembar dokumen resmi (judul, narasi, tabel, hingga tanda tangan).
+                </p>
+              </div>
             </CardContent>
           </Card>
 
@@ -1048,6 +1092,7 @@ export function DocumentTemplateCustomizer() {
                         value={currentTemplate.body_text_template || ''}
                         onChange={(html) => updateTemplateField('body_text_template', html)}
                         availableVariables={combinedVariables}
+                        fontFamily={currentTemplate.font_family || 'Times New Roman'}
                         placeholder="Ketik isi surat atau narasi di sini. Gunakan tombol perataan teks (kiri, tengah, kanan, justify), daftar poin/nomor, serta tombol '+ Variabel Database' atau 'Tabel' untuk menyisipkan data otomatis..."
                       />
                       <p className="text-[10px] text-muted-foreground flex items-center gap-1">
@@ -1322,6 +1367,51 @@ export function DocumentTemplateCustomizer() {
                   >
                     <span className="font-semibold text-xs">Dasar Lembar</span>
                     <span className="text-[9px] opacity-80">(Paling Bawah)</span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* PENGATURAN TATA LETAK PENGESAHAN TUNGGAL (1 PENGESAHAN) */}
+              <div className="p-3 bg-muted/40 rounded-lg border space-y-2">
+                <div className="space-y-0.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-semibold">Tata Letak Pengesahan Tunggal (1 Tanda Tangan)</Label>
+                    <Badge variant="outline" className="text-[9px]">Khusus 1 Pengesahan</Badge>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Tentukan perataan posisi jika dokumen hanya memiliki 1 penandatangan aktif (misal: Dosen Pembimbing pada Nota Dinas).
+                  </p>
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-1">
+                  <Button
+                    type="button"
+                    variant={currentTemplate.single_signature_align === 'left' ? 'default' : 'outline'}
+                    size="sm"
+                    className="text-xs h-8 gap-1.5 justify-center"
+                    onClick={() => updateTemplateField('single_signature_align', 'left')}
+                  >
+                    <AlignLeft className="h-3.5 w-3.5" />
+                    <span>Rata Kiri</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={currentTemplate.single_signature_align === 'center' || !currentTemplate.single_signature_align ? 'default' : 'outline'}
+                    size="sm"
+                    className="text-xs h-8 gap-1.5 justify-center"
+                    onClick={() => updateTemplateField('single_signature_align', 'center')}
+                  >
+                    <AlignCenter className="h-3.5 w-3.5" />
+                    <span>Rata Tengah</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={currentTemplate.single_signature_align === 'right' ? 'default' : 'outline'}
+                    size="sm"
+                    className="text-xs h-8 gap-1.5 justify-center"
+                    onClick={() => updateTemplateField('single_signature_align', 'right')}
+                  >
+                    <AlignRight className="h-3.5 w-3.5" />
+                    <span>Rata Kanan (Surat Dinas)</span>
                   </Button>
                 </div>
               </div>
@@ -1682,6 +1772,9 @@ export function DocumentTemplateCustomizer() {
                   paddingBottom: `${Math.max(docSettings.margin_bottom / 3, 6)}px`,
                   paddingLeft: `${Math.max(docSettings.margin_left / 3, 8)}px`,
                   paddingRight: `${Math.max(docSettings.margin_right / 3, 8)}px`,
+                  fontFamily: currentTemplate.font_family && currentTemplate.font_family !== 'inherit'
+                    ? `"${currentTemplate.font_family}", Times New Roman, Times, serif`
+                    : undefined,
                 }}
               >
                 {/* 1. KOP SURAT */}
@@ -1820,11 +1913,19 @@ export function DocumentTemplateCustomizer() {
                         {docSettings.default_city || 'Ponorogo'}, 21 Oktober 2026
                       </div>
                     )}
-                    <div className="flex justify-around items-end pt-0.5 text-center text-[6px]">
-                      {currentTemplate.signatures
-                        .filter((s) => s.enabled)
-                        .slice(0, 3)
-                        .map((sig) => (
+                    {(() => {
+                      const enabledSigs = currentTemplate.signatures.filter((s) => s.enabled);
+                      const singleAlign = currentTemplate.single_signature_align || 'center';
+                      const previewAlignClass =
+                        enabledSigs.length === 1
+                          ? (singleAlign === 'right' ? 'justify-end pr-2' : singleAlign === 'left' ? 'justify-start pl-2' : 'justify-center')
+                          : 'justify-around';
+
+                      return (
+                        <div className={`flex items-end pt-0.5 text-center text-[6px] ${previewAlignClass}`}>
+                          {enabledSigs
+                            .slice(0, 3)
+                            .map((sig) => (
                           <div key={sig.id} className="flex flex-col items-center">
                             {sig.signer_status && sig.signer_status !== 'pemohon' && (
                               <span className="text-[5px] uppercase font-semibold text-slate-400">
@@ -1851,6 +1952,8 @@ export function DocumentTemplateCustomizer() {
                           </div>
                         ))}
                     </div>
+                  );
+                })()}
 
                     {/* Tembusan Mini */}
                     {currentTemplate.copies_enabled && currentTemplate.copies_list && currentTemplate.copies_list.length > 0 && (
