@@ -238,10 +238,10 @@ export function UniversalDocumentContainer({
     await printElementById(containerId, {
       paperSize: docSettings.paper_size,
       orientation: effectiveOrientation,
-      marginTop: docSettings.margin_top,
-      marginBottom: docSettings.margin_bottom,
-      marginLeft: docSettings.margin_left,
-      marginRight: docSettings.margin_right,
+      marginTop: effectiveMarginTop,
+      marginBottom: effectiveMarginBottom,
+      marginLeft: effectiveMarginLeft,
+      marginRight: effectiveMarginRight,
       title: finalTitle,
     });
   };
@@ -249,7 +249,7 @@ export function UniversalDocumentContainer({
   // CSS Page sizing for @media print
   const pageSizeStyle = `@page { 
     size: ${docSettings.paper_size} ${effectiveOrientation}; 
-    margin: ${docSettings.margin_top}mm ${docSettings.margin_right}mm ${docSettings.margin_bottom}mm ${docSettings.margin_left}mm; 
+    margin: ${effectiveMarginTop}mm ${effectiveMarginRight}mm ${effectiveMarginBottom}mm ${effectiveMarginLeft}mm; 
   }`;
 
   // Kamus lengkap variabel database yang siap diisi
@@ -413,10 +413,10 @@ export function UniversalDocumentContainer({
         }`}
         style={{
           minHeight: isPortrait ? (isA4 ? '297mm' : '330mm') : (isA4 ? '210mm' : '215mm'),
-          paddingTop: `${docSettings.margin_top}mm`,
-          paddingBottom: `${docSettings.margin_bottom}mm`,
-          paddingLeft: `${docSettings.margin_left}mm`,
-          paddingRight: `${docSettings.margin_right}mm`,
+          paddingTop: `${effectiveMarginTop}mm`,
+          paddingBottom: `${effectiveMarginBottom}mm`,
+          paddingLeft: `${effectiveMarginLeft}mm`,
+          paddingRight: `${effectiveMarginRight}mm`,
           fontFamily: template.font_family && template.font_family !== 'inherit'
             ? `"${template.font_family}", Times New Roman, Times, serif`
             : undefined,
@@ -435,11 +435,11 @@ export function UniversalDocumentContainer({
                   style={
                     docSettings.header_image_full_bleed
                       ? {
-                          marginTop: `-${docSettings.margin_top}mm`,
-                          marginLeft: `-${docSettings.margin_left}mm`,
-                          marginRight: `-${docSettings.margin_right}mm`,
-                          width: `calc(100% + ${docSettings.margin_left + docSettings.margin_right}mm)`,
-                          maxWidth: `calc(100% + ${docSettings.margin_left + docSettings.margin_right}mm)`,
+                          marginTop: `-${effectiveMarginTop}mm`,
+                          marginLeft: `-${effectiveMarginLeft}mm`,
+                          marginRight: `-${effectiveMarginRight}mm`,
+                          width: `calc(100% + ${effectiveMarginLeft + effectiveMarginRight}mm)`,
+                          maxWidth: `calc(100% + ${effectiveMarginLeft + effectiveMarginRight}mm)`,
                         }
                       : undefined
                   }
@@ -894,11 +894,11 @@ export function UniversalDocumentContainer({
             style={
               docSettings.footer_mode === 'image' && docSettings.footer_image_full_bleed
                 ? {
-                    marginBottom: `-${docSettings.margin_bottom}mm`,
-                    marginLeft: `-${docSettings.margin_left}mm`,
-                    marginRight: `-${docSettings.margin_right}mm`,
-                    width: `calc(100% + ${docSettings.margin_left + docSettings.margin_right}mm)`,
-                    maxWidth: `calc(100% + ${docSettings.margin_left + docSettings.margin_right}mm)`,
+                    marginBottom: `-${effectiveMarginBottom}mm`,
+                    marginLeft: `-${effectiveMarginLeft}mm`,
+                    marginRight: `-${effectiveMarginRight}mm`,
+                    width: `calc(100% + ${effectiveMarginLeft + effectiveMarginRight}mm)`,
+                    maxWidth: `calc(100% + ${effectiveMarginLeft + effectiveMarginRight}mm)`,
                   }
                 : undefined
             }

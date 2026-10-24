@@ -114,6 +114,10 @@ export async function printHtml(
         border: none !important;
         box-shadow: none !important;
         margin: 0 !important;
+        padding-top: ${marginTop}mm !important;
+        padding-bottom: ${marginBottom}mm !important;
+        padding-left: ${marginLeft}mm !important;
+        padding-right: ${marginRight}mm !important;
         width: 100% !important;
         max-width: none !important;
         min-height: ${heightMm}mm !important;

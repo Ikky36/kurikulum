@@ -183,16 +183,21 @@ export function DocumentSettingsTab() {
 
   // Test Print simulation via isolated print iframe
   const handleTestPrint = async () => {
-    toast.loading('Menyiapkan lembar uji cetak kop...', { id: 'test-print-kop' });
+    toast.loading('Menyiapkan lembar uji cetak...', { id: 'test-print-kop' });
+    const isWithoutKop = previewKopMode === 'without_kop';
+    const topMargin = isWithoutKop ? (form.margin_top_without_kop ?? 20) : form.margin_top;
+    const bottomMargin = isWithoutKop ? (form.margin_bottom_without_kop ?? form.margin_bottom) : form.margin_bottom;
+    const leftMargin = isWithoutKop ? (form.margin_left_without_kop ?? form.margin_left) : form.margin_left;
+    const rightMargin = isWithoutKop ? (form.margin_right_without_kop ?? form.margin_right) : form.margin_right;
     try {
       await printElementById('admin-kop-printable-sheet', {
         paperSize: form.paper_size,
         orientation: form.orientation,
-        marginTop: form.margin_top,
-        marginBottom: form.margin_bottom,
-        marginLeft: form.margin_left,
-        marginRight: form.margin_right,
-        title: `Uji Cetak Kop & Lembar - ${form.institution_line_1 || 'STITMA'}`,
+        marginTop: topMargin,
+        marginBottom: bottomMargin,
+        marginLeft: leftMargin,
+        marginRight: rightMargin,
+        title: `Uji Cetak Lembar - ${form.institution_line_1 || 'STITMA'}`,
       });
       toast.success('Dialog cetak berhasil dibuka.', { id: 'test-print-kop' });
     } catch (e) {
@@ -1957,7 +1962,16 @@ export function DocumentSettingsTab() {
   <div className="fixed -left-[9999px] top-0 pointer-events-none opacity-0 overflow-hidden" aria-hidden="true">
     <UniversalDocumentContainer
       containerId="admin-kop-printable-sheet"
-      templateCode="kartu_bimbingan_ta"
+      templateCode={previewKopMode === 'without_kop' ? 'surat_pengesahan_proposal' : 'kartu_bimbingan_ta'}
+      templateOverride={{
+        show_kop: previewKopMode !== 'without_kop',
+        custom_margins: previewKopMode === 'without_kop' ? {
+          top: form.margin_top_without_kop ?? 20,
+          bottom: form.margin_bottom_without_kop ?? form.margin_bottom,
+          left: form.margin_left_without_kop ?? form.margin_left,
+          right: form.margin_right_without_kop ?? form.margin_right,
+        } : undefined,
+      }}
       variables={{}}
     />
   </div>
