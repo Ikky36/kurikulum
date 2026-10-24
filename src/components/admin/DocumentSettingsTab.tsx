@@ -50,6 +50,7 @@ export function DocumentSettingsTab() {
   const { settings, isLoading, updateSettings, isUpdating } = useDocumentSettings();
   const [form, setForm] = useState<DocumentLayoutSettings>(settings);
   const [activeMainTab, setActiveMainTab] = useState<'layout' | 'templates'>('layout');
+  const [previewKopMode, setPreviewKopMode] = useState<'with_kop' | 'without_kop'>('with_kop');
   const [uploadingField, setUploadingField] = useState<string | null>(null);
 
   // Hidden File Input Refs
@@ -349,51 +350,120 @@ export function DocumentSettingsTab() {
                   </div>
 
                   {/* Margins */}
-                  <div className="space-y-2 pt-2 border-t">
-                    <Label className="text-xs font-semibold">Margin Halaman (dalam milimeter / mm)</Label>
-                    <p className="text-[11px] text-muted-foreground">
-                      Menentukan batas jarak aman isi konten terhadap tepi kertas (1 cm = 10 mm).
-                    </p>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Atas (Top)</Label>
-                        <Input
-                          type="number"
-                          min={5}
-                          max={60}
-                          value={form.margin_top}
-                          onChange={(e) => updateField('margin_top', Number(e.target.value) || 0)}
-                        />
+                  <div className="space-y-4 pt-3 border-t">
+                    <div>
+                      <Label className="text-xs font-semibold flex items-center gap-1.5">
+                        <FileText className="h-3.5 w-3.5 text-primary" />
+                        Margin Dokumen Standar (Dengan Kop Surat)
+                      </Label>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Batas tepi kertas untuk dokumen yang menggunakan kop surat resmi (1 cm = 10 mm).
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-muted-foreground">Atas (Top)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={form.margin_top}
+                            onChange={(e) => updateField('margin_top', Number(e.target.value) || 0)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-muted-foreground">Bawah (Bottom)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={form.margin_bottom}
+                            onChange={(e) => updateField('margin_bottom', Number(e.target.value) || 0)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-muted-foreground">Kiri (Left - Jilid)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={form.margin_left}
+                            onChange={(e) => updateField('margin_left', Number(e.target.value) || 0)}
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-muted-foreground">Kanan (Right)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={form.margin_right}
+                            onChange={(e) => updateField('margin_right', Number(e.target.value) || 0)}
+                          />
+                        </div>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Bawah (Bottom)</Label>
-                        <Input
-                          type="number"
-                          min={5}
-                          max={60}
-                          value={form.margin_bottom}
-                          onChange={(e) => updateField('margin_bottom', Number(e.target.value) || 0)}
-                        />
+                    </div>
+
+                    {/* Margin Khusus Tanpa Kop Surat */}
+                    <div className="p-3.5 bg-amber-50/70 border border-amber-200/90 rounded-lg space-y-2.5">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-xs font-semibold text-amber-950 flex items-center gap-1.5">
+                            <Sliders className="h-3.5 w-3.5 text-amber-700" />
+                            Margin Dokumen Tanpa Kop Surat (Nota Dinas / Pengesahan)
+                          </Label>
+                          <span className="text-[10px] bg-amber-200/70 text-amber-900 px-1.5 py-0.5 rounded font-medium">
+                            Otomatis
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-amber-800/90 mt-0.5 leading-relaxed">
+                          Diterapkan otomatis ketika dokumen tidak menggunakan kop surat, sehingga judul dokumen (seperti Nota Dinas) tidak terlalu jauh turun ke bawah.
+                        </p>
                       </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Kiri (Left - Jilid)</Label>
-                        <Input
-                          type="number"
-                          min={5}
-                          max={60}
-                          value={form.margin_left}
-                          onChange={(e) => updateField('margin_left', Number(e.target.value) || 0)}
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-[11px] text-muted-foreground">Kanan (Right)</Label>
-                        <Input
-                          type="number"
-                          min={5}
-                          max={60}
-                          value={form.margin_right}
-                          onChange={(e) => updateField('margin_right', Number(e.target.value) || 0)}
-                        />
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-slate-700 font-medium">Atas (Top Tanpa Kop)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={form.margin_top_without_kop ?? 20}
+                            onChange={(e) => updateField('margin_top_without_kop', Number(e.target.value) || 0)}
+                            className="bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-slate-700 font-medium">Bawah (Bottom)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={form.margin_bottom_without_kop ?? form.margin_bottom}
+                            onChange={(e) => updateField('margin_bottom_without_kop', Number(e.target.value) || 0)}
+                            className="bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-slate-700 font-medium">Kiri (Left - Jilid)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={form.margin_left_without_kop ?? form.margin_left}
+                            onChange={(e) => updateField('margin_left_without_kop', Number(e.target.value) || 0)}
+                            className="bg-white"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-[11px] text-slate-700 font-medium">Kanan (Right)</Label>
+                          <Input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={form.margin_right_without_kop ?? form.margin_right}
+                            onChange={(e) => updateField('margin_right_without_kop', Number(e.target.value) || 0)}
+                            className="bg-white"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -443,7 +513,7 @@ export function DocumentSettingsTab() {
                   </div>
 
                   {/* MODE 1: LOGO & TEKS */}
-                  {form.header_mode === 'text' && (
+                  {previewKopMode !== 'without_kop' && form.header_mode === 'text' && (
                     <div className="space-y-3 pt-2">
                       {/* Logo Uploads */}
                       <div className="grid grid-cols-2 gap-3 p-3 bg-muted/40 rounded-lg border">
@@ -1626,23 +1696,49 @@ export function DocumentSettingsTab() {
                   Skala simulasi: {form.paper_size} ({form.orientation})
                 </CardDescription>
               </div>
-              <Badge variant="outline" className="text-xs">
-                {form.paper_size}
-              </Badge>
+              <div className="flex items-center gap-1.5">
+                <div className="inline-flex rounded-md border p-0.5 bg-slate-100 text-[10px]">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewKopMode('with_kop')}
+                    className={`px-2 py-0.5 rounded font-medium transition-all ${
+                      previewKopMode === 'with_kop'
+                        ? 'bg-white shadow-xs text-primary font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Dgn Kop
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewKopMode('without_kop')}
+                    className={`px-2 py-0.5 rounded font-medium transition-all ${
+                      previewKopMode === 'without_kop'
+                        ? 'bg-white shadow-xs text-amber-700 font-bold'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Tanpa Kop
+                  </button>
+                </div>
+                <Badge variant="outline" className="text-xs">
+                  {form.paper_size}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="p-3 bg-muted/40 flex justify-center">
               {/* LEMBAR KERTAS FISIK SIMULASI */}
               <div
                 className={`w-full max-w-[360px] bg-white text-slate-900 shadow-md rounded-sm border transition-all flex flex-col justify-between overflow-hidden ${ratioStyle}`}
                 style={{
-                  paddingTop: `${Math.max(form.margin_top / 3, 6)}px`,
-                  paddingBottom: `${Math.max(form.margin_bottom / 3, 6)}px`,
-                  paddingLeft: `${Math.max(form.margin_left / 3, 8)}px`,
-                  paddingRight: `${Math.max(form.margin_right / 3, 8)}px`,
+                  paddingTop: `${Math.max((previewKopMode === 'without_kop' ? (form.margin_top_without_kop ?? 20) : form.margin_top) / 3, 6)}px`,
+                  paddingBottom: `${Math.max((previewKopMode === 'without_kop' ? (form.margin_bottom_without_kop ?? form.margin_bottom) : form.margin_bottom) / 3, 6)}px`,
+                  paddingLeft: `${Math.max((previewKopMode === 'without_kop' ? (form.margin_left_without_kop ?? form.margin_left) : form.margin_left) / 3, 8)}px`,
+                  paddingRight: `${Math.max((previewKopMode === 'without_kop' ? (form.margin_right_without_kop ?? form.margin_right) : form.margin_right) / 3, 8)}px`,
                 }}
               >
                 {/* 1. KOP SURAT */}
-                {form.header_mode === 'image' && form.header_image_url && (
+                {previewKopMode !== 'without_kop' && form.header_mode === 'image' && form.header_image_url && (
                   <div
                     className="w-full mb-2 overflow-hidden"
                     style={
@@ -1838,7 +1934,7 @@ export function DocumentSettingsTab() {
             </CardContent>
             <CardFooter className="pt-3 border-t flex justify-between">
               <span className="text-xs text-muted-foreground flex items-center gap-1">
-                <Info className="h-3.5 w-3.5" /> Margin: T:{form.margin_top} B:{form.margin_bottom} L:{form.margin_left} R:{form.margin_right} mm
+                <Info className="h-3.5 w-3.5" /> Margin: T:{previewKopMode === 'without_kop' ? (form.margin_top_without_kop ?? 20) : form.margin_top} B:{previewKopMode === 'without_kop' ? (form.margin_bottom_without_kop ?? form.margin_bottom) : form.margin_bottom} L:{previewKopMode === 'without_kop' ? (form.margin_left_without_kop ?? form.margin_left) : form.margin_left} R:{previewKopMode === 'without_kop' ? (form.margin_right_without_kop ?? form.margin_right) : form.margin_right} mm {previewKopMode === 'without_kop' ? '(Tanpa Kop)' : '(Standar)'}
               </span>
               <Button variant="outline" size="sm" className="text-xs" onClick={handleTestPrint}>
                 <Printer className="h-3.5 w-3.5 mr-1.5" />

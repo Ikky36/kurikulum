@@ -7,11 +7,17 @@ export interface DocumentLayoutSettings {
   paper_size: 'A4' | 'F4';
   orientation: 'portrait' | 'landscape';
 
-  // Margin (dalam milimeter)
+  // Margin (dalam milimeter) - Standar / Dengan Kop Surat
   margin_top: number;
   margin_bottom: number;
   margin_left: number;
   margin_right: number;
+
+  // Margin Khusus Tanpa Kop Surat (dalam milimeter)
+  margin_top_without_kop?: number;
+  margin_bottom_without_kop?: number;
+  margin_left_without_kop?: number;
+  margin_right_without_kop?: number;
 
   // Kop Surat (Header)
   header_mode: 'text' | 'image' | 'none';
@@ -88,6 +94,11 @@ export const defaultDocumentSettings: DocumentLayoutSettings = {
   margin_bottom: 20,
   margin_left: 25,
   margin_right: 20,
+
+  margin_top_without_kop: 20,
+  margin_bottom_without_kop: 20,
+  margin_left_without_kop: 25,
+  margin_right_without_kop: 20,
 
   header_mode: 'text',
   header_image_url: '',
@@ -246,5 +257,64 @@ export function useDocumentSettings() {
     isLoading: query.isLoading,
     updateSettings: mutation.mutate,
     isUpdating: mutation.isPending,
+  };
+}
+
+/**
+ * Menghitung batas margin efektif sebuah dokumen secara presisi.
+ * Memprioritaskan:
+ * 1. Kustom margin template dokumen (jika diatur spesifik pada template)
+ * 2. Margin standar dengan kop surat (jika template menggunakan kop surat)
+ * 3. Margin tanpa kop surat (jika template tanpa kop surat / show_kop === false)
+ */
+export function getEffectiveDocumentMargins(
+  template?: {
+    show_kop?: boolean;
+    custom_margins?: {
+      top?: number;
+      bottom?: number;
+      left?: number;
+      right?: number;
+    };
+  } | null,
+  docSettings?: DocumentLayoutSettings | null
+) {
+  const settings = docSettings || defaultDocumentSettings;
+  const isUsingKop = Boolean(template?.show_kop !== false && settings.header_mode !== 'none');
+
+  const marginTop =
+    template?.custom_margins?.top !== undefined && template?.custom_margins?.top !== null
+      ? template.custom_margins.top
+      : isUsingKop
+      ? settings.margin_top
+      : (settings.margin_top_without_kop ?? 20);
+
+  const marginBottom =
+    template?.custom_margins?.bottom !== undefined && template?.custom_margins?.bottom !== null
+      ? template.custom_margins.bottom
+      : isUsingKop
+      ? settings.margin_bottom
+      : (settings.margin_bottom_without_kop ?? settings.margin_bottom);
+
+  const marginLeft =
+    template?.custom_margins?.left !== undefined && template?.custom_margins?.left !== null
+      ? template.custom_margins.left
+      : isUsingKop
+      ? settings.margin_left
+      : (settings.margin_left_without_kop ?? settings.margin_left);
+
+  const marginRight =
+    template?.custom_margins?.right !== undefined && template?.custom_margins?.right !== null
+      ? template.custom_margins.right
+      : isUsingKop
+      ? settings.margin_right
+      : (settings.margin_right_without_kop ?? settings.margin_right);
+
+  return {
+    isUsingKop,
+    marginTop,
+    marginBottom,
+    marginLeft,
+    marginRight,
   };
 }

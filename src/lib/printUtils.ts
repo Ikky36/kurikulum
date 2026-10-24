@@ -96,6 +96,9 @@ export async function printHtml(
       min-height: ${heightMm}mm !important;
       font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
+    h1, h2, h3, h4, h5, h6 {
+      font-family: inherit !important;
+    }
     .no-print {
       display: none !important;
     }

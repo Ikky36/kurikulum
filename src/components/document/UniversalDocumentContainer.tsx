@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { useDocumentSettings } from '@/lib/documentSettings';
+import { useDocumentSettings, getEffectiveDocumentMargins } from '@/lib/documentSettings';
 import {
   useDocumentTemplatesConfig,
   SingleDocumentTemplate,
@@ -153,6 +153,15 @@ export function UniversalDocumentContainer({
 
   const finalTitle = documentTitle || template.document_title;
   const finalSubtitle = documentSubtitle || template.document_subtitle;
+
+  // Resolusi margin efektif dokumen (mengakomodasi tanpa kop surat vs dengan kop surat vs kustom template)
+  const {
+    isUsingKop,
+    marginTop: effectiveMarginTop,
+    marginBottom: effectiveMarginBottom,
+    marginLeft: effectiveMarginLeft,
+    marginRight: effectiveMarginRight,
+  } = getEffectiveDocumentMargins(template, docSettings);
 
   const isA4 = docSettings.paper_size === 'A4';
   // Orientasi ditentukan oleh konfigurasi template dokumen yang diatur Admin (fallback ke global docSettings)
@@ -376,7 +385,7 @@ export function UniversalDocumentContainer({
             Format: {docSettings.paper_size} ({effectiveOrientation === 'portrait' ? 'Portrait' : 'Landscape'})
           </Badge>
           <span className="text-xs text-muted-foreground hidden sm:inline">
-            Margin: T:{docSettings.margin_top} B:{docSettings.margin_bottom} L:{docSettings.margin_left} R:{docSettings.margin_right} mm
+            Margin: T:{effectiveMarginTop} B:{effectiveMarginBottom} L:{effectiveMarginLeft} R:{effectiveMarginRight} mm {!isUsingKop ? '(Tanpa Kop)' : ''}
           </span>
         </div>
 

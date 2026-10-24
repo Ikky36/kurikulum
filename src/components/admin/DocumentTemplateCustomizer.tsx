@@ -15,7 +15,7 @@ import {
   getDummyContextForModule,
   getDummyValueForColumn,
 } from '@/lib/documentDataSources';
-import { useDocumentSettings } from '@/lib/documentSettings';
+import { useDocumentSettings, getEffectiveDocumentMargins } from '@/lib/documentSettings';
 import { UniversalDocumentContainer } from '@/components/document/UniversalDocumentContainer';
 import { printElementById } from '@/lib/printUtils';
 import DOMPurify from 'dompurify';
@@ -43,6 +43,7 @@ import {
 import { toast } from 'sonner';
 import {
   FileText,
+  Sliders,
   Save,
   RotateCcw,
   CheckCircle2,
@@ -514,13 +515,13 @@ export function DocumentTemplateCustomizer() {
     toast.loading('Menyiapkan lembar cetak dokumen...', { id: 'test-print-toast' });
     try {
       await printElementById('admin-test-printable-document', {
-        paperSize: docSettings.paper_size,
+        paperSize: docSettings?.paper_size || 'A4',
         orientation: currentTemplate.orientation || 'portrait',
-        marginTop: docSettings.margin_top,
-        marginBottom: docSettings.margin_bottom,
-        marginLeft: docSettings.margin_left,
-        marginRight: docSettings.margin_right,
-        title: `${currentTemplate.document_title || 'Uji Cetak Dokumen'} - ${docSettings.institution_line_1 || 'STITMA'}`,
+        marginTop: effectiveMarginTop,
+        marginBottom: effectiveMarginBottom,
+        marginLeft: effectiveMarginLeft,
+        marginRight: effectiveMarginRight,
+        title: `${currentTemplate.document_title || 'Uji Cetak Dokumen'} - ${docSettings?.institution_line_1 || 'STITMA'}`,
       });
       toast.success('Dialog cetak berhasil dibuka.', { id: 'test-print-toast' });
     } catch (err) {
@@ -894,6 +895,110 @@ export function DocumentTemplateCustomizer() {
                   </div>
                 </div>
               </div>
+
+              {/* Kustomisasi Margin Dokumen Ini */}
+              <div className="space-y-2 pt-2 border-t">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-xs font-semibold flex items-center gap-1.5">
+                      <Sliders className="h-3.5 w-3.5 text-primary" />
+                      Margin Dokumen Ini (mm)
+                    </Label>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {currentTemplate.custom_margins?.top !== undefined
+                        ? 'Kustom khusus dokumen ini aktif'
+                        : !currentTemplate.show_kop
+                        ? `Otomatis memakai standar tanpa kop (Atas: ${docSettings?.margin_top_without_kop ?? 20} mm)`
+                        : `Otomatis memakai standar dengan kop (Atas: ${docSettings?.margin_top ?? 20} mm)`}
+                    </p>
+                  </div>
+                  {currentTemplate.custom_margins && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[10px] text-destructive hover:bg-destructive/10 px-2"
+                      onClick={() => updateTemplateField('custom_margins', undefined)}
+                    >
+                      Reset ke Global
+                    </Button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Atas (Top)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      placeholder={String(effectiveMarginTop)}
+                      value={currentTemplate.custom_margins?.top ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? undefined : Number(e.target.value);
+                        updateTemplateField('custom_margins', {
+                          ...(currentTemplate.custom_margins || {}),
+                          top: val,
+                        });
+                      }}
+                      className="h-7 text-xs bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Bawah (Bottom)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      placeholder={String(effectiveMarginBottom)}
+                      value={currentTemplate.custom_margins?.bottom ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? undefined : Number(e.target.value);
+                        updateTemplateField('custom_margins', {
+                          ...(currentTemplate.custom_margins || {}),
+                          bottom: val,
+                        });
+                      }}
+                      className="h-7 text-xs bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Kiri (Left)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      placeholder={String(effectiveMarginLeft)}
+                      value={currentTemplate.custom_margins?.left ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? undefined : Number(e.target.value);
+                        updateTemplateField('custom_margins', {
+                          ...(currentTemplate.custom_margins || {}),
+                          left: val,
+                        });
+                      }}
+                      className="h-7 text-xs bg-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] text-muted-foreground">Kanan (Right)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={100}
+                      placeholder={String(effectiveMarginRight)}
+                      value={currentTemplate.custom_margins?.right ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? undefined : Number(e.target.value);
+                        updateTemplateField('custom_margins', {
+                          ...(currentTemplate.custom_margins || {}),
+                          right: val,
+                        });
+                      }}
+                      className="h-7 text-xs bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
             </CardContent>
           </Card>
 
@@ -971,8 +1076,29 @@ export function DocumentTemplateCustomizer() {
                   </SelectContent>
                 </Select>
                 <p className="text-[10px] text-muted-foreground">
-                  Jenis huruf ini akan diterapkan ke seluruh lembar dokumen resmi (judul, narasi, tabel, hingga tanda tangan).
+                  Jenis huruf ini akan diterapkan ke seluruh lembar dokumen resmi (judul utama, subjudul, narasi, tabel, hingga tanda tangan).
                 </p>
+
+                {/* Pratinjau Tipografi Judul & Subjudul */}
+                <div className="p-3 bg-slate-50 border rounded-lg text-center space-y-1 mt-2">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider block font-sans">
+                    Pratinjau Tipografi Judul & Subjudul Dokumen:
+                  </span>
+                  <div
+                    className="text-sm font-bold tracking-wide uppercase text-slate-900"
+                    style={{ fontFamily: currentTemplate.font_family || 'Times New Roman' }}
+                  >
+                    {currentTemplate.document_title || 'JUDUL UTAMA DOKUMEN'}
+                  </div>
+                  {currentTemplate.document_subtitle && (
+                    <div
+                      className="text-xs font-semibold tracking-normal text-slate-700 uppercase"
+                      style={{ fontFamily: currentTemplate.font_family || 'Times New Roman' }}
+                    >
+                      {currentTemplate.document_subtitle}
+                    </div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1786,10 +1912,10 @@ export function DocumentTemplateCustomizer() {
                   isPortrait ? 'max-w-[340px] aspect-[1/1.414]' : 'max-w-[480px] aspect-[1.414/1]'
                 }`}
                 style={{
-                  paddingTop: `${Math.max(docSettings.margin_top / 3, 6)}px`,
-                  paddingBottom: `${Math.max(docSettings.margin_bottom / 3, 6)}px`,
-                  paddingLeft: `${Math.max(docSettings.margin_left / 3, 8)}px`,
-                  paddingRight: `${Math.max(docSettings.margin_right / 3, 8)}px`,
+                  paddingTop: `${Math.max(effectiveMarginTop / 3, 6)}px`,
+                  paddingBottom: `${Math.max(effectiveMarginBottom / 3, 6)}px`,
+                  paddingLeft: `${Math.max(effectiveMarginLeft / 3, 8)}px`,
+                  paddingRight: `${Math.max(effectiveMarginRight / 3, 8)}px`,
                   fontFamily: currentTemplate.font_family && currentTemplate.font_family !== 'inherit'
                     ? `"${currentTemplate.font_family}", Times New Roman, Times, serif`
                     : undefined,
@@ -1804,10 +1930,10 @@ export function DocumentTemplateCustomizer() {
                         style={
                           docSettings.header_image_full_bleed
                             ? {
-                                marginTop: `-${Math.max(docSettings.margin_top / 3, 6)}px`,
-                                marginLeft: `-${Math.max(docSettings.margin_left / 3, 8)}px`,
-                                marginRight: `-${Math.max(docSettings.margin_right / 3, 8)}px`,
-                                width: `calc(100% + ${Math.max(docSettings.margin_left / 3, 8) + Math.max(docSettings.margin_right / 3, 8)}px)`,
+                                marginTop: `-${Math.max(effectiveMarginTop / 3, 6)}px`,
+                                marginLeft: `-${Math.max(effectiveMarginLeft / 3, 8)}px`,
+                                marginRight: `-${Math.max(effectiveMarginRight / 3, 8)}px`,
+                                width: `calc(100% + ${Math.max(effectiveMarginLeft / 3, 8) + Math.max(effectiveMarginRight / 3, 8)}px)`,
                               }
                             : undefined
                         }
@@ -1843,9 +1969,20 @@ export function DocumentTemplateCustomizer() {
                 <div className={`py-1 text-[7px] space-y-1.5 ${currentTemplate.signature_spacing === 'bottom' ? 'flex-1 flex flex-col justify-between' : 'w-full flex flex-col'}`}>
                   <div>
                     {/* Judul Dokumen */}
-                    <div className="text-center font-bold text-[8.5px] uppercase tracking-wide border-b pb-0.5 mb-1.5">
+                    <div
+                      className="text-center font-bold text-[8.5px] uppercase tracking-wide border-b pb-0.5 mb-1"
+                      style={{ fontFamily: 'inherit' }}
+                    >
                       {currentTemplate.document_title}
                     </div>
+                    {currentTemplate.document_subtitle && (
+                      <div
+                        className="text-center font-semibold text-[7px] uppercase tracking-normal text-slate-700 mb-1"
+                        style={{ fontFamily: 'inherit' }}
+                      >
+                        {currentTemplate.document_subtitle}
+                      </div>
+                    )}
 
                     {/* Biodata Mahasiswa Mini (Dinamis dari Pilihan Database) */}
                     {currentTemplate.show_student_info && (

@@ -326,6 +326,34 @@
   margin-bottom: 0.25rem;
 }
 
+/* Pastikan seluruh heading dokumen (judul utama, subjudul, bab) mewarisi font dokumen yang dipilih (Times New Roman, Arial, dll.) */
+#printable-document h1,
+#printable-document h2,
+#printable-document h3,
+#printable-document h4,
+#printable-document h5,
+#printable-document h6,
+#admin-test-printable-document h1,
+#admin-test-printable-document h2,
+#admin-test-printable-document h3,
+#admin-test-printable-document h4,
+#admin-test-printable-document h5,
+#admin-test-printable-document h6,
+#admin-kop-printable-sheet h1,
+#admin-kop-printable-sheet h2,
+#admin-kop-printable-sheet h3,
+.document-rich-content h1,
+.document-rich-content h2,
+.document-rich-content h3,
+.document-rich-content h4,
+.document-rich-content h5,
+.document-rich-content h6,
+.printable-sheet h1,
+.printable-sheet h2,
+.printable-sheet h3 {
+  font-family: inherit !important;
+}
+
 .document-rich-content h1 {
   font-size: 1.25rem;
   font-weight: 700;

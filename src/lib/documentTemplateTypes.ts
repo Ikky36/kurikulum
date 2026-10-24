@@ -72,6 +72,13 @@ export interface SingleDocumentTemplate {
   single_signature_align?: 'left' | 'center' | 'right';
   // Jenis Huruf Dokumen (misal: 'Times New Roman' | 'Arial' | 'Calibri' | 'inherit')
   font_family?: string;
+  // Kustomisasi Margin Khusus Dokumen Ini (opsional override)
+  custom_margins?: {
+    top?: number;
+    bottom?: number;
+    left?: number;
+    right?: number;
+  };
 
   // Tembusan (Carbon Copy / CC)
   copies_enabled?: boolean;
@@ -374,6 +381,7 @@ export function useDocumentTemplatesConfig() {
                 signatures: parsed[key].signatures || merged[key].signatures,
                 single_signature_align: parsed[key].single_signature_align || merged[key].single_signature_align,
                 font_family: parsed[key].font_family || merged[key].font_family,
+                custom_margins: parsed[key].custom_margins || merged[key].custom_margins,
               };
             } else {
               merged[key] = parsed[key];
