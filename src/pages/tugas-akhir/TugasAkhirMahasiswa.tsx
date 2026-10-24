@@ -895,47 +895,35 @@ export default function TugasAkhirMahasiswa() {
                         </div>
 
                         {/* 3 Tombol Pengesahan Dokumen Tugas Akhir */}
-                        <div className="pt-4 border-t flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2 sm:gap-2.5">
+                        <div className="pt-4 border-t flex flex-wrap items-center justify-end gap-2 sm:gap-2.5">
                           {/* 1. Pengesahan Proposal TA (Nota Dinas) */}
                           {isProposalApproved ? (
                             <Button
                               variant="default"
                               size="sm"
-                              className="w-full sm:w-auto justify-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-9"
+                              className="w-full sm:w-auto justify-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-9 px-3.5"
                               onClick={() => {
                                 setPrintTemplateCode('surat_pengesahan_proposal');
                                 setIsPrintModalOpen(true);
                               }}
                               title="Cetak Surat Pengesahan Proposal TA yang telah disahkan resmi oleh Dosen Pembimbing"
                             >
-                              <ShieldCheck className="w-3.5 h-3.5" /> Cetak Proposal TA (Telah Disahkan ✓)
+                              <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> Cetak Proposal TA (Telah Disahkan ✓)
                             </Button>
                           ) : isProposalRequested ? (
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 w-full sm:w-auto">
+                            <div className="flex items-center gap-1.5 w-full sm:w-auto">
                               <Button
                                 variant="secondary"
                                 size="sm"
                                 disabled
-                                className="w-full sm:w-auto justify-center gap-1.5 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800 h-9"
+                                className="w-full sm:w-auto justify-center gap-1.5 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800 h-9 px-3.5"
                               >
-                                <Clock className="w-3.5 h-3.5 text-amber-600" /> Proposal TA Diajukan (Menunggu Dosen)
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
-                                title="Lihat Pratinjau Draf Surat Pengesahan Proposal"
-                                onClick={() => {
-                                  setPrintTemplateCode('surat_pengesahan_proposal');
-                                  setIsPrintModalOpen(true);
-                                }}
-                              >
-                                <Eye className="w-3.5 h-3.5 mr-1" /> Draf
+                                <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" /> Pengesahan Proposal TA Diajukan
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="w-full sm:w-auto justify-center h-9 sm:h-8 px-2 text-xs text-muted-foreground hover:text-destructive gap-1"
+                                className="w-full sm:w-auto justify-center h-9 px-2.5 text-xs text-muted-foreground hover:text-destructive gap-1"
                                 disabled={cancelRequestApproval.isPending}
                                 title="Tarik kembali permohonan pengesahan proposal TA"
                                 onClick={() => {
@@ -951,37 +939,23 @@ export default function TugasAkhirMahasiswa() {
                               </Button>
                             </div>
                           ) : (
-                            <div className="flex items-center gap-1 w-full sm:w-auto">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full sm:w-auto justify-center gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5 h-9"
-                                disabled={requestApproval.isPending}
-                                onClick={() => {
-                                  if (window.confirm('Ajukan permohonan pengesahan Proposal TA (Nota Dinas) kepada Dosen Pembimbing? Setelah diajukan, Dosen Pembimbing dapat memeriksa dan memberikan pengesahan resmi.')) {
-                                    requestApproval.mutate({
-                                      submissionId: mySubmission.id,
-                                      docCode: 'surat_pengesahan_proposal',
-                                    });
-                                  }
-                                }}
-                                title="Ajukan permohonan pengesahan Proposal TA kepada Dosen Pembimbing"
-                              >
-                                <Send className="w-3.5 h-3.5" /> Ajukan Pengesahan Proposal TA
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-9 px-2 text-xs text-muted-foreground hover:text-foreground"
-                                title="Lihat Pratinjau Draf Surat Pengesahan Proposal"
-                                onClick={() => {
-                                  setPrintTemplateCode('surat_pengesahan_proposal');
-                                  setIsPrintModalOpen(true);
-                                }}
-                              >
-                                <Eye className="w-3.5 h-3.5 mr-1" /> Draf
-                              </Button>
-                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full sm:w-auto justify-center gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5 h-9 px-3.5"
+                              disabled={requestApproval.isPending}
+                              onClick={() => {
+                                if (window.confirm('Ajukan permohonan pengesahan Proposal TA (Nota Dinas) kepada Dosen Pembimbing? Setelah diajukan, Dosen Pembimbing dapat memeriksa dan memberikan pengesahan resmi.')) {
+                                  requestApproval.mutate({
+                                    submissionId: mySubmission.id,
+                                    docCode: 'surat_pengesahan_proposal',
+                                  });
+                                }
+                              }}
+                              title="Ajukan permohonan pengesahan Proposal TA kepada Dosen Pembimbing"
+                            >
+                              <Send className="w-3.5 h-3.5 shrink-0" /> Ajukan Pengesahan Proposal TA
+                            </Button>
                           )}
 
                           {/* 2. Ajukan Pengesahan Laporan TA (Belum aktif karena dokumennya belum dikostum) */}
@@ -989,10 +963,10 @@ export default function TugasAkhirMahasiswa() {
                             variant="outline" 
                             size="sm" 
                             disabled 
-                            className="w-full sm:w-auto justify-center gap-1.5 text-xs text-muted-foreground h-9"
+                            className="w-full sm:w-auto justify-center gap-1.5 text-xs text-muted-foreground h-9 px-3.5"
                             title="Belum aktif karena dokumennya belum dikostum"
                           >
-                            <Send className="w-3.5 h-3.5" /> Ajukan Pengesahan Laporan TA
+                            <Send className="w-3.5 h-3.5 shrink-0" /> Ajukan Pengesahan Laporan TA
                           </Button>
 
                           {/* 3. Ajukan Pengesahan Kartu Bimbingan TA */}
@@ -1000,7 +974,7 @@ export default function TugasAkhirMahasiswa() {
                             <Button
                               variant="default"
                               size="sm"
-                              className="w-full sm:w-auto justify-center bg-amber-600 hover:bg-amber-700 text-white gap-1.5 shadow-sm text-xs h-9"
+                              className="w-full sm:w-auto justify-center bg-amber-600 hover:bg-amber-700 text-white gap-1.5 shadow-sm text-xs h-9 px-3.5"
                               disabled={requestApproval.isPending}
                               onClick={() => {
                                 if (approvedLogsCount === 0) {
@@ -1012,23 +986,23 @@ export default function TugasAkhirMahasiswa() {
                                 }
                               }}
                             >
-                              <Send className="w-3.5 h-3.5" /> Ajukan Pengesahan Kartu Bimbingan TA
+                              <Send className="w-3.5 h-3.5 shrink-0" /> Ajukan Pengesahan Kartu Bimbingan TA
                             </Button>
                           ) : (
-                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-1.5 w-full sm:w-auto">
+                            <div className="flex items-center gap-1.5 w-full sm:w-auto">
                               <Button
                                 variant="secondary"
                                 size="sm"
                                 disabled
-                                className="w-full sm:w-auto justify-center gap-1.5 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800 h-9"
+                                className="w-full sm:w-auto justify-center gap-1.5 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800 h-9 px-3.5"
                               >
-                                <Clock className="w-3.5 h-3.5 text-amber-600" /> Pengajuan Kartu Bimbingan TA Terkirim
+                                <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" /> Pengajuan Kartu Bimbingan TA Terkirim
                               </Button>
                               {!hasAnyApprovalSigned && (
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  className="w-full sm:w-auto justify-center h-9 sm:h-8 px-2 text-xs text-muted-foreground hover:text-destructive gap-1"
+                                  className="w-full sm:w-auto justify-center h-9 px-2.5 text-xs text-muted-foreground hover:text-destructive gap-1"
                                   disabled={cancelRequestApproval.isPending}
                                   title="Tarik kembali permohonan pengesahan"
                                   onClick={() => {
