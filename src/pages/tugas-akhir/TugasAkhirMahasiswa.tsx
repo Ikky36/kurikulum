@@ -908,7 +908,7 @@ export default function TugasAkhirMahasiswa() {
                               }}
                               title="Cetak Surat Pengesahan Proposal TA yang telah disahkan resmi oleh Dosen Pembimbing"
                             >
-                              <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> Cetak Proposal TA (Telah Disahkan ✓)
+                              <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> Cetak Pengesahan Proposal TA
                             </Button>
                           ) : isProposalRequested ? (
                             <div className="flex items-center gap-1.5 w-full sm:w-auto">
