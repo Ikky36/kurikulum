@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save, Undo2, Eye, Edit2, Trash2, ArrowLeft, Printer, ShieldCheck, Send, FileCheck, BookOpen, GraduationCap } from 'lucide-react';
+import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save, Undo2, Eye, Edit2, Trash2, ArrowLeft, Printer, ShieldCheck, Send, FileCheck, BookOpen, GraduationCap, ExternalLink } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -52,6 +52,10 @@ export default function TugasAkhirMahasiswa() {
   // Edit Response Log State (Mahasiswa)
   const [editingLog, setEditingLog] = useState<any>(null);
   const [editSolution, setEditSolution] = useState('');
+
+  // Edit Document Link State (Mahasiswa)
+  const [isEditDocLinkOpen, setIsEditDocLinkOpen] = useState(false);
+  const [newDocLink, setNewDocLink] = useState('');
 
   // Revision & Rejection State
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -338,6 +342,36 @@ export default function TugasAkhirMahasiswa() {
       toast.error('Gagal menghapus: ' + error.message);
       setDeleteId(null);
     }
+  });
+
+  const updateDocLinkMutation = useMutation({
+    mutationFn: async (updatedLink: string) => {
+      if (!mySubmission?.id) throw new Error('Tidak ada data tugas akhir aktif');
+      const { data, error } = await supabase
+        .from('ta_submissions')
+        .update({
+          document_link: updatedLink,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', mySubmission.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my_ta_submissions', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['my_ta_submission', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['ta_submission'] });
+      queryClient.invalidateQueries({ queryKey: ['ta_submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['dosen_ta_students'] });
+      toast.success('Link dokumen proposal berhasil diperbarui');
+      setIsEditDocLinkOpen(false);
+    },
+    onError: (err: any) => {
+      toast.error('Gagal memperbarui link dokumen: ' + err.message);
+    },
   });
 
   const reviseMutation = useMutation({
@@ -629,13 +663,48 @@ export default function TugasAkhirMahasiswa() {
                       </div>
                       
                       <div>
-                        <h3 className="font-semibold mb-2 text-sm text-muted-foreground">Dokumen Pengajuan</h3>
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="font-semibold text-sm text-muted-foreground">Dokumen Pengajuan</h3>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 px-2 text-xs text-primary hover:bg-primary/10 gap-1 font-medium"
+                            onClick={() => {
+                              setNewDocLink(mySubmission.document_link || '');
+                              setIsEditDocLinkOpen(true);
+                            }}
+                            title="Ubah link dokumen proposal tugas akhir"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" /> Ubah Link
+                          </Button>
+                        </div>
                         {mySubmission.document_link ? (
-                          <a href={mySubmission.document_link.startsWith('http') ? mySubmission.document_link : `https://${mySubmission.document_link}`} target="_blank" rel="noreferrer" className="text-primary hover:underline flex items-center">
-                            <FileText className="w-4 h-4 mr-2" /> Buka Dokumen Proposal
-                          </a>
+                          <div className="flex items-center gap-2">
+                            <a 
+                              href={mySubmission.document_link.startsWith('http') ? mySubmission.document_link : `https://${mySubmission.document_link}`} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="text-primary hover:underline inline-flex items-center text-sm font-medium"
+                            >
+                              <FileText className="w-4 h-4 mr-1.5 shrink-0" /> Buka Dokumen Proposal
+                              <ExternalLink className="w-3.5 h-3.5 ml-1 opacity-70" />
+                            </a>
+                          </div>
                         ) : (
-                          <p className="text-sm italic text-muted-foreground">Tidak ada dokumen dilampirkan.</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm italic text-muted-foreground">Belum ada dokumen dilampirkan.</p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-7 text-xs px-2 gap-1 text-primary"
+                              onClick={() => {
+                                setNewDocLink('');
+                                setIsEditDocLinkOpen(true);
+                              }}
+                            >
+                              <Plus className="w-3 h-3" /> Tambah Link
+                            </Button>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -1414,6 +1483,63 @@ export default function TugasAkhirMahasiswa() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Modal Ubah Link Dokumen Proposal */}
+        <Dialog open={isEditDocLinkOpen} onOpenChange={setIsEditDocLinkOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <FileText className="w-5 h-5 text-primary" /> Ubah Link Dokumen Proposal
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Masukkan tautan dokumen proposal tugas akhir Anda (Google Drive, OneDrive, atau cloud storage lainnya). Pastikan hak akses tautan dapat dibuka oleh Dosen Pembimbing.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div>
+                <Label htmlFor="doc-link-url" className="text-xs font-medium">Link Dokumen Proposal</Label>
+                <Input
+                  id="doc-link-url"
+                  placeholder="https://drive.google.com/..."
+                  value={newDocLink}
+                  onChange={(e) => setNewDocLink(e.target.value)}
+                  className="mt-1 text-sm"
+                  autoFocus
+                />
+              </div>
+              {mySubmission?.document_link && (
+                <div className="text-xs text-muted-foreground bg-muted/50 p-2.5 rounded border">
+                  <span className="font-semibold block text-[11px] text-foreground mb-0.5">Tautan Saat Ini:</span>
+                  <a
+                    href={mySubmission.document_link.startsWith('http') ? mySubmission.document_link : `https://${mySubmission.document_link}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline truncate block"
+                  >
+                    {mySubmission.document_link}
+                  </a>
+                </div>
+              )}
+            </div>
+            <DialogFooter className="gap-2 sm:gap-0">
+              <Button variant="outline" size="sm" onClick={() => setIsEditDocLinkOpen(false)}>
+                Batal
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => updateDocLinkMutation.mutate(newDocLink.trim())}
+                disabled={updateDocLinkMutation.isPending || !newDocLink.trim()}
+                className="gap-1.5"
+              >
+                {updateDocLinkMutation.isPending ? 'Menyimpan...' : (
+                  <>
+                    <Save className="w-3.5 h-3.5" /> Simpan Perubahan
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Modal Cetak Dokumen Tugas Akhir */}
         {mySubmission && (
