@@ -41,6 +41,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 import { DocumentTemplateCustomizer } from './DocumentTemplateCustomizer';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { UniversalDocumentContainer } from '@/components/document/UniversalDocumentContainer';
 import { printElementById } from '@/lib/printUtils';
 
@@ -1850,7 +1851,9 @@ export function DocumentSettingsTab() {
     </TabsContent>
 
     <TabsContent value="templates" className="mt-4">
-      <DocumentTemplateCustomizer />
+      <ErrorBoundary>
+        <DocumentTemplateCustomizer />
+      </ErrorBoundary>
     </TabsContent>
   </Tabs>
 

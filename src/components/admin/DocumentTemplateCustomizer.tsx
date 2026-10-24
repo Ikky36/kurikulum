@@ -62,6 +62,8 @@ import {
   CheckSquare,
   Type,
   AlignLeft,
+  AlignCenter,
+  AlignRight,
   LayoutTemplate,
   PlusCircle,
   Tag,
@@ -71,9 +73,14 @@ export function DocumentTemplateCustomizer() {
   const { templatesMap, updateSingleTemplate, createNewTemplate, deleteTemplate, isUpdating } = useDocumentTemplatesConfig();
   const { settings: docSettings } = useDocumentSettings();
 
-  const [selectedDocCode, setSelectedDocCode] = useState<string>('kartu_bimbingan_ta');
+  const availableCodes = Object.keys(templatesMap);
+  const initialCode = templatesMap['kartu_bimbingan_ta']
+    ? 'kartu_bimbingan_ta'
+    : availableCodes[0] || 'surat_pengesahan_proposal';
+
+  const [selectedDocCode, setSelectedDocCode] = useState<string>(initialCode);
   const [currentTemplate, setCurrentTemplate] = useState<SingleDocumentTemplate>(
-    templatesMap[selectedDocCode] || defaultDocumentTemplates.kartu_bimbingan_ta
+    templatesMap[initialCode] || defaultDocumentTemplates[initialCode] || defaultDocumentTemplates.kartu_bimbingan_ta
   );
 
   // New Document Dialog State
@@ -107,10 +114,13 @@ export function DocumentTemplateCustomizer() {
     if (templatesMap[selectedDocCode]) {
       setCurrentTemplate(templatesMap[selectedDocCode]);
     } else {
-      const firstCode = Object.keys(templatesMap)[0] || 'kartu_bimbingan_ta';
-      setSelectedDocCode(firstCode);
-      if (templatesMap[firstCode]) {
-        setCurrentTemplate(templatesMap[firstCode]);
+      const available = Object.keys(templatesMap);
+      if (available.length > 0) {
+        const nextCode = available[0];
+        setSelectedDocCode(nextCode);
+        if (templatesMap[nextCode]) {
+          setCurrentTemplate(templatesMap[nextCode]);
+        }
       }
     }
   }, [selectedDocCode, templatesMap]);
@@ -190,21 +200,29 @@ export function DocumentTemplateCustomizer() {
     toast.info(`Biodata "${removedItem?.label || 'Item'}" dihapus.`);
   };
 
+  if (!currentTemplate) {
+    return (
+      <div className="p-8 text-center text-muted-foreground text-xs">
+        Memuat data template dokumen...
+      </div>
+    );
+  }
+
   // Active module definition
-  const activeModule = getDataSourceModuleById(currentTemplate.data_source_module || 'tugas_akhir');
+  const activeModule = getDataSourceModuleById(currentTemplate?.data_source_module || 'tugas_akhir');
   const allModules = getAllDataSourceModules();
 
   // Daftar variabel database gabungan (modul aktif + variabel global institusi)
   const combinedVariables: DatabaseVariable[] = [
     ...activeModule.textVariables,
-    { key: 'kota_institusi', label: 'Kota Institusi', category: 'institusi', exampleValue: docSettings.default_city || 'Yogyakarta' },
+    { key: 'kota_institusi', label: 'Kota Institusi', category: 'institusi', exampleValue: docSettings?.default_city || 'Yogyakarta' },
     { key: 'tanggal_cetak', label: 'Tanggal Cetak Hari Ini', category: 'institusi', exampleValue: '24 Oktober 2026' },
-    { key: 'nama_kampus', label: 'Nama Universitas / Institut', category: 'institusi', exampleValue: docSettings.institution_line_2 || 'STITMA' },
-    { key: 'fakultas', label: 'Nama Fakultas', category: 'institusi', exampleValue: docSettings.faculty_name || 'Fakultas Tarbiyah' },
-    { key: 'nama_kaprodi', label: 'Nama Kaprodi', category: 'institusi', exampleValue: docSettings.kaprodi_name || 'Dr. M. Ridwan, M.Pd.I' },
-    { key: 'nidn_kaprodi', label: 'NIDN Kaprodi', category: 'institusi', exampleValue: docSettings.kaprodi_nidn || '0711037502' },
-    { key: 'nama_dekan', label: 'Nama Dekan', category: 'institusi', exampleValue: docSettings.dekan_name || 'Dr. H. Ahmad Hidayat, M.A.' },
-    { key: 'nidn_dekan', label: 'NIDN Dekan', category: 'institusi', exampleValue: docSettings.dekan_nidn || '0712057801' },
+    { key: 'nama_kampus', label: 'Nama Universitas / Institut', category: 'institusi', exampleValue: docSettings?.institution_line_2 || 'STITMA' },
+    { key: 'fakultas', label: 'Nama Fakultas', category: 'institusi', exampleValue: docSettings?.faculty_name || 'Fakultas Tarbiyah' },
+    { key: 'nama_kaprodi', label: 'Nama Kaprodi', category: 'institusi', exampleValue: docSettings?.kaprodi_name || 'Dr. M. Ridwan, M.Pd.I' },
+    { key: 'nidn_kaprodi', label: 'NIDN Kaprodi', category: 'institusi', exampleValue: docSettings?.kaprodi_nidn || '0711037502' },
+    { key: 'nama_dekan', label: 'Nama Dekan', category: 'institusi', exampleValue: docSettings?.dekan_name || 'Dr. H. Ahmad Hidayat, M.A.' },
+    { key: 'nidn_dekan', label: 'NIDN Dekan', category: 'institusi', exampleValue: docSettings?.dekan_nidn || '0712057801' },
   ];
 
   // Variable Inserter Handler: Inserts {{variable}} at cursor position in Textarea
@@ -1160,7 +1178,7 @@ export function DocumentTemplateCustomizer() {
 
                       {/* DAFTAR BARIS KOLOM (DILENGKAPI TOMBOL DELETE PADA SETIAP BARIS) */}
                       <div className="space-y-2 border rounded-lg p-2.5 bg-slate-50">
-                        {currentTemplate.columns.map((col, idx) => {
+                        {(currentTemplate.columns || []).map((col, idx) => {
                           const baseId = col.id.split('_')[0];
                           const matchedField = availableDbCols.find((c) => c.id === baseId);
                           const isCustom = col.is_custom || baseId === 'custom' || baseId === 'col';
@@ -1456,7 +1474,7 @@ export function DocumentTemplateCustomizer() {
 
               {/* DAFTAR PENANDATANGAN */}
               <div className="space-y-3">
-                {currentTemplate.signatures.map((sig, idx) => (
+                {(currentTemplate.signatures || []).map((sig, idx) => (
                   <div key={sig.id} className="p-3 border rounded-lg bg-slate-50 space-y-2.5 text-xs">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -1870,7 +1888,7 @@ export function DocumentTemplateCustomizer() {
                       <table className="w-full border-collapse border border-slate-300 text-[6px]">
                         <thead>
                           <tr className="bg-slate-100">
-                            {currentTemplate.columns.map((c) => (
+                            {(currentTemplate.columns || []).map((c) => (
                               <th key={c.id} className="border border-slate-300 p-0.5 text-center font-semibold">
                                 {c.label}
                               </th>
@@ -1879,7 +1897,7 @@ export function DocumentTemplateCustomizer() {
                         </thead>
                         <tbody>
                           <tr>
-                            {currentTemplate.columns.map((c) => (
+                            {(currentTemplate.columns || []).map((c) => (
                               <td key={c.id} className="border border-slate-300 p-0.5 text-center text-slate-600">
                                 {getDummyValueForColumn(c.id, c.label)}
                               </td>
@@ -1914,7 +1932,7 @@ export function DocumentTemplateCustomizer() {
                       </div>
                     )}
                     {(() => {
-                      const enabledSigs = currentTemplate.signatures.filter((s) => s.enabled);
+                      const enabledSigs = (currentTemplate.signatures || []).filter((s) => s.enabled);
                       const singleAlign = currentTemplate.single_signature_align || 'center';
                       const previewAlignClass =
                         enabledSigs.length === 1
