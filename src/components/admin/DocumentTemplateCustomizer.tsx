@@ -209,6 +209,15 @@ export function DocumentTemplateCustomizer() {
     );
   }
 
+  // Resolusi margin efektif dokumen (mengakomodasi tanpa kop surat vs dengan kop surat vs kustom template)
+  const {
+    isUsingKop,
+    marginTop: effectiveMarginTop,
+    marginBottom: effectiveMarginBottom,
+    marginLeft: effectiveMarginLeft,
+    marginRight: effectiveMarginRight,
+  } = getEffectiveDocumentMargins(currentTemplate, docSettings);
+
   // Active module definition
   const activeModule = getDataSourceModuleById(currentTemplate?.data_source_module || 'tugas_akhir');
   const allModules = getAllDataSourceModules();
