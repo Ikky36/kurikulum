@@ -561,7 +561,7 @@ export function UniversalDocumentContainer({
           {template.content_mode !== 'table_only' && template.body_text_enabled !== false && template.body_text_template && (
             template.body_text_template.includes('<') && template.body_text_template.includes('>') ? (
               <div
-                className="my-3 text-xs sm:text-sm leading-relaxed text-slate-800"
+                className="my-3 text-xs sm:text-sm leading-relaxed text-slate-800 document-rich-content"
                 dangerouslySetInnerHTML={{
                   __html: DOMPurify.sanitize(
                     interpolateVariables(template.body_text_template, resolvedVariables)

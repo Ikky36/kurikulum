@@ -18,6 +18,8 @@ import {
 import { useDocumentSettings } from '@/lib/documentSettings';
 import { UniversalDocumentContainer } from '@/components/document/UniversalDocumentContainer';
 import { printElementById } from '@/lib/printUtils';
+import DOMPurify from 'dompurify';
+import { DocumentRichTextEditor, DatabaseVariable } from './DocumentRichTextEditor';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -191,6 +193,19 @@ export function DocumentTemplateCustomizer() {
   // Active module definition
   const activeModule = getDataSourceModuleById(currentTemplate.data_source_module || 'tugas_akhir');
   const allModules = getAllDataSourceModules();
+
+  // Daftar variabel database gabungan (modul aktif + variabel global institusi)
+  const combinedVariables: DatabaseVariable[] = [
+    ...activeModule.textVariables,
+    { key: 'kota_institusi', label: 'Kota Institusi', category: 'institusi', exampleValue: docSettings.default_city || 'Yogyakarta' },
+    { key: 'tanggal_cetak', label: 'Tanggal Cetak Hari Ini', category: 'institusi', exampleValue: '24 Oktober 2026' },
+    { key: 'nama_kampus', label: 'Nama Universitas / Institut', category: 'institusi', exampleValue: docSettings.institution_line_2 || 'STITMA' },
+    { key: 'fakultas', label: 'Nama Fakultas', category: 'institusi', exampleValue: docSettings.faculty_name || 'Fakultas Tarbiyah' },
+    { key: 'nama_kaprodi', label: 'Nama Kaprodi', category: 'institusi', exampleValue: docSettings.kaprodi_name || 'Dr. M. Ridwan, M.Pd.I' },
+    { key: 'nidn_kaprodi', label: 'NIDN Kaprodi', category: 'institusi', exampleValue: docSettings.kaprodi_nidn || '0711037502' },
+    { key: 'nama_dekan', label: 'Nama Dekan', category: 'institusi', exampleValue: docSettings.dekan_name || 'Dr. H. Ahmad Hidayat, M.A.' },
+    { key: 'nidn_dekan', label: 'NIDN Dekan', category: 'institusi', exampleValue: docSettings.dekan_nidn || '0712057801' },
+  ];
 
   // Variable Inserter Handler: Inserts {{variable}} at cursor position in Textarea
   const handleInsertVariable = (varKey: string) => {
@@ -1029,83 +1044,16 @@ export function DocumentTemplateCustomizer() {
 
                   {currentTemplate.body_text_enabled !== false && (
                     <div className="space-y-3">
-                      {/* TOOLBAR SISIPKAN REFERENSI DATABASE */}
-                      <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-slate-50 border rounded-lg">
-                        <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                          <Database className="h-3.5 w-3.5 text-primary" />
-                          Variabel Database:
-                        </span>
-
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <Button size="sm" variant="default" className="h-7 text-xs gap-1.5 shadow-xs">
-                              <Plus className="h-3.5 w-3.5" />
-                              Sisipkan Data Database
-                              <ChevronDown className="h-3 w-3 opacity-70" />
-                            </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-80 p-3" align="end">
-                            <div className="space-y-2.5">
-                              <div className="border-b pb-1.5">
-                                <p className="font-semibold text-xs text-foreground">
-                                  Pilih Kolom Data ({activeModule.name})
-                                </p>
-                                <p className="text-[10px] text-muted-foreground">
-                                  Klik item untuk menyisipkan placeholder otomatis di posisi kursor teks.
-                                </p>
-                              </div>
-                              <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
-                                {activeModule.textVariables.map((v) => (
-                                  <button
-                                    key={v.key}
-                                    type="button"
-                                    onClick={() => handleInsertVariable(v.key)}
-                                    className="w-full text-left p-1.5 rounded hover:bg-primary/10 transition-colors flex items-center justify-between border border-transparent hover:border-primary/20 text-xs group"
-                                  >
-                                    <div>
-                                      <p className="font-medium text-slate-900 group-hover:text-primary">{v.label}</p>
-                                      <p className="text-[10px] text-muted-foreground font-mono">{`{{${v.key}}}`}</p>
-                                    </div>
-                                    <Badge variant="outline" className="text-[9px] py-0 px-1 font-normal uppercase">
-                                      {v.category}
-                                    </Badge>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-
-                      {/* QUICK CHIPS SHORTCUT */}
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] text-muted-foreground">Sisip Cepat:</span>
-                        {activeModule.textVariables.slice(0, 5).map((v) => (
-                          <button
-                            key={v.key}
-                            type="button"
-                            onClick={() => handleInsertVariable(v.key)}
-                            className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-100 hover:bg-primary/15 hover:text-primary border transition-colors"
-                            title={v.label}
-                          >
-                            + {v.label}
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="space-y-1">
-                        <Textarea
-                          ref={textareaRef}
-                          rows={4}
-                          value={currentTemplate.body_text_template || ''}
-                          onChange={(e) => updateTemplateField('body_text_template', e.target.value)}
-                          placeholder="Ketik narasi surat di sini. Gunakan tombol 'Sisipkan Data Database' untuk menyisipkan nilai data..."
-                          className="text-xs leading-relaxed font-sans"
-                        />
-                        <p className="text-[10px] text-muted-foreground">
-                          Placeholder seperti <code className="bg-muted px-1 rounded font-mono">{`{{nama_mahasiswa}}`}</code> otomatis diisi dengan data asli dari database kampus saat dicetak.
-                        </p>
-                      </div>
+                      <DocumentRichTextEditor
+                        value={currentTemplate.body_text_template || ''}
+                        onChange={(html) => updateTemplateField('body_text_template', html)}
+                        availableVariables={combinedVariables}
+                        placeholder="Ketik isi surat atau narasi di sini. Gunakan tombol perataan teks (kiri, tengah, kanan, justify), daftar poin/nomor, serta tombol '+ Variabel Database' atau 'Tabel' untuk menyisipkan data otomatis..."
+                      />
+                      <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                        <Info className="h-3 w-3 text-primary shrink-0" />
+                        Variabel seperti <code className="bg-muted px-1 rounded font-mono text-primary font-semibold">{"{{nama_mahasiswa}}"}</code> atau tabel biodata otomatis diisi dengan data asli dari database kampus saat dicetak.
+                      </p>
 
                       {/* Sub-Bab Catatan / Tata Tertib Tambahan */}
                       <div className="pt-2 border-t space-y-2">
@@ -1810,9 +1758,18 @@ export function DocumentTemplateCustomizer() {
 
                     {/* Teks Narasi / Surat Keterangan */}
                     {currentContentMode !== 'table_only' && currentTemplate.body_text_enabled !== false && previewBodyText && (
-                      <div className="p-1 text-[6.5px] leading-relaxed text-slate-800 border-l-2 border-primary/40 bg-slate-50/50 mb-1.5">
-                        {previewBodyText}
-                      </div>
+                      previewBodyText.includes('<') && previewBodyText.includes('>') ? (
+                        <div
+                          className="p-1.5 text-[6.5px] leading-relaxed text-slate-800 border-l-2 border-primary/40 bg-slate-50/50 mb-1.5 document-rich-content overflow-x-auto"
+                          dangerouslySetInnerHTML={{
+                            __html: DOMPurify.sanitize(previewBodyText),
+                          }}
+                        />
+                      ) : (
+                        <div className="p-1 text-[6.5px] leading-relaxed text-slate-800 border-l-2 border-primary/40 bg-slate-50/50 mb-1.5 whitespace-pre-wrap">
+                          {previewBodyText}
+                        </div>
+                      )
                     )}
 
                     {/* Tabel Data Dummy (Merender Semua Kolom yang Ada di Daftar) */}

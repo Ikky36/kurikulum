@@ -293,6 +293,88 @@
   }
 }
 
+/* =========================================================================
+   DOCUMENT RICH TEXT & WYSIWYG EDITOR STYLING
+   Mendukung format perataan teks, daftar poin/nomor, dan tabel resmi
+   ========================================================================= */
+.document-rich-editor-content:empty:before {
+  content: attr(data-placeholder);
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.document-rich-content ul {
+  list-style-type: disc !important;
+  margin-left: 1.5rem !important;
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.35rem !important;
+}
+
+.document-rich-content ol {
+  list-style-type: decimal !important;
+  margin-left: 1.5rem !important;
+  margin-top: 0.35rem !important;
+  margin-bottom: 0.35rem !important;
+}
+
+.document-rich-content li {
+  margin-bottom: 0.2rem !important;
+}
+
+.document-rich-content p {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.document-rich-content h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 0.75rem;
+  margin-bottom: 0.35rem;
+}
+
+.document-rich-content h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.document-rich-content h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-top: 0.35rem;
+  margin-bottom: 0.2rem;
+}
+
+.document-rich-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+}
+
+/* Garis bantu sel saat di dalam visual editor (agar sel tanpa border tetap mudah diedit) */
+.document-rich-editor-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.5rem 0;
+}
+
+.document-rich-editor-content td,
+.document-rich-editor-content th {
+  outline: 1px dashed rgba(148, 163, 184, 0.4);
+  padding: 4px 6px;
+  min-height: 22px;
+}
+
+.document-rich-editor-content td:focus,
+.document-rich-editor-content td:focus-within,
+.document-rich-editor-content th:focus,
+.document-rich-editor-content th:focus-within {
+  outline: 2px solid #3b82f6 !important;
+  background-color: rgba(59, 130, 246, 0.04);
+}
+
 /* Ensure Radix portalled combobox / popover overlays inside modals receive pointer and scroll events */
 [data-radix-popper-content-wrapper] {
   pointer-events: auto !important;
