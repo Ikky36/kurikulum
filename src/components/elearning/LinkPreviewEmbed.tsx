@@ -82,6 +82,17 @@ function parseLinkInfo(url: string): LinkInfo {
 
     // Google Slides
     if (hostname.includes('docs.google.com') && pathname.includes('/presentation/')) {
+      const pubMatch = originalPathname.match(/\/d\/e\/([a-zA-Z0-9_-]+)/);
+      if (pubMatch) {
+        return {
+          type: 'google-slide',
+          embedUrl: `https://docs.google.com/presentation/d/e/${pubMatch[1]}/embed?start=false&loop=false&delayms=3000`,
+          icon: <Presentation className="h-4 w-4" />,
+          label: 'Google Slides',
+          category: 'document',
+          canEmbed: true,
+        };
+      }
       const slideId = originalPathname.match(/\/d\/([a-zA-Z0-9_-]+)/)?.[1];
       return {
         type: 'google-slide',

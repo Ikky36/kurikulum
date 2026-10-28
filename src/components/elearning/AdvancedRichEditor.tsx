@@ -59,6 +59,63 @@ interface AdvancedRichEditorProps {
   placeholder?: string;
 }
 
+/**
+ * Ekstraksi URL embed Google Slides dari berbagai format (link edit, multi-account /u/0/, published /d/e/, Google Drive, iframe embed code).
+ */
+export function parseGoogleSlideEmbedUrl(rawInput: string): string | null {
+  if (!rawInput) return null;
+  let input = rawInput.trim();
+
+  // 1. Jika pengguna menempelkan kode iframe langsung
+  const iframeMatch = input.match(/<iframe[^>]*\s+src=["']([^"']+)["']/i);
+  if (iframeMatch) {
+    input = iframeMatch[1].trim();
+  }
+
+  // Bersihkan tanda kutip jika ada
+  input = input.replace(/^["']|["']$/g, '').trim();
+
+  // Tambahkan protokol jika tidak ada
+  if (!/^https?:\/\//i.test(input)) {
+    input = 'https://' + input;
+  }
+
+  // 2. Published Google Slide (/d/e/2PACX-...)
+  const pubMatch = input.match(/docs\.google\.com\/presentation\/(?:u\/\d+\/)?d\/e\/([a-zA-Z0-9_-]+)/i);
+  if (pubMatch) {
+    const pubId = pubMatch[1];
+    return `https://docs.google.com/presentation/d/e/${pubId}/embed?start=false&loop=false&delayms=3000`;
+  }
+
+  // 3. Regular Google Slide (/d/<ID>) dengan dukungan multi-account /u/0/, /u/1/
+  const slideMatch = input.match(/docs\.google\.com\/presentation\/(?:u\/\d+\/)?d\/([a-zA-Z0-9_-]+)/i);
+  if (slideMatch) {
+    const slideId = slideMatch[1];
+    return `https://docs.google.com/presentation/d/${slideId}/embed?start=false&loop=false&delayms=3000`;
+  }
+
+  // 4. Google Drive presentation file link: drive.google.com/file/d/<ID>
+  const driveMatch = input.match(/drive\.google\.com\/file\/(?:u\/\d+\/)?d\/([a-zA-Z0-9_-]+)/i);
+  if (driveMatch) {
+    const driveId = driveMatch[1];
+    return `https://docs.google.com/presentation/d/${driveId}/embed?start=false&loop=false&delayms=3000`;
+  }
+
+  // 5. Google Drive open?id=<ID>
+  const driveOpenMatch = input.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/i);
+  if (driveOpenMatch) {
+    const driveId = driveOpenMatch[1];
+    return `https://docs.google.com/presentation/d/${driveId}/embed?start=false&loop=false&delayms=3000`;
+  }
+
+  // 6. Jika sudah merupakan URL /embed dari Google Presentation
+  if (input.includes('docs.google.com/presentation') && input.includes('/embed')) {
+    return input;
+  }
+
+  return null;
+}
+
 export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRichEditorProps) {
   const { toast } = useToast();
   const editorRef = useRef<HTMLDivElement>(null);
@@ -70,6 +127,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
   const [videoUrl, setVideoUrl] = useState('');
   const [audioUrl, setAudioUrl] = useState('');
   const [slideUrl, setSlideUrl] = useState('');
+  const [isSlidePopoverOpen, setIsSlidePopoverOpen] = useState(false);
   const [tableRows, setTableRows] = useState('3');
   const [tableCols, setTableCols] = useState('3');
   const [selectedFont, setSelectedFont] = useState('inherit');
@@ -304,21 +362,26 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
   };
 
   const insertSlide = () => {
-    if (!slideUrl) {
+    if (!slideUrl.trim()) {
       toast({ title: 'Error', description: 'Masukkan URL Google Slide', variant: 'destructive' });
       return;
     }
 
-    const slideMatch = slideUrl.match(/(https:\/\/docs\.google\.com\/presentation\/d\/(?:e\/)?[a-zA-Z0-9-_]+)/);
+    const embedUrl = parseGoogleSlideEmbedUrl(slideUrl);
     
-    if (slideMatch) {
-      const embedUrl = `${slideMatch[1]}/embed?start=false&loop=false&delayms=3000`;
-      const embedHtml = `<div class="slide-embed" style="position: relative; padding-bottom: 56.25%; height: 0; margin: 1rem 0; background: #f1f5f9; border-radius: 0.5rem; overflow: hidden;"><iframe src="${embedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 0.5rem;" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe></div><p><br></p>`;
-      insertHtmlAtCursor(embedHtml);
+    if (embedUrl) {
+      const embedHtml = `<div contenteditable="false" class="slide-embed" style="position: relative; padding-bottom: 56.25%; height: 0; margin: 1rem 0; background: #f1f5f9; border-radius: 0.5rem; overflow: hidden;"><iframe src="${embedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 0.5rem;" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe></div><p><br></p>`;
+      insertHtmlAtCursor(embedHtml, savedSelection.current);
       setSlideUrl('');
+      setIsSlidePopoverOpen(false);
+      savedSelection.current = null;
       toast({ title: 'Slide ditambahkan', description: 'Google Slide berhasil dimasukkan' });
     } else {
-      toast({ title: 'Error', description: 'URL Google Slide tidak valid', variant: 'destructive' });
+      toast({ 
+        title: 'URL Tidak Valid', 
+        description: 'Pastikan tautan berasal dari Google Slide atau Google Drive (misal: docs.google.com/presentation/d/...)', 
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -691,19 +754,40 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
           </Popover>
 
           {/* Google Slide */}
-          <Popover>
+          <Popover open={isSlidePopoverOpen} onOpenChange={setIsSlidePopoverOpen}>
             <PopoverTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8" title="Insert Google Slide">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8" 
+                title="Insert Google Slide"
+                onClick={() => {
+                  const sel = window.getSelection();
+                  if (sel && sel.rangeCount > 0 && editorRef.current?.contains(sel.anchorNode)) {
+                    savedSelection.current = sel.getRangeAt(0).cloneRange();
+                  } else {
+                    savedSelection.current = null;
+                  }
+                }}
+              >
                 <Presentation className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80">
               <div className="space-y-3">
-                <Label>URL Google Slide</Label>
+                <Label className="text-sm font-semibold">URL Google Slide</Label>
                 <Input
                   value={slideUrl}
                   onChange={(e) => setSlideUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      insertSlide();
+                    }
+                  }}
                   placeholder="https://docs.google.com/presentation/d/..."
+                  className="text-xs"
+                  autoFocus
                 />
                 <p className="text-xs text-muted-foreground">Pastikan link memiliki akses "Siapa saja yang memiliki link" (Anyone with the link)</p>
                 <Button size="sm" onClick={insertSlide} className="w-full">Insert Slide</Button>
