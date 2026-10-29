@@ -554,7 +554,7 @@
   position: absolute !important;
   bottom: 0 !important;
   right: 0 !important;
-  left: 88px !important;
+  width: 150px !important;
   height: 62px !important;
   background-color: #f5f7f8 !important;
   z-index: 20 !important;

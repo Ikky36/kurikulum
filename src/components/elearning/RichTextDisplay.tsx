@@ -29,7 +29,7 @@ export function RichTextDisplay({ content, className, title = 'Video Interaktif'
       if (!embed.querySelector('.slide-blocker')) {
         const blocker = document.createElement('div');
         blocker.className = 'slide-blocker';
-        blocker.style.cssText = 'position: absolute; bottom: 0; right: 0; left: 88px; height: 62px; background: #f5f7f8; z-index: 20; cursor: default; pointer-events: auto; border-bottom-right-radius: 0.5rem;';
+        blocker.style.cssText = 'position: absolute; bottom: 0; right: 0; width: 150px; height: 62px; background: #f5f7f8; z-index: 20; cursor: default; pointer-events: auto; border-bottom-right-radius: 0.5rem;';
         embed.appendChild(blocker);
       }
     });

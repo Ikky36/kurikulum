@@ -374,7 +374,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
       if (hideSlideControls && !embedUrl.includes('rm=minimal')) {
         embedUrl += '&rm=minimal';
       }
-      const embedHtml = `<div contenteditable="false" class="slide-embed" style="position: relative; padding-bottom: 56.25%; height: 0; margin: 1rem 0; background: #f1f5f9; border-radius: 0.5rem; overflow: hidden;"><iframe src="${embedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 0.5rem;" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe><div class="slide-blocker" style="position: absolute; bottom: 0; right: 0; left: 88px; height: 62px; background: #f5f7f8; z-index: 20; cursor: default; pointer-events: auto;" title="Slide Presentation"></div></div><p><br></p>`;
+      const embedHtml = `<div contenteditable="false" class="slide-embed" style="position: relative; padding-bottom: 56.25%; height: 0; margin: 1rem 0; background: #f1f5f9; border-radius: 0.5rem; overflow: hidden;"><iframe src="${embedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 0.5rem;" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe><div class="slide-blocker" style="position: absolute; bottom: 0; right: 0; width: 150px; height: 62px; background: #f5f7f8; z-index: 20; cursor: default; pointer-events: auto;" title="Slide Presentation"></div></div><p><br></p>`;
       insertHtmlAtCursor(embedHtml, savedSelection.current);
       setSlideUrl('');
       setHideSlideControls(false);
@@ -962,7 +962,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
           position: absolute;
           bottom: 0;
           right: 0;
-          left: 88px;
+          width: 150px;
           height: 62px;
           background: #f5f7f8;
           z-index: 20;
