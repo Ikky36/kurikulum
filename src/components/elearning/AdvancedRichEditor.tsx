@@ -538,9 +538,9 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
   );
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-visible">
       {/* Toolbar */}
-      <div className="bg-muted/50 border-b p-2 space-y-2">
+      <div className="bg-muted/50 border-b p-2 space-y-2 rounded-t-lg">
         {/* Row 1: Font, Size, Colors */}
         <div className="flex flex-wrap items-center gap-2">
           <Select value={selectedFont} onValueChange={applyFont}>
@@ -576,7 +576,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
                 <Type className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-2">
+            <PopoverContent portal={false} className="w-auto p-2 z-50">
               <div className="grid grid-cols-6 gap-1">
                 {COLORS.map(color => (
                   <button
@@ -597,7 +597,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
                 <Palette className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-2">
+            <PopoverContent portal={false} className="w-auto p-2 z-50">
               <div className="grid grid-cols-6 gap-1">
                 {COLORS.map(color => (
                   <button
@@ -666,8 +666,8 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
                 <Link className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80">
-              <div className="space-y-3">
+            <PopoverContent portal={false} className="w-80 z-50">
+              <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
                 <div>
                   <Label>Teks Link (Opsional)</Label>
                   <Input
@@ -698,8 +698,8 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
                 <ImageIcon className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80">
-              <div className="space-y-3">
+            <PopoverContent portal={false} className="w-80 z-50">
+              <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
                 <Label>URL Gambar</Label>
                 <Input
                   value={imageUrl}
@@ -718,8 +718,8 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
                 <FileVideo className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80">
-              <div className="space-y-3">
+            <PopoverContent portal={false} className="w-80 z-50">
+              <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
                 <Label>URL Video (YouTube/Vimeo/Direct)</Label>
                 <Input
                   value={videoUrl}
@@ -739,8 +739,8 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
                 <Music className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80">
-              <div className="space-y-3">
+            <PopoverContent portal={false} className="w-80 z-50">
+              <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
                 <Label>URL Audio (SoundCloud/Spotify/Direct)</Label>
                 <Input
                   value={audioUrl}
@@ -773,8 +773,8 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
                 <Presentation className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-80">
-              <div className="space-y-3">
+            <PopoverContent portal={false} className="w-80 z-50">
+              <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
                 <Label className="text-sm font-semibold">URL Google Slide</Label>
                 <Input
                   value={slideUrl}
@@ -823,8 +823,8 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
                 <Table className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-60">
-              <div className="space-y-3">
+            <PopoverContent portal={false} className="w-60 z-50">
+              <div className="space-y-3" onClick={(e) => e.stopPropagation()}>
                 <Label>Ukuran Tabel</Label>
                 <div className="flex gap-2">
                   <div className="flex-1">

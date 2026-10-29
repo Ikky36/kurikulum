@@ -264,7 +264,15 @@ export function MaterialList({ classId, courseId, canEdit }: MaterialListProps) 
 
       {/* Material Editor Dialog */}
       <Dialog open={showEditor} onOpenChange={setShowEditor}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent 
+          className="max-w-5xl max-h-[90vh] overflow-y-auto"
+          onInteractOutside={(e) => {
+            const target = e.target as HTMLElement | null;
+            if (target?.closest('[data-radix-popper-content-wrapper]') || target?.closest('[role="dialog"]')) {
+              e.preventDefault();
+            }
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="text-xl">
               {editingMaterial ? 'Edit Materi' : 'Tambah Materi Baru'}
