@@ -512,13 +512,19 @@ function renderEmbedContent(linkInfo: LinkInfo, url: string, height: string = '7
     default:
       // Full width responsive document preview - taller on mobile to avoid controls overlap
       return (
-        <div className="relative w-full pb-[120%] sm:pb-[80%] lg:pb-[60%]">
+        <div className="relative w-full pb-[120%] sm:pb-[80%] lg:pb-[60%] overflow-hidden rounded-lg">
           <iframe
             src={linkInfo.embedUrl}
             className="absolute inset-0 w-full h-full border-0 rounded-lg"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
+          {linkInfo.type === 'google-slide' && (
+            <div 
+              className="absolute bottom-0 right-0 w-[125px] h-[34px] bg-[#f5f7f8] z-20 cursor-default pointer-events-auto rounded-br-lg" 
+              title="Slide Presentation"
+            />
+          )}
         </div>
       );
   }

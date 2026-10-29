@@ -128,6 +128,7 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
   const [audioUrl, setAudioUrl] = useState('');
   const [slideUrl, setSlideUrl] = useState('');
   const [isSlidePopoverOpen, setIsSlidePopoverOpen] = useState(false);
+  const [hideSlideControls, setHideSlideControls] = useState(false);
   const [tableRows, setTableRows] = useState('3');
   const [tableCols, setTableCols] = useState('3');
   const [selectedFont, setSelectedFont] = useState('inherit');
@@ -367,12 +368,16 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
       return;
     }
 
-    const embedUrl = parseGoogleSlideEmbedUrl(slideUrl);
+    let embedUrl = parseGoogleSlideEmbedUrl(slideUrl);
     
     if (embedUrl) {
-      const embedHtml = `<div contenteditable="false" class="slide-embed" style="position: relative; padding-bottom: 56.25%; height: 0; margin: 1rem 0; background: #f1f5f9; border-radius: 0.5rem; overflow: hidden;"><iframe src="${embedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 0.5rem;" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe></div><p><br></p>`;
+      if (hideSlideControls && !embedUrl.includes('rm=minimal')) {
+        embedUrl += '&rm=minimal';
+      }
+      const embedHtml = `<div contenteditable="false" class="slide-embed" style="position: relative; padding-bottom: 56.25%; height: 0; margin: 1rem 0; background: #f1f5f9; border-radius: 0.5rem; overflow: hidden;"><iframe src="${embedUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; border-radius: 0.5rem;" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe><div class="slide-blocker" style="position: absolute; bottom: 0; right: 0; width: 125px; height: 34px; background: #f5f7f8; z-index: 20; cursor: default; pointer-events: auto;" title="Slide Presentation"></div></div><p><br></p>`;
       insertHtmlAtCursor(embedHtml, savedSelection.current);
       setSlideUrl('');
+      setHideSlideControls(false);
       setIsSlidePopoverOpen(false);
       savedSelection.current = null;
       toast({ title: 'Slide ditambahkan', description: 'Google Slide berhasil dimasukkan' });
@@ -789,6 +794,18 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
                   className="text-xs"
                   autoFocus
                 />
+                <div className="flex items-center space-x-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="hideSlideControls"
+                    checked={hideSlideControls}
+                    onChange={(e) => setHideSlideControls(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                  />
+                  <Label htmlFor="hideSlideControls" className="text-xs cursor-pointer select-none text-muted-foreground">
+                    Sembunyikan bilah navigasi (Mode Minimal)
+                  </Label>
+                </div>
                 <p className="text-xs text-muted-foreground">Pastikan link memiliki akses "Siapa saja yang memiliki link" (Anyone with the link)</p>
                 <Button size="sm" onClick={insertSlide} className="w-full">Insert Slide</Button>
               </div>
@@ -938,6 +955,19 @@ export function AdvancedRichEditor({ value, onChange, placeholder }: AdvancedRic
           background: hsl(var(--muted));
           border-radius: 0.5rem;
           overflow: hidden;
+        }
+        .slide-embed::after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          width: 125px;
+          height: 34px;
+          background: #f5f7f8;
+          z-index: 20;
+          cursor: default;
+          pointer-events: auto;
+          border-bottom-right-radius: 0.5rem;
         }
         .video-embed iframe, .slide-embed iframe {
           position: absolute;

@@ -537,3 +537,27 @@
     break-inside: avoid !important;
   }
 }
+
+/* ==========================================================================
+   Google Slide Embed Protection
+   Sembunyikan & nonaktifkan tombol 'Google Slides' di pojok kanan bawah
+   agar peserta / mahasiswa tidak dapat membuka presentasi di tab Google Slides
+   ========================================================================== */
+.slide-embed {
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.slide-embed::after {
+  content: '' !important;
+  position: absolute !important;
+  bottom: 0 !important;
+  right: 0 !important;
+  width: 125px !important;
+  height: 34px !important;
+  background-color: #f5f7f8 !important;
+  z-index: 20 !important;
+  cursor: default !important;
+  pointer-events: auto !important;
+  border-bottom-right-radius: 0.5rem !important;
+}
