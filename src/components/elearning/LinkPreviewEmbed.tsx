@@ -521,7 +521,7 @@ function renderEmbedContent(linkInfo: LinkInfo, url: string, height: string = '7
           />
           {linkInfo.type === 'google-slide' && (
             <div 
-              className="absolute bottom-0 right-0 w-[125px] h-[34px] bg-[#f5f7f8] z-20 cursor-default pointer-events-auto rounded-br-lg" 
+              className="absolute bottom-0 right-0 left-[88px] h-[62px] bg-[#f5f7f8] z-20 cursor-default pointer-events-auto rounded-br-lg" 
               title="Slide Presentation"
             />
           )}

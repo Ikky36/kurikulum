@@ -548,13 +548,14 @@
   overflow: hidden !important;
 }
 
-.slide-embed::after {
+.slide-embed::after,
+.slide-embed .slide-blocker {
   content: '' !important;
   position: absolute !important;
   bottom: 0 !important;
   right: 0 !important;
-  width: 125px !important;
-  height: 34px !important;
+  left: 88px !important;
+  height: 62px !important;
   background-color: #f5f7f8 !important;
   z-index: 20 !important;
   cursor: default !important;
