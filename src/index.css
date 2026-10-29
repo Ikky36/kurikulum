@@ -554,11 +554,11 @@
   position: absolute !important;
   bottom: 0 !important;
   right: 0 !important;
-  width: 150px !important;
-  height: 62px !important;
-  background-color: #f5f7f8 !important;
+  width: 160px !important;
+  height: 65px !important;
+  background: transparent !important;
+  background-color: transparent !important;
   z-index: 20 !important;
   cursor: default !important;
   pointer-events: auto !important;
-  border-bottom-right-radius: 0.5rem !important;
 }

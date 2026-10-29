@@ -23,15 +23,18 @@ export function RichTextDisplay({ content, className, title = 'Video Interaktif'
     });
     interactiveVideoRoots.current = [];
 
-    // Google Slides embed protection: pastikan semua slide tertutup rapi dari tombol Google Slides & garis pemisah
+    // Google Slides embed protection: nonaktifkan tombol Google Slides & garis pemisah secara transparan tanpa efek tambalan
     const slideEmbeds = containerRef.current.querySelectorAll('.slide-embed');
     slideEmbeds.forEach((embed) => {
-      if (!embed.querySelector('.slide-blocker')) {
-        const blocker = document.createElement('div');
+      let blocker = embed.querySelector('.slide-blocker') as HTMLElement | null;
+      if (!blocker) {
+        blocker = document.createElement('div');
         blocker.className = 'slide-blocker';
-        blocker.style.cssText = 'position: absolute; bottom: 0; right: 0; width: 150px; height: 62px; background: #f5f7f8; z-index: 20; cursor: default; pointer-events: auto; border-bottom-right-radius: 0.5rem;';
         embed.appendChild(blocker);
       }
+      blocker.style.cssText = 'position: absolute; bottom: 0; right: 0; width: 160px; height: 65px; background: transparent; z-index: 20; cursor: default; pointer-events: auto;';
+      blocker.onclick = (e) => { e.preventDefault(); e.stopPropagation(); };
+      blocker.onmousedown = (e) => { e.preventDefault(); e.stopPropagation(); };
     });
 
     // Find all embedded interactive video placeholders within this container

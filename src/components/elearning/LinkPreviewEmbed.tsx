@@ -521,8 +521,9 @@ function renderEmbedContent(linkInfo: LinkInfo, url: string, height: string = '7
           />
           {linkInfo.type === 'google-slide' && (
             <div 
-              className="absolute bottom-0 right-0 w-[150px] h-[62px] bg-[#f5f7f8] z-20 cursor-default pointer-events-auto rounded-br-lg" 
-              title="Slide Presentation"
+              className="absolute bottom-0 right-0 w-[160px] h-[65px] bg-transparent z-20 cursor-default pointer-events-auto" 
+              onClick={(e) => { e.stopPropagation(); e.preventDefault(); }} 
+              onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }} 
             />
           )}
         </div>
