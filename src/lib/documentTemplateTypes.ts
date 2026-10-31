@@ -86,6 +86,9 @@ export interface SingleDocumentTemplate {
 
   // Penempatan Tombol Cetak di Aplikasi
   placement_targets?: string[];
+
+  // Peruntukan peran dokumen resmi di sistem
+  document_role?: 'kartu_bimbingan_ta' | 'surat_pengesahan_proposal' | 'krs' | 'kartu_bimbingan_dpa' | 'custom';
 }
 
 export function getSignatureSpacingClass(spacing?: 'compact' | 'normal' | 'spacious' | 'bottom'): string {
@@ -147,6 +150,7 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     copies_enabled: false,
     copies_list: ['Dekan Fakultas Tarbiyah', 'Ketua Program Studi PBA', 'Arsip BAAK'],
     placement_targets: ['mahasiswa_tugas_akhir', 'dosen_bimbingan_ta', 'admin_tugas_akhir'],
+    document_role: 'kartu_bimbingan_ta',
   },
 
   krs: {
@@ -446,61 +450,81 @@ export function useDocumentTemplatesConfig() {
 
   const getTemplate = (code: string, fallbackModule?: string): SingleDocumentTemplate => {
     const map = query.data || defaultDocumentTemplates;
+    const deletedCodes: string[] = (map as any)._deleted_codes || [];
     const canonicalCode = code === 'kartu_bimbingan_tugas_akhir' ? 'kartu_bimbingan_ta' : code;
 
     // 1. Cocokkan kode langsung jika ada di template aktif
     if (map[canonicalCode]) return map[canonicalCode];
     if (map[code]) return map[code];
 
-    // 2. Jika mencari template tugas akhir / bimbingan skripsi
-    if (code === 'kartu_bimbingan_ta' || code === 'kartu_bimbingan_tugas_akhir') {
-      if (map['kartu_bimbingan_ta']) return map['kartu_bimbingan_ta'];
-      if (map['kartu_bimbingan_tugas_akhir']) return map['kartu_bimbingan_tugas_akhir'];
-    }
+    // 2. Jika mencari template Kartu Bimbingan Tugas Akhir
     if (
-      fallbackModule === 'tugas_akhir' ||
-      code.includes('tugas_akhir') ||
-      code.includes('bimbingan_ta')
+      code === 'kartu_bimbingan_ta' ||
+      code === 'kartu_bimbingan_tugas_akhir' ||
+      code.includes('bimbingan_ta') ||
+      (fallbackModule === 'tugas_akhir' && !code.includes('proposal') && !code.includes('laporan'))
     ) {
       const taTemplate = Object.values(map).find(
         (t) =>
-          t.code === 'kartu_bimbingan_tugas_akhir' ||
-          t.code === 'kartu_bimbingan_ta' ||
-          t.placement_targets?.includes('mahasiswa_tugas_akhir') ||
-          t.data_source_module === 'tugas_akhir' ||
-          t.code.includes('tugas_akhir') ||
-          t.code.includes('bimbingan_ta')
+          t.document_role === 'kartu_bimbingan_ta' ||
+          t.table_dataset_id === 'riwayat_bimbingan_ta' ||
+          (t.data_source_module === 'tugas_akhir' && (t.code.includes('bimbingan') || t.name?.toLowerCase().includes('bimbingan')) && !t.code.includes('dpa') && !t.code.includes('proposal')) ||
+          (t.placement_targets?.includes('mahasiswa_tugas_akhir') && t.table_enabled && !t.code.includes('proposal'))
       );
       if (taTemplate) return taTemplate;
     }
 
-    // 3. Jika mencari template KRS
+    // 3. Jika mencari template Surat Pengesahan Proposal TA
+    if (code === 'surat_pengesahan_proposal' || code.includes('proposal')) {
+      const proposalTemplate = Object.values(map).find(
+        (t) =>
+          t.document_role === 'surat_pengesahan_proposal' ||
+          t.code === 'surat_pengesahan_proposal' ||
+          t.code.includes('proposal') ||
+          t.name?.toLowerCase().includes('proposal') ||
+          (t.data_source_module === 'tugas_akhir' && !t.table_enabled)
+      );
+      if (proposalTemplate) return proposalTemplate;
+    }
+
+    // 4. Jika mencari template KRS
     if (code === 'krs' || fallbackModule === 'akademik') {
       const krsTemplate = Object.values(map).find(
         (t) =>
+          t.document_role === 'krs' ||
           t.code === 'krs' ||
-          t.placement_targets?.includes('mahasiswa_krs') ||
-          t.code.includes('krs')
+          t.table_dataset_id === 'daftar_mata_kuliah_krs' ||
+          t.code.includes('krs') ||
+          t.name?.toLowerCase().includes('krs') ||
+          t.name?.toLowerCase().includes('rencana studi') ||
+          t.placement_targets?.includes('mahasiswa_krs')
       );
       if (krsTemplate) return krsTemplate;
     }
 
-    // 4. Jika mencari template DPA
-    if (code === 'kartu_bimbingan_dpa') {
+    // 5. Jika mencari template DPA
+    if (code === 'kartu_bimbingan_dpa' || code.includes('dpa')) {
       const dpaTemplate = Object.values(map).find(
         (t) =>
+          t.document_role === 'kartu_bimbingan_dpa' ||
           t.code === 'kartu_bimbingan_dpa' ||
-          t.placement_targets?.includes('dosen_perwalian_dpa') ||
-          t.code.includes('dpa')
+          t.code.includes('dpa') ||
+          t.name?.toLowerCase().includes('dpa') ||
+          t.name?.toLowerCase().includes('perwalian') ||
+          t.placement_targets?.includes('dosen_perwalian_dpa')
       );
       if (dpaTemplate) return dpaTemplate;
     }
 
-    // 5. Fallback ke default sistem bawaan jika belum terhapus
-    if (defaultDocumentTemplates[code]) {
+    // 6. Fallback ke default sistem bawaan HANYA JIKA belum pernah dihapus oleh admin
+    if (!deletedCodes.includes(canonicalCode) && defaultDocumentTemplates[canonicalCode]) {
+      return defaultDocumentTemplates[canonicalCode];
+    }
+    if (!deletedCodes.includes(code) && defaultDocumentTemplates[code]) {
       return defaultDocumentTemplates[code];
     }
 
+    // 7. Fallback ke template aktif pertama yang tersedia di map
     const available = Object.values(map);
     return available[0] || defaultDocumentTemplates.kartu_bimbingan_ta;
   };

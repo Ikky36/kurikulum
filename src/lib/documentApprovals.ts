@@ -40,7 +40,7 @@ export function normalizeDocKey(docCode?: string | null): string {
   const lower = docCode.toLowerCase();
   if (lower.includes('proposal')) return 'surat_pengesahan_proposal';
   if (lower.includes('laporan')) return 'surat_pengesahan_laporan';
-  if (lower.includes('kartu') || lower.includes('bimbingan')) return 'kartu_bimbingan_ta';
+  if (lower.includes('kartu') || lower.includes('bimbingan') || lower.includes('konsultasi') || lower.includes('kendali') || lower.includes('skripsi')) return 'kartu_bimbingan_ta';
   return lower;
 }
 

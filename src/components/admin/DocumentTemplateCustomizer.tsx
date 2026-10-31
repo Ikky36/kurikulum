@@ -89,6 +89,7 @@ export function DocumentTemplateCustomizer() {
   const [newDocName, setNewDocName] = useState('');
   const [newDocCode, setNewDocCode] = useState('');
   const [newDocModule, setNewDocModule] = useState('tugas_akhir');
+  const [newDocRole, setNewDocRole] = useState<string>('kartu_bimbingan_ta');
 
   // Textarea Cursor Ref for Variable Inserter
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -624,6 +625,44 @@ export function DocumentTemplateCustomizer() {
                     onChange={(e) => setNewDocCode(e.target.value)}
                   />
                   <p className="text-[10px] text-muted-foreground">Hanya huruf kecil, angka, dan underscore.</p>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs">Peruntukan Fitur Dokumen di Aplikasi</Label>
+                  <Select value={newDocRole} onValueChange={(val) => {
+                    setNewDocRole(val);
+                    if (val === 'kartu_bimbingan_ta' || val === 'surat_pengesahan_proposal') {
+                      setNewDocModule('tugas_akhir');
+                    } else if (val === 'krs' || val === 'kartu_bimbingan_dpa') {
+                      setNewDocModule('akademik');
+                    }
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih peruntukan dokumen..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="kartu_bimbingan_ta">
+                        <span className="font-semibold text-xs">Kartu Bimbingan Tugas Akhir</span>
+                        <span className="text-[10px] text-muted-foreground block">Terkoneksi ke tombol Cetak Kartu Bimbingan TA (Mahasiswa, Dosen, Kaprodi)</span>
+                      </SelectItem>
+                      <SelectItem value="surat_pengesahan_proposal">
+                        <span className="font-semibold text-xs">Surat Pengesahan Proposal TA</span>
+                        <span className="text-[10px] text-muted-foreground block">Terkoneksi ke tombol Cetak Pengesahan Proposal TA</span>
+                      </SelectItem>
+                      <SelectItem value="krs">
+                        <span className="font-semibold text-xs">Kartu Rencana Studi (KRS)</span>
+                        <span className="text-[10px] text-muted-foreground block">Terkoneksi ke tombol Cetak KRS Mahasiswa & DPA</span>
+                      </SelectItem>
+                      <SelectItem value="kartu_bimbingan_dpa">
+                        <span className="font-semibold text-xs">Kartu Bimbingan Akademik (DPA)</span>
+                        <span className="text-[10px] text-muted-foreground block">Terkoneksi ke tombol Bimbingan Perwalian DPA</span>
+                      </SelectItem>
+                      <SelectItem value="custom">
+                        <span className="font-semibold text-xs">Dokumen Kustom Mandiri</span>
+                        <span className="text-[10px] text-muted-foreground block">Formulir atau lembaran resmi akademik lainnya</span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-1">
@@ -1890,7 +1929,29 @@ export function DocumentTemplateCustomizer() {
                 Tentukan di halaman mana saja tombol cetak dokumen ini akan aktif dan siapa saja role yang dapat mencetaknya.
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-4 space-y-2">
+            <CardContent className="pt-4 space-y-3">
+              <div className="p-3 bg-muted/40 border rounded-lg space-y-1.5">
+                <Label className="text-xs font-semibold">Peruntukan Fitur Dokumen (Slot Sistem):</Label>
+                <Select
+                  value={currentTemplate.document_role || 'custom'}
+                  onValueChange={(val: any) => updateTemplateField('document_role', val)}
+                >
+                  <SelectTrigger className="h-8 text-xs bg-background">
+                    <SelectValue placeholder="Pilih peruntukan dokumen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="kartu_bimbingan_ta">Kartu Bimbingan Tugas Akhir (Slot Utama TA)</SelectItem>
+                    <SelectItem value="surat_pengesahan_proposal">Surat Pengesahan Proposal TA (Slot Proposal)</SelectItem>
+                    <SelectItem value="krs">Kartu Rencana Studi / KRS (Slot Akademik)</SelectItem>
+                    <SelectItem value="kartu_bimbingan_dpa">Kartu Bimbingan Akademik / DPA (Slot Perwalian)</SelectItem>
+                    <SelectItem value="custom">Dokumen Kustom Mandiri</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground">
+                  Mengatur agar tombol cetak pada halaman yang bersangkutan otomatis menggunakan format dokumen ini.
+                </p>
+              </div>
+
               {activeModule.placements.map((plc) => {
                 const isChecked = (currentTemplate.placement_targets || []).includes(plc.id);
                 return (
