@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { PenLine, Upload, Trash2, CheckCircle2, AlertCircle, RefreshCw, Edit3, Eraser, Info } from 'lucide-react';
+import { PenLine, Upload, Trash2, CheckCircle2, AlertCircle, RefreshCw, Edit3, Eraser, Info, Download } from 'lucide-react';
+import { downloadFile } from '@/lib/downloadUtils';
 
 interface SignatureUploadCardProps {
   className?: string;
@@ -29,6 +30,29 @@ export function SignatureUploadCard({ className = '' }: SignatureUploadCardProps
 
   const signatureUrl = profile?.signature_url;
   const parafUrl = profile?.paraf_url;
+
+  // Helper Download File Tanda Tangan / Paraf
+  const cleanUserName = (profile?.full_name || user?.email || 'User')
+    .replace(/[^a-zA-Z0-9_\-]/g, '_')
+    .replace(/_+/g, '_');
+
+  const handleDownload = async (url?: string | null, type: 'signature' | 'paraf' = 'signature') => {
+    if (!url) return;
+    const label = type === 'signature' ? 'Tanda_Tangan' : 'Paraf';
+    const filename = `${label}_${cleanUserName}.png`;
+    await downloadFile(url, filename);
+  };
+
+  const handleDownloadAll = async () => {
+    if (signatureUrl) {
+      await handleDownload(signatureUrl, 'signature');
+    }
+    if (parafUrl) {
+      setTimeout(() => {
+        handleDownload(parafUrl, 'paraf');
+      }, 500);
+    }
+  };
 
   // File Upload Handler (Max 1 MB)
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'signature' | 'paraf') => {
@@ -238,14 +262,28 @@ export function SignatureUploadCard({ className = '' }: SignatureUploadCardProps
   return (
     <Card className={className}>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <CardTitle className="flex items-center gap-2">
             <PenLine className="h-5 w-5 text-primary" />
             Tanda Tangan & Paraf Digital
           </CardTitle>
-          <Badge variant="outline" className="text-xs">
-            Maks. 1 MB
-          </Badge>
+          <div className="flex items-center gap-2">
+            {(signatureUrl || parafUrl) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1.5 text-primary hover:bg-primary/10 border-primary/30"
+                onClick={handleDownloadAll}
+                title="Unduh seluruh berkas tanda tangan dan paraf yang tersedia"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Unduh Semua
+              </Button>
+            )}
+            <Badge variant="outline" className="text-xs">
+              Maks. 1 MB
+            </Badge>
+          </div>
         </div>
         <CardDescription>
           Kelola tanda tangan dan paraf Anda untuk dokumen akademik resmi (KRS, Kartu Bimbingan Tugas Akhir, Kartu DPA, dll.)
@@ -277,11 +315,23 @@ export function SignatureUploadCard({ className = '' }: SignatureUploadCardProps
               {/* Box Preview Tanda Tangan */}
               <div className="relative mt-3 h-36 w-full rounded-lg border-2 border-dashed border-border/80 flex items-center justify-center overflow-hidden bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:12px_12px]">
                 {signatureUrl ? (
-                  <img
-                    src={signatureUrl}
-                    alt="Tanda Tangan"
-                    className="max-h-28 max-w-[90%] object-contain drop-shadow-sm transition-transform hover:scale-105"
-                  />
+                  <>
+                    <img
+                      src={signatureUrl}
+                      alt="Tanda Tangan"
+                      className="max-h-28 max-w-[90%] object-contain drop-shadow-sm transition-transform hover:scale-105"
+                    />
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="absolute top-2 right-2 h-7 px-2 text-[11px] gap-1 shadow-xs bg-background/90 backdrop-blur-xs hover:bg-primary hover:text-primary-foreground border"
+                      onClick={() => handleDownload(signatureUrl, 'signature')}
+                      title="Unduh Tanda Tangan (PNG Transparan)"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Unduh
+                    </Button>
+                  </>
                 ) : (
                   <div className="text-center p-4">
                     <PenLine className="h-8 w-8 mx-auto text-muted-foreground/40 mb-1" />
@@ -322,15 +372,28 @@ export function SignatureUploadCard({ className = '' }: SignatureUploadCardProps
                 Gores Digital
               </Button>
               {signatureUrl && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                  disabled={uploadingType === 'signature'}
-                  onClick={() => handleDelete('signature')}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs text-primary hover:text-primary hover:bg-primary/10 gap-1.5 px-3"
+                    onClick={() => handleDownload(signatureUrl, 'signature')}
+                    title="Unduh Tanda Tangan (PNG Transparan)"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Unduh
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                    disabled={uploadingType === 'signature'}
+                    onClick={() => handleDelete('signature')}
+                    title="Hapus Tanda Tangan"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -359,11 +422,23 @@ export function SignatureUploadCard({ className = '' }: SignatureUploadCardProps
               {/* Box Preview Paraf */}
               <div className="relative mt-3 h-36 w-full rounded-lg border-2 border-dashed border-border/80 flex items-center justify-center overflow-hidden bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:12px_12px]">
                 {parafUrl ? (
-                  <img
-                    src={parafUrl}
-                    alt="Paraf"
-                    className="max-h-24 max-w-[85%] object-contain drop-shadow-sm transition-transform hover:scale-105"
-                  />
+                  <>
+                    <img
+                      src={parafUrl}
+                      alt="Paraf"
+                      className="max-h-24 max-w-[85%] object-contain drop-shadow-sm transition-transform hover:scale-105"
+                    />
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="absolute top-2 right-2 h-7 px-2 text-[11px] gap-1 shadow-xs bg-background/90 backdrop-blur-xs hover:bg-primary hover:text-primary-foreground border"
+                      onClick={() => handleDownload(parafUrl, 'paraf')}
+                      title="Unduh Paraf Singkat (PNG Transparan)"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Unduh
+                    </Button>
+                  </>
                 ) : (
                   <div className="text-center p-4">
                     <Edit3 className="h-8 w-8 mx-auto text-muted-foreground/40 mb-1" />
@@ -404,15 +479,28 @@ export function SignatureUploadCard({ className = '' }: SignatureUploadCardProps
                 Gores Digital
               </Button>
               {parafUrl && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-                  disabled={uploadingType === 'paraf'}
-                  onClick={() => handleDelete('paraf')}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs text-primary hover:text-primary hover:bg-primary/10 gap-1.5 px-3"
+                    onClick={() => handleDownload(parafUrl, 'paraf')}
+                    title="Unduh Paraf Singkat (PNG Transparan)"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Unduh
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                    disabled={uploadingType === 'paraf'}
+                    onClick={() => handleDelete('paraf')}
+                    title="Hapus Paraf"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </>
               )}
             </div>
           </div>

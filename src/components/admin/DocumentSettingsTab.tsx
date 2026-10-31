@@ -22,7 +22,7 @@ import { toast } from 'sonner';
 import {
   FileText,
   Printer,
-  Upload,
+  Upload, Download,
   Trash2,
   RotateCcw,
   Save,
@@ -1234,6 +1234,17 @@ export function DocumentSettingsTab() {
                             <p className="text-[10px] text-slate-500">Tanda tangan dari akun dosen ini otomatis disematkan pada dokumen resmi.</p>
                           </div>
                         </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs gap-1.5 shrink-0"
+                          onClick={() => downloadFile(form.kaprodi_signature_url, `TTD_Kaprodi_${(form.kaprodi_name || 'Kaprodi').replace(/\s+/g, '_')}.png`)}
+                          title="Unduh Tanda Tangan Kaprodi"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Unduh TTD
+                        </Button>
                       </div>
                     )}
                   </div>
@@ -1321,6 +1332,17 @@ export function DocumentSettingsTab() {
                             <p className="text-[10px] text-slate-500">Tanda tangan dari akun dekan ini otomatis disematkan pada dokumen resmi.</p>
                           </div>
                         </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs gap-1.5 shrink-0"
+                          onClick={() => downloadFile(form.dekan_signature_url, `TTD_Dekan_${(form.dekan_name || 'Dekan').replace(/\s+/g, '_')}.png`)}
+                          title="Unduh Tanda Tangan Dekan"
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          Unduh TTD
+                        </Button>
                       </div>
                     )}
                   </div>

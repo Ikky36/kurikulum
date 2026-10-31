@@ -19,7 +19,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target, Eye, EyeOff, Settings, CheckSquare, LogIn, FileText, RefreshCw } from 'lucide-react';
+import { User, Mail, Camera, Loader2, Plus, Trash2, UserCog, BookOpen, Users, GraduationCap, Pencil, Search, Filter, Target, Eye, EyeOff, Settings, CheckSquare, LogIn, FileText, RefreshCw, Download, PenLine } from 'lucide-react';
 import { Navigate, Link, useLocation } from 'react-router-dom';
 import { Course, Profile, AppRole, Program } from '@/lib/types';
 import { useProgramFilter } from '@/hooks/useProgramFilter';
@@ -28,6 +28,7 @@ import { SistemKuliahManager } from '@/components/admin/SistemKuliahManager';
 import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 import { UserImportExport } from '@/components/admin/UserImportExport';
 import { UserPagination } from '@/components/admin/UserPagination';
+import { downloadFile } from '@/lib/downloadUtils';
 import { KurikulumTab } from '@/components/admin/KurikulumTab';
 import { KrsApprovalTab } from '@/components/admin/KrsApprovalTab';
 import { DpaManagerTab } from '@/components/admin/DpaManagerTab';
@@ -1282,6 +1283,60 @@ export default function DashboardAdmin() {
                               <Input value={userNip} onChange={(e) => setUserNip(e.target.value)} placeholder="Nomor Induk Dosen Nasional/Khusus" />
                             </div>
                           )}
+
+                          {/* Berkas Tanda Tangan & Paraf Digital */}
+                          {editingUser && (editingUser.signature_url || editingUser.paraf_url) && (
+                            <div className="p-3 bg-muted/50 border rounded-lg space-y-2.5">
+                              <Label className="text-xs font-semibold flex items-center gap-1.5 text-primary">
+                                <PenLine className="h-4 w-4" /> Tanda Tangan & Paraf Digital Pengguna
+                              </Label>
+                              <div className="grid grid-cols-2 gap-2.5">
+                                <div className="p-2 border rounded-md bg-background text-center space-y-1.5">
+                                  <p className="text-[11px] font-medium text-muted-foreground">Tanda Tangan Penuh</p>
+                                  {editingUser.signature_url ? (
+                                    <>
+                                      <div className="h-16 flex items-center justify-center p-1 bg-white border border-dashed rounded overflow-hidden">
+                                        <img src={editingUser.signature_url} alt="TTD" className="max-h-14 max-w-full object-contain" />
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full text-[11px] h-7 gap-1"
+                                        onClick={() => downloadFile(editingUser.signature_url!, `Tanda_Tangan_${(editingUser.full_name || 'User').replace(/\s+/g, '_')}.png`)}
+                                      >
+                                        <Download className="h-3 w-3" /> Unduh TTD
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <p className="text-[10px] text-muted-foreground py-4">Belum ada</p>
+                                  )}
+                                </div>
+
+                                <div className="p-2 border rounded-md bg-background text-center space-y-1.5">
+                                  <p className="text-[11px] font-medium text-muted-foreground">Paraf Singkat</p>
+                                  {editingUser.paraf_url ? (
+                                    <>
+                                      <div className="h-16 flex items-center justify-center p-1 bg-white border border-dashed rounded overflow-hidden">
+                                        <img src={editingUser.paraf_url} alt="Paraf" className="max-h-14 max-w-full object-contain" />
+                                      </div>
+                                      <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        className="w-full text-[11px] h-7 gap-1"
+                                        onClick={() => downloadFile(editingUser.paraf_url!, `Paraf_${(editingUser.full_name || 'User').replace(/\s+/g, '_')}.png`)}
+                                      >
+                                        <Download className="h-3 w-3" /> Unduh Paraf
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <p className="text-[10px] text-muted-foreground py-4">Belum ada</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                         <DialogFooter>
                           <Button 
@@ -1551,6 +1606,17 @@ export default function DashboardAdmin() {
                         )}
                         <TableCell>
                           <div className="flex gap-1">
+                            {(u.signature_url || u.paraf_url) && (
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => openEditUser(u)}
+                                title="Lihat & Unduh TTD / Paraf"
+                                className="text-primary hover:text-primary hover:bg-primary/10"
+                              >
+                                <PenLine className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button 
                               variant="ghost" 
                               size="icon" 
