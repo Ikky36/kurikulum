@@ -388,6 +388,13 @@ export function useDocumentTemplatesConfig() {
             }
           }
 
+          // Sinkronisasi otomatis alias kartu bimbingan: kartu_bimbingan_ta & kartu_bimbingan_tugas_akhir
+          const activeCustomTa = merged['kartu_bimbingan_tugas_akhir'] || merged['kartu_bimbingan_ta'];
+          if (activeCustomTa) {
+            merged['kartu_bimbingan_tugas_akhir'] = { ...activeCustomTa, code: 'kartu_bimbingan_tugas_akhir' };
+            merged['kartu_bimbingan_ta'] = { ...activeCustomTa, code: 'kartu_bimbingan_ta' };
+          }
+
           Object.defineProperty(merged, '_deleted_codes', {
             value: deletedCodes,
             enumerable: false,
@@ -434,17 +441,19 @@ export function useDocumentTemplatesConfig() {
     if (map[code]) return map[code];
 
     // 2. Jika mencari template tugas akhir / bimbingan skripsi
+    if (code === 'kartu_bimbingan_ta' || code === 'kartu_bimbingan_tugas_akhir') {
+      if (map['kartu_bimbingan_tugas_akhir']) return map['kartu_bimbingan_tugas_akhir'];
+      if (map['kartu_bimbingan_ta']) return map['kartu_bimbingan_ta'];
+    }
     if (
-      code === 'kartu_bimbingan_ta' ||
-      code === 'kartu_bimbingan_tugas_akhir' ||
       fallbackModule === 'tugas_akhir' ||
       code.includes('tugas_akhir') ||
       code.includes('bimbingan_ta')
     ) {
       const taTemplate = Object.values(map).find(
         (t) =>
-          t.code === 'kartu_bimbingan_ta' ||
           t.code === 'kartu_bimbingan_tugas_akhir' ||
+          t.code === 'kartu_bimbingan_ta' ||
           t.placement_targets?.includes('mahasiswa_tugas_akhir') ||
           t.data_source_module === 'tugas_akhir' ||
           t.code.includes('tugas_akhir') ||

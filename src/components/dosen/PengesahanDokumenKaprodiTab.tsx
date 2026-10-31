@@ -534,6 +534,7 @@ export function PengesahanDokumenKaprodiTab() {
           submission={selectedSubForPreview}
           consultationLogs={previewConsultationLogs || selectedSubForPreview.ta_consultation_logs || []}
           studentProfile={selectedSubForPreview.profiles}
+          templateCode="kartu_bimbingan_tugas_akhir"
         />
       )}
     </div>

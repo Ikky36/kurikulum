@@ -31,19 +31,14 @@ export function KartuBimbinganViewerModal({
 
   try {
     const targetCode = templateCode || 'kartu_bimbingan_tugas_akhir';
-    // Cari template aktif yang sesuai kode dokumen yang diminta
+    // Prioritaskan template aktif yang sesuai kode yang diminta (atau varian kustom tugas akhir)
     const template =
-      (templateCode && (templatesMap[templateCode] || defaultDocumentTemplates[templateCode] || getTemplate(templateCode, 'tugas_akhir'))) ||
-      Object.values(templatesMap).find(
-        (t) =>
-          t?.code === targetCode ||
-          t?.placement_targets?.includes('mahasiswa_tugas_akhir') ||
-          t?.data_source_module === 'tugas_akhir' ||
-          t?.code === 'kartu_bimbingan_tugas_akhir' ||
-          t?.code === 'kartu_bimbingan_ta' ||
-          t?.code?.includes('tugas_akhir')
-      ) ||
-      getTemplate('kartu_bimbingan_ta', 'tugas_akhir') ||
+      (templateCode && templatesMap[templateCode]) ||
+      templatesMap[targetCode] ||
+      (targetCode === 'kartu_bimbingan_tugas_akhir' ? templatesMap['kartu_bimbingan_ta'] : undefined) ||
+      (targetCode === 'kartu_bimbingan_ta' ? templatesMap['kartu_bimbingan_tugas_akhir'] : undefined) ||
+      getTemplate(targetCode, 'tugas_akhir') ||
+      defaultDocumentTemplates[targetCode] ||
       defaultDocumentTemplates.kartu_bimbingan_ta;
 
     const columns =
