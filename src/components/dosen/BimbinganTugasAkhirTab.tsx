@@ -29,7 +29,7 @@ export function BimbinganTugasAkhirTab() {
   const [dosenSubTab, setDosenSubTab] = useState('daftar');
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [printTemplateCode, setPrintTemplateCode] = useState<string>('kartu_bimbingan_tugas_akhir');
+  const [printTemplateCode, setPrintTemplateCode] = useState<string>('kartu_bimbingan_ta');
   
   // States for consultation response & add
   const [activeLog, setActiveLog] = useState<any>(null);
@@ -405,7 +405,7 @@ export function BimbinganTugasAkhirTab() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => { setPrintTemplateCode('kartu_bimbingan_tugas_akhir'); setIsPrintModalOpen(true); }}
+                          onClick={() => { setPrintTemplateCode('kartu_bimbingan_ta'); setIsPrintModalOpen(true); }}
                           className="gap-1.5 flex-1 sm:flex-initial justify-center text-xs h-9"
                         >
                           <Printer className="w-3.5 h-3.5" /> Cetak Kartu Bimbingan

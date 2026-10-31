@@ -30,7 +30,7 @@ export function KartuBimbinganViewerModal({
   if (!submission) return null;
 
   try {
-    const targetCode = templateCode || 'kartu_bimbingan_tugas_akhir';
+    const targetCode = templateCode || 'kartu_bimbingan_ta';
     // Prioritaskan template aktif yang sesuai kode yang diminta (atau varian kustom tugas akhir)
     const template =
       (templateCode && templatesMap[templateCode]) ||

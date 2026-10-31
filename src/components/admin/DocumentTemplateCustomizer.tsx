@@ -424,14 +424,32 @@ export function DocumentTemplateCustomizer() {
 
   // Create New Document Handler
   const handleCreateDocument = () => {
-    if (!newDocName.trim() || !newDocCode.trim()) {
+    const cleanName = newDocName.trim();
+    const cleanCode = newDocCode.toLowerCase().trim().replace(/[^a-z0-9_]/g, '_');
+
+    if (!cleanName || !cleanCode) {
       toast.error('Nama dan kode dokumen wajib diisi.');
       return;
     }
 
-    const cleanCode = newDocCode.toLowerCase().replace(/[^a-z0-9_]/g, '_');
+    // 1. Cek bentrok dengan kode dokumen aktif
     if (templatesMap[cleanCode]) {
-      toast.error('Kode dokumen sudah digunakan. Harap gunakan kode unik lain.');
+      toast.error(`Kode dokumen "${cleanCode}" sudah digunakan oleh format "${templatesMap[cleanCode].name}". Harap gunakan kode unik lain.`);
+      return;
+    }
+
+    // 2. Cek bentrok dengan reserved alias sistem
+    if (cleanCode === 'kartu_bimbingan_tugas_akhir' || cleanCode === 'kartu_bimbingan_ta') {
+      toast.error('Kode ini merupakan kode cadangan sistem untuk Kartu Bimbingan Tugas Akhir. Silakan gunakan kode lain.');
+      return;
+    }
+
+    // 3. Cek bentrok dengan nama dokumen yang sama persis
+    const duplicateName = Object.values(templatesMap).find(
+      (t) => t.name.trim().toLowerCase() === cleanName.toLowerCase()
+    );
+    if (duplicateName) {
+      toast.error(`Format dokumen dengan nama "${cleanName}" sudah ada (${duplicateName.code}). Harap gunakan nama yang berbeda.`);
       return;
     }
 
@@ -556,8 +574,10 @@ export function DocumentTemplateCustomizer() {
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-primary" />
                       <span>{tmpl.name}</span>
-                      {['kartu_bimbingan_ta', 'krs'].includes(tmpl.code) && (
+                      {defaultDocumentTemplates[tmpl.code] ? (
                         <Badge variant="secondary" className="text-[10px] py-0 px-1.5 ml-1">Bawaan</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 ml-1 text-muted-foreground">Kustom</Badge>
                       )}
                     </div>
                   </SelectItem>

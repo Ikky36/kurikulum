@@ -364,6 +364,20 @@ export function useDocumentTemplatesConfig() {
             if (key === '_deleted_codes') continue;
             if (deletedCodes.includes(key)) continue;
 
+            // Normalisasi kode legacy kartu bimbingan: lipat 'kartu_bimbingan_tugas_akhir' ke canonical 'kartu_bimbingan_ta'
+            if (key === 'kartu_bimbingan_tugas_akhir') {
+              if (!deletedCodes.includes('kartu_bimbingan_ta')) {
+                const legacyTa = parsed[key];
+                merged['kartu_bimbingan_ta'] = {
+                  ...(merged['kartu_bimbingan_ta'] || defaultDocumentTemplates.kartu_bimbingan_ta),
+                  ...legacyTa,
+                  code: 'kartu_bimbingan_ta',
+                  name: legacyTa.name || 'Kartu Bimbingan Tugas Akhir',
+                };
+              }
+              continue; // Hindari duplikasi key di merged
+            }
+
             // Jika template surat_pengesahan_proposal di database masih memakai template generik awal
             if (
               key === 'surat_pengesahan_proposal' &&
@@ -388,12 +402,7 @@ export function useDocumentTemplatesConfig() {
             }
           }
 
-          // Sinkronisasi otomatis alias kartu bimbingan: kartu_bimbingan_ta & kartu_bimbingan_tugas_akhir
-          const activeCustomTa = merged['kartu_bimbingan_tugas_akhir'] || merged['kartu_bimbingan_ta'];
-          if (activeCustomTa) {
-            merged['kartu_bimbingan_tugas_akhir'] = { ...activeCustomTa, code: 'kartu_bimbingan_tugas_akhir' };
-            merged['kartu_bimbingan_ta'] = { ...activeCustomTa, code: 'kartu_bimbingan_ta' };
-          }
+
 
           Object.defineProperty(merged, '_deleted_codes', {
             value: deletedCodes,
@@ -437,13 +446,16 @@ export function useDocumentTemplatesConfig() {
 
   const getTemplate = (code: string, fallbackModule?: string): SingleDocumentTemplate => {
     const map = query.data || defaultDocumentTemplates;
+    const canonicalCode = code === 'kartu_bimbingan_tugas_akhir' ? 'kartu_bimbingan_ta' : code;
+
     // 1. Cocokkan kode langsung jika ada di template aktif
+    if (map[canonicalCode]) return map[canonicalCode];
     if (map[code]) return map[code];
 
     // 2. Jika mencari template tugas akhir / bimbingan skripsi
     if (code === 'kartu_bimbingan_ta' || code === 'kartu_bimbingan_tugas_akhir') {
-      if (map['kartu_bimbingan_tugas_akhir']) return map['kartu_bimbingan_tugas_akhir'];
       if (map['kartu_bimbingan_ta']) return map['kartu_bimbingan_ta'];
+      if (map['kartu_bimbingan_tugas_akhir']) return map['kartu_bimbingan_tugas_akhir'];
     }
     if (
       fallbackModule === 'tugas_akhir' ||
@@ -494,11 +506,17 @@ export function useDocumentTemplatesConfig() {
   };
 
   const updateSingleTemplate = (code: string, updated: SingleDocumentTemplate) => {
-    const currentMap = query.data || defaultDocumentTemplates;
-    const deletedCodes: string[] = [...((currentMap as any)._deleted_codes || [])].filter((c) => c !== code);
+    const canonicalCode = code === 'kartu_bimbingan_tugas_akhir' ? 'kartu_bimbingan_ta' : code;
+    const currentMap = { ...(query.data || defaultDocumentTemplates) };
+    const deletedCodes: string[] = [...((currentMap as any)._deleted_codes || [])].filter(
+      (c) => c !== canonicalCode && c !== code
+    );
+    if (canonicalCode === 'kartu_bimbingan_ta') {
+      delete currentMap['kartu_bimbingan_tugas_akhir'];
+    }
     const newMap: AllDocumentTemplatesMap = {
       ...currentMap,
-      [code]: updated,
+      [canonicalCode]: { ...updated, code: canonicalCode },
     };
     Object.defineProperty(newMap, '_deleted_codes', {
       value: deletedCodes,
@@ -510,11 +528,14 @@ export function useDocumentTemplatesConfig() {
   };
 
   const createNewTemplate = (code: string, newTemplate: SingleDocumentTemplate) => {
-    const currentMap = query.data || defaultDocumentTemplates;
-    const deletedCodes: string[] = [...((currentMap as any)._deleted_codes || [])].filter((c) => c !== code);
+    const canonicalCode = code === 'kartu_bimbingan_tugas_akhir' ? 'kartu_bimbingan_ta' : code;
+    const currentMap = { ...(query.data || defaultDocumentTemplates) };
+    const deletedCodes: string[] = [...((currentMap as any)._deleted_codes || [])].filter(
+      (c) => c !== canonicalCode && c !== code
+    );
     const newMap: AllDocumentTemplatesMap = {
       ...currentMap,
-      [code]: newTemplate,
+      [canonicalCode]: { ...newTemplate, code: canonicalCode },
     };
     Object.defineProperty(newMap, '_deleted_codes', {
       value: deletedCodes,
@@ -528,10 +549,17 @@ export function useDocumentTemplatesConfig() {
   const deleteTemplate = (code: string) => {
     const currentMap = { ...(query.data || defaultDocumentTemplates) };
     const deletedCodes: string[] = [...((currentMap as any)._deleted_codes || [])];
-    if (!deletedCodes.includes(code)) {
-      deletedCodes.push(code);
+    const codesToDelete =
+      code === 'kartu_bimbingan_ta' || code === 'kartu_bimbingan_tugas_akhir'
+        ? ['kartu_bimbingan_ta', 'kartu_bimbingan_tugas_akhir']
+        : [code];
+
+    for (const c of codesToDelete) {
+      if (!deletedCodes.includes(c)) {
+        deletedCodes.push(c);
+      }
+      delete currentMap[c];
     }
-    delete currentMap[code];
     Object.defineProperty(currentMap, '_deleted_codes', {
       value: deletedCodes,
       enumerable: false,

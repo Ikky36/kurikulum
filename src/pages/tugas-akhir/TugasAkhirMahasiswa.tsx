@@ -40,7 +40,7 @@ export default function TugasAkhirMahasiswa() {
 
   // Print Card State
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
-  const [printTemplateCode, setPrintTemplateCode] = useState<string>('kartu_bimbingan_tugas_akhir');
+  const [printTemplateCode, setPrintTemplateCode] = useState<string>('kartu_bimbingan_ta');
 
   // Add Log State
   const [isAddLogOpen, setIsAddLogOpen] = useState(false);
@@ -823,7 +823,7 @@ export default function TugasAkhirMahasiswa() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => { setPrintTemplateCode('kartu_bimbingan_tugas_akhir'); setIsPrintModalOpen(true); }}
+                            onClick={() => { setPrintTemplateCode('kartu_bimbingan_ta'); setIsPrintModalOpen(true); }}
                             className="gap-1.5"
                           >
                             <Printer className="w-4 h-4" /> Cetak Kartu Bimbingan
