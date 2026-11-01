@@ -374,68 +374,187 @@ export const EvaluasiPengujiPage: React.FC = () => {
           </CardHeader>
 
           <CardContent className="pt-6 space-y-6">
-            {criteria.map((crit, index) => {
-              const val = rawScores[crit.id] ?? 80;
-              const weighted = Math.round((val * (crit.weight / 100)) * 100) / 100;
+            {/* Indikator Rata-rata Subtotal Kategori jika rubrik terbagi A & B */}
+            {scoreResult.avgA !== undefined && scoreResult.avgB !== undefined && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 rounded-xl border bg-muted/20">
+                <div className="flex items-center justify-between p-2.5 rounded-lg border bg-background">
+                  <div>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase block">
+                      A. Rata-rata Dokumen
+                    </span>
+                    <span className="text-lg font-black text-primary font-mono">
+                      {scoreResult.avgA}
+                    </span>
+                  </div>
+                  <Badge variant="outline" className="text-xs">7 Kriteria</Badge>
+                </div>
 
-              return (
-                <div
-                  key={crit.id}
-                  className="p-4 rounded-xl border bg-card/60 space-y-3 transition-all hover:border-primary/30"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
-                          {index + 1}
-                        </span>
-                        <h3 className="text-sm font-bold text-foreground">{crit.name}</h3>
-                        <Badge variant="secondary" className="text-xs font-semibold">
-                          Bobot {crit.weight}%
-                        </Badge>
-                      </div>
-                      {crit.description && (
-                        <p className="text-xs text-muted-foreground leading-relaxed pl-7">
-                          {crit.description}
-                        </p>
-                      )}
+                <div className="flex items-center justify-between p-2.5 rounded-lg border bg-background">
+                  <div>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase block">
+                      B. Rata-rata Ujian Lisan
+                    </span>
+                    <span className="text-lg font-black text-primary font-mono">
+                      {scoreResult.avgB}
+                    </span>
+                  </div>
+                  <Badge variant="outline" className="text-xs">6 Kriteria</Badge>
+                </div>
+              </div>
+            )}
+
+            {/* Skala Penilaian Standar Kampus */}
+            <div className="p-3 rounded-lg border bg-slate-50 dark:bg-slate-900/50 text-xs flex flex-wrap items-center justify-between gap-2">
+              <span className="font-bold text-slate-700 dark:text-slate-300">Skala Kelulusan:</span>
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
+                <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">A: 91-100</span>
+                <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold">A-: 81-90,99</span>
+                <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold">B+: 71-80,99</span>
+                <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 font-bold">B: 66-70,99</span>
+                <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-bold">C+: 61-65,99</span>
+                <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800 font-bold">D: 46-60,99</span>
+                <span className="px-1.5 py-0.5 rounded bg-rose-200 text-rose-900 font-bold">E: 0-45,99</span>
+              </div>
+            </div>
+
+            {/* Loop Kriteria per Kategori atau Flat */}
+            {(() => {
+              const categories = [
+                { key: 'A', title: 'A. PENILAIAN DOKUMEN', list: criteria.filter((c) => c.category === 'A' || (!c.category && c.order_index <= 7)) },
+                { key: 'B', title: 'B. PENILAIAN UJIAN LISAN', list: criteria.filter((c) => c.category === 'B' || (!c.category && c.order_index > 7)) },
+              ];
+
+              const isCategorized = categories[0].list.length > 0 && categories[1].list.length > 0;
+
+              if (isCategorized) {
+                return categories.map((cat) => (
+                  <div key={cat.key} className="space-y-4 pt-2">
+                    <div className="flex items-center justify-between border-b pb-2">
+                      <h3 className="font-extrabold text-sm text-foreground uppercase tracking-wide">
+                        {cat.title}
+                      </h3>
+                      <Badge variant="secondary" className="text-xs font-semibold">
+                        {cat.key === 'A' ? `Rata-rata: ${scoreResult.avgA ?? '-'}` : `Rata-rata: ${scoreResult.avgB ?? '-'}`}
+                      </Badge>
                     </div>
 
-                    <div className="flex items-center gap-2 pl-7 sm:pl-0">
-                      <Input
-                        type="number"
+                    <div className="space-y-3">
+                      {cat.list.map((crit, subIdx) => {
+                        const val = rawScores[crit.id] ?? 80;
+                        const globalIdx = crit.order_index || (cat.key === 'A' ? subIdx + 1 : 7 + subIdx + 1);
+                        return (
+                          <div
+                            key={crit.id}
+                            className="p-3.5 rounded-xl border bg-card/60 space-y-2.5 transition-all hover:border-primary/30"
+                          >
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
+                                    {subIdx + 1}
+                                  </span>
+                                  <h4 className="text-sm font-bold text-foreground">{crit.name}</h4>
+                                </div>
+                                {crit.description && (
+                                  <p className="text-xs text-muted-foreground leading-relaxed pl-7">
+                                    {crit.description}
+                                  </p>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-2 pl-7 sm:pl-0">
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  value={val}
+                                  disabled={isLocked}
+                                  onChange={(e) => {
+                                    const num = Number(e.target.value);
+                                    setRawScores((prev) => ({ ...prev, [crit.id]: Math.min(100, Math.max(0, num)) }));
+                                  }}
+                                  className="w-20 text-center font-bold text-base h-9 font-mono"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="pl-7 pt-1">
+                              <Slider
+                                value={[val]}
+                                min={0}
+                                max={100}
+                                step={1}
+                                disabled={isLocked}
+                                onValueChange={(vals) =>
+                                  setRawScores((prev) => ({ ...prev, [crit.id]: vals[0] }))
+                                }
+                                className="py-1"
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ));
+              }
+
+              // Fallback Flat List
+              return criteria.map((crit, index) => {
+                const val = rawScores[crit.id] ?? 80;
+                return (
+                  <div
+                    key={crit.id}
+                    className="p-4 rounded-xl border bg-card/60 space-y-3 transition-all hover:border-primary/30"
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
+                            {index + 1}
+                          </span>
+                          <h3 className="text-sm font-bold text-foreground">{crit.name}</h3>
+                        </div>
+                        {crit.description && (
+                          <p className="text-xs text-muted-foreground leading-relaxed pl-7">
+                            {crit.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center gap-2 pl-7 sm:pl-0">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          value={val}
+                          disabled={isLocked}
+                          onChange={(e) => {
+                            const num = Number(e.target.value);
+                            setRawScores((prev) => ({ ...prev, [crit.id]: Math.min(100, Math.max(0, num)) }));
+                          }}
+                          className="w-20 text-center font-bold text-base h-9 font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pl-7 pt-1">
+                      <Slider
+                        value={[val]}
                         min={0}
                         max={100}
-                        value={val}
+                        step={1}
                         disabled={isLocked}
-                        onChange={(e) => {
-                          const num = Number(e.target.value);
-                          setRawScores((prev) => ({ ...prev, [crit.id]: Math.min(100, Math.max(0, num)) }));
-                        }}
-                        className="w-20 text-center font-bold text-base h-9"
+                        onValueChange={(vals) =>
+                          setRawScores((prev) => ({ ...prev, [crit.id]: vals[0] }))
+                        }
+                        className="py-1"
                       />
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        Tertimbang: <strong>{weighted}</strong>
-                      </span>
                     </div>
                   </div>
-
-                  <div className="pl-7 pt-1">
-                    <Slider
-                      value={[val]}
-                      min={0}
-                      max={100}
-                      step={1}
-                      disabled={isLocked}
-                      onValueChange={(vals) =>
-                        setRawScores((prev) => ({ ...prev, [crit.id]: vals[0] }))
-                      }
-                      className="py-1"
-                    />
-                  </div>
-                </div>
-              );
-            })}
+                );
+              });
+            })()}
 
             {/* Rangkuman Nilai Akhir */}
             <div className="p-4 rounded-xl border bg-muted/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

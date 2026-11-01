@@ -11,6 +11,8 @@ export interface TaRubricCriterion {
   weight: number; // Persentase bobot (misal: 25 untuk 25%)
   max_score: number; // Default 100
   order_index?: number;
+  category?: 'A' | 'B'; // 'A': Penilaian Dokumen, 'B': Penilaian Ujian Lisan
+  category_name?: string; // 'PENILAIAN DOKUMEN' | 'PENILAIAN UJIAN LISAN'
 }
 
 export interface TaRubricConfig {
@@ -68,41 +70,142 @@ export const defaultTaRubrics: AllTaRubricsConfig = {
   },
   sidang: {
     id: 'sidang',
-    title: 'Rubrik Penilaian Sidang Munaqasyah Tugas Akhir',
-    description: 'Rubrik evaluasi komprehensif naskah akhir skripsi, kedalaman temuan hasil riset, argumentasi ilmiah, dan sikap akademisi.',
-    min_passing_score: 70,
+    title: 'Format Penilaian Sidang Tugas Akhir',
+    description: 'Format penilaian dokumen naskah skripsi dan ujian lisan sidang munaqasyah tugas akhir.',
+    min_passing_score: 66,
     criteria: [
+      // Kategori A: Penilaian Dokumen (7 Kriteria)
       {
-        id: 'sidang_crit_1',
-        name: 'Kualitas Naskah & Sistematika Penulisan',
-        description: 'Kepatuhan format terhadap Pedoman Penulisan Skripsi STITMA, koherensi antar bab, ketepatan sitasi (Mendeley/Zotero), dan bahasa baku.',
-        weight: 25,
+        id: 'sidang_a1',
+        name: 'Pemilihan dan perumusan masalah',
+        description: 'Kejelasan urgensi, orisinalitas, dan ketajaman perumusan masalah penelitian.',
+        weight: 7.14,
         max_score: 100,
         order_index: 1,
+        category: 'A',
+        category_name: 'PENILAIAN DOKUMEN',
       },
       {
-        id: 'sidang_crit_2',
-        name: 'Kedalaman Hasil & Pembahasan Penelitian',
-        description: 'Validitas dan keabsahan temuan data, ketajaman analisis hasil pembahasan, keterkaitan dengan teori rujukan, dan signifikansi temuan.',
-        weight: 35,
+        id: 'sidang_a2',
+        name: 'Penggunaan bahasa',
+        description: 'Tata bahasa baku, keterbacaan, kebakuan istilah, dan kepatuhan pedoman penulisan karya ilmiah.',
+        weight: 7.14,
         max_score: 100,
         order_index: 2,
+        category: 'A',
+        category_name: 'PENILAIAN DOKUMEN',
       },
       {
-        id: 'sidang_crit_3',
-        name: 'Penguasaan Materi Skripsi & Daya Nalar',
-        description: 'Kemampuan mempertahankan dalil skripsi secara objektif, penguasaan teori dan metodologi pendukung, serta kematangan penalaran ilmiah.',
-        weight: 25,
+        id: 'sidang_a3',
+        name: 'Keterkaitan studi kepustakaan dengan masalah',
+        description: 'Relevansi telaah pustaka dan kerangka berpikir teoritik terhadap pokok permasalahan.',
+        weight: 7.14,
         max_score: 100,
         order_index: 3,
+        category: 'A',
+        category_name: 'PENILAIAN DOKUMEN',
       },
       {
-        id: 'sidang_crit_4',
-        name: 'Teknik Presentasi & Sikap Akademik',
-        description: 'Kualitas slide presentasi, kejelasan tutur kata, kesantunan dalam berdiskusi, kejujuran ilmiah, dan sikap selama persidangan.',
-        weight: 15,
+        id: 'sidang_a4',
+        name: 'Kemutakhiran dan relevansi sumber acuan',
+        description: 'Kualitas dan kemutakhiran rujukan primer (jurnal bereputasi & literatur otoritatif).',
+        weight: 7.14,
         max_score: 100,
         order_index: 4,
+        category: 'A',
+        category_name: 'PENILAIAN DOKUMEN',
+      },
+      {
+        id: 'sidang_a5',
+        name: 'Ketepatan penyajian sosial',
+        description: 'Ketepatan penyajian data temuan, konteks sosial penelitian, dan analisis pembahasan.',
+        weight: 7.14,
+        max_score: 100,
+        order_index: 5,
+        category: 'A',
+        category_name: 'PENILAIAN DOKUMEN',
+      },
+      {
+        id: 'sidang_a6',
+        name: 'Keaslian',
+        description: 'Integritas akademik, orisinalitas karya, dan bebas plagiarisme.',
+        weight: 7.15,
+        max_score: 100,
+        order_index: 6,
+        category: 'A',
+        category_name: 'PENILAIAN DOKUMEN',
+      },
+      {
+        id: 'sidang_a7',
+        name: 'Kesimpulan manfaat',
+        description: 'Ketepatan penarikan kesimpulan dan kontribusi manfaat teoritis serta praktis.',
+        weight: 7.15,
+        max_score: 100,
+        order_index: 7,
+        category: 'A',
+        category_name: 'PENILAIAN DOKUMEN',
+      },
+
+      // Kategori B: Penilaian Ujian Lisan (6 Kriteria)
+      {
+        id: 'sidang_b1',
+        name: 'Kemampuan mengungkap / menguraikan pendapat',
+        description: 'Kemampuan artikulasi ilmiah dan kejelasan dalam menguraikan argumen.',
+        weight: 8.33,
+        max_score: 100,
+        order_index: 8,
+        category: 'B',
+        category_name: 'PENILAIAN UJIAN LISAN',
+      },
+      {
+        id: 'sidang_b2',
+        name: 'Teknik presentasi',
+        description: 'Kerapian media presentasi, alokasi waktu, dan ketepatan penyampaian poin inti.',
+        weight: 8.33,
+        max_score: 100,
+        order_index: 9,
+        category: 'B',
+        category_name: 'PENILAIAN UJIAN LISAN',
+      },
+      {
+        id: 'sidang_b3',
+        name: 'Keterbukaan terhadap pernyataan / saran penguji',
+        description: 'Sikap santun, daya kritis, dan penerimaan terhadap masukan dewan penguji.',
+        weight: 8.33,
+        max_score: 100,
+        order_index: 10,
+        category: 'B',
+        category_name: 'PENILAIAN UJIAN LISAN',
+      },
+      {
+        id: 'sidang_b4',
+        name: 'Penguasaan materi',
+        description: 'Kedalaman pemahaman teori, konsep, dan metodologi yang diterapkan pada skripsi.',
+        weight: 8.33,
+        max_score: 100,
+        order_index: 11,
+        category: 'B',
+        category_name: 'PENILAIAN UJIAN LISAN',
+      },
+      {
+        id: 'sidang_b5',
+        name: 'Kebenaran / ketetapan jawaban',
+        description: 'Ketepatan logika, akurasi fakta, dan ketajaman dalil dalam merespons pertanyaan.',
+        weight: 8.34,
+        max_score: 100,
+        order_index: 12,
+        category: 'B',
+        category_name: 'PENILAIAN UJIAN LISAN',
+      },
+      {
+        id: 'sidang_b6',
+        name: 'Penampilan umum',
+        description: 'Kerapian busana formal persidangan, etika akademik, dan sikap selama persidangan.',
+        weight: 8.34,
+        max_score: 100,
+        order_index: 13,
+        category: 'B',
+        category_name: 'PENILAIAN UJIAN LISAN',
       },
     ],
   },
@@ -148,9 +251,17 @@ export function calculateExaminerScore(
   finalScore: number;
   details: TaExaminerScoreItem[];
   isComplete: boolean;
+  avgA?: number;
+  avgB?: number;
 } {
   let totalWeightedScore = 0;
   let isComplete = true;
+
+  const hasCategories = criteria.some((c) => c.category === 'A') && criteria.some((c) => c.category === 'B');
+  let sumScoreA = 0;
+  let countA = 0;
+  let sumScoreB = 0;
+  let countB = 0;
 
   const details: TaExaminerScoreItem[] = criteria.map((crit) => {
     const rawVal = rawScores[crit.id];
@@ -160,6 +271,14 @@ export function calculateExaminerScore(
     }
     const weighted = Math.round((raw * (crit.weight / 100)) * 100) / 100;
     totalWeightedScore += weighted;
+
+    if (crit.category === 'A') {
+      sumScoreA += raw;
+      countA++;
+    } else if (crit.category === 'B') {
+      sumScoreB += raw;
+      countB++;
+    }
 
     return {
       criterion_id: crit.id,
@@ -171,19 +290,29 @@ export function calculateExaminerScore(
     };
   });
 
-  const finalScore = Math.round(totalWeightedScore * 100) / 100;
+  let finalScore = Math.round(totalWeightedScore * 100) / 100;
+  let avgA: number | undefined;
+  let avgB: number | undefined;
+
+  if (hasCategories && countA > 0 && countB > 0) {
+    avgA = Math.round((sumScoreA / countA) * 100) / 100;
+    avgB = Math.round((sumScoreB / countB) * 100) / 100;
+    finalScore = Math.round(((avgA + avgB) / 2) * 100) / 100;
+  }
 
   return {
     finalScore,
     details,
     isComplete,
+    avgA,
+    avgB,
   };
 }
 
-// Helper: Menentukan Predikat Huruf & Keterangan Kelulusan berdasarkan nilai angka
+// Helper: Menentukan Predikat Huruf & Keterangan Kelulusan berdasarkan nilai angka resmi
 export function determineGradeFromScore(
   score: number,
-  minPassingScore: number = 65
+  minPassingScore: number = 66
 ): {
   grade: string;
   isPass: boolean;
@@ -193,16 +322,16 @@ export function determineGradeFromScore(
 } {
   const isPass = score >= minPassingScore;
 
-  if (score >= 85) {
+  if (score >= 91) {
     return {
       grade: 'A',
       isPass: true,
-      statusLabel: 'Lulus dengan Sangat Memuaskan',
+      statusLabel: 'Lulus dengan Sangat Memuaskan (Mumtaz)',
       badgeClass: 'bg-emerald-500/10 text-emerald-700 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400',
       arabicLabel: 'ممتاز (Mumtaz)',
     };
   }
-  if (score >= 80) {
+  if (score >= 81) {
     return {
       grade: 'A-',
       isPass: true,
@@ -211,7 +340,7 @@ export function determineGradeFromScore(
       arabicLabel: 'جيد جدا مرتفع',
     };
   }
-  if (score >= 75) {
+  if (score >= 71) {
     return {
       grade: 'B+',
       isPass: true,
@@ -220,46 +349,42 @@ export function determineGradeFromScore(
       arabicLabel: 'جيد جدا (Jayyid Jiddan)',
     };
   }
-  if (score >= 70) {
+  if (score >= 66) {
     return {
       grade: 'B',
-      isPass: isPass,
-      statusLabel: isPass ? 'Lulus dengan Baik' : 'Belum Memenuhi Batas Kelulusan',
-      badgeClass: isPass
-        ? 'bg-blue-500/10 text-blue-700 border-blue-300 dark:bg-blue-500/20 dark:text-blue-400'
-        : 'bg-amber-500/10 text-amber-700 border-amber-300 dark:bg-amber-500/20 dark:text-amber-400',
+      isPass: true,
+      statusLabel: 'Lulus dengan Baik',
+      badgeClass: 'bg-blue-500/10 text-blue-700 border-blue-300 dark:bg-blue-500/20 dark:text-blue-400',
       arabicLabel: 'جيد (Jayyid)',
     };
   }
-  if (score >= 65) {
-    return {
-      grade: 'B-',
-      isPass: isPass,
-      statusLabel: isPass ? 'Lulus Cukup Baik' : 'Belum Memenuhi Batas Kelulusan',
-      badgeClass: isPass
-        ? 'bg-amber-500/10 text-amber-700 border-amber-300 dark:bg-amber-500/20 dark:text-amber-400'
-        : 'bg-rose-500/10 text-rose-700 border-rose-300 dark:bg-rose-500/20 dark:text-rose-400',
-      arabicLabel: 'مقبول مرتفع',
-    };
-  }
-  if (score >= 60) {
+  if (score >= 61) {
     return {
       grade: 'C+',
       isPass: isPass,
-      statusLabel: isPass ? 'Lulus Cukup' : 'Tidak Lulus',
+      statusLabel: isPass ? 'Lulus Cukup' : 'Belum Memenuhi Batas Kelulusan',
       badgeClass: isPass
         ? 'bg-amber-500/10 text-amber-700 border-amber-300 dark:bg-amber-500/20 dark:text-amber-400'
         : 'bg-rose-500/10 text-rose-700 border-rose-300 dark:bg-rose-500/20 dark:text-rose-400',
       arabicLabel: 'مقبول (Maqbul)',
     };
   }
+  if (score >= 46) {
+    return {
+      grade: 'D',
+      isPass: false,
+      statusLabel: 'Kurang / Mengulang Ujian',
+      badgeClass: 'bg-rose-500/10 text-rose-700 border-rose-300 dark:bg-rose-500/20 dark:text-rose-400',
+      arabicLabel: 'راسب (D)',
+    };
+  }
 
   return {
-    grade: 'D',
+    grade: 'E',
     isPass: false,
-    statusLabel: 'Tidak Lulus / Mengulang Sidang',
-    badgeClass: 'bg-rose-500/10 text-rose-700 border-rose-300 dark:bg-rose-500/20 dark:text-rose-400',
-    arabicLabel: 'راسب (Rasib)',
+    statusLabel: 'Gagal / Mengulang Ujian',
+    badgeClass: 'bg-destructive/10 text-destructive border-destructive/30',
+    arabicLabel: 'راسب (E)',
   };
 }
 

@@ -3,6 +3,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { UniversalDocumentContainer, DocumentSignatureData } from './UniversalDocumentContainer';
+import { QRCodeSVG } from 'qrcode.react';
 import { useDocumentTemplatesConfig, SingleDocumentTemplate } from '@/lib/documentTemplateTypes';
 import { useDocumentSettings } from '@/lib/documentSettings';
 import { useTaRubricsConfig, determineGradeFromScore } from '@/lib/taAssessmentTypes';
@@ -22,6 +23,7 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
   initialDocType = 'berita_acara',
 }) => {
   const [activeDocType, setActiveDocType] = useState<'berita_acara' | 'lembar_nilai' | 'surat_tugas'>(initialDocType);
+  const [selectedExaminerIndex, setSelectedExaminerIndex] = useState<number | 'rekap'>(0);
 
   useEffect(() => {
     if (open && initialDocType) {
@@ -168,9 +170,27 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
   }
 
   // Template override with dynamic committee signatures
+  const isIndividualExaminerSheet = activeDocType === 'lembar_nilai' && !isSempro && selectedExaminerIndex !== 'rekap';
+  const activeExaminer = isIndividualExaminerSheet && examiners.length > 0
+    ? (examiners[selectedExaminerIndex as number] || examiners[0])
+    : null;
+
+  // Template override with dynamic committee signatures
   const templateOverride: SingleDocumentTemplate = {
     ...baseTemplate,
-    signatures: dynamicSignatures,
+    document_title: (activeDocType === 'lembar_nilai' && !isSempro) ? 'FORMAT PENILAIAN' : baseTemplate.document_title,
+    document_subtitle: (activeDocType === 'lembar_nilai' && !isSempro) ? '' : baseTemplate.document_subtitle,
+    show_kop: true,
+    show_footer: true,
+    show_student_info: true,
+    student_bio_fields: (activeDocType === 'lembar_nilai' && !isSempro)
+      ? [
+          { key: 'nama_mahasiswa', label: 'Nama Mahasiswa' },
+          { key: 'nim', label: 'NIM' },
+          { key: 'judul_tugas_akhir', label: 'Judul Tugas Akhir' },
+        ]
+      : baseTemplate.student_bio_fields,
+    signatures: isIndividualExaminerSheet ? [] : dynamicSignatures,
   };
 
   // Variables for interpolation
@@ -204,45 +224,78 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-1rem)] sm:w-full max-w-5xl max-h-[96vh] p-3 sm:p-5 flex flex-col overflow-hidden bg-slate-100 dark:bg-slate-900">
         {/* Document Selector Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b bg-background p-3 rounded-lg print:hidden">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase text-muted-foreground">Pilih Dokumen:</span>
-            <div className="inline-flex rounded-lg border bg-muted/60 p-0.5">
-              <Button
-                variant={activeDocType === 'berita_acara' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveDocType('berita_acara')}
-                className="h-7 text-xs gap-1.5"
-              >
-                <FileText className="w-3.5 h-3.5" />
-                Berita Acara
-              </Button>
-              <Button
-                variant={activeDocType === 'lembar_nilai' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveDocType('lembar_nilai')}
-                className="h-7 text-xs gap-1.5"
-              >
-                <Award className="w-3.5 h-3.5" />
-                Lembar Nilai Rubrik
-              </Button>
-              <Button
-                variant={activeDocType === 'surat_tugas' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveDocType('surat_tugas')}
-                className="h-7 text-xs gap-1.5"
-              >
-                <FileCheck className="w-3.5 h-3.5" />
-                Surat Tugas
-              </Button>
+        <div className="flex flex-col gap-2 pb-2 border-b bg-background p-3 rounded-lg print:hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase text-muted-foreground">Pilih Dokumen:</span>
+              <div className="inline-flex rounded-lg border bg-muted/60 p-0.5">
+                <Button
+                  variant={activeDocType === 'berita_acara' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveDocType('berita_acara')}
+                  className="h-7 text-xs gap-1.5"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  Berita Acara
+                </Button>
+                <Button
+                  variant={activeDocType === 'lembar_nilai' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveDocType('lembar_nilai')}
+                  className="h-7 text-xs gap-1.5"
+                >
+                  <Award className="w-3.5 h-3.5" />
+                  Lembar Nilai Rubrik
+                </Button>
+                <Button
+                  variant={activeDocType === 'surat_tugas' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveDocType('surat_tugas')}
+                  className="h-7 text-xs gap-1.5"
+                >
+                  <FileCheck className="w-3.5 h-3.5" />
+                  Surat Tugas
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-xs">
+                {isSempro ? 'Seminar Proposal' : 'Sidang Munaqasyah'}
+              </Badge>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {isSempro ? 'Seminar Proposal' : 'Sidang Munaqasyah'}
-            </Badge>
-          </div>
+          {/* Sub-selector Penguji jika Lembar Nilai Sidang */}
+          {activeDocType === 'lembar_nilai' && !isSempro && examiners.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto pt-1 border-t">
+              <span className="text-[11px] font-bold text-muted-foreground uppercase shrink-0">
+                Pilih Format Lembar:
+              </span>
+              {examiners.map((ex: any, idx: number) => {
+                const exName = ex.examiner_name || ex.profiles?.full_name || `Penguji ${idx + 1}`;
+                return (
+                  <Button
+                    key={idx}
+                    variant={selectedExaminerIndex === idx ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedExaminerIndex(idx)}
+                    className="h-6 text-[11px] px-2.5 shrink-0"
+                  >
+                    {ex.role || `Penguji ${idx + 1}`}: {exName}
+                  </Button>
+                );
+              })}
+              <Button
+                variant={selectedExaminerIndex === 'rekap' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedExaminerIndex('rekap')}
+                className="h-6 text-[11px] px-2.5 shrink-0"
+              >
+                Rekapitulasi Semua Penguji
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Scrollable Document Container */}
@@ -284,85 +337,304 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
           >
             {/* If Lembar Nilai, render the Rubric Scoring Table */}
             {activeDocType === 'lembar_nilai' && (
-              <div className="my-4 space-y-3">
-                <table className="w-full border-collapse border border-slate-700 text-xs">
-                  <thead>
-                    <tr className="bg-slate-100 text-slate-800">
-                      <th className="border border-slate-700 py-1.5 px-2 w-10 text-center font-bold">No</th>
-                      <th className="border border-slate-700 py-1.5 px-3 text-left font-bold">
-                        Komponen & Aspek Penilaian Rubrik
-                      </th>
-                      <th className="border border-slate-700 py-1.5 px-2 w-20 text-center font-bold">Bobot (%)</th>
-                      {examiners.map((ex: any, idx: number) => (
-                        <th key={idx} className="border border-slate-700 py-1.5 px-2 w-24 text-center font-bold">
-                          {ex.role}
-                        </th>
-                      ))}
-                      <th className="border border-slate-700 py-1.5 px-2 w-24 text-center font-bold">
-                        Rata-rata
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {criteria.map((crit, idx) => {
-                      // Ambil skor per penguji untuk kriteria ini
-                      const critScores = examiners.map((ex: any) => {
-                        if (Array.isArray(ex.scores_detail)) {
-                          const item = ex.scores_detail.find((s: any) => s.criterion_id === crit.id);
-                          return item?.raw_score ?? null;
-                        }
-                        return null;
-                      });
+              isIndividualExaminerSheet && activeExaminer ? (
+                // FORMAT PENILAIAN INDIVIDUAL PENGUJI (Sesuai Format Resmi Dokumen)
+                (() => {
+                  const criteriaA = criteria.filter((c: any) => c.category === 'A' || c.order_index <= 7);
+                  const criteriaB = criteria.filter((c: any) => c.category === 'B' || c.order_index > 7);
 
-                      const validScores = critScores.filter((s): s is number => s !== null);
-                      const avg = validScores.length > 0
-                        ? Math.round((validScores.reduce((a, b) => a + b, 0) / validScores.length) * 100) / 100
-                        : '-';
+                  const getScoreVal = (critId: string, idx: number) => {
+                    if (!activeExaminer || !Array.isArray(activeExaminer.scores_detail)) return '-';
+                    const item = activeExaminer.scores_detail.find((s: any) => s.criterion_id === critId);
+                    if (item && item.raw_score !== undefined && item.raw_score !== null) {
+                      return item.raw_score;
+                    }
+                    const fallbackItem = activeExaminer.scores_detail[idx];
+                    if (fallbackItem && fallbackItem.raw_score !== undefined && fallbackItem.raw_score !== null) {
+                      return fallbackItem.raw_score;
+                    }
+                    return '-';
+                  };
 
-                      return (
-                        <tr key={crit.id} className="hover:bg-slate-50">
-                          <td className="border border-slate-700 py-2 px-2 text-center">{idx + 1}</td>
-                          <td className="border border-slate-700 py-2 px-3">
-                            <span className="font-semibold block">{crit.name}</span>
-                            {crit.description && (
-                              <span className="text-[10px] text-slate-500 block leading-tight mt-0.5">
-                                {crit.description}
-                              </span>
-                            )}
-                          </td>
-                          <td className="border border-slate-700 py-2 px-2 text-center font-semibold">
-                            {crit.weight}%
-                          </td>
-                          {critScores.map((score, sIdx) => (
-                            <td key={sIdx} className="border border-slate-700 py-2 px-2 text-center font-mono">
-                              {score !== null ? score : '-'}
+                  const scoresA = criteriaA.map((crit: any, idx: number) => {
+                    const v = getScoreVal(crit.id, idx);
+                    return typeof v === 'number' ? v : null;
+                  });
+                  const validScoresA = scoresA.filter((s: any): s is number => s !== null);
+                  const avgA = validScoresA.length > 0
+                    ? (validScoresA.reduce((a: number, b: number) => a + b, 0) / validScoresA.length).toFixed(2)
+                    : '-';
+
+                  const scoresB = criteriaB.map((crit: any, idx: number) => {
+                    const v = getScoreVal(crit.id, criteriaA.length + idx);
+                    return typeof v === 'number' ? v : null;
+                  });
+                  const validScoresB = scoresB.filter((s: any): s is number => s !== null);
+                  const avgB = validScoresB.length > 0
+                    ? (validScoresB.reduce((a: number, b: number) => a + b, 0) / validScoresB.length).toFixed(2)
+                    : '-';
+
+                  let finalScoreExaminer = '-';
+                  if (avgA !== '-' && avgB !== '-') {
+                    finalScoreExaminer = ((Number(avgA) + Number(avgB)) / 2).toFixed(2);
+                  } else if (activeExaminer.score !== undefined && activeExaminer.score !== null) {
+                    finalScoreExaminer = Number(activeExaminer.score).toFixed(2);
+                  }
+
+                  const gradeExaminer = determineGradeFromScore(Number(finalScoreExaminer) || 0);
+                  const defaultCity = docSettings.default_city || 'Bantul';
+                  const verificationUrl = typeof window !== 'undefined'
+                    ? `${window.location.origin}/v?doc=lembar_nilai_sidang&id=${seminar.id}`
+                    : '';
+
+                  return (
+                    <div className="my-2 space-y-3 font-serif">
+                      {/* TABEL FORMAT PENILAIAN */}
+                      <table className="w-full border-collapse border border-slate-900 text-xs text-slate-900">
+                        <thead>
+                          <tr className="bg-slate-50/50 border-b border-slate-900 text-slate-900 font-bold text-center">
+                            <th className="border border-slate-900 py-1.5 px-2 w-12 text-center font-bold">NO</th>
+                            <th className="border border-slate-900 py-1.5 px-3 text-center font-bold">
+                              KOMPONEN PENILAIAN
+                            </th>
+                            <th className="border border-slate-900 py-1.5 px-3 w-32 text-center font-bold">
+                              NILAI ANGKA
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {/* A. PENILAIAN DOKUMEN */}
+                          <tr className="font-bold bg-slate-50/30">
+                            <td className="border border-slate-900 py-1 px-2 text-center font-bold">A</td>
+                            <td className="border border-slate-900 py-1 px-3 font-bold uppercase">
+                              PENILAIAN DOKUMEN
                             </td>
+                            <td className="border border-slate-900 py-1 px-3 text-center font-mono"></td>
+                          </tr>
+                          {criteriaA.map((crit: any, idx: number) => (
+                            <tr key={crit.id} className="hover:bg-slate-50/40">
+                              <td className="border border-slate-900 py-1 px-2 text-center">{idx + 1}</td>
+                              <td className="border border-slate-900 py-1 px-3">{crit.name}</td>
+                              <td className="border border-slate-900 py-1 px-3 text-center font-mono font-medium">
+                                {getScoreVal(crit.id, idx)}
+                              </td>
+                            </tr>
                           ))}
-                          <td className="border border-slate-700 py-2 px-2 text-center font-bold font-mono">
-                            {avg}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                          {/* Baris Rata-rata A */}
+                          <tr className="font-bold bg-slate-50/50">
+                            <td colSpan={2} className="border border-slate-900 py-1 px-3 text-center font-bold">
+                              Rata-rata
+                            </td>
+                            <td className="border border-slate-900 py-1 px-3 text-center font-mono font-bold">
+                              {avgA}
+                            </td>
+                          </tr>
 
-                    {/* Total Row */}
-                    <tr className="bg-slate-100 font-bold">
-                      <td colSpan={2} className="border border-slate-700 py-2 px-3 text-right">
-                        NILAI AKHIR RATA-RATA:
-                      </td>
-                      <td className="border border-slate-700 py-2 px-2 text-center">100%</td>
-                      {examiners.map((ex: any, idx: number) => (
-                        <td key={idx} className="border border-slate-700 py-2 px-2 text-center font-mono text-sm">
-                          {ex.score !== undefined && ex.score !== null ? ex.score : '-'}
+                          {/* B. PENILAIAN UJIAN LISAN */}
+                          <tr className="font-bold bg-slate-50/30">
+                            <td className="border border-slate-900 py-1 px-2 text-center font-bold">B</td>
+                            <td className="border border-slate-900 py-1 px-3 font-bold uppercase">
+                              PENILAIAN UJIAN LISAN
+                            </td>
+                            <td className="border border-slate-900 py-1 px-3 text-center font-mono"></td>
+                          </tr>
+                          {criteriaB.map((crit: any, idx: number) => (
+                            <tr key={crit.id} className="hover:bg-slate-50/40">
+                              <td className="border border-slate-900 py-1 px-2 text-center">{idx + 1}</td>
+                              <td className="border border-slate-900 py-1 px-3">{crit.name}</td>
+                              <td className="border border-slate-900 py-1 px-3 text-center font-mono font-medium">
+                                {getScoreVal(crit.id, criteriaA.length + idx)}
+                              </td>
+                            </tr>
+                          ))}
+                          {/* Baris Rata-rata B */}
+                          <tr className="font-bold bg-slate-50/50">
+                            <td colSpan={2} className="border border-slate-900 py-1 px-3 text-center font-bold">
+                              Rata-rata
+                            </td>
+                            <td className="border border-slate-900 py-1 px-3 text-center font-mono font-bold">
+                              {avgB}
+                            </td>
+                          </tr>
+
+                          {/* Baris Jumlah Rata-rata A & B */}
+                          <tr className="font-bold bg-slate-100/70">
+                            <td colSpan={2} className="border border-slate-900 py-1.5 px-3 text-center font-bold">
+                              Jumlah Rata-rata A & B
+                            </td>
+                            <td className="border border-slate-900 py-1.5 px-3 text-center font-mono font-bold text-sm">
+                              {finalScoreExaminer}
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+
+                      {/* Teks Nilai Rata-rata Akhir */}
+                      <div className="my-2 text-xs font-bold text-slate-900">
+                        Nilai Rata-rata akhir : (&nbsp;&nbsp;{finalScoreExaminer !== '-' ? `${finalScoreExaminer} / ${gradeExaminer.grade}` : '          '}&nbsp;&nbsp;)
+                      </div>
+
+                      {/* Bagian Bawah Dua Kolom (Skala Nilai & Pengesahan Penguji) */}
+                      <div className="grid grid-cols-2 gap-6 mt-4 pt-2 text-xs text-slate-900 break-inside-avoid page-break-inside-avoid">
+                        {/* Kolom Kiri: Tabel Rentang Skala Nilai */}
+                        <div className="space-y-1 font-mono text-[11px] leading-tight pt-1">
+                          <div className="flex gap-3">
+                            <span className="w-6 font-bold">A</span>
+                            <span>91 – 100</span>
+                          </div>
+                          <div className="flex gap-3">
+                            <span className="w-6 font-bold">A-</span>
+                            <span>81 – 90,99</span>
+                          </div>
+                          <div className="flex gap-3">
+                            <span className="w-6 font-bold">B+</span>
+                            <span>71 – 80,99</span>
+                          </div>
+                          <div className="flex gap-3">
+                            <span className="w-6 font-bold">B</span>
+                            <span>66 – 70,99</span>
+                          </div>
+                          <div className="flex gap-3">
+                            <span className="w-6 font-bold">C+</span>
+                            <span>61 – 65,99</span>
+                          </div>
+                          <div className="flex gap-3">
+                            <span className="w-6 font-bold">D</span>
+                            <span>46 – 60,99</span>
+                          </div>
+                          <div className="flex gap-3">
+                            <span className="w-6 font-bold">E</span>
+                            <span>0 – 45,99</span>
+                          </div>
+                        </div>
+
+                        {/* Kolom Kanan: Pengesahan Penguji & Barcode */}
+                        <div className="flex flex-col items-center justify-between text-center min-h-[145px]">
+                          <div>
+                            <p className="text-xs">
+                              {defaultCity}, {dateFormatted}
+                            </p>
+                            <p className="font-bold text-xs mt-0.5">
+                              {activeExaminer?.role || 'Penguji'}
+                            </p>
+                          </div>
+
+                          {/* Tanda Tangan Digital / Spasi */}
+                          <div className="my-1 h-14 flex items-center justify-center">
+                            {activeExaminer?.signature_url ? (
+                              <img
+                                src={activeExaminer.signature_url}
+                                alt="Tanda Tangan Penguji"
+                                className="max-h-14 max-w-[140px] object-contain"
+                              />
+                            ) : (
+                              <div className="h-12 w-32 border-b border-dotted border-slate-400" />
+                            )}
+                          </div>
+
+                          <div>
+                            <p className="font-bold text-xs underline decoration-dotted">
+                              (&nbsp;{activeExaminer?.examiner_name || activeExaminer?.profiles?.full_name || '.........................................'}&nbsp;)
+                            </p>
+                            {(activeExaminer?.examiner_nip || activeExaminer?.profiles?.nip) && (
+                              <p className="text-[10px] text-slate-600 font-mono mt-0.5">
+                                NIP/NIDN: {activeExaminer.examiner_nip || activeExaminer.profiles?.nip}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* QR Code Verifikasi Dokumen di Pojok Bawah */}
+                          {verificationUrl && (
+                            <div className="self-end mt-2 pt-1 border border-slate-300 p-1 rounded bg-white">
+                              <QRCodeSVG value={verificationUrl} size={54} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : (
+                // FORMAT REKAPITULASI KOMPARATIF SEMUA PENGUJI
+                <div className="my-4 space-y-3">
+                  <table className="w-full border-collapse border border-slate-700 text-xs">
+                    <thead>
+                      <tr className="bg-slate-100 text-slate-800">
+                        <th className="border border-slate-700 py-1.5 px-2 w-10 text-center font-bold">No</th>
+                        <th className="border border-slate-700 py-1.5 px-3 text-left font-bold">
+                          Komponen & Aspek Penilaian Rubrik
+                        </th>
+                        <th className="border border-slate-700 py-1.5 px-2 w-20 text-center font-bold">Bobot (%)</th>
+                        {examiners.map((ex: any, idx: number) => (
+                          <th key={idx} className="border border-slate-700 py-1.5 px-2 w-24 text-center font-bold">
+                            {ex.role}
+                          </th>
+                        ))}
+                        <th className="border border-slate-700 py-1.5 px-2 w-24 text-center font-bold">
+                          Rata-rata
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {criteria.map((crit: any, idx: number) => {
+                        const critScores = examiners.map((ex: any) => {
+                          if (Array.isArray(ex.scores_detail)) {
+                            const item = ex.scores_detail.find((s: any) => s.criterion_id === crit.id);
+                            return item?.raw_score ?? null;
+                          }
+                          return null;
+                        });
+
+                        const validScores = critScores.filter((s): s is number => s !== null);
+                        const avg = validScores.length > 0
+                          ? Math.round((validScores.reduce((a, b) => a + b, 0) / validScores.length) * 100) / 100
+                          : '-';
+
+                        return (
+                          <tr key={crit.id} className="hover:bg-slate-50">
+                            <td className="border border-slate-700 py-2 px-2 text-center">{idx + 1}</td>
+                            <td className="border border-slate-700 py-2 px-3">
+                              <span className="font-semibold block">{crit.name}</span>
+                              {crit.description && (
+                                <span className="text-[10px] text-slate-500 block leading-tight mt-0.5">
+                                  {crit.description}
+                                </span>
+                              )}
+                            </td>
+                            <td className="border border-slate-700 py-2 px-2 text-center font-semibold">
+                              {crit.weight}%
+                            </td>
+                            {critScores.map((score, sIdx) => (
+                              <td key={sIdx} className="border border-slate-700 py-2 px-2 text-center font-mono">
+                                {score !== null ? score : '-'}
+                              </td>
+                            ))}
+                            <td className="border border-slate-700 py-2 px-2 text-center font-bold font-mono">
+                              {avg}
+                            </td>
+                          </tr>
+                        );
+                      })}
+
+                      {/* Total Row */}
+                      <tr className="bg-slate-100 font-bold">
+                        <td colSpan={2} className="border border-slate-700 py-2 px-3 text-right">
+                          NILAI AKHIR RATA-RATA:
                         </td>
-                      ))}
-                      <td className="border border-slate-700 py-2 px-2 text-center font-mono text-sm text-primary">
-                        {seminar.final_score !== null && seminar.final_score !== undefined ? seminar.final_score : '-'}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
+                        <td className="border border-slate-700 py-2 px-2 text-center">100%</td>
+                        {examiners.map((ex: any, idx: number) => (
+                          <td key={idx} className="border border-slate-700 py-2 px-2 text-center font-mono text-sm">
+                            {ex.score !== undefined && ex.score !== null ? ex.score : '-'}
+                          </td>
+                        ))}
+                        <td className="border border-slate-700 py-2 px-2 text-center font-mono text-sm text-primary">
+                          {seminar.final_score !== null && seminar.final_score !== undefined ? seminar.final_score : '-'}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )
             )}
           </UniversalDocumentContainer>
         </div>

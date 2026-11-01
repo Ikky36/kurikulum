@@ -520,19 +520,18 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
 
   lembar_nilai_sidang: {
     code: 'lembar_nilai_sidang',
-    name: 'Lembar Nilai Sidang Munaqasyah',
+    name: 'Format Penilaian Sidang Tugas Akhir',
     orientation: 'portrait',
     data_source_module: 'tugas_akhir',
-    document_title: 'LEMBAR PENILAIAN SIDANG MUNAQASYAH SKRIPSI',
-    document_subtitle: 'REKAPITULASI SKOR RUBRIK DEWAN PENGUJI',
+    document_title: 'FORMAT PENILAIAN',
+    document_subtitle: '',
     show_kop: true,
     show_footer: true,
     show_student_info: true,
     student_bio_fields: [
       { key: 'nama_mahasiswa', label: 'Nama Mahasiswa' },
       { key: 'nim', label: 'NIM' },
-      { key: 'program_studi', label: 'Program Studi' },
-      { key: 'judul_tugas_akhir', label: 'Judul Skripsi' },
+      { key: 'judul_tugas_akhir', label: 'Judul Tugas Akhir' },
     ],
     content_mode: 'all',
     body_text_enabled: false,
