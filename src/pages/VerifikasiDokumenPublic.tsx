@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,15 +9,17 @@ import {
   ShieldCheck,
   CheckCircle2,
   Clock,
-  AlertTriangle,
   FileText,
   UserCheck,
   GraduationCap,
   Calendar,
   Building2,
-  ExternalLink,
-  Info,
   Scale,
+  Award,
+  FileCheck,
+  MapPin,
+  Check,
+  AlertCircle,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,16 +29,71 @@ export default function VerifikasiDokumenPublic() {
   const [searchParams] = useSearchParams();
   const { settings: docSettings, isLoading: loadingSettings } = useDocumentSettings();
 
-  const docType = searchParams.get('doc') || 'kartu_bimbingan_ta';
-  const docId = searchParams.get('id') || '';
+  const docTypeParam = searchParams.get('doc') || '';
+  const idParam = searchParams.get('id') || '';
   const vParam = searchParams.get('v');
+
+  // Decode QR code payload token jika tersedia
   const urlPayload = vParam ? decodeVerificationPayload(vParam) : null;
 
-  // 1. Fetch data dokumen tugas akhir jika ID tersedia
-  const { data: taData, isLoading: loadingTA } = useQuery({
-    queryKey: ['public_verify_ta', docId],
+  // Resolusi tipe dokumen dan ID sebenarnya
+  const targetDoc = urlPayload?.doc || docTypeParam || 'kartu_bimbingan_ta';
+  const effectiveDocId = urlPayload?.fullId || idParam || urlPayload?.id || '';
+
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(effectiveDocId);
+  const isSample = (!effectiveDocId || effectiveDocId === 'sample') && !urlPayload;
+
+  // Kategori Dokumen
+  const isSeminarDoc =
+    targetDoc.startsWith('berita_acara') ||
+    targetDoc.startsWith('lembar_nilai') ||
+    targetDoc.startsWith('surat_tugas') ||
+    targetDoc.includes('sempro') ||
+    targetDoc.includes('sidang');
+
+  const isKRS = targetDoc === 'krs';
+  const isProposal = targetDoc.includes('proposal');
+  const isKartuBimbingan = targetDoc.includes('bimbingan') || (!isSeminarDoc && !isKRS && !isProposal);
+
+  // 1. Fetch data Seminar / Sidang dari ta_seminars jika dokumen seminar
+  const { data: seminarData, isLoading: loadingSeminar } = useQuery({
+    queryKey: ['public_verify_seminar', effectiveDocId],
     queryFn: async () => {
-      if (!docId || docId === 'sample') return null;
+      if (!isUuid || !isSeminarDoc) return null;
+      const { data, error } = await supabase
+        .from('ta_seminars')
+        .select(`
+          id, type, status, schedule_date, room, final_score, final_grade, result_status, revision_deadline, notes,
+          chairperson_id, chairperson_name, chairperson_nip, chairperson_signature_url, chairperson_signed_at,
+          created_at, updated_at,
+          ta_submissions (
+            id, title, status,
+            profiles:student_id (id, full_name, nim, program, academic_year)
+          ),
+          chairperson:chairperson_id (id, full_name, nip, signature_url),
+          ta_examiners (
+            id, role, examiner_type, examiner_name, examiner_nip, score, signed_at, signature_url,
+            scores_detail, revision_notes,
+            profiles:dosen_id (id, full_name, nip, signature_url)
+          )
+        `)
+        .eq('id', effectiveDocId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching public seminar doc verification:', error);
+        return null;
+      }
+      return data;
+    },
+    enabled: Boolean(isUuid && isSeminarDoc),
+  });
+
+  // 2. Fetch data Tugas Akhir (Bimbingan / Pengesahan Proposal) jika bukan seminar/KRS
+  const { data: taData, isLoading: loadingTA } = useQuery({
+    queryKey: ['public_verify_ta', effectiveDocId],
+    queryFn: async () => {
+      if (!isUuid || isSeminarDoc || isKRS) return null;
       const { data, error } = await supabase
         .from('ta_submissions')
         .select(`
@@ -46,7 +103,7 @@ export default function VerifikasiDokumenPublic() {
           ta_advisors (id, role, dosen_id, profiles (id, full_name, nip, signature_url)),
           ta_consultation_logs (id, date, problem, solution, status)
         `)
-        .eq('id', docId)
+        .eq('id', effectiveDocId)
         .maybeSingle();
 
       if (error) {
@@ -55,14 +112,14 @@ export default function VerifikasiDokumenPublic() {
       }
       return data;
     },
-    enabled: Boolean(docId && docId !== 'sample' && !urlPayload),
+    enabled: Boolean(isUuid && !isSeminarDoc && !isKRS),
   });
 
-  // 2. Fetch data KRS jika dokumen adalah KRS
+  // 3. Fetch data KRS jika dokumen adalah KRS
   const { data: krsData, isLoading: loadingKRS } = useQuery({
-    queryKey: ['public_verify_krs', docId],
+    queryKey: ['public_verify_krs', effectiveDocId],
     queryFn: async () => {
-      if (!docId || docId === 'sample') return null;
+      if (!isUuid || !isKRS) return null;
       const { data, error } = await supabase
         .from('krs')
         .select(`
@@ -72,7 +129,7 @@ export default function VerifikasiDokumenPublic() {
           semesters (id, name),
           krs_items (id, status, courses (id, name, code, sks))
         `)
-        .eq('id', docId)
+        .eq('id', effectiveDocId)
         .maybeSingle();
 
       if (error) {
@@ -81,45 +138,43 @@ export default function VerifikasiDokumenPublic() {
       }
       return data;
     },
-    enabled: Boolean(docId && docId !== 'sample' && docType === 'krs' && !urlPayload),
+    enabled: Boolean(isUuid && isKRS),
   });
 
-  const isLoading = loadingSettings || (!urlPayload && (loadingTA || loadingKRS));
+  const isLoading = loadingSettings || (isUuid && (loadingSeminar || loadingTA || loadingKRS));
 
-  // Resolusi data yang diverifikasi
-  const isSample = (!docId || docId === 'sample') && !urlPayload;
-  const isTA = Boolean(
-    urlPayload?.doc?.includes('ta') ||
-    urlPayload?.doc?.includes('bimbingan') ||
-    taData ||
-    docType.includes('tugas_akhir') ||
-    docType.includes('ta') ||
-    isSample
-  );
+  // Resolusi Judul Dokumen Resmi
+  const resolveDocTitle = (): string => {
+    if (urlPayload?.dt) return urlPayload.dt;
+    switch (targetDoc) {
+      case 'berita_acara_sempro':
+        return 'Berita Acara Seminar Proposal Tugas Akhir';
+      case 'berita_acara_sidang':
+        return 'Berita Acara Sidang Munaqasyah Tugas Akhir';
+      case 'lembar_nilai_sempro':
+        return 'Lembar Penilaian Rubrik Seminar Proposal';
+      case 'lembar_nilai_sidang':
+        return 'Lembar Penilaian Rubrik Sidang Munaqasyah';
+      case 'surat_tugas_sempro':
+        return 'Surat Tugas Penguji Seminar Proposal';
+      case 'surat_tugas_sidang':
+        return 'Surat Tugas Penguji Sidang Munaqasyah';
+      case 'pengesahan_proposal':
+      case 'surat_pengesahan_proposal':
+        return 'Lembar Pengesahan Proposal Tugas Akhir';
+      case 'krs':
+        return 'Kartu Rencana Studi (KRS)';
+      case 'kartu_bimbingan_dpa':
+        return 'Kartu Bimbingan Penasihat Akademik (DPA)';
+      case 'kartu_bimbingan_ta':
+      default:
+        return 'Kartu Kendali Bimbingan Tugas Akhir';
+    }
+  };
 
-  // Parse approvals dari comments database jika ada
-  const approvalState = parseApprovalsFromComments(taData?.comments);
-  const docApproval = getDocApproval(approvalState, docType || urlPayload?.doc);
-  const signers = docApproval?.signers || {};
+  const docTitle = resolveDocTitle();
 
-  const isKaprodiApproved = urlPayload
-    ? Boolean(urlPayload.okk || urlPayload.st === 'approved')
-    : Boolean(signers.kaprodi?.is_approved);
-
-  const isAdvisorApproved = urlPayload
-    ? Boolean(urlPayload.ok1)
-    : Boolean(signers.advisor_1?.is_approved || signers.advisor_2?.is_approved);
-
-  const isProposal = (docType || urlPayload?.doc || '').includes('proposal');
-  const isFullyVerified = isSample
-    ? true
-    : urlPayload
-    ? urlPayload.st === 'approved'
-    : isTA
-    ? (isProposal ? isAdvisorApproved : isKaprodiApproved)
-    : krsData?.status === 'approved';
-
-  // Format Helper
+  // Helper Format Tanggal
   const formatDateTime = (isoDate?: string | null) => {
     if (!isoDate) return '-';
     try {
@@ -135,44 +190,123 @@ export default function VerifikasiDokumenPublic() {
     }
   };
 
+  const formatDateOnly = (isoDate?: string | null) => {
+    if (!isoDate) return '-';
+    try {
+      const d = new Date(isoDate);
+      if (isNaN(d.getTime())) return isoDate;
+      return d.toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+    } catch {
+      return isoDate;
+    }
+  };
+
+  // Parse approvals dari comments database jika dokumen TA non-seminar
+  const approvalState = parseApprovalsFromComments(taData?.comments);
+  const docApproval = getDocApproval(approvalState, targetDoc);
+  const signers = docApproval?.signers || {};
+
+  const isKaprodiApproved = urlPayload
+    ? Boolean(urlPayload.okk || urlPayload.st === 'approved')
+    : Boolean(signers.kaprodi?.is_approved);
+
+  const isAdvisorApproved = urlPayload
+    ? Boolean(urlPayload.ok1)
+    : Boolean(signers.advisor_1?.is_approved || signers.advisor_2?.is_approved);
+
+  // Status Keabsahan Dokumen
+  let isFullyVerified = false;
+  if (isSample) {
+    isFullyVerified = true;
+  } else if (isSeminarDoc) {
+    isFullyVerified = seminarData
+      ? Boolean(seminarData.status === 'completed' || seminarData.chairperson_signed_at)
+      : (urlPayload?.st === 'approved');
+  } else if (isKRS) {
+    isFullyVerified = krsData
+      ? Boolean(krsData.status === 'approved')
+      : (urlPayload?.st === 'approved');
+  } else if (isProposal) {
+    isFullyVerified = taData ? isAdvisorApproved : (urlPayload?.st === 'approved');
+  } else {
+    isFullyVerified = taData ? isKaprodiApproved : (urlPayload?.st === 'approved');
+  }
+
+  // Identitas Mahasiswa & Dokumen
   const studentName =
     urlPayload?.nm ||
+    seminarData?.ta_submissions?.profiles?.full_name ||
     taData?.profiles?.full_name ||
     krsData?.profiles?.full_name ||
     (isSample ? 'Ahmad Fauzi Mubarak' : 'Mahasiswa');
 
   const studentNim =
     urlPayload?.nim ||
+    seminarData?.ta_submissions?.profiles?.nim ||
     taData?.profiles?.nim ||
     krsData?.profiles?.nim ||
     (isSample ? '4220261109' : '-');
 
   const studentProgram =
     urlPayload?.pr ||
+    seminarData?.ta_submissions?.profiles?.program ||
     taData?.profiles?.program ||
     krsData?.profiles?.program ||
     docSettings.program_name ||
     'Pendidikan Bahasa Arab';
 
-  const docTitle = isTA
-    ? 'Kartu Kendali Bimbingan Tugas Akhir'
-    : 'Kartu Rencana Studi (KRS)';
-
   const topicTitle =
     urlPayload?.tl ||
+    seminarData?.ta_submissions?.title ||
     taData?.title ||
     (isSample
       ? 'Analisis Kontrastif Sintaksis Bahasa Arab dan Bahasa Indonesia pada Terjemahan Kitab Matan Al-Ajurrumiyyah'
       : '-');
 
-  const effectiveDocId = urlPayload?.fullId || urlPayload?.id || docId || 'DOC';
-  const docCodeNumber = isSample
-    ? 'DOC-TA-202610-88492'
-    : `DOC-${effectiveDocId.slice(0, 8).toUpperCase()}-${new Date(taData?.created_at || Date.now()).getFullYear()}`;
+  const docCodeNumber = urlPayload?.no || (
+    isSample
+      ? 'DOC-TA-202610-88492'
+      : isSeminarDoc
+      ? `ST-${effectiveDocId.slice(0, 4).toUpperCase()}/PBA-STITMA/TA/${new Date(seminarData?.created_at || Date.now()).getFullYear()}`
+      : `DOC-${effectiveDocId.slice(0, 8).toUpperCase()}-${new Date(taData?.created_at || Date.now()).getFullYear()}`
+  );
 
-  const approvedLogsCount = urlPayload?.cnt ?? (taData?.ta_consultation_logs?.filter((l: any) => l.status === 'approved').length || 0);
+  // Data Spesifik Seminar / Sidang
+  const finalScore = urlPayload?.sc ?? seminarData?.final_score ?? (isSample ? 77.5 : null);
+  const finalGrade = urlPayload?.gr || seminarData?.final_grade || (isSample ? 'B+' : null);
+  
+  const resolveResultStatus = (status?: string | null) => {
+    if (!status) return null;
+    if (status === 'lulus_tanpa_revisi') return 'LULUS MURNI (TANPA REVISI)';
+    if (status === 'lulus_revisi_ringan') return 'LULUS DENGAN REVISI RINGAN';
+    if (status === 'lulus_revisi_berat') return 'LULUS DENGAN REVISI SUBSTANSIAL';
+    if (status === 'mengulang') return 'TIDAK LULUS (MENGULANG)';
+    return status;
+  };
 
-  // Signer data terverifikasi
+  const resultStatusLabel = urlPayload?.rs || resolveResultStatus(seminarData?.result_status) || (isSample ? 'LULUS DENGAN REVISI RINGAN' : null);
+  const examDateFormatted = urlPayload?.ed || (seminarData?.schedule_date ? formatDateTime(seminarData.schedule_date) : (isSample ? 'Selasa, 3 November 2026' : null));
+  const examRoom = urlPayload?.rm || seminarData?.room || (isSample ? 'Ruang Sidang STITMA' : null);
+  const revisionDeadline = urlPayload?.rd || (seminarData?.revision_deadline ? formatDateOnly(seminarData.revision_deadline) : (isSample ? '15 November 2026' : null));
+
+  // Pejabat Pengesah
+  const chairpersonName =
+    urlPayload?.ch ||
+    seminarData?.chairperson_name ||
+    seminarData?.chairperson?.full_name ||
+    (isSample ? 'Agus Sylistyo, M.Pd.' : 'Ketua Sidang');
+  const chairpersonNip = seminarData?.chairperson_nip || seminarData?.chairperson?.nip || (isSample ? '198204122011011003' : null);
+  const chairpersonSignedAt = seminarData?.chairperson_signed_at || (isSample ? new Date().toISOString() : null);
+  const isChairpersonApproved = seminarData ? Boolean(seminarData.chairperson_signed_at) : (urlPayload ? Boolean(urlPayload.st === 'approved') : isSample);
+
+  // Dewan Penguji
+  const dbExaminers = Array.isArray(seminarData?.ta_examiners) ? seminarData.ta_examiners : [];
+
+  // Data Pembimbing (Bimbingan)
   const adv1Name =
     urlPayload?.a1 ||
     signers.advisor_1?.signer_name ||
@@ -181,14 +315,18 @@ export default function VerifikasiDokumenPublic() {
   const adv1Date = urlPayload?.da1 || signers.advisor_1?.approved_at || taData?.updated_at || taData?.created_at;
   const adv1Approved = urlPayload ? Boolean(urlPayload.ok1) : Boolean(signers.advisor_1?.is_approved);
 
+  // Kaprodi
   const kaprodiName =
     urlPayload?.kp ||
     signers.kaprodi?.signer_name ||
     docSettings.kaprodi_name ||
     (isSample ? 'Zulkifli Hayad, M.Pd.' : 'Ketua Program Studi');
   const kaprodiNidn = urlPayload?.kpd || signers.kaprodi?.signer_nidn || docSettings.kaprodi_nidn;
-  const kaprodiDate = urlPayload?.dkp || signers.kaprodi?.approved_at || taData?.approved_at || taData?.updated_at;
-  const kaprodiApproved = urlPayload ? Boolean(urlPayload.okk || urlPayload.st === 'approved') : Boolean(signers.kaprodi?.is_approved);
+  const kaprodiDate = urlPayload?.dkp || signers.kaprodi?.approved_at || seminarData?.chairperson_signed_at || taData?.approved_at;
+  const kaprodiApproved = urlPayload ? Boolean(urlPayload.okk || urlPayload.st === 'approved') : (isSeminarDoc ? isFullyVerified : Boolean(signers.kaprodi?.is_approved));
+
+  // Jumlah log aktivitas
+  const approvedLogsCount = urlPayload?.cnt ?? (taData?.ta_consultation_logs?.filter((l: any) => l.status === 'approved').length || (isSample ? 8 : 0));
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 via-slate-100/70 to-slate-200/50 py-6 px-3 sm:px-6 flex flex-col items-center justify-start">
@@ -261,7 +399,7 @@ export default function VerifikasiDokumenPublic() {
                 <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                   {isFullyVerified
                     ? (docSettings.qr_verify_badge_verified_desc || 'Dokumen ini secara resmi tercatat dalam pangkalan data akademik dan telah dibubuhi stempel tanda tangan digital yang sah oleh pejabat berwenang.')
-                    : 'Dokumen ini sedang dalam proses review/pengesahan bertingkat oleh dosen pembimbing atau pimpinan program studi.'}
+                    : 'Dokumen ini sedang dalam proses review/pengesahan bertingkat oleh dosen pembimbing, dewan penguji, atau pimpinan program studi.'}
                 </p>
               </div>
             </CardContent>
@@ -311,9 +449,12 @@ export default function VerifikasiDokumenPublic() {
                 </div>
               )}
 
-              {docSettings.qr_verify_show_topic_title !== false && isTA && (
+              {/* Judul Skripsi / Proposal */}
+              {docSettings.qr_verify_show_topic_title !== false && !isKRS && (
                 <div className="pt-1">
-                  <span className="text-slate-500 font-medium block mb-1">Judul Tugas Akhir / Skripsi:</span>
+                  <span className="text-slate-500 font-medium block mb-1">
+                    {isProposal ? 'Judul Proposal Tugas Akhir:' : 'Judul Tugas Akhir / Skripsi:'}
+                  </span>
                   <p className="p-2.5 bg-slate-50 dark:bg-slate-900/60 rounded-md border text-slate-800 dark:text-slate-200 italic font-medium leading-relaxed">
                     "{topicTitle}"
                   </p>
@@ -321,49 +462,221 @@ export default function VerifikasiDokumenPublic() {
               )}
             </div>
 
+            {/* SEKSI SPESIFIK: HASIL EVALUASI SIDANG & SKOR */}
+            {isSeminarDoc && (finalScore !== null || resultStatusLabel || examDateFormatted) && (
+              <div className="pt-3 border-t">
+                <h3 className="font-bold text-slate-900 mb-2.5 flex items-center gap-1.5 text-xs">
+                  <Award className="w-4 h-4 text-primary" />
+                  Hasil Evaluasi Persidangan & Kelulusan
+                </h3>
+
+                <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-3">
+                  {/* Skor & Predikat */}
+                  <div className="p-3 rounded-lg border bg-slate-50/70 text-center space-y-0.5">
+                    <span className="text-[10px] text-slate-500 block uppercase font-bold">Nilai Akhir Rata-rata</span>
+                    <div className="flex items-center justify-center gap-1.5">
+                      <span className="text-xl font-black text-primary font-mono">
+                        {finalScore !== null && finalScore !== undefined ? finalScore : '-'}
+                      </span>
+                      {finalGrade && (
+                        <Badge variant="outline" className="font-bold text-xs bg-white">
+                          {finalGrade}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Status Kelulusan */}
+                  <div className="p-3 rounded-lg border bg-slate-50/70 text-center space-y-0.5 flex flex-col justify-center">
+                    <span className="text-[10px] text-slate-500 block uppercase font-bold">Status Keputusan</span>
+                    <span className={`text-xs font-extrabold ${
+                      resultStatusLabel?.toLowerCase().includes('lulus')
+                        ? 'text-emerald-700'
+                        : resultStatusLabel?.toLowerCase().includes('ulang')
+                        ? 'text-destructive'
+                        : 'text-slate-800'
+                    }`}>
+                      {resultStatusLabel || 'Terjadwal'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Jadwal, Ruangan & Batas Revisi */}
+                <div className="space-y-1.5 p-2.5 rounded-lg border bg-muted/20 text-[11px]">
+                  {examDateFormatted && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500 flex items-center gap-1">
+                        <Calendar className="w-3 h-3" /> Tanggal Ujian
+                      </span>
+                      <span className="font-medium text-slate-800">{examDateFormatted}</span>
+                    </div>
+                  )}
+                  {examRoom && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-500 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" /> Ruang Ujian
+                      </span>
+                      <span className="font-medium text-slate-800">{examRoom}</span>
+                    </div>
+                  )}
+                  {revisionDeadline && (
+                    <div className="flex justify-between items-center pt-1 border-t border-dashed">
+                      <span className="text-slate-500 flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-amber-600" /> Batas Pengumpulan Revisi
+                      </span>
+                      <span className="font-bold text-amber-700">{revisionDeadline}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* SEKSI SPESIFIK: KRS TOTAL SKS */}
+            {isKRS && (
+              <div className="p-3 bg-muted/40 border rounded-lg flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-slate-500 block text-[11px]">Beban Studi Semester Ini</span>
+                  <span className="font-bold text-slate-900 text-sm">
+                    {urlPayload?.cnt || krsData?.krs_items?.length || 20} SKS Terdaftar
+                  </span>
+                </div>
+                <Badge variant="secondary" className="font-normal text-[10px]">
+                  SIAKAD Aktif
+                </Badge>
+              </div>
+            )}
+
             {/* AUDIT TRAIL PEJABAT PENGESAH */}
             {docSettings.qr_verify_show_signers !== false && (
-              <div className="pt-2">
+              <div className="pt-2 border-t">
                 <h3 className="font-bold text-slate-900 mb-2.5 flex items-center gap-1.5 text-xs">
                   <UserCheck className="w-4 h-4 text-primary" />
                   Jejak Digital Pengesahan Pejabat (Audit Trail)
                 </h3>
 
                 <div className="space-y-2">
-                  {/* Pembimbing 1 */}
-                  <div className="p-2.5 rounded-lg border bg-card flex items-start justify-between gap-3">
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] uppercase font-bold text-slate-500 block">
-                        Dosen Pembimbing I
-                      </span>
-                      <p className="font-semibold text-slate-900 text-xs">
-                        {adv1Name}
-                      </p>
-                      {adv1Nidn && (
-                        <p className="text-[10px] text-muted-foreground font-mono">
-                          NIDN: {adv1Nidn}
+                  {/* JIKA SEMINAR: Ketua Sidang */}
+                  {isSeminarDoc && targetDoc !== 'surat_tugas_sempro' && targetDoc !== 'surat_tugas_sidang' && (
+                    <div className="p-2.5 rounded-lg border bg-card flex items-start justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                          Ketua Sidang / Majelis Ujian
+                        </span>
+                        <p className="font-semibold text-slate-900 text-xs">
+                          {chairpersonName}
                         </p>
-                      )}
-                      {docSettings.qr_verify_show_timestamps !== false && (
-                        <p className={`text-[10px] mt-1 flex items-center gap-1 ${
-                          adv1Approved ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'
-                        }`}>
-                          <CheckCircle2 className="w-3 h-3" /> {adv1Approved ? `Disahkan: ${formatDateTime(adv1Date)}` : 'Menunggu Pengesahan'}
-                        </p>
-                      )}
+                        {chairpersonNip && (
+                          <p className="text-[10px] text-muted-foreground font-mono">
+                            NIP/NIDN: {chairpersonNip}
+                          </p>
+                        )}
+                        {docSettings.qr_verify_show_timestamps !== false && (
+                          <p className={`text-[10px] mt-1 flex items-center gap-1 ${
+                            isChairpersonApproved ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'
+                          }`}>
+                            <CheckCircle2 className="w-3 h-3" /> {isChairpersonApproved ? `Disahkan: ${formatDateTime(chairpersonSignedAt)}` : 'Menunggu Pengesahan'}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className={`text-[10px] shrink-0 ${
+                        isChairpersonApproved ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-amber-50 text-amber-800 border-amber-300'
+                      }`}>
+                        {isChairpersonApproved ? 'Disahkan ✓' : 'Menunggu'}
+                      </Badge>
                     </div>
-                    <Badge variant="outline" className={`text-[10px] shrink-0 ${
-                      adv1Approved ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-amber-50 text-amber-800 border-amber-300'
-                    }`}>
-                      {adv1Approved ? 'Disahkan ✓' : 'Menunggu'}
-                    </Badge>
-                  </div>
+                  )}
 
-                  {/* Kaprodi */}
+                  {/* JIKA SEMINAR: Seluruh Dewan Penguji */}
+                  {isSeminarDoc && dbExaminers.length > 0 && targetDoc !== 'surat_tugas_sempro' && targetDoc !== 'surat_tugas_sidang' && (
+                    dbExaminers.map((ex: any, idx: number) => {
+                      const exName = ex.examiner_name || ex.profiles?.full_name || `Penguji ${idx + 1}`;
+                      const exNip = ex.examiner_nip || ex.profiles?.nip;
+                      const exSigned = Boolean(ex.signed_at);
+                      return (
+                        <div key={ex.id || idx} className="p-2.5 rounded-lg border bg-card flex items-start justify-between gap-3">
+                          <div className="space-y-0.5">
+                            <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                              {ex.role || `Penguji ${idx + 1}`}
+                            </span>
+                            <p className="font-semibold text-slate-900 text-xs">
+                              {exName}
+                            </p>
+                            {exNip && (
+                              <p className="text-[10px] text-muted-foreground font-mono">
+                                NIP: {exNip}
+                              </p>
+                            )}
+                            {ex.score !== undefined && ex.score !== null && (
+                              <p className="text-[10px] font-mono text-primary font-semibold">
+                                Nilai Penguji: {ex.score}
+                              </p>
+                            )}
+                            {docSettings.qr_verify_show_timestamps !== false && (
+                              <p className={`text-[10px] mt-1 flex items-center gap-1 ${
+                                exSigned ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'
+                              }`}>
+                                <CheckCircle2 className="w-3 h-3" /> {exSigned ? `Disahkan: ${formatDateTime(ex.signed_at)}` : 'Menunggu Penilaian'}
+                              </p>
+                            )}
+                          </div>
+                          <Badge variant="outline" className={`text-[10px] shrink-0 ${
+                            exSigned ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-amber-50 text-amber-800 border-amber-300'
+                          }`}>
+                            {exSigned ? 'Disahkan ✓' : 'Menunggu'}
+                          </Badge>
+                        </div>
+                      );
+                    })
+                  )}
+
+                  {/* Fallback ringkasan penguji jika dari payload offline */}
+                  {isSeminarDoc && dbExaminers.length === 0 && urlPayload?.exs && (
+                    <div className="p-2.5 rounded-lg border bg-card text-[11px] space-y-1">
+                      <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                        Dewan Penguji Terdaftar
+                      </span>
+                      <p className="font-medium text-slate-800">
+                        {urlPayload.exs}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* JIKA BUKAN SEMINAR: Dosen Pembimbing 1 */}
+                  {!isSeminarDoc && !isKRS && (
+                    <div className="p-2.5 rounded-lg border bg-card flex items-start justify-between gap-3">
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] uppercase font-bold text-slate-500 block">
+                          Dosen Pembimbing I
+                        </span>
+                        <p className="font-semibold text-slate-900 text-xs">
+                          {adv1Name}
+                        </p>
+                        {adv1Nidn && (
+                          <p className="text-[10px] text-muted-foreground font-mono">
+                            NIDN: {adv1Nidn}
+                          </p>
+                        )}
+                        {docSettings.qr_verify_show_timestamps !== false && (
+                          <p className={`text-[10px] mt-1 flex items-center gap-1 ${
+                            adv1Approved ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-700 dark:text-amber-400'
+                          }`}>
+                            <CheckCircle2 className="w-3 h-3" /> {adv1Approved ? `Disahkan: ${formatDateTime(adv1Date)}` : 'Menunggu Pengesahan'}
+                          </p>
+                        )}
+                      </div>
+                      <Badge variant="outline" className={`text-[10px] shrink-0 ${
+                        adv1Approved ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : 'bg-amber-50 text-amber-800 border-amber-300'
+                      }`}>
+                        {adv1Approved ? 'Disahkan ✓' : 'Menunggu'}
+                      </Badge>
+                    </div>
+                  )}
+
+                  {/* Ketua Program Studi */}
                   <div className="p-2.5 rounded-lg border bg-card flex items-start justify-between gap-3">
                     <div className="space-y-0.5">
                       <span className="text-[10px] uppercase font-bold text-slate-500 block">
-                        Ketua Program Studi
+                        {targetDoc?.startsWith('surat_tugas') ? 'Pemberi Tugas (Ketua Program Studi)' : 'Ketua Program Studi (Mengetahui)'}
                       </span>
                       <p className="font-semibold text-slate-900 text-xs">
                         {kaprodiName}
@@ -392,7 +705,7 @@ export default function VerifikasiDokumenPublic() {
             )}
 
             {/* RINGKASAN AKTIVITAS BIMBINGAN */}
-            {docSettings.qr_verify_show_activity_summary !== false && isTA && (
+            {docSettings.qr_verify_show_activity_summary !== false && isKartuBimbingan && !isSeminarDoc && (
               <div className="p-3 bg-muted/40 border rounded-lg flex items-center justify-between text-xs">
                 <div>
                   <span className="text-slate-500 block text-[11px]">Total Sesi Bimbingan Tervalidasi</span>

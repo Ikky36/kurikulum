@@ -251,6 +251,32 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
             templateCode={targetTemplateCode}
             templateOverride={templateOverride}
             containerId={`printable-ta-${seminar.id}`}
+            documentId={seminar.id}
+            documentDate={seminar.chairperson_signed_at || seminar.schedule_date || seminar.created_at}
+            verificationData={{
+              id: seminar.id,
+              docType: targetTemplateCode,
+              docTitle: baseTemplate?.document_title,
+              studentName: student?.full_name,
+              studentNim: student?.nim,
+              studentProgram: student?.program || docSettings.program_name,
+              topicTitle: submission?.title || '',
+              isFullyApproved: Boolean(seminar.status === 'completed' || seminar.chairperson_signed_at),
+              examDate: dateFormatted,
+              room: seminar.room || 'Ruang Sidang STITMA',
+              chairpersonName: seminar.chairperson_name || seminar.chairperson?.full_name || '',
+              chairpersonNip: seminar.chairperson_nip || seminar.chairperson?.nip || '',
+              chairpersonApproved: Boolean(seminar.chairperson_signed_at),
+              finalScore: seminar.final_score,
+              finalGrade: seminar.final_grade,
+              resultStatus: statusKelulusanLabel,
+              revisionDeadline: deadlineFormatted,
+              examinersList: examinerNamesStr,
+              docNumber: variables.nomor_surat,
+              kaprodiName: docSettings.kaprodi_name || '',
+              kaprodiNidn: docSettings.kaprodi_nidn || '',
+              kaprodiApproved: Boolean(seminar.status === 'completed' || seminar.chairperson_signed_at),
+            }}
             studentInfo={studentInfo}
             variables={variables}
             signaturesData={signaturesData}

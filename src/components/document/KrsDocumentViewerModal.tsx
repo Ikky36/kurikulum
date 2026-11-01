@@ -105,6 +105,7 @@ export function KrsDocumentViewerModal({
             verificationData={{
               id: krsData?.id,
               docType: template.code,
+              docTitle: template.document_title,
               studentName: mhsName,
               studentNim: mhsNim,
               studentProgram: mhsProgram,

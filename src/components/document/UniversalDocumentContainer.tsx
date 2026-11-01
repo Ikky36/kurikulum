@@ -26,6 +26,7 @@ export interface DocumentSignatureData {
 export interface DocumentVerificationData {
   id?: string;
   docType?: string;
+  docTitle?: string;
   studentName?: string;
   studentNim?: string;
   studentProgram?: string;
@@ -40,6 +41,18 @@ export interface DocumentVerificationData {
   kaprodiDate?: string;
   kaprodiApproved?: boolean;
   activityCount?: number;
+  // Seminar & Sidang specific fields
+  examDate?: string;
+  room?: string;
+  chairpersonName?: string;
+  chairpersonNip?: string;
+  chairpersonApproved?: boolean;
+  finalScore?: number | string | null;
+  finalGrade?: string | null;
+  resultStatus?: string | null;
+  revisionDeadline?: string | null;
+  examinersList?: string | null;
+  docNumber?: string | null;
 }
 
 export function encodeVerificationPayload(obj: any): string {
@@ -69,14 +82,18 @@ export function decodeVerificationPayload(str: string): any {
     }
     const parsed = JSON.parse(new TextDecoder().decode(bytes));
 
-    // Handle model array ringkas: [id, nm, nim, pr, st, a1, kp, cnt, tl]
+    if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+      return parsed;
+    }
+
+    // Handle legacy model array ringkas: [id, nm, nim, pr, st, a1, kp, cnt, tl, doc]
     if (Array.isArray(parsed)) {
-      const [id, nm, nim, pr, isApproved, a1, kp, cnt, tl] = parsed;
+      const [id, nm, nim, pr, isApproved, a1, kp, cnt, tl, doc] = parsed;
       const approved = isApproved === 1 || isApproved === '1' || isApproved === 'approved';
       return {
         id: id || 'DOC',
         fullId: id || '',
-        doc: 'kartu_bimbingan_ta',
+        doc: doc || 'kartu_bimbingan_ta',
         nm: nm || '',
         nim: nim || '',
         pr: pr || '',
@@ -283,27 +300,28 @@ export function UniversalDocumentContainer({
     if (typeof window === 'undefined') return '';
     const origin = window.location.origin;
 
-    // Slug ringkas agar menghemat puluhan karakter URL (misal 'ta' atau 'krs')
-    const shortDoc = (templateCode?.includes('ta') || templateCode?.includes('bimbingan')) ? 'ta' : templateCode;
+    // Gunakan templateCode asli agar tipe dokumen selalu presisi saat dipindai
+    const docSlug = templateCode || 'kartu_bimbingan_ta';
     const shortId = documentId ? documentId.slice(0, 8) : 'sample';
 
-    // 1. Opsi Ultra-Clean: Hanya URL ber-ID murni (menghasilkan matriks QR Code paling besar 25x25 hingga 29x29)
+    // 1. Opsi Ultra-Clean: Hanya URL ber-ID murni
     if (docSettings.qr_code_density === 'ultra_clean') {
-      return `${origin}/v?doc=${shortDoc}&id=${documentId || 'sample'}`;
+      return `${origin}/v?doc=${encodeURIComponent(docSlug)}&id=${documentId || 'sample'}`;
     }
 
     // 2. Opsi Tradisional Padat (Legacy Object format)
     if (docSettings.qr_code_density === 'detailed') {
-      const legacyBase = `${origin}/verifikasi-dokumen?doc=${templateCode}&id=${documentId || 'sample'}`;
+      const legacyBase = `${origin}/verifikasi-dokumen?doc=${encodeURIComponent(docSlug)}&id=${documentId || 'sample'}`;
       const legacyPayload = {
         id: shortId,
         fullId: documentId || '',
-        doc: templateCode,
+        doc: docSlug,
+        dt: verificationData?.docTitle || documentTitle || template.document_title || '',
         nm: verificationData?.studentName || studentInfo?.name || '',
         nim: verificationData?.studentNim || studentInfo?.nim || '',
         pr: verificationData?.studentProgram || studentInfo?.program || '',
-        tl: verificationData?.topicTitle || variables?.['topic_title'] || variables?.['submission_title'] || '',
-        st: (verificationData?.isFullyApproved ?? (signaturesData?.kaprodi?.is_approved || false)) ? 'approved' : 'pending',
+        tl: verificationData?.topicTitle || variables?.['topic_title'] || variables?.['submission_title'] || variables?.['judul_tugas_akhir'] || '',
+        st: (verificationData?.isFullyApproved ?? (signaturesData?.chairperson?.is_approved || signaturesData?.kaprodi?.is_approved || false)) ? 'approved' : 'pending',
         a1: verificationData?.adv1Name || signaturesData?.advisor_1?.name || '',
         ad1: verificationData?.adv1Nidn || signaturesData?.advisor_1?.id_number || '',
         da1: verificationData?.adv1Date || (signaturesData?.advisor_1?.signed_at ? String(signaturesData.advisor_1.signed_at) : ''),
@@ -313,64 +331,97 @@ export function UniversalDocumentContainer({
         dkp: verificationData?.kaprodiDate || (signaturesData?.kaprodi?.signed_at ? String(signaturesData.kaprodi.signed_at) : ''),
         okk: (verificationData?.kaprodiApproved ?? signaturesData?.kaprodi?.is_approved) ? 1 : 0,
         cnt: verificationData?.activityCount ?? 0,
+        ed: verificationData?.examDate || '',
+        rm: verificationData?.room || '',
+        ch: verificationData?.chairpersonName || signaturesData?.chairperson?.name || '',
+        sc: verificationData?.finalScore ?? '',
+        gr: verificationData?.finalGrade || '',
+        rs: verificationData?.resultStatus || '',
+        rd: verificationData?.revisionDeadline || '',
+        exs: verificationData?.examinersList || '',
+        no: verificationData?.docNumber || variables?.nomor_surat || '',
       };
       const token = encodeVerificationPayload(legacyPayload);
       return token ? `${legacyBase}&v=${token}` : legacyBase;
     }
 
-    // 3. Default (Rekomendasi Utama): Payload Ringkas Dinamis yang Menghormati Sakelar Pengaturan Tampilan
-    // JIKA PENGGUNA MEMATIKAN BEBERAPA PILIHAN DATA (MISAL JUDUL, PENGESAH, ATAU LOG AKTIVITAS),
-    // DATA TERSEBUT DIBUANG DARI PAYLOAD SEHINGGA KOTAK-KOTAK BARCODE MENJADI JAUH LEBIH BESAR!
-    const isApproved = (verificationData?.isFullyApproved ?? (signaturesData?.kaprodi?.is_approved || false)) ? 1 : 0;
+    // 3. Default (Rekomendasi Utama): Payload Ringkas Dinamis yang Membawa Info Dokumen Spesifik
+    const isApproved = (
+      verificationData?.isFullyApproved ??
+      (signaturesData?.chairperson?.is_approved || signaturesData?.kaprodi?.is_approved || false)
+    ) ? 1 : 0;
 
-    const studentName = docSettings.qr_verify_show_student_name !== false
-      ? (verificationData?.studentName || studentInfo?.name || '').slice(0, 28)
-      : '';
-    const studentNim = docSettings.qr_verify_show_student_nim !== false
-      ? (verificationData?.studentNim || studentInfo?.nim || '')
-      : '';
-    const studentProgram = docSettings.qr_verify_show_student_prodi !== false
-      ? (verificationData?.studentProgram || studentInfo?.program || '')
-      : '';
+    const payload: Record<string, any> = {
+      id: shortId,
+      fullId: documentId || '',
+      doc: docSlug,
+      st: isApproved ? 'approved' : 'pending',
+    };
 
-    const adv1Name = docSettings.qr_verify_show_signers !== false
-      ? (verificationData?.adv1Name || signaturesData?.advisor_1?.name || '').slice(0, 24)
-      : '';
-    const kaprodiName = docSettings.qr_verify_show_signers !== false
-      ? (verificationData?.kaprodiName || signaturesData?.kaprodi?.name || docSettings.kaprodi_name || '').slice(0, 24)
-      : '';
-
-    const activityCount = docSettings.qr_verify_show_activity_summary !== false
-      ? (verificationData?.activityCount ?? 0)
-      : 0;
-
-    const shortTitle = docSettings.qr_verify_show_topic_title !== false
-      ? (verificationData?.topicTitle || variables?.['topic_title'] || variables?.['submission_title'] || '').slice(0, 36)
-      : '';
-
-    // Susun array minimalis: [id, nm, nim, pr, isApproved, a1, kp, cnt, tl]
-    const compactArray: (string | number)[] = [
-      shortId,
-      studentName,
-      studentNim,
-      studentProgram,
-      isApproved,
-      adv1Name,
-      kaprodiName,
-      activityCount,
-      shortTitle
-    ];
-
-    // Pangkas trailing empty/zero values dari belakang agar muatan data sepadat dan seringkas mungkin
-    while (
-      compactArray.length > 2 &&
-      (compactArray[compactArray.length - 1] === '' || compactArray[compactArray.length - 1] === 0)
-    ) {
-      compactArray.pop();
+    if (verificationData?.docTitle || documentTitle || template.document_title) {
+      payload.dt = verificationData?.docTitle || documentTitle || template.document_title;
+    }
+    if (docSettings.qr_verify_show_student_name !== false) {
+      const nm = (verificationData?.studentName || studentInfo?.name || '').slice(0, 32);
+      if (nm) payload.nm = nm;
+    }
+    if (docSettings.qr_verify_show_student_nim !== false) {
+      const nim = verificationData?.studentNim || studentInfo?.nim || '';
+      if (nim) payload.nim = nim;
+    }
+    if (docSettings.qr_verify_show_student_prodi !== false) {
+      const pr = verificationData?.studentProgram || studentInfo?.program || '';
+      if (pr) payload.pr = pr;
+    }
+    if (docSettings.qr_verify_show_topic_title !== false) {
+      const tl = (verificationData?.topicTitle || variables?.['topic_title'] || variables?.['submission_title'] || variables?.['judul_tugas_akhir'] || '').slice(0, 48);
+      if (tl) payload.tl = tl;
     }
 
-    const token = encodeVerificationPayload(compactArray);
-    const base = `${origin}/v?doc=${shortDoc}&id=${shortId}`;
+    // Pejabat & Penandatangan
+    if (docSettings.qr_verify_show_signers !== false) {
+      const a1 = (verificationData?.adv1Name || signaturesData?.advisor_1?.name || '').slice(0, 26);
+      if (a1) payload.a1 = a1;
+
+      const kp = (verificationData?.kaprodiName || signaturesData?.kaprodi?.name || docSettings.kaprodi_name || '').slice(0, 26);
+      if (kp) payload.kp = kp;
+
+      const ch = (verificationData?.chairpersonName || signaturesData?.chairperson?.name || '').slice(0, 26);
+      if (ch) payload.ch = ch;
+    }
+
+    // Data spesifik seminar / sidang / surat tugas / lembar nilai
+    if (verificationData?.finalScore !== undefined && verificationData?.finalScore !== null && verificationData?.finalScore !== '') {
+      payload.sc = verificationData.finalScore;
+    }
+    if (verificationData?.finalGrade) {
+      payload.gr = verificationData.finalGrade;
+    }
+    if (verificationData?.resultStatus) {
+      payload.rs = verificationData.resultStatus;
+    }
+    if (verificationData?.examDate) {
+      payload.ed = verificationData.examDate;
+    }
+    if (verificationData?.room) {
+      payload.rm = verificationData.room;
+    }
+    if (verificationData?.revisionDeadline) {
+      payload.rd = verificationData.revisionDeadline;
+    }
+    if (verificationData?.examinersList) {
+      payload.exs = verificationData.examinersList.slice(0, 60);
+    }
+    if (verificationData?.docNumber || variables?.nomor_surat) {
+      payload.no = verificationData?.docNumber || variables?.nomor_surat;
+    }
+
+    if (docSettings.qr_verify_show_activity_summary !== false && verificationData?.activityCount !== undefined) {
+      payload.cnt = verificationData.activityCount;
+    }
+
+    const token = encodeVerificationPayload(payload);
+    const base = `${origin}/v?doc=${encodeURIComponent(docSlug)}&id=${documentId || shortId}`;
     return token ? `${base}&v=${token}` : base;
   })();
 

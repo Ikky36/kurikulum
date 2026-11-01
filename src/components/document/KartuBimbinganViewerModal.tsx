@@ -237,6 +237,7 @@ export function KartuBimbinganViewerModal({
             verificationData={{
               id: submission.id,
               docType: template.code,
+              docTitle: template.document_title,
               studentName: mhsName,
               studentNim: mhsNim,
               studentProgram: mhsProgram,
