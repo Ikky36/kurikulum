@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Slider } from '@/components/ui/slider';
 import {
   GraduationCap,
   Calendar,
@@ -41,10 +40,33 @@ export const EvaluasiPengujiPage: React.FC = () => {
   const { user } = useAuth();
 
   // Local state for scores, notes, signature
-  const [rawScores, setRawScores] = useState<Record<string, number>>({});
+  const [rawScores, setRawScores] = useState<Record<string, any>>({});
   const [revisionNotes, setRevisionNotes] = useState<string>('');
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [isSubmittedSuccess, setIsSubmittedSuccess] = useState(false);
+
+  // Helper pengisian nilai kolom secara langsung (tanpa slider)
+  const handleScoreChange = (critId: string, valStr: string) => {
+    if (valStr === '') {
+      setRawScores((prev) => ({ ...prev, [critId]: '' }));
+      return;
+    }
+    let num = parseFloat(valStr);
+    if (isNaN(num)) return;
+    if (num > 100) num = 100;
+    if (num < 0) num = 0;
+    setRawScores((prev) => ({ ...prev, [critId]: num }));
+  };
+
+  const handleScoreBlur = (critId: string) => {
+    setRawScores((prev) => {
+      const curr = prev[critId];
+      if (curr === '' || curr === undefined || curr === null || isNaN(Number(curr))) {
+        return { ...prev, [critId]: 0 };
+      }
+      return prev;
+    });
+  };
 
   // 1. Fetch Examiner & Seminar Data by Token
   const { data: examinerData, isLoading, error, refetch } = useQuery({
@@ -354,7 +376,7 @@ export const EvaluasiPengujiPage: React.FC = () => {
                   Formulir Penilaian Rubrik ({criteria.length} Kriteria)
                 </CardTitle>
                 <CardDescription className="text-xs">
-                  Berikan skor penilaian (0 - 100) pada setiap kriteria. Nilai akhir dihitung otomatis berdasarkan persentase bobot.
+                  Isi kolom skor penilaian (rentang 0 - 100) pada setiap butir kriteria di bawah ini. Nilai akhir dihitung otomatis.
                 </CardDescription>
               </div>
 
@@ -441,55 +463,51 @@ export const EvaluasiPengujiPage: React.FC = () => {
                     <div className="space-y-3">
                       {cat.list.map((crit, subIdx) => {
                         const val = rawScores[crit.id] ?? 80;
-                        const globalIdx = crit.order_index || (cat.key === 'A' ? subIdx + 1 : 7 + subIdx + 1);
                         return (
                           <div
                             key={crit.id}
-                            className="p-3.5 rounded-xl border bg-card/60 space-y-2.5 transition-all hover:border-primary/30"
+                            className="p-3.5 rounded-xl border bg-card/60 transition-all hover:border-primary/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                           >
-                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
-                              <div className="space-y-0.5">
-                                <div className="flex items-center gap-2">
-                                  <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
-                                    {subIdx + 1}
-                                  </span>
-                                  <h4 className="text-sm font-bold text-foreground">{crit.name}</h4>
-                                </div>
-                                {crit.description && (
-                                  <p className="text-xs text-muted-foreground leading-relaxed pl-7">
-                                    {crit.description}
-                                  </p>
-                                )}
+                            <div className="space-y-0.5 flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">
+                                  {subIdx + 1}
+                                </span>
+                                <h4 className="text-sm font-bold text-foreground leading-snug">{crit.name}</h4>
                               </div>
+                              {crit.description && (
+                                <p className="text-xs text-muted-foreground leading-relaxed pl-7">
+                                  {crit.description}
+                                </p>
+                              )}
+                            </div>
 
-                              <div className="flex items-center gap-2 pl-7 sm:pl-0">
+                            <div className="flex items-center gap-2 pl-7 sm:pl-0 shrink-0">
+                              <div className="relative flex items-center">
                                 <Input
                                   type="number"
                                   min={0}
                                   max={100}
-                                  value={val}
+                                  step="any"
+                                  placeholder="0 - 100"
+                                  value={rawScores[crit.id] ?? ''}
                                   disabled={isLocked}
-                                  onChange={(e) => {
-                                    const num = Number(e.target.value);
-                                    setRawScores((prev) => ({ ...prev, [crit.id]: Math.min(100, Math.max(0, num)) }));
-                                  }}
-                                  className="w-20 text-center font-bold text-base h-9 font-mono"
+                                  onChange={(e) => handleScoreChange(crit.id, e.target.value)}
+                                  onBlur={() => handleScoreBlur(crit.id)}
+                                  className="w-24 text-center font-bold text-base h-10 font-mono pr-7 bg-background shadow-xs focus-visible:ring-primary"
                                 />
+                                <span className="absolute right-2 text-[10px] font-semibold text-muted-foreground pointer-events-none select-none">
+                                  /100
+                                </span>
                               </div>
-                            </div>
-
-                            <div className="pl-7 pt-1">
-                              <Slider
-                                value={[val]}
-                                min={0}
-                                max={100}
-                                step={1}
-                                disabled={isLocked}
-                                onValueChange={(vals) =>
-                                  setRawScores((prev) => ({ ...prev, [crit.id]: vals[0] }))
-                                }
-                                className="py-1"
-                              />
+                              {typeof rawScores[crit.id] === 'number' && !isNaN(Number(rawScores[crit.id])) && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-xs font-mono font-bold w-9 justify-center py-1"
+                                >
+                                  {determineGradeFromScore(Number(rawScores[crit.id]), 65).grade}
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         );
@@ -499,57 +517,59 @@ export const EvaluasiPengujiPage: React.FC = () => {
                 ));
               }
 
-              // Fallback Flat List
+              // Fallback Flat List (Seminar Proposal dll.)
               return criteria.map((crit, index) => {
                 const val = rawScores[crit.id] ?? 80;
                 return (
                   <div
                     key={crit.id}
-                    className="p-4 rounded-xl border bg-card/60 space-y-3 transition-all hover:border-primary/30"
+                    className="p-4 rounded-xl border bg-card/60 transition-all hover:border-primary/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                   >
-                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center">
-                            {index + 1}
-                          </span>
-                          <h3 className="text-sm font-bold text-foreground">{crit.name}</h3>
-                        </div>
-                        {crit.description && (
-                          <p className="text-xs text-muted-foreground leading-relaxed pl-7">
-                            {crit.description}
-                          </p>
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-bold flex items-center justify-center shrink-0">
+                          {index + 1}
+                        </span>
+                        <h3 className="text-sm font-bold text-foreground leading-snug">{crit.name}</h3>
+                        {crit.weight > 0 && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            Bobot: {crit.weight}%
+                          </Badge>
                         )}
                       </div>
+                      {crit.description && (
+                        <p className="text-xs text-muted-foreground leading-relaxed pl-7">
+                          {crit.description}
+                        </p>
+                      )}
+                    </div>
 
-                      <div className="flex items-center gap-2 pl-7 sm:pl-0">
+                    <div className="flex items-center gap-2 pl-7 sm:pl-0 shrink-0">
+                      <div className="relative flex items-center">
                         <Input
                           type="number"
                           min={0}
                           max={100}
-                          value={val}
+                          step="any"
+                          placeholder="0 - 100"
+                          value={rawScores[crit.id] ?? ''}
                           disabled={isLocked}
-                          onChange={(e) => {
-                            const num = Number(e.target.value);
-                            setRawScores((prev) => ({ ...prev, [crit.id]: Math.min(100, Math.max(0, num)) }));
-                          }}
-                          className="w-20 text-center font-bold text-base h-9 font-mono"
+                          onChange={(e) => handleScoreChange(crit.id, e.target.value)}
+                          onBlur={() => handleScoreBlur(crit.id)}
+                          className="w-24 text-center font-bold text-base h-10 font-mono pr-7 bg-background shadow-xs focus-visible:ring-primary"
                         />
+                        <span className="absolute right-2 text-[10px] font-semibold text-muted-foreground pointer-events-none select-none">
+                          /100
+                        </span>
                       </div>
-                    </div>
-
-                    <div className="pl-7 pt-1">
-                      <Slider
-                        value={[val]}
-                        min={0}
-                        max={100}
-                        step={1}
-                        disabled={isLocked}
-                        onValueChange={(vals) =>
-                          setRawScores((prev) => ({ ...prev, [crit.id]: vals[0] }))
-                        }
-                        className="py-1"
-                      />
+                      {typeof rawScores[crit.id] === 'number' && !isNaN(Number(rawScores[crit.id])) && (
+                        <Badge
+                          variant="outline"
+                          className="text-xs font-mono font-bold w-9 justify-center py-1"
+                        >
+                          {determineGradeFromScore(Number(rawScores[crit.id]), 65).grade}
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 );

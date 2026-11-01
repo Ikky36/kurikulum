@@ -246,7 +246,7 @@ export function calculateRubricTotalWeight(criteria: TaRubricCriterion[]): numbe
 // Helper: Hitung skor tertimbang penguji berdasarkan input skor mentah
 export function calculateExaminerScore(
   criteria: TaRubricCriterion[],
-  rawScores: Record<string, number>
+  rawScores: Record<string, number | any>
 ): {
   finalScore: number;
   details: TaExaminerScoreItem[];
@@ -265,8 +265,9 @@ export function calculateExaminerScore(
 
   const details: TaExaminerScoreItem[] = criteria.map((crit) => {
     const rawVal = rawScores[crit.id];
-    const raw = typeof rawVal === 'number' && !isNaN(rawVal) ? Math.min(100, Math.max(0, rawVal)) : 0;
-    if (rawVal === undefined || rawVal === null || isNaN(rawVal)) {
+    const numVal = typeof rawVal === 'number' ? rawVal : parseFloat(rawVal);
+    const raw = !isNaN(numVal) ? Math.min(100, Math.max(0, numVal)) : 0;
+    if (rawVal === undefined || rawVal === null || rawVal === '' || isNaN(numVal)) {
       isComplete = false;
     }
     const weighted = Math.round((raw * (crit.weight / 100)) * 100) / 100;
