@@ -162,7 +162,7 @@ export const EvaluasiKetuaSidangPage: React.FC = () => {
           official_notes: officialNotes.trim() || null,
           chairperson_signature_url: signatureUrl,
           chairperson_signed_at: signedAt,
-          status: 'finished',
+          status: 'completed',
           is_locked: true,
           locked_at: signedAt,
         })

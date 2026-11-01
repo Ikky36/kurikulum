@@ -113,7 +113,7 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
 
     setScheduleDate(seminar.schedule_date ? seminar.schedule_date.substring(0, 16) : '');
     setRoom(seminar.room || '');
-    setStatus(seminar.status || 'scheduled');
+    setStatus(seminar.status === 'finished' ? 'completed' : seminar.status === 'rejected' ? 'cancelled' : seminar.status || 'scheduled');
 
     // Chairperson setup
     setChairpersonType(seminar.chairperson_type || (seminar.chairperson_id ? 'internal' : 'internal'));
@@ -493,8 +493,8 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
                     <SelectContent>
                       <SelectItem value="pending">Menunggu Penjadwalan</SelectItem>
                       <SelectItem value="scheduled">Terjadwal (Disetujui)</SelectItem>
-                      <SelectItem value="finished">Selesai (Nilai Masuk)</SelectItem>
-                      <SelectItem value="rejected">Ditolak / Batal</SelectItem>
+                      <SelectItem value="completed">Selesai (Nilai Masuk)</SelectItem>
+                      <SelectItem value="cancelled">Ditolak / Batal</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

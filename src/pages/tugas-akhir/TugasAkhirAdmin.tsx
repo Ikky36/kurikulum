@@ -751,12 +751,12 @@ export default function TugasAkhirAdmin() {
                           </div>
                           <Badge variant={
                             sem.status === 'scheduled' ? 'default' :
-                            sem.status === 'finished' ? 'secondary' :
-                            sem.status === 'rejected' ? 'destructive' : 'outline'
+                            (sem.status === 'finished' || sem.status === 'completed') ? 'secondary' :
+                            (sem.status === 'rejected' || sem.status === 'cancelled') ? 'destructive' : 'outline'
                           } className="text-xs shrink-0">
                             {sem.status === 'scheduled' ? 'Terjadwal' :
-                             sem.status === 'finished' ? 'Selesai' :
-                             sem.status === 'rejected' ? 'Ditolak' : 'Menunggu'}
+                             (sem.status === 'finished' || sem.status === 'completed') ? 'Selesai' :
+                             (sem.status === 'rejected' || sem.status === 'cancelled') ? 'Ditolak' : 'Menunggu'}
                           </Badge>
                         </div>
 
@@ -949,12 +949,12 @@ export default function TugasAkhirAdmin() {
                               <div className="space-y-1">
                                 <Badge variant={
                                   sem.status === 'scheduled' ? 'default' :
-                                  sem.status === 'finished' ? 'secondary' :
-                                  sem.status === 'rejected' ? 'destructive' : 'outline'
+                                  (sem.status === 'finished' || sem.status === 'completed') ? 'secondary' :
+                                  (sem.status === 'rejected' || sem.status === 'cancelled') ? 'destructive' : 'outline'
                                 } className="text-[11px]">
                                   {sem.status === 'scheduled' ? 'Terjadwal' :
-                                   sem.status === 'finished' ? 'Selesai' :
-                                   sem.status === 'rejected' ? 'Ditolak' : 'Menunggu'}
+                                   (sem.status === 'finished' || sem.status === 'completed') ? 'Selesai' :
+                                   (sem.status === 'rejected' || sem.status === 'cancelled') ? 'Ditolak' : 'Menunggu'}
                                 </Badge>
                                 {sem.final_score !== null && sem.final_score !== undefined && (
                                   <div className="text-xs font-bold text-emerald-700">

@@ -96,3 +96,14 @@ TO public
 USING (
   bucket_id = 'avatars'
 );
+
+
+-- 4. Perbarui batasan status pada ta_seminars agar menerima 'completed', 'finished', 'cancelled', 'rejected'
+DO $$
+BEGIN
+  ALTER TABLE public.ta_seminars DROP CONSTRAINT IF EXISTS ta_seminars_status_check;
+  ALTER TABLE public.ta_seminars ADD CONSTRAINT ta_seminars_status_check
+    CHECK (status IN ('pending', 'scheduled', 'completed', 'finished', 'cancelled', 'rejected'));
+EXCEPTION
+  WHEN OTHERS THEN NULL;
+END $$;

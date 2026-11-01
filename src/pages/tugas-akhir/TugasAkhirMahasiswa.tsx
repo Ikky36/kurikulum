@@ -562,9 +562,9 @@ export default function TugasAkhirMahasiswa() {
     }
 
     const isScheduled = seminar.status === 'scheduled';
-    const isFinished = seminar.status === 'finished';
+    const isFinished = seminar.status === 'finished' || seminar.status === 'completed';
     const isPending = seminar.status === 'pending';
-    const isRejected = seminar.status === 'rejected';
+    const isRejected = seminar.status === 'rejected' || seminar.status === 'cancelled';
 
     const examiners = Array.isArray(seminar.ta_examiners) ? seminar.ta_examiners : [];
 

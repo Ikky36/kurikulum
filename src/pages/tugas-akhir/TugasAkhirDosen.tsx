@@ -313,8 +313,8 @@ export default function TugasAkhirDosen() {
                               <Badge variant="secondary" className="capitalize text-[11px]">
                                 {sem.type === 'sempro' ? 'Seminar Proposal' : 'Sidang TA'}
                               </Badge>
-                              <Badge variant={sem.status === 'finished' ? 'default' : 'outline'} className="text-[10px]">
-                                {sem.status === 'finished' ? 'Selesai' : sem.status === 'scheduled' ? 'Terjadwal' : 'Menunggu'}
+                              <Badge variant={(sem.status === 'finished' || sem.status === 'completed') ? 'default' : 'outline'} className="text-[10px]">
+                                {(sem.status === 'finished' || sem.status === 'completed') ? 'Selesai' : sem.status === 'scheduled' ? 'Terjadwal' : 'Menunggu'}
                               </Badge>
                             </div>
 
