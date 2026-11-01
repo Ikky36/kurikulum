@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, CheckCircle2, XCircle, Users, ExternalLink, Plus, Trash2, Save, Calendar, Clock, MapPin, Search, Share2, ShieldCheck } from 'lucide-react';
+import { Eye, CheckCircle2, XCircle, Users, ExternalLink, Plus, Trash2, Save, Calendar, Clock, MapPin, Search, Share2, ShieldCheck, Printer, FileText } from 'lucide-react';
+import { SeminarDocumentViewerModal } from '@/components/document/SeminarDocumentViewerModal';
 import { TableSortHeader, SortConfig, sortData } from '@/components/ui/table-sort-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
@@ -50,6 +51,13 @@ export default function TugasAkhirAdmin() {
 
   // STATE FOR SEMINAR
   const [selectedSeminar, setSelectedSeminar] = useState<any>(null);
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [selectedSeminarForDoc, setSelectedSeminarForDoc] = useState<any>(null);
+
+  const openDocModal = (sem: any) => {
+    setSelectedSeminarForDoc(sem);
+    setIsDocModalOpen(true);
+  };
   const [isSeminarDetailOpen, setIsSeminarDetailOpen] = useState(false);
 
   const queryClient = useQueryClient();
@@ -822,12 +830,15 @@ export default function TugasAkhirAdmin() {
                           </div>
                         )}
 
-                        <div className="pt-2 border-t flex gap-2">
+                        <div className="pt-2 border-t flex gap-1.5 flex-wrap">
                           <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => openSeminarDetail(sem)}>
-                            <Calendar className="w-3.5 h-3.5 mr-1" /> Atur Jadwal
+                            <Calendar className="w-3.5 h-3.5 mr-1" /> Atur
                           </Button>
                           <Button size="sm" className="h-8 text-xs gap-1" onClick={() => openSeminarDetail(sem)}>
                             <Share2 className="w-3.5 h-3.5" /> Tautan
+                          </Button>
+                          <Button variant="secondary" size="sm" className="h-8 text-xs gap-1" onClick={() => openDocModal(sem)} title="Cetak Dokumen Resmi">
+                            <Printer className="w-3.5 h-3.5" /> Cetak
                           </Button>
                         </div>
                       </div>
@@ -960,6 +971,9 @@ export default function TugasAkhirAdmin() {
                                 <Button size="sm" className="h-8 text-xs gap-1" onClick={() => openSeminarDetail(sem)}>
                                   <Share2 className="w-3.5 h-3.5" /> Tautan
                                 </Button>
+                                <Button variant="secondary" size="sm" className="h-8 text-xs gap-1" onClick={() => openDocModal(sem)} title="Cetak Berita Acara, Lembar Nilai & Surat Tugas">
+                                  <Printer className="w-3.5 h-3.5" /> Cetak
+                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -981,6 +995,15 @@ export default function TugasAkhirAdmin() {
                 onSaved={() => {
                   refetchSeminars();
                 }}
+              />
+            )}
+
+            {/* Modal Cetak Dokumen Lengkap (Berita Acara, Lembar Nilai Rubrik, Surat Tugas) */}
+            {selectedSeminarForDoc && (
+              <SeminarDocumentViewerModal
+                open={isDocModalOpen}
+                onOpenChange={setIsDocModalOpen}
+                seminar={selectedSeminarForDoc}
               />
             )}
           </TabsContent>

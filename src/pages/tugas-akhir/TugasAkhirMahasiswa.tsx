@@ -11,7 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save, Undo2, Eye, Edit2, Trash2, ArrowLeft, Printer, ShieldCheck, Send, FileCheck, BookOpen, GraduationCap, ExternalLink } from 'lucide-react';
+import { FileText, Clock, CheckCircle2, XCircle, AlertCircle, RefreshCw, Plus, Calendar, MessageSquare, Save, Undo2, Eye, Edit2, Trash2, ArrowLeft, Printer, ShieldCheck, Send, FileCheck, BookOpen, GraduationCap, ExternalLink, Award, MapPin } from 'lucide-react';
+import { SeminarDocumentViewerModal } from '@/components/document/SeminarDocumentViewerModal';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -41,6 +42,17 @@ export default function TugasAkhirMahasiswa() {
   // Print Card State
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [printTemplateCode, setPrintTemplateCode] = useState<string>('kartu_bimbingan_ta');
+
+  // Seminar Document Modal State
+  const [isSeminarDocModalOpen, setIsSeminarDocModalOpen] = useState(false);
+  const [selectedSeminarForDoc, setSelectedSeminarForDoc] = useState<any>(null);
+  const [seminarDocInitialType, setSeminarDocInitialType] = useState<'berita_acara' | 'lembar_nilai' | 'surat_tugas'>('berita_acara');
+
+  const openSeminarDoc = (sem: any, type: 'berita_acara' | 'lembar_nilai' | 'surat_tugas' = 'berita_acara') => {
+    setSelectedSeminarForDoc(sem);
+    setSeminarDocInitialType(type);
+    setIsSeminarDocModalOpen(true);
+  };
 
   // Add Log State
   const [isAddLogOpen, setIsAddLogOpen] = useState(false);
@@ -166,6 +178,47 @@ export default function TugasAkhirMahasiswa() {
       } else {
         toast.info('Status sub-target dibatalkan');
       }
+    }
+  });
+
+  const { data: mySeminars, refetch: refetchMySeminars } = useQuery({
+    queryKey: ['my_ta_seminars', mySubmission?.id],
+    queryFn: async () => {
+      if (!mySubmission?.id) return [];
+      const { data, error } = await supabase
+        .from('ta_seminars')
+        .select(`
+          *,
+          chairperson:chairperson_id(id, full_name, nip, signature_url),
+          ta_submissions(
+            id, title,
+            profiles:student_id(id, full_name, nim, program, gender)
+          ),
+          ta_examiners(
+            id, role, examiner_type, examiner_name, examiner_nip,
+            score, scores_detail, revision_notes, signed_at, signature_url,
+            profiles:dosen_id(id, full_name, nip, signature_url)
+          )
+        `)
+        .eq('submission_id', mySubmission.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!mySubmission?.id
+  });
+
+  const cancelSeminarMutation = useMutation({
+    mutationFn: async (seminarId: string) => {
+      const { error } = await supabase.from('ta_seminars').delete().eq('id', seminarId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Pendaftaran seminar berhasil dibatalkan');
+      queryClient.invalidateQueries({ queryKey: ['my_ta_seminars'] });
+    },
+    onError: (err: any) => {
+      toast.error('Gagal membatalkan pendaftaran: ' + err.message);
     }
   });
 
@@ -467,6 +520,335 @@ export default function TugasAkhirMahasiswa() {
     setDocumentLink('');
     setComments('');
     setSelectedType('');
+  };
+
+  
+  const renderSeminarContent = (phase: 'sempro' | 'sidang') => {
+    if (!mySubmission || mySubmission.status !== 'approved') {
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {phase === 'sempro' ? 'Pendaftaran Seminar Proposal' : 'Pendaftaran Sidang Akhir'}
+            </CardTitle>
+            <CardDescription>
+              {phase === 'sempro'
+                ? 'Ajukan jadwal seminar proposal Anda di sini.'
+                : 'Ajukan jadwal sidang akhir setelah bimbingan Anda selesai.'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="py-10 text-center text-muted-foreground">
+            <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
+            <p>Anda belum memiliki pengajuan Tugas Akhir yang disetujui Kaprodi.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    const seminar = mySeminars?.find((s: any) => s.type === phase);
+
+    if (!seminar) {
+      return (
+        <SeminarRegistrationForm
+          phase={phase}
+          submission={mySubmission}
+          profile={myProfile}
+          requirements={taRequirements || []}
+          grades={myGrades || []}
+          instrumenPenilaian={instrumenPenilaian || []}
+          semester={calculateSemester(myProfile?.enrollment_year, activeAcademicYear?.name, activeSemester?.name) || 1}
+        />
+      );
+    }
+
+    const isScheduled = seminar.status === 'scheduled';
+    const isFinished = seminar.status === 'finished';
+    const isPending = seminar.status === 'pending';
+    const isRejected = seminar.status === 'rejected';
+
+    const examiners = Array.isArray(seminar.ta_examiners) ? seminar.ta_examiners : [];
+
+    let statusKelulusanLabel = 'Lulus dengan Catatan Revisi';
+    if (seminar.result_status === 'lulus_tanpa_revisi') statusKelulusanLabel = 'LULUS MURNI (TANPA REVISI)';
+    else if (seminar.result_status === 'lulus_revisi_ringan') statusKelulusanLabel = 'LULUS DENGAN REVISI RINGAN';
+    else if (seminar.result_status === 'lulus_revisi_berat') statusKelulusanLabel = 'LULUS DENGAN REVISI SUBSTANSIAL';
+    else if (seminar.result_status === 'mengulang') statusKelulusanLabel = 'TIDAK LULUS (MENGULANG SIDANG)';
+
+    return (
+      <div className="space-y-6">
+        <Card className="border-2 shadow-sm">
+          <CardHeader className="pb-3 border-b bg-muted/20">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Badge variant={isFinished ? 'default' : isScheduled ? 'secondary' : isRejected ? 'destructive' : 'outline'} className="text-xs">
+                    {isFinished ? 'Ujian Selesai' : isScheduled ? 'Jadwal Ditetapkan' : isRejected ? 'Ditolak' : 'Menunggu Verifikasi & Jadwal'}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    Fase: {phase === 'sempro' ? 'Seminar Proposal' : 'Sidang Munaqasyah TA'}
+                  </span>
+                </div>
+                <CardTitle className="text-lg sm:text-xl">
+                  {phase === 'sempro' ? 'Status & Lembar Seminar Proposal' : 'Status & Lembar Sidang Tugas Akhir'}
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Judul: <strong className="text-foreground">{mySubmission.title}</strong>
+                </CardDescription>
+              </div>
+
+              {(isScheduled || isFinished) && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openSeminarDoc(seminar, 'berita_acara')}
+                    className="h-8 text-xs gap-1 border-primary/40 hover:bg-primary/10 text-primary"
+                  >
+                    <FileText className="w-3.5 h-3.5" /> Berita Acara
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openSeminarDoc(seminar, 'lembar_nilai')}
+                    className="h-8 text-xs gap-1 border-emerald-500/40 hover:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                  >
+                    <Award className="w-3.5 h-3.5" /> Lembar Nilai
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openSeminarDoc(seminar, 'surat_tugas')}
+                    className="h-8 text-xs gap-1"
+                  >
+                    <FileCheck className="w-3.5 h-3.5" /> Surat Tugas
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+
+          <CardContent className="pt-5 space-y-6">
+            {isPending && (
+              <Alert className="bg-amber-500/10 border-amber-300 text-amber-800 dark:text-amber-300">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <AlertTitle className="font-semibold text-xs sm:text-sm">Pendaftaran Berhasil Diajukan</AlertTitle>
+                <AlertDescription className="text-xs mt-1">
+                  Berkas pendaftaran Anda telah tercatat dan saat ini sedang dalam proses verifikasi oleh Tim Akademik/Kaprodi. Jadwal pelaksanaan dan susunan dewan penguji akan segera diterbitkan di halaman ini.
+                  <div className="mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs border-amber-400 hover:bg-amber-100 text-amber-900"
+                      onClick={() => {
+                        if (confirm('Apakah Anda yakin ingin membatalkan pendaftaran seminar ini?')) {
+                          cancelSeminarMutation.mutate(seminar.id);
+                        }
+                      }}
+                      disabled={cancelSeminarMutation.isPending}
+                    >
+                      Batalkan Pengajuan
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {isRejected && (
+              <Alert variant="destructive">
+                <AlertCircle className="w-4 h-4" />
+                <AlertTitle>Pendaftaran Ditolak</AlertTitle>
+                <AlertDescription className="text-xs mt-1">
+                  Pendaftaran Anda belum dapat dilanjutkan. Silakan periksa kembali kelengkapan syarat atau hubungi admin prodi.
+                  <div className="mt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      onClick={() => cancelSeminarMutation.mutate(seminar.id)}
+                    >
+                      Daftar Ulang
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {(isScheduled || isFinished) && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-3.5 rounded-lg border bg-card space-y-1">
+                  <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-primary" /> Waktu Pelaksanaan
+                  </span>
+                  <p className="text-sm font-semibold">
+                    {seminar.schedule_date
+                      ? new Date(seminar.schedule_date).toLocaleDateString('id-ID', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'long',
+                          year: 'numeric',
+                        })
+                      : 'Belum dijadwalkan'}
+                  </p>
+                  {seminar.schedule_date && (
+                    <p className="text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      Pukul {new Date(seminar.schedule_date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+                    </p>
+                  )}
+                </div>
+
+                <div className="p-3.5 rounded-lg border bg-card space-y-1">
+                  <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-primary" /> Ruangan / Tempat
+                  </span>
+                  <p className="text-sm font-semibold">{seminar.room || 'Ruang Sidang STITMA'}</p>
+                  <p className="text-xs text-muted-foreground">Kampus STIT Madani Yogyakarta</p>
+                </div>
+
+                <div className="p-3.5 rounded-lg border bg-card space-y-1">
+                  <span className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-primary" /> Ketua Sidang
+                  </span>
+                  <p className="text-sm font-semibold truncate">
+                    {seminar.chairperson?.full_name || seminar.chairperson_name || 'Menunggu penetapan'}
+                  </p>
+                  {seminar.chairperson_signed_at ? (
+                    <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-300">
+                      ✓ Telah Mengesahkan
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">Pimpinan Sidang</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {(isScheduled || isFinished) && (
+              <div className="space-y-2">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Susunan Dewan Penguji
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {examiners.length === 0 ? (
+                    <div className="col-span-full text-xs text-muted-foreground italic py-2">
+                      Susunan dewan penguji sedang disiapkan oleh Admin Program Studi.
+                    </div>
+                  ) : (
+                    examiners.map((ex: any, idx: number) => {
+                      const exName = ex.examiner_name || ex.profiles?.full_name || 'Dosen Penguji';
+                      const hasScored = ex.score !== null && ex.score !== undefined;
+                      return (
+                        <div key={ex.id || idx} className="p-3 rounded-lg border bg-muted/20 flex flex-col justify-between">
+                          <div>
+                            <div className="flex items-center justify-between gap-1 mb-1">
+                              <Badge variant="outline" className="text-[10px] font-medium">
+                                {ex.role || ('Penguji ' + (idx + 1))}
+                              </Badge>
+                              {hasScored ? (
+                                <Badge className="bg-emerald-500/10 text-emerald-700 text-[10px] border-emerald-300">
+                                  Sudah Menilai
+                                </Badge>
+                              ) : (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  Menunggu Nilai
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="text-xs font-semibold">{exName}</div>
+                            <div className="text-[11px] text-muted-foreground">
+                              {ex.examiner_nip || ex.profiles?.nip || (ex.examiner_type === 'external' ? 'Dosen Tamu' : '-')}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            )}
+
+            {(isFinished || seminar.final_score !== null) && (
+              <div className="rounded-xl border border-emerald-500/40 bg-gradient-to-br from-emerald-500/5 via-teal-500/5 to-cyan-500/5 p-4 sm:p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-500/20 pb-3">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                      Hasil Keputusan Dewan Penguji
+                    </span>
+                    <h3 className="text-base sm:text-lg font-bold text-foreground">
+                      {statusKelulusanLabel}
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <span className="text-[11px] text-muted-foreground block">Nilai Rata-rata</span>
+                      <span className="text-2xl font-black font-mono text-emerald-700 dark:text-emerald-400">
+                        {seminar.final_score ?? '-'}
+                      </span>
+                    </div>
+                    <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shadow-sm">
+                      {seminar.final_grade || 'A'}
+                    </div>
+                  </div>
+                </div>
+
+                {seminar.revision_deadline && (
+                  <div className="flex items-center gap-2 text-xs bg-amber-500/10 border border-amber-300/60 rounded-md p-2.5 text-amber-900 dark:text-amber-200">
+                    <Clock className="w-4 h-4 shrink-0 text-amber-600" />
+                    <span>
+                      Batas Akhir Penyerahan Naskah Revisi: <strong>{new Date(seminar.revision_deadline).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</strong>
+                    </span>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                    <MessageSquare className="w-3.5 h-3.5 text-primary" /> Rangkuman Catatan & Arahan Revisi:
+                  </h4>
+                  {examiners.some((e: any) => e.revision_notes && e.revision_notes.trim()) ? (
+                    <div className="space-y-2">
+                      {examiners
+                        .filter((e: any) => e.revision_notes && e.revision_notes.trim())
+                        .map((e: any, idx: number) => (
+                          <div key={idx} className="p-3 rounded-lg bg-background border text-xs space-y-1">
+                            <div className="font-semibold text-primary">
+                              • {e.role} ({e.examiner_name || e.profiles?.full_name || 'Dosen Penguji'}):
+                            </div>
+                            <p className="whitespace-pre-line text-muted-foreground pl-3">
+                              {e.revision_notes}
+                            </p>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic bg-background p-3 rounded-lg border">
+                      Tidak ada catatan revisi khusus atau naskah dinyatakan disetujui tanpa perubahan substansial.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </CardContent>
+
+          {(isScheduled || isFinished) && (
+            <CardFooter className="bg-muted/10 border-t py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" /> Dokumen digital resmi dilengkapi QR-Code verifikasi STITMA.
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5"
+                  onClick={() => openSeminarDoc(seminar, 'berita_acara')}
+                >
+                  <Printer className="w-3.5 h-3.5" /> Buka & Cetak Dokumen Lengkap
+                </Button>
+              </div>
+            </CardFooter>
+          )}
+        </Card>
+      </div>
+    );
   };
 
   if (subLoading || typesLoading) return <Layout><div className="container py-8 text-center">Memuat data...</div></Layout>;
@@ -1197,53 +1579,11 @@ export default function TugasAkhirMahasiswa() {
           </TabsContent>
 
           <TabsContent value="seminar">
-            {!mySubmission || mySubmission.status !== 'approved' ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Pendaftaran Seminar Proposal</CardTitle>
-                  <CardDescription>Ajukan jadwal seminar proposal Anda di sini.</CardDescription>
-                </CardHeader>
-                <CardContent className="py-10 text-center text-muted-foreground">
-                  <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                  <p>Anda belum memiliki pengajuan Tugas Akhir yang disetujui Kaprodi.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <SeminarRegistrationForm 
-                phase="sempro"
-                submission={mySubmission}
-                profile={myProfile}
-                requirements={taRequirements || []}
-                grades={myGrades || []}
-                instrumenPenilaian={instrumenPenilaian || []}
-                semester={calculateSemester(myProfile?.enrollment_year, activeAcademicYear?.name, activeSemester?.name) || 1}
-              />
-            )}
+            {renderSeminarContent('sempro')}
           </TabsContent>
 
           <TabsContent value="sidang">
-            {!mySubmission || mySubmission.status !== 'approved' ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Pendaftaran Sidang Akhir</CardTitle>
-                  <CardDescription>Ajukan jadwal sidang akhir setelah bimbingan Anda selesai.</CardDescription>
-                </CardHeader>
-                <CardContent className="py-10 text-center text-muted-foreground">
-                  <CheckCircle2 className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                  <p>Anda belum memiliki pengajuan Tugas Akhir yang disetujui Kaprodi.</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <SeminarRegistrationForm 
-                phase="sidang"
-                submission={mySubmission}
-                profile={myProfile}
-                requirements={taRequirements || []}
-                grades={myGrades || []}
-                instrumenPenilaian={instrumenPenilaian || []}
-                semester={calculateSemester(myProfile?.enrollment_year, activeAcademicYear?.name, activeSemester?.name) || 1}
-              />
-            )}
+            {renderSeminarContent('sidang')}
           </TabsContent>
         </Tabs>
 
@@ -1550,6 +1890,16 @@ export default function TugasAkhirMahasiswa() {
             consultationLogs={consultationLogs || []}
             studentProfile={profile}
             templateCode={printTemplateCode}
+          />
+        )}
+
+        {/* Modal Cetak Dokumen Seminar / Sidang */}
+        {selectedSeminarForDoc && (
+          <SeminarDocumentViewerModal
+            open={isSeminarDocModalOpen}
+            onOpenChange={setIsSeminarDocModalOpen}
+            seminar={selectedSeminarForDoc}
+            initialDocType={seminarDocInitialType}
           />
         )}
 

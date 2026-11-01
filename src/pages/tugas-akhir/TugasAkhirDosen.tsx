@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Calendar, CheckCircle2, FileText, MessageSquare, Plus, Save, Clock, ExternalLink } from 'lucide-react';
+import { BookOpen, Calendar, CheckCircle2, FileText, MessageSquare, Plus, Save, Clock, ExternalLink, Printer, ShieldCheck, Award, MapPin } from 'lucide-react';
+import { SeminarDocumentViewerModal } from '@/components/document/SeminarDocumentViewerModal';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -24,6 +25,13 @@ export default function TugasAkhirDosen() {
   const queryClient = useQueryClient();
   
   const [selectedAdvisorship, setSelectedAdvisorship] = useState<any>(null);
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [selectedSeminarForDoc, setSelectedSeminarForDoc] = useState<any>(null);
+
+  const openSeminarDoc = (sem: any) => {
+    setSelectedSeminarForDoc(sem);
+    setIsDocModalOpen(true);
+  };
   const [subTab, setSubTab] = useState('daftar');
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   
@@ -35,6 +43,38 @@ export default function TugasAkhirDosen() {
   const [logProblem, setLogProblem] = useState('');
   const [logSolution, setLogSolution] = useState('');
   const [logStatus, setLogStatus] = useState('approved');
+
+  const { data: myExamSeminars, isLoading: loadingExams } = useQuery({
+    queryKey: ['dosen_ta_exam_seminars', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from('ta_seminars')
+        .select(`
+          *,
+          chairperson:chairperson_id(id, full_name, nip, signature_url),
+          ta_submissions(
+            id, title,
+            profiles:student_id(id, full_name, nim, program)
+          ),
+          ta_examiners(
+            id, role, examiner_type, dosen_id, examiner_name, examiner_nip,
+            score, scores_detail, revision_notes, signed_at, signature_url, access_token,
+            profiles:dosen_id(id, full_name, nip, signature_url)
+          )
+        `)
+        .order('schedule_date', { ascending: false });
+
+      if (error) throw error;
+
+      return (data || []).filter((sem: any) => {
+        const isChair = sem.chairperson_id === user.id;
+        const isExaminer = sem.ta_examiners?.some((ex: any) => ex.dosen_id === user.id);
+        return isChair || isExaminer;
+      });
+    },
+    enabled: !!user?.id
+  });
 
   const { data: advisorships, isLoading } = useQuery({
     queryKey: ['dosen_ta_students', user?.id],
@@ -157,6 +197,14 @@ export default function TugasAkhirDosen() {
             <TabsTrigger value="rekapitulasi" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2 text-xs sm:text-sm">
               <BarChart3 className="w-3.5 h-3.5 mr-1.5" /> Rekapitulasi Progres Fase
             </TabsTrigger>
+            <TabsTrigger value="pengujian" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2 text-xs sm:text-sm">
+              <Award className="w-3.5 h-3.5 mr-1.5" /> Jadwal Ujian & Pengujian
+              {myExamSeminars && myExamSeminars.length > 0 && (
+                <Badge variant="secondary" className="ml-1.5 text-[10px] px-1.5 py-0 h-4">
+                  {myExamSeminars.length}
+                </Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="daftar" className="mt-0 space-y-6">
@@ -227,6 +275,260 @@ export default function TugasAkhirDosen() {
 
           <TabsContent value="rekapitulasi" className="mt-0">
             <RekapitulasiFaseView scope="dosen" dosenId={profile?.id || user?.id} />
+          </TabsContent>
+
+          <TabsContent value="pengujian" className="mt-0 space-y-6">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <CardTitle>Jadwal Ujian & Dewan Penguji</CardTitle>
+                    <CardDescription>
+                      Daftar seminar proposal dan sidang munaqasyah di mana Anda bertugas sebagai Ketua Sidang atau Penguji.
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline" className="text-xs self-start sm:self-auto">
+                    Total: {myExamSeminars?.length || 0} Ujian
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {loadingExams ? (
+                  <div className="text-center py-12 text-muted-foreground">Memuat jadwal ujian...</div>
+                ) : !myExamSeminars || myExamSeminars.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground space-y-2">
+                    <Award className="w-12 h-12 mx-auto opacity-20" />
+                    <p>Belum ada jadwal seminar atau sidang tugas akhir yang menugaskan Anda.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Mobile Card View */}
+                    <div className="grid grid-cols-1 gap-3 md:hidden">
+                      {myExamSeminars.map((sem: any) => {
+                        const isChair = sem.chairperson_id === user?.id;
+                        const myEx = sem.ta_examiners?.find((e: any) => e.dosen_id === user?.id);
+                        return (
+                          <div key={sem.id} className="p-4 rounded-xl border bg-card space-y-3 shadow-sm">
+                            <div className="flex items-center justify-between gap-2">
+                              <Badge variant="secondary" className="capitalize text-[11px]">
+                                {sem.type === 'sempro' ? 'Seminar Proposal' : 'Sidang TA'}
+                              </Badge>
+                              <Badge variant={sem.status === 'finished' ? 'default' : 'outline'} className="text-[10px]">
+                                {sem.status === 'finished' ? 'Selesai' : sem.status === 'scheduled' ? 'Terjadwal' : 'Menunggu'}
+                              </Badge>
+                            </div>
+
+                            <div>
+                              <div className="font-semibold text-sm">{sem.ta_submissions?.profiles?.full_name}</div>
+                              <div className="text-xs text-muted-foreground">{sem.ta_submissions?.profiles?.nim}</div>
+                              <p className="text-xs text-foreground font-medium mt-1 line-clamp-2">
+                                {sem.ta_submissions?.title}
+                              </p>
+                            </div>
+
+                            <div className="text-xs space-y-1 bg-muted/30 p-2.5 rounded-lg border">
+                              <div className="flex items-center text-muted-foreground">
+                                <Calendar className="w-3.5 h-3.5 mr-1.5 text-primary" />
+                                {sem.schedule_date ? new Date(sem.schedule_date).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : 'Belum dijadwalkan'}
+                              </div>
+                              {sem.schedule_date && (
+                                <div className="flex items-center text-muted-foreground">
+                                  <Clock className="w-3.5 h-3.5 mr-1.5" />
+                                  {new Date(sem.schedule_date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+                                </div>
+                              )}
+                              {sem.room && (
+                                <div className="flex items-center text-primary font-medium">
+                                  <MapPin className="w-3.5 h-3.5 mr-1.5" /> {sem.room}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="flex items-center justify-between text-xs pt-1 border-t">
+                              <span className="text-muted-foreground">Peran Anda:</span>
+                              <div className="flex items-center gap-1">
+                                {isChair && <Badge className="bg-primary/10 text-primary border-primary/20 text-[10px]">Ketua Sidang</Badge>}
+                                {myEx && <Badge variant="outline" className="text-[10px]">{myEx.role}</Badge>}
+                              </div>
+                            </div>
+
+                            <div className="pt-2 border-t flex flex-wrap gap-1.5">
+                              {myEx && (
+                                <Button
+                                  size="sm"
+                                  className="h-8 text-xs flex-1 gap-1"
+                                  onClick={() => window.open('/evaluasi-ta/penguji?token=' + myEx.access_token, '_blank')}
+                                >
+                                  <FileText className="w-3.5 h-3.5" />
+                                  {myEx.score !== null ? 'Edit Nilai' : 'Beri Nilai'}
+                                </Button>
+                              )}
+                              {isChair && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8 text-xs flex-1 gap-1 border-primary/40 text-primary"
+                                  onClick={() => window.open('/evaluasi-ta/ketua-sidang?token=' + sem.chairperson_access_token, '_blank')}
+                                >
+                                  <ShieldCheck className="w-3.5 h-3.5" />
+                                  Pimpin Sidang
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                className="h-8 text-xs gap-1"
+                                onClick={() => openSeminarDoc(sem)}
+                                title="Cetak Berita Acara, Lembar Nilai & Surat Tugas"
+                              >
+                                <Printer className="w-3.5 h-3.5" /> Cetak
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="rounded-md border overflow-x-auto hidden md:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Mahasiswa & Judul</TableHead>
+                            <TableHead>Jenis Ujian</TableHead>
+                            <TableHead>Jadwal & Tempat</TableHead>
+                            <TableHead>Peran Anda</TableHead>
+                            <TableHead>Status Nilai / Sah</TableHead>
+                            <TableHead className="text-right">Aksi</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {myExamSeminars.map((sem: any) => {
+                            const isChair = sem.chairperson_id === user?.id;
+                            const myEx = sem.ta_examiners?.find((e: any) => e.dosen_id === user?.id);
+                            return (
+                              <TableRow key={sem.id}>
+                                <TableCell>
+                                  <div className="font-medium">{sem.ta_submissions?.profiles?.full_name}</div>
+                                  <div className="text-xs text-muted-foreground">{sem.ta_submissions?.profiles?.nim}</div>
+                                  <div className="text-xs text-foreground font-medium max-w-[240px] truncate" title={sem.ta_submissions?.title}>
+                                    {sem.ta_submissions?.title}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary" className="capitalize">
+                                    {sem.type === 'sempro' ? 'Sempro' : 'Sidang TA'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {sem.schedule_date ? (
+                                    <div className="space-y-0.5 text-xs">
+                                      <div className="font-semibold flex items-center">
+                                        <Calendar className="w-3 h-3 mr-1 text-primary" />
+                                        {new Date(sem.schedule_date).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
+                                      </div>
+                                      <div className="text-muted-foreground flex items-center">
+                                        <Clock className="w-3 h-3 mr-1" />
+                                        {new Date(sem.schedule_date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
+                                      </div>
+                                      {sem.room && (
+                                        <div className="text-primary font-medium flex items-center">
+                                          <MapPin className="w-3 h-3 mr-1" /> {sem.room}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground italic">Belum dijadwalkan</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="space-y-1">
+                                    {isChair && (
+                                      <Badge className="bg-primary/10 text-primary border-primary/20 text-[11px] block text-center">
+                                        Ketua Sidang
+                                      </Badge>
+                                    )}
+                                    {myEx && (
+                                      <Badge variant="outline" className="text-[11px] block text-center">
+                                        {myEx.role}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="space-y-1">
+                                    {myEx && (
+                                      <div>
+                                        {myEx.score !== null ? (
+                                          <Badge className="bg-emerald-500/10 text-emerald-700 text-[11px] border-emerald-300">
+                                            Skor Anda: {myEx.score}
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="secondary" className="text-[11px] text-amber-700 bg-amber-50">
+                                            Belum Dinilai
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    )}
+                                    {isChair && (
+                                      <div>
+                                        {sem.chairperson_signed_at ? (
+                                          <Badge className="bg-emerald-500/10 text-emerald-700 text-[11px]">
+                                            ✓ Telah Disahkan
+                                          </Badge>
+                                        ) : (
+                                          <Badge variant="outline" className="text-[11px] text-muted-foreground">
+                                            Menunggu Pengesahan
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                    {myEx && (
+                                      <Button
+                                        size="sm"
+                                        className="h-8 text-xs gap-1"
+                                        onClick={() => window.open('/evaluasi-ta/penguji?token=' + myEx.access_token, '_blank')}
+                                      >
+                                        <FileText className="w-3.5 h-3.5" />
+                                        {myEx.score !== null ? 'Edit Nilai' : 'Beri Nilai'}
+                                      </Button>
+                                    )}
+                                    {isChair && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 text-xs gap-1 border-primary/40 text-primary hover:bg-primary/10"
+                                        onClick={() => window.open('/evaluasi-ta/ketua-sidang?token=' + sem.chairperson_access_token, '_blank')}
+                                      >
+                                        <ShieldCheck className="w-3.5 h-3.5" />
+                                        Pimpin Sidang
+                                      </Button>
+                                    )}
+                                    <Button
+                                      size="sm"
+                                      variant="secondary"
+                                      className="h-8 text-xs gap-1"
+                                      onClick={() => openSeminarDoc(sem)}
+                                      title="Cetak Berita Acara, Lembar Nilai & Surat Tugas"
+                                    >
+                                      <Printer className="w-3.5 h-3.5" /> Dokumen
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 
@@ -457,6 +759,15 @@ export default function TugasAkhirDosen() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Modal Cetak Dokumen Seminar / Sidang */}
+      {selectedSeminarForDoc && (
+        <SeminarDocumentViewerModal
+          open={isDocModalOpen}
+          onOpenChange={setIsDocModalOpen}
+          seminar={selectedSeminarForDoc}
+        />
+      )}
     </Layout>
   );
 }

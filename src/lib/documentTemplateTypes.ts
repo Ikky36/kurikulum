@@ -88,7 +88,18 @@ export interface SingleDocumentTemplate {
   placement_targets?: string[];
 
   // Peruntukan peran dokumen resmi di sistem
-  document_role?: 'kartu_bimbingan_ta' | 'surat_pengesahan_proposal' | 'krs' | 'kartu_bimbingan_dpa' | 'custom';
+  document_role?:
+    | 'kartu_bimbingan_ta'
+    | 'surat_pengesahan_proposal'
+    | 'krs'
+    | 'kartu_bimbingan_dpa'
+    | 'berita_acara_sempro'
+    | 'berita_acara_sidang'
+    | 'lembar_nilai_sempro'
+    | 'lembar_nilai_sidang'
+    | 'surat_tugas_sempro'
+    | 'surat_tugas_sidang'
+    | 'custom';
 }
 
 export function getSignatureSpacingClass(spacing?: 'compact' | 'normal' | 'spacious' | 'bottom'): string {
@@ -328,6 +339,400 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     copies_enabled: false,
     copies_list: [],
     placement_targets: ['mahasiswa_tugas_akhir', 'dosen_bimbingan_ta', 'admin_tugas_akhir'],
+  },
+
+  berita_acara_sempro: {
+    code: 'berita_acara_sempro',
+    name: 'Berita Acara Seminar Proposal',
+    orientation: 'portrait',
+    data_source_module: 'tugas_akhir',
+    document_title: 'BERITA ACARA SEMINAR PROPOSAL SKRIPSI',
+    document_subtitle: 'PROGRAM STUDI PENDIDIKAN BAHASA ARAB',
+    show_kop: true,
+    show_footer: true,
+    show_student_info: true,
+    student_bio_fields: [
+      { key: 'nama_mahasiswa', label: 'Nama Mahasiswa' },
+      { key: 'nim', label: 'NIM' },
+      { key: 'program_studi', label: 'Program Studi' },
+      { key: 'judul_tugas_akhir', label: 'Judul Proposal' },
+    ],
+    content_mode: 'text_only',
+    body_text_enabled: true,
+    body_text_template: `<div style="text-align: justify; line-height: 1.7; font-size: 13px; margin-bottom: 1rem;">
+  Pada hari ini, <strong>{{hari_ujian}}</strong> tanggal <strong>{{tanggal_ujian}}</strong>, telah diselenggarakan Seminar Proposal Skripsi bagi mahasiswa yang tercantum di atas. Dewan Penguji telah melakukan evaluasi komprehensif terhadap naskah proposal dan penguasaan materi penelitian, dengan hasil keputusan persidangan sebagai berikut:
+</div>
+
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 13px;">
+  <tbody>
+    <tr>
+      <td style="width: 180px; padding: 4px 0; font-weight: 600;">Nilai Rata-rata Akhir</td>
+      <td style="width: 15px; text-align: center;">:</td>
+      <td style="font-weight: 700; color: #1e3a8a;">{{skor_akhir}} (Predikat: {{predikat_huruf}})</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0; font-weight: 600;">Keputusan Dewan Penguji</td>
+      <td style="text-align: center;">:</td>
+      <td style="font-weight: 700;">{{status_kelulusan}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0; font-weight: 600;">Batas Akhir Perbaikan</td>
+      <td style="text-align: center;">:</td>
+      <td>{{batas_waktu_revisi}}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div style="text-align: justify; line-height: 1.6; font-size: 13px; margin-bottom: 1rem;">
+  Demikian Berita Acara Seminar Proposal ini dibuat dengan sebenarnya untuk dipergunakan sebagaimana mestinya dan menjadi syarat mutlak dalam melanjutkan tahapan riset skripsi.
+</div>`,
+    table_enabled: false,
+    rules_note_enabled: true,
+    rules_note_title: 'Catatan & Arahan Revisi Dewan Penguji:',
+    rules_note_text: '{{catatan_revisi_penguji}}',
+    columns: [],
+    show_signature_date: true,
+    signature_spacing: 'normal',
+    single_signature_align: 'center',
+    font_family: 'Times New Roman',
+    signatures: [
+      { id: 'chairperson', role_label: 'Ketua Sidang', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
+      { id: 'examiner_1', role_label: 'Penguji I', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
+      { id: 'examiner_2', role_label: 'Penguji II', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
+      { id: 'kaprodi', role_label: 'Ketua Program Studi', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
+    ],
+    copies_enabled: false,
+    copies_list: ['Arsip Program Studi', 'Dosen Pembimbing', 'Mahasiswa Bersangkutan'],
+    placement_targets: ['mahasiswa_tugas_akhir', 'admin_tugas_akhir', 'dosen_penguji'],
+    document_role: 'berita_acara_sempro',
+  },
+
+  berita_acara_sidang: {
+    code: 'berita_acara_sidang',
+    name: 'Berita Acara Sidang Munaqasyah',
+    orientation: 'portrait',
+    data_source_module: 'tugas_akhir',
+    document_title: 'BERITA ACARA SIDANG MUNAQASYAH TUGAS AKHIR',
+    document_subtitle: 'PROGRAM STUDI PENDIDIKAN BAHASA ARAB',
+    show_kop: true,
+    show_footer: true,
+    show_student_info: true,
+    student_bio_fields: [
+      { key: 'nama_mahasiswa', label: 'Nama Mahasiswa' },
+      { key: 'nim', label: 'NIM' },
+      { key: 'program_studi', label: 'Program Studi' },
+      { key: 'judul_tugas_akhir', label: 'Judul Skripsi' },
+    ],
+    content_mode: 'text_only',
+    body_text_enabled: true,
+    body_text_template: `<div style="text-align: justify; line-height: 1.7; font-size: 13px; margin-bottom: 1rem;">
+  Pada hari ini, <strong>{{hari_ujian}}</strong> tanggal <strong>{{tanggal_ujian}}</strong>, bertempat di <strong>{{ruangan_ujian}}</strong>, telah dilaksanakan Sidang Munaqasyah Skripsi bagi mahasiswa yang identitasnya tercantum di atas. Setelah mempertimbangkan nilai dari seluruh dewan penguji serta penguasaan materi skripsi, Dewan Sidang memutuskan:
+</div>
+
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 13px;">
+  <tbody>
+    <tr>
+      <td style="width: 180px; padding: 4px 0; font-weight: 600;">Nilai Akhir Sidang</td>
+      <td style="width: 15px; text-align: center;">:</td>
+      <td style="font-weight: 700; color: #1e3a8a;">{{skor_akhir}} (Predikat: {{predikat_huruf}})</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0; font-weight: 600;">Status Kelulusan</td>
+      <td style="text-align: center;">:</td>
+      <td style="font-weight: 700;">{{status_kelulusan}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0; font-weight: 600;">Batas Waktu Revisi</td>
+      <td style="text-align: center;">:</td>
+      <td>{{batas_waktu_revisi}}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div style="text-align: justify; line-height: 1.6; font-size: 13px; margin-bottom: 1rem;">
+  Demikian Berita Acara ini dibuat dan disahkan oleh Dewan Sidang untuk dipergunakan sebagai dasar penerbitan ijazah dan kelulusan sarjana (S.Pd.).
+</div>`,
+    table_enabled: false,
+    rules_note_enabled: true,
+    rules_note_title: 'Catatan Penyempurnaan Skripsi:',
+    rules_note_text: '{{catatan_revisi_penguji}}',
+    columns: [],
+    show_signature_date: true,
+    signature_spacing: 'normal',
+    single_signature_align: 'center',
+    font_family: 'Times New Roman',
+    signatures: [
+      { id: 'chairperson', role_label: 'Ketua Sidang', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
+      { id: 'examiner_1', role_label: 'Penguji I', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
+      { id: 'examiner_2', role_label: 'Penguji II', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
+      { id: 'kaprodi', role_label: 'Ketua Program Studi', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
+    ],
+    copies_enabled: false,
+    copies_list: ['Fakultas Tarbiyah', 'BAAK STITMA', 'Arsip Program Studi', 'Mahasiswa Bersangkutan'],
+    placement_targets: ['mahasiswa_tugas_akhir', 'admin_tugas_akhir', 'dosen_penguji'],
+    document_role: 'berita_acara_sidang',
+  },
+
+  lembar_nilai_sempro: {
+    code: 'lembar_nilai_sempro',
+    name: 'Lembar Nilai Seminar Proposal',
+    orientation: 'portrait',
+    data_source_module: 'tugas_akhir',
+    document_title: 'LEMBAR PENILAIAN SEMINAR PROPOSAL SKRIPSI',
+    document_subtitle: 'REKAPITULASI SKOR RUBRIK DEWAN PENGUJI',
+    show_kop: true,
+    show_footer: true,
+    show_student_info: true,
+    student_bio_fields: [
+      { key: 'nama_mahasiswa', label: 'Nama Mahasiswa' },
+      { key: 'nim', label: 'NIM' },
+      { key: 'program_studi', label: 'Program Studi' },
+      { key: 'judul_tugas_akhir', label: 'Judul Proposal' },
+    ],
+    content_mode: 'all',
+    body_text_enabled: false,
+    table_enabled: true,
+    table_dataset_id: 'rubrik_penilaian_ta',
+    rules_note_enabled: false,
+    rules_note_title: '',
+    rules_note_text: '',
+    columns: [
+      { id: 'no', label: 'No', enabled: true },
+      { id: 'criterion_name', label: 'Komponen / Aspek Penilaian Rubrik', enabled: true },
+      { id: 'weight', label: 'Bobot (%)', enabled: true },
+      { id: 'examiner_scores', label: 'Skor Penguji', enabled: true },
+      { id: 'weighted_score', label: 'Nilai Tertimbang', enabled: true },
+    ],
+    show_signature_date: true,
+    signature_spacing: 'normal',
+    single_signature_align: 'center',
+    font_family: 'Times New Roman',
+    signatures: [
+      { id: 'examiner_1', role_label: 'Penguji I', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
+      { id: 'examiner_2', role_label: 'Penguji II', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
+      { id: 'chairperson', role_label: 'Ketua Sidang', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
+    ],
+    copies_enabled: false,
+    copies_list: [],
+    placement_targets: ['mahasiswa_tugas_akhir', 'admin_tugas_akhir', 'dosen_penguji'],
+    document_role: 'lembar_nilai_sempro',
+  },
+
+  lembar_nilai_sidang: {
+    code: 'lembar_nilai_sidang',
+    name: 'Lembar Nilai Sidang Munaqasyah',
+    orientation: 'portrait',
+    data_source_module: 'tugas_akhir',
+    document_title: 'LEMBAR PENILAIAN SIDANG MUNAQASYAH SKRIPSI',
+    document_subtitle: 'REKAPITULASI SKOR RUBRIK DEWAN PENGUJI',
+    show_kop: true,
+    show_footer: true,
+    show_student_info: true,
+    student_bio_fields: [
+      { key: 'nama_mahasiswa', label: 'Nama Mahasiswa' },
+      { key: 'nim', label: 'NIM' },
+      { key: 'program_studi', label: 'Program Studi' },
+      { key: 'judul_tugas_akhir', label: 'Judul Skripsi' },
+    ],
+    content_mode: 'all',
+    body_text_enabled: false,
+    table_enabled: true,
+    table_dataset_id: 'rubrik_penilaian_ta',
+    rules_note_enabled: false,
+    rules_note_title: '',
+    rules_note_text: '',
+    columns: [
+      { id: 'no', label: 'No', enabled: true },
+      { id: 'criterion_name', label: 'Komponen / Aspek Penilaian Rubrik', enabled: true },
+      { id: 'weight', label: 'Bobot (%)', enabled: true },
+      { id: 'examiner_scores', label: 'Skor Penguji', enabled: true },
+      { id: 'weighted_score', label: 'Nilai Tertimbang', enabled: true },
+    ],
+    show_signature_date: true,
+    signature_spacing: 'normal',
+    single_signature_align: 'center',
+    font_family: 'Times New Roman',
+    signatures: [
+      { id: 'examiner_1', role_label: 'Penguji I', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
+      { id: 'examiner_2', role_label: 'Penguji II', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
+      { id: 'chairperson', role_label: 'Ketua Sidang', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
+    ],
+    copies_enabled: false,
+    copies_list: [],
+    placement_targets: ['mahasiswa_tugas_akhir', 'admin_tugas_akhir', 'dosen_penguji'],
+    document_role: 'lembar_nilai_sidang',
+  },
+
+  surat_tugas_sempro: {
+    code: 'surat_tugas_sempro',
+    name: 'Surat Tugas Seminar Proposal',
+    orientation: 'portrait',
+    data_source_module: 'tugas_akhir',
+    document_title: 'SURAT TUGAS PENGUJI SEMINAR PROPOSAL',
+    document_subtitle: 'NOMOR: {{nomor_surat}}',
+    show_kop: true,
+    show_footer: true,
+    show_student_info: false,
+    content_mode: 'text_only',
+    body_text_enabled: true,
+    body_text_template: `<div style="text-align: justify; line-height: 1.7; font-size: 13px; margin-bottom: 1rem;">
+  Ketua Program Studi Pendidikan Bahasa Arab Sekolah Tinggi Ilmu Tarbiyah Madani (STITMA) Yogyakarta, dengan ini memberikan tugas pengujian kepada:
+</div>
+
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 13px;">
+  <tbody>
+    <tr>
+      <td style="width: 140px; padding: 4px 0; font-weight: 600;">Ketua Sidang</td>
+      <td style="width: 15px; text-align: center;">:</td>
+      <td style="font-weight: 700;">{{nama_ketua_sidang}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0; font-weight: 600;">Dewan Penguji</td>
+      <td style="text-align: center;">:</td>
+      <td>{{daftar_nama_penguji}}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div style="text-align: justify; line-height: 1.7; font-size: 13px; margin-bottom: 1rem;">
+  Untuk melaksanakan pengujian pada Seminar Proposal Skripsi mahasiswa:
+</div>
+
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 13px;">
+  <tbody>
+    <tr>
+      <td style="width: 140px; padding: 4px 0;">Nama Mahasiswa</td>
+      <td style="width: 15px; text-align: center;">:</td>
+      <td style="font-weight: 600;">{{nama_mahasiswa}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0;">NIM / Program Studi</td>
+      <td style="text-align: center;">:</td>
+      <td>{{nim}} / {{program_studi}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0;">Judul Proposal</td>
+      <td style="text-align: center;">:</td>
+      <td style="font-style: italic;">"{{judul_tugas_akhir}}"</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0;">Hari / Tanggal / Jam</td>
+      <td style="text-align: center;">:</td>
+      <td>{{hari_ujian}}, {{tanggal_ujian}} WIB</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0;">Ruangan / Tempat</td>
+      <td style="text-align: center;">:</td>
+      <td>{{ruangan_ujian}}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div style="text-align: justify; line-height: 1.6; font-size: 13px; margin-bottom: 1rem;">
+  Demikian surat tugas ini dibuat untuk dilaksanakan dengan penuh rasa tanggung jawab dan amanah ilmiah.
+</div>`,
+    table_enabled: false,
+    rules_note_enabled: false,
+    rules_note_title: '',
+    rules_note_text: '',
+    columns: [],
+    show_signature_date: true,
+    signature_spacing: 'normal',
+    single_signature_align: 'right',
+    font_family: 'Times New Roman',
+    signatures: [
+      { id: 'kaprodi', role_label: 'Ketua Program Studi', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
+    ],
+    copies_enabled: false,
+    copies_list: ['Ketua STITMA', 'Dosen yang bersangkutan', 'Arsip BAAK'],
+    placement_targets: ['admin_tugas_akhir', 'dosen_penguji'],
+    document_role: 'surat_tugas_sempro',
+  },
+
+  surat_tugas_sidang: {
+    code: 'surat_tugas_sidang',
+    name: 'Surat Tugas Sidang Munaqasyah',
+    orientation: 'portrait',
+    data_source_module: 'tugas_akhir',
+    document_title: 'SURAT TUGAS DEWAN PENGUJI MUNAQASYAH',
+    document_subtitle: 'NOMOR: {{nomor_surat}}',
+    show_kop: true,
+    show_footer: true,
+    show_student_info: false,
+    content_mode: 'text_only',
+    body_text_enabled: true,
+    body_text_template: `<div style="text-align: justify; line-height: 1.7; font-size: 13px; margin-bottom: 1rem;">
+  Ketua Sekolah Tinggi Ilmu Tarbiyah Madani (STITMA) Yogyakarta, menugaskan kepada Dosen yang namanya tercantum di bawah ini:
+</div>
+
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 13px;">
+  <tbody>
+    <tr>
+      <td style="width: 140px; padding: 4px 0; font-weight: 600;">Ketua Sidang</td>
+      <td style="width: 15px; text-align: center;">:</td>
+      <td style="font-weight: 700;">{{nama_ketua_sidang}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0; font-weight: 600;">Dewan Penguji</td>
+      <td style="text-align: center;">:</td>
+      <td>{{daftar_nama_penguji}}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div style="text-align: justify; line-height: 1.7; font-size: 13px; margin-bottom: 1rem;">
+  Sebagai Dewan Sidang Munaqasyah Skripsi bagi mahasiswa:
+</div>
+
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 13px;">
+  <tbody>
+    <tr>
+      <td style="width: 140px; padding: 4px 0;">Nama Mahasiswa</td>
+      <td style="width: 15px; text-align: center;">:</td>
+      <td style="font-weight: 600;">{{nama_mahasiswa}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0;">NIM / Program Studi</td>
+      <td style="text-align: center;">:</td>
+      <td>{{nim}} / {{program_studi}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0;">Judul Skripsi</td>
+      <td style="text-align: center;">:</td>
+      <td style="font-style: italic;">"{{judul_tugas_akhir}}"</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0;">Hari / Tanggal / Jam</td>
+      <td style="text-align: center;">:</td>
+      <td>{{hari_ujian}}, {{tanggal_ujian}} WIB</td>
+    </tr>
+    <tr>
+      <td style="padding: 4px 0;">Ruangan / Tempat</td>
+      <td style="text-align: center;">:</td>
+      <td>{{ruangan_ujian}}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div style="text-align: justify; line-height: 1.6; font-size: 13px; margin-bottom: 1rem;">
+  Surat tugas ini berlaku sejak tanggal ditetapkan sampai dengan selesainya pelaksanaan sidang munaqasyah skripsi.
+</div>`,
+    table_enabled: false,
+    rules_note_enabled: false,
+    rules_note_title: '',
+    rules_note_text: '',
+    columns: [],
+    show_signature_date: true,
+    signature_spacing: 'normal',
+    single_signature_align: 'right',
+    font_family: 'Times New Roman',
+    signatures: [
+      { id: 'kaprodi', role_label: 'Ketua Program Studi', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
+    ],
+    copies_enabled: false,
+    copies_list: ['Ketua STITMA', 'Dosen yang bersangkutan', 'Arsip BAAK'],
+    placement_targets: ['admin_tugas_akhir', 'dosen_penguji'],
+    document_role: 'surat_tugas_sidang',
   },
 };
 
