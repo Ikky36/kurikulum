@@ -2056,159 +2056,252 @@ export function DocumentTemplateCustomizer() {
                 )}
 
                 {/* 2. AREA KONTEN DOKUMEN */}
-                <div className={`py-1 text-[7px] space-y-1.5 ${currentTemplate.signature_spacing === 'bottom' ? 'flex-1 flex flex-col justify-between' : 'w-full flex flex-col'}`}>
-                  <div>
-                    {/* Judul Dokumen */}
-                    <div
-                      className="text-center font-bold text-[8.5px] uppercase tracking-wide border-b pb-0.5 mb-1"
-                      style={{ fontFamily: 'inherit' }}
-                    >
-                      {currentTemplate.document_title}
-                    </div>
-                    {currentTemplate.document_subtitle && (
-                      <div
-                        className="text-center font-semibold text-[7px] uppercase tracking-normal text-slate-700 mb-1"
-                        style={{ fontFamily: 'inherit' }}
-                      >
-                        {currentTemplate.document_subtitle}
-                      </div>
-                    )}
+                {(() => {
+                  const isMiniPenilaian =
+                    currentTemplate.code === 'lembar_nilai_sidang' ||
+                    currentTemplate.document_role === 'lembar_nilai_sidang';
 
-                    {/* Biodata Mahasiswa Mini (Dinamis dari Pilihan Database) */}
-                    {currentTemplate.show_student_info && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-0.5 text-[6.5px] text-slate-700 bg-slate-50 p-1.5 rounded border border-slate-200 mb-1.5">
-                        {(currentTemplate.student_bio_fields && currentTemplate.student_bio_fields.length > 0
-                          ? currentTemplate.student_bio_fields
-                          : defaultStudentBioFields
-                        ).map((field, idx) => {
-                          const val = dummyContext[field.key] || dummyContext[field.key.replace('nama_mahasiswa', 'name')] || 'Data Contoh';
-                          const isLong = String(val).length > 25;
-                          return (
-                            <div key={idx} className={`flex ${isLong ? 'col-span-1 sm:col-span-2' : ''}`}>
-                              <span className="w-16 font-medium text-slate-500 shrink-0 truncate">{field.label}</span>
-                              <span className="w-1.5 text-center shrink-0">:</span>
-                              <strong className="text-slate-900 flex-1 truncate">{val}</strong>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Teks Narasi / Surat Keterangan */}
-                    {currentContentMode !== 'table_only' && currentTemplate.body_text_enabled !== false && previewBodyText && (
-                      previewBodyText.includes('<') && previewBodyText.includes('>') ? (
+                  return (
+                    <div className={`py-1 text-[7px] space-y-1.5 ${currentTemplate.signature_spacing === 'bottom' ? 'flex-1 flex flex-col justify-between' : 'w-full flex flex-col'}`}>
+                      <div>
+                        {/* Judul Dokumen */}
                         <div
-                          className="p-1.5 text-[6.5px] leading-relaxed text-slate-800 border-l-2 border-primary/40 bg-slate-50/50 mb-1.5 document-rich-content overflow-x-auto"
-                          dangerouslySetInnerHTML={{
-                            __html: DOMPurify.sanitize(previewBodyText),
-                          }}
-                        />
-                      ) : (
-                        <div className="p-1 text-[6.5px] leading-relaxed text-slate-800 border-l-2 border-primary/40 bg-slate-50/50 mb-1.5 whitespace-pre-wrap">
-                          {previewBodyText}
+                          className="text-center font-bold text-[8.5px] uppercase tracking-wide border-b pb-0.5 mb-1"
+                          style={{ fontFamily: 'inherit' }}
+                        >
+                          {isMiniPenilaian ? 'FORMAT PENILAIAN' : currentTemplate.document_title}
                         </div>
-                      )
-                    )}
-
-                    {/* Tabel Data Dummy (Merender Semua Kolom yang Ada di Daftar) */}
-                    {currentContentMode !== 'text_only' && currentTemplate.table_enabled !== false && (
-                      <table className="w-full border-collapse border border-slate-300 text-[6px]">
-                        <thead>
-                          <tr className="bg-slate-100">
-                            {(currentTemplate.columns || []).map((c) => (
-                              <th key={c.id} className="border border-slate-300 p-0.5 text-center font-semibold">
-                                {c.label}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr>
-                            {(currentTemplate.columns || []).map((c) => (
-                              <td key={c.id} className="border border-slate-300 p-0.5 text-center text-slate-600">
-                                {getDummyValueForColumn(c.id, c.label)}
-                              </td>
-                            ))}
-                          </tr>
-                        </tbody>
-                      </table>
-                    )}
-
-                    {/* Sub-Bab Catatan */}
-                    {currentTemplate.rules_note_enabled && currentTemplate.rules_note_text && (
-                      <div className="mt-1.5 p-1 bg-slate-50 border border-slate-200 rounded text-[5.5px] text-slate-600">
-                        <p className="font-bold text-slate-800">{currentTemplate.rules_note_title}</p>
-                        <p className="truncate">{currentTemplate.rules_note_text}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Pengesahan Tanda Tangan (Mengalir proporsional di bawah konten) */}
-                  <div className={
-                    currentTemplate.signature_spacing === 'compact'
-                      ? 'mt-1.5'
-                      : currentTemplate.signature_spacing === 'spacious'
-                      ? 'mt-4'
-                      : currentTemplate.signature_spacing === 'bottom'
-                      ? 'mt-auto'
-                      : 'mt-2.5'
-                  }>
-                    {currentTemplate.show_signature_date !== false && docSettings.show_signature_date !== false && (
-                      <div className="text-right text-[6px] text-slate-500 mb-0.5">
-                        {docSettings.default_city || 'Ponorogo'}, 21 Oktober 2026
-                      </div>
-                    )}
-                    {(() => {
-                      const enabledSigs = (currentTemplate.signatures || []).filter((s) => s.enabled);
-                      const singleAlign = currentTemplate.single_signature_align || 'center';
-                      const previewAlignClass =
-                        enabledSigs.length === 1
-                          ? (singleAlign === 'right' ? 'justify-end pr-2' : singleAlign === 'left' ? 'justify-start pl-2' : 'justify-center')
-                          : 'justify-around';
-
-                      return (
-                        <div className={`flex items-end pt-0.5 text-center text-[6px] ${previewAlignClass}`}>
-                          {enabledSigs
-                            .slice(0, 3)
-                            .map((sig) => (
-                          <div key={sig.id} className="flex flex-col items-center">
-                            {sig.signer_status && sig.signer_status !== 'pemohon' && (
-                              <span className="text-[5px] uppercase font-semibold text-slate-400">
-                                {sig.signer_status === 'mengetahui' ? 'Mengetahui,' : 'Menyetujui,'}
-                              </span>
-                            )}
-                            <p className="text-[5.5px] text-slate-600">{sig.role_label},</p>
-                            <div className="h-5 flex items-center justify-center font-serif text-[6px] italic text-slate-400">
-                              {sig.use_digital_signature ? (
-                                (sig.id === 'kaprodi' && docSettings.kaprodi_signature_url) ? (
-                                  <img src={docSettings.kaprodi_signature_url} alt="TTD" className="max-h-4 max-w-full object-contain" />
-                                ) : (sig.id === 'dekan' && docSettings.dekan_signature_url) ? (
-                                  <img src={docSettings.dekan_signature_url} alt="TTD" className="max-h-4 max-w-full object-contain" />
-                                ) : (
-                                  <span className="text-[5px] text-emerald-600 font-sans font-semibold">✓ TTD Digital</span>
-                                )
-                              ) : (
-                                '(Ttd)'
-                              )}
-                            </div>
-                            <p className="font-semibold text-slate-800 underline">
-                              {sig.custom_name || (sig.id === 'kaprodi' ? docSettings.kaprodi_name || 'Dr. Fulan' : sig.id === 'dekan' ? docSettings.dekan_name || 'Prof. Dr. Ahmad' : 'Nama Pejabat')}
-                            </p>
+                        {!isMiniPenilaian && currentTemplate.document_subtitle && (
+                          <div
+                            className="text-center font-semibold text-[7px] uppercase tracking-normal text-slate-700 mb-1"
+                            style={{ fontFamily: 'inherit' }}
+                          >
+                            {currentTemplate.document_subtitle}
                           </div>
-                        ))}
+                        )}
+
+                        {/* Biodata Mahasiswa Mini */}
+                        {isMiniPenilaian ? (
+                          <div className="text-[6.5px] font-serif leading-tight text-slate-800 mb-1.5 space-y-0.5">
+                            <div className="flex">
+                              <span className="w-18 shrink-0">Nama Mahasiswa</span>
+                              <span className="w-1.5 text-center">:</span>
+                              <span className="flex-1 font-medium">{dummyContext.nama_mahasiswa || 'Muhammad Zaid'}</span>
+                            </div>
+                            <div className="flex">
+                              <span className="w-18 shrink-0">NIM</span>
+                              <span className="w-1.5 text-center">:</span>
+                              <span className="flex-1 font-medium">{dummyContext.nim || '221.372.115'}</span>
+                            </div>
+                            <div className="flex">
+                              <span className="w-18 shrink-0">Judul Tugas Akhir</span>
+                              <span className="w-1.5 text-center">:</span>
+                              <span className="flex-1 leading-tight line-clamp-2">{dummyContext.judul_tugas_akhir || 'Implementasi Pembelajaran Nahwu Kelas VIII C Salafiyah Wustho...'}</span>
+                            </div>
+                          </div>
+                        ) : currentTemplate.show_student_info ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-0.5 text-[6.5px] text-slate-700 bg-slate-50 p-1.5 rounded border border-slate-200 mb-1.5">
+                            {(currentTemplate.student_bio_fields && currentTemplate.student_bio_fields.length > 0
+                              ? currentTemplate.student_bio_fields
+                              : defaultStudentBioFields
+                            ).map((field, idx) => {
+                              const val = dummyContext[field.key] || dummyContext[field.key.replace('nama_mahasiswa', 'name')] || 'Data Contoh';
+                              const isLong = String(val).length > 25;
+                              return (
+                                <div key={idx} className={`flex ${isLong ? 'col-span-1 sm:col-span-2' : ''}`}>
+                                  <span className="w-16 font-medium text-slate-500 shrink-0 truncate">{field.label}</span>
+                                  <span className="w-1.5 text-center shrink-0">:</span>
+                                  <strong className="text-slate-900 flex-1 truncate">{val}</strong>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : null}
+
+                        {/* Teks Narasi / Surat Keterangan */}
+                        {!isMiniPenilaian && currentContentMode !== 'table_only' && currentTemplate.body_text_enabled !== false && previewBodyText && (
+                          previewBodyText.includes('<') && previewBodyText.includes('>') ? (
+                            <div
+                              className="p-1.5 text-[6.5px] leading-relaxed text-slate-800 border-l-2 border-primary/40 bg-slate-50/50 mb-1.5 document-rich-content overflow-x-auto"
+                              dangerouslySetInnerHTML={{
+                                __html: DOMPurify.sanitize(previewBodyText),
+                              }}
+                            />
+                          ) : (
+                            <div className="p-1 text-[6.5px] leading-relaxed text-slate-800 border-l-2 border-primary/40 bg-slate-50/50 mb-1.5 whitespace-pre-wrap">
+                              {previewBodyText}
+                            </div>
+                          )
+                        )}
+
+                        {/* Tabel Data Dummy */}
+                        {isMiniPenilaian ? (
+                          <div className="w-full text-[5.5px] font-serif text-slate-900 space-y-1">
+                            <table className="w-full border-collapse border border-slate-900">
+                              <thead>
+                                <tr className="border-b border-slate-900 font-bold text-center">
+                                  <th className="border border-slate-900 p-0.5 w-4">NO</th>
+                                  <th className="border border-slate-900 p-0.5">KOMPONEN PENILAIAN</th>
+                                  <th className="border border-slate-900 p-0.5 w-10">NILAI</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr className="font-bold bg-slate-50">
+                                  <td className="border border-slate-900 p-0.5 text-center">A</td>
+                                  <td className="border border-slate-900 p-0.5 font-bold uppercase">PENILAIAN DOKUMEN (7 Butir)</td>
+                                  <td className="border border-slate-900 p-0.5"></td>
+                                </tr>
+                                <tr className="font-bold">
+                                  <td colSpan={2} className="border border-slate-900 p-0.5 text-center font-bold">Rata-rata</td>
+                                  <td className="border border-slate-900 p-0.5"></td>
+                                </tr>
+                                <tr className="font-bold bg-slate-50">
+                                  <td className="border border-slate-900 p-0.5 text-center">B</td>
+                                  <td className="border border-slate-900 p-0.5 font-bold uppercase">PENILAIAN UJIAN LISAN (6 Butir)</td>
+                                  <td className="border border-slate-900 p-0.5"></td>
+                                </tr>
+                                <tr className="font-bold">
+                                  <td colSpan={2} className="border border-slate-900 p-0.5 text-center font-bold">Rata-rata</td>
+                                  <td className="border border-slate-900 p-0.5"></td>
+                                </tr>
+                                <tr className="font-bold">
+                                  <td colSpan={2} className="border border-slate-900 p-0.5 text-center font-bold">Jumlah Rata-rata A & B</td>
+                                  <td className="border border-slate-900 p-0.5"></td>
+                                </tr>
+                              </tbody>
+                            </table>
+
+                            <div className="font-bold text-[5.5px] my-1">
+                              Nilai Rata-rata akhir : (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 mt-1.5 text-[5px]">
+                              {/* Skala Kiri */}
+                              <div className="space-y-0.5 font-mono text-[4.5px] leading-tight">
+                                <div><strong className="w-3 inline-block">A</strong> 91 – 100</div>
+                                <div><strong className="w-3 inline-block">A-</strong> 81 – 90,99</div>
+                                <div><strong className="w-3 inline-block">B+</strong> 71 – 80,99</div>
+                                <div><strong className="w-3 inline-block">B</strong> 66 – 70,99</div>
+                                <div><strong className="w-3 inline-block">C+</strong> 61 – 65,99</div>
+                                <div><strong className="w-3 inline-block">D</strong> 46 – 60,99</div>
+                                <div><strong className="w-3 inline-block">E</strong> 0 – 45,99</div>
+                              </div>
+                              {/* Pengesahan Kanan */}
+                              <div className="flex flex-col items-center justify-between text-center min-h-[50px]">
+                                <div>
+                                  <p>{docSettings.default_city || 'Bantul'}, 22 Juni 2026</p>
+                                  <p className="font-bold mt-0.5">Penguji 2</p>
+                                </div>
+                                <div className="border-b border-dotted border-slate-400 w-16 my-1"></div>
+                                <p className="font-bold underline decoration-dotted">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</p>
+                                <div className="self-end mt-1 h-3.5 w-3.5 border border-slate-400 flex items-center justify-center bg-white text-[3.5px] font-mono">
+                                  QR
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : currentContentMode !== 'text_only' && currentTemplate.table_enabled !== false ? (
+                          <table className="w-full border-collapse border border-slate-300 text-[6px]">
+                            <thead>
+                              <tr className="bg-slate-100">
+                                {(currentTemplate.columns || []).map((c) => (
+                                  <th key={c.id} className="border border-slate-300 p-0.5 text-center font-semibold">
+                                    {c.label}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr>
+                                {(currentTemplate.columns || []).map((c) => (
+                                  <td key={c.id} className="border border-slate-300 p-0.5 text-center text-slate-600">
+                                    {getDummyValueForColumn(c.id, c.label)}
+                                  </td>
+                                ))}
+                              </tr>
+                            </tbody>
+                          </table>
+                        ) : null}
+
+                        {/* Sub-Bab Catatan */}
+                        {!isMiniPenilaian && currentTemplate.rules_note_enabled && currentTemplate.rules_note_text && (
+                          <div className="mt-1.5 p-1 bg-slate-50 border border-slate-200 rounded text-[5.5px] text-slate-600">
+                            <p className="font-bold text-slate-800">{currentTemplate.rules_note_title}</p>
+                            <p className="truncate">{currentTemplate.rules_note_text}</p>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Pengesahan Tanda Tangan */}
+                      {!isMiniPenilaian && (
+                        <div className={
+                          currentTemplate.signature_spacing === 'compact'
+                            ? 'mt-1.5'
+                            : currentTemplate.signature_spacing === 'spacious'
+                            ? 'mt-4'
+                            : currentTemplate.signature_spacing === 'bottom'
+                            ? 'mt-auto'
+                            : 'mt-2.5'
+                        }>
+                          {currentTemplate.show_signature_date !== false && docSettings.show_signature_date !== false && (
+                            <div className="text-right text-[6px] text-slate-500 mb-0.5">
+                              {docSettings.default_city || 'Ponorogo'}, 21 Oktober 2026
+                            </div>
+                          )}
+                          {(() => {
+                            const enabledSigs = (currentTemplate.signatures || []).filter((s) => s.enabled);
+                            const singleAlign = currentTemplate.single_signature_align || 'center';
+                            const previewAlignClass =
+                              enabledSigs.length === 1
+                                ? (singleAlign === 'right' ? 'justify-end pr-2' : singleAlign === 'left' ? 'justify-start pl-2' : 'justify-center')
+                                : 'justify-around';
+
+                            return (
+                              <div className={`flex items-end pt-0.5 text-center text-[6px] ${previewAlignClass}`}>
+                                {enabledSigs
+                                  .slice(0, 3)
+                                  .map((sig) => (
+                                <div key={sig.id} className="flex flex-col items-center">
+                                  {sig.signer_status && sig.signer_status !== 'pemohon' && (
+                                    <span className="text-[5px] uppercase font-semibold text-slate-400">
+                                      {sig.signer_status === 'mengetahui' ? 'Mengetahui,' : 'Menyetujui,'}
+                                    </span>
+                                  )}
+                                  <p className="text-[5.5px] text-slate-600">{sig.role_label},</p>
+                                  <div className="h-5 flex items-center justify-center font-serif text-[6px] italic text-slate-400">
+                                    {sig.use_digital_signature ? (
+                                      (sig.id === 'kaprodi' && docSettings.kaprodi_signature_url) ? (
+                                        <img src={docSettings.kaprodi_signature_url} alt="TTD" className="max-h-4 max-w-full object-contain" />
+                                      ) : (sig.id === 'dekan' && docSettings.dekan_signature_url) ? (
+                                        <img src={docSettings.dekan_signature_url} alt="TTD" className="max-h-4 max-w-full object-contain" />
+                                      ) : (
+                                        <span className="text-[5px] text-emerald-600 font-sans font-semibold">✓ TTD Digital</span>
+                                      )
+                                    ) : (
+                                      '(Ttd)'
+                                    )}
+                                  </div>
+                                  <p className="font-semibold text-slate-800 underline">
+                                    {sig.custom_name || (sig.id === 'kaprodi' ? docSettings.kaprodi_name || 'Dr. Fulan' : sig.id === 'dekan' ? docSettings.dekan_name || 'Prof. Dr. Ahmad' : 'Nama Pejabat')}
+                                  </p>
+                                </div>
+                              ))}
+                          </div>
+                        );
+                      })()}
+
+                          {/* Tembusan Mini */}
+                          {currentTemplate.copies_enabled && currentTemplate.copies_list && currentTemplate.copies_list.length > 0 && (
+                            <div className="mt-1 pt-1 border-t text-[5px] text-slate-500">
+                              <span className="font-semibold">Tembusan: </span>
+                              <span>{currentTemplate.copies_list.join(', ')}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
-
-                    {/* Tembusan Mini */}
-                    {currentTemplate.copies_enabled && currentTemplate.copies_list && currentTemplate.copies_list.length > 0 && (
-                      <div className="mt-1 pt-1 border-t text-[5px] text-slate-500">
-                        <span className="font-semibold">Tembusan: </span>
-                        <span>{currentTemplate.copies_list.join(', ')}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
 
                 {/* 3. FOOTER */}
                 {docSettings.footer_enabled && currentTemplate.show_footer !== false && (

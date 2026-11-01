@@ -576,10 +576,10 @@ export function UniversalDocumentContainer({
 
           {/* 2. JUDUL DOKUMEN */}
           <div className="text-center my-3">
-            <h1 className="text-base sm:text-lg font-bold tracking-wide uppercase text-slate-900">
-              {finalTitle}
+            <h1 className="text-base sm:text-lg font-bold tracking-wide uppercase text-slate-900 font-serif">
+              {isFormatPenilaianSidang ? 'FORMAT PENILAIAN' : finalTitle}
             </h1>
-            {finalSubtitle && (
+            {!isFormatPenilaianSidang && finalSubtitle && (
               <h2 className="text-xs sm:text-sm font-semibold tracking-normal text-slate-700 uppercase mt-0.5">
                 {finalSubtitle}
               </h2>
@@ -587,7 +587,33 @@ export function UniversalDocumentContainer({
           </div>
 
           {/* 3. BIODATA MAHASISWA & METADATA (DINAMIS DARI DATABASE) */}
-          {template.show_student_info && (
+          {isFormatPenilaianSidang ? (
+            <div className="mb-4 text-xs font-serif leading-relaxed text-slate-900">
+              <div className="space-y-1">
+                <div className="flex">
+                  <span className="w-36 font-normal text-slate-900 shrink-0">Nama Mahasiswa</span>
+                  <span className="w-4 text-center shrink-0">:</span>
+                  <span className="font-normal text-slate-900 flex-1">
+                    {resolvedVariables.nama_mahasiswa || studentInfo?.name || 'Muhammad Zaid'}
+                  </span>
+                </div>
+                <div className="flex">
+                  <span className="w-36 font-normal text-slate-900 shrink-0">NIM</span>
+                  <span className="w-4 text-center shrink-0">:</span>
+                  <span className="font-normal text-slate-900 flex-1">
+                    {resolvedVariables.nim || studentInfo?.nim || '221.372.115'}
+                  </span>
+                </div>
+                <div className="flex">
+                  <span className="w-36 font-normal text-slate-900 shrink-0">Judul Tugas Akhir</span>
+                  <span className="w-4 text-center shrink-0">:</span>
+                  <span className="font-normal text-slate-900 flex-1 leading-relaxed">
+                    {resolvedVariables.judul_tugas_akhir || resolvedVariables.topic_title || studentInfo?.judul_tugas_akhir || 'Implementasi Pembelajaran Nahwu Kelas VIII C Salafiyah Wustho Islamic Centre Bin Baz Tahun Ajaran 2025/2026'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ) : template.show_student_info ? (
             <div className="mb-4 p-3 bg-slate-50 border border-slate-300 rounded text-xs leading-relaxed">
               <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
                 {(template.student_bio_fields && template.student_bio_fields.length > 0
@@ -618,7 +644,6 @@ export function UniversalDocumentContainer({
                   );
                 })}
 
-                {/* Additional Metadata Items (hanya jika template belum memiliki student_bio_fields yang dikonfigurasi Admin) */}
                 {(!template.student_bio_fields || template.student_bio_fields.length === 0) &&
                   metadataItems.map((item, idx) => (
                     <div key={`meta_${idx}`} className="flex col-span-2">
@@ -629,7 +654,7 @@ export function UniversalDocumentContainer({
                   ))}
               </div>
             </div>
-          )}
+          ) : null}
 
           {/* 3.b TEKS NARASI / SURAT KETERANGAN */}
           {template.content_mode !== 'table_only' && template.body_text_enabled !== false && template.body_text_template && (
@@ -650,7 +675,138 @@ export function UniversalDocumentContainer({
           )}
 
           {/* 4. ISI UTAMA DOKUMEN (TABEL ATAU KONTEN DARI PROPS) */}
-          {template.content_mode !== 'text_only' && template.table_enabled !== false && (
+          {isFormatPenilaianSidang && !children ? (
+            <div className="w-full my-2 font-serif text-slate-900">
+              {/* TABEL FORMAT PENILAIAN RESMI (Persis Format Acuan) */}
+              <table className="w-full border-collapse border border-slate-900 text-xs">
+                <thead>
+                  <tr className="border-b border-slate-900 text-slate-900 font-bold text-center">
+                    <th className="border border-slate-900 py-1.5 px-2 w-12 text-center font-bold">NO</th>
+                    <th className="border border-slate-900 py-1.5 px-3 text-center font-bold">
+                      KOMPONEN PENILAIAN
+                    </th>
+                    <th className="border border-slate-900 py-1.5 px-3 w-32 text-center font-bold">
+                      NILAI ANGKA
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* A. PENILAIAN DOKUMEN */}
+                  <tr className="font-bold">
+                    <td className="border border-slate-900 py-1 px-2 text-center font-bold">A</td>
+                    <td className="border border-slate-900 py-1 px-3 font-bold uppercase">
+                      PENILAIAN DOKUMEN
+                    </td>
+                    <td className="border border-slate-900 py-1 px-3"></td>
+                  </tr>
+                  {[
+                    'Pemilihan dan perumusan masalah',
+                    'Penggunaan bahasa',
+                    'Keterkaitan studi kepustakaan dengan masalah',
+                    'Kemutakhiran dan relevansi sumber acuan',
+                    'Ketetapan penyajian sosial',
+                    'Keaslian',
+                    'Kesimpulan manfaat',
+                  ].map((critName, idx) => (
+                    <tr key={idx}>
+                      <td className="border border-slate-900 py-1 px-2 text-center">{idx + 1}</td>
+                      <td className="border border-slate-900 py-1 px-3">{critName}</td>
+                      <td className="border border-slate-900 py-1 px-3 text-center font-mono font-medium"></td>
+                    </tr>
+                  ))}
+                  {/* Baris Rata-rata A */}
+                  <tr className="font-bold">
+                    <td colSpan={2} className="border border-slate-900 py-1 px-3 text-center font-bold">
+                      Rata-rata
+                    </td>
+                    <td className="border border-slate-900 py-1 px-3 text-center font-mono font-bold"></td>
+                  </tr>
+
+                  {/* B. PENILAIAN UJIAN LISAN */}
+                  <tr className="font-bold">
+                    <td className="border border-slate-900 py-1 px-2 text-center font-bold">B</td>
+                    <td className="border border-slate-900 py-1 px-3 font-bold uppercase">
+                      PENILAIAN UJIAN LISAN
+                    </td>
+                    <td className="border border-slate-900 py-1 px-3"></td>
+                  </tr>
+                  {[
+                    'Kemampuan mengungkap / menguraikan pendapat',
+                    'Teknik presentasi',
+                    'Keterbukaan terhadap pernyataan / saran penguji',
+                    'Penguasaan materi',
+                    'Kebenaran / ketetapan jawaban',
+                    'Penampilan umum',
+                  ].map((critName, idx) => (
+                    <tr key={idx}>
+                      <td className="border border-slate-900 py-1 px-2 text-center">{idx + 1}</td>
+                      <td className="border border-slate-900 py-1 px-3">{critName}</td>
+                      <td className="border border-slate-900 py-1 px-3 text-center font-mono font-medium"></td>
+                    </tr>
+                  ))}
+                  {/* Baris Rata-rata B */}
+                  <tr className="font-bold">
+                    <td colSpan={2} className="border border-slate-900 py-1 px-3 text-center font-bold">
+                      Rata-rata
+                    </td>
+                    <td className="border border-slate-900 py-1 px-3 text-center font-mono font-bold"></td>
+                  </tr>
+
+                  {/* Baris Jumlah Rata-rata A & B */}
+                  <tr className="font-bold">
+                    <td colSpan={2} className="border border-slate-900 py-1.5 px-3 text-center font-bold">
+                      Jumlah Rata-rata A & B
+                    </td>
+                    <td className="border border-slate-900 py-1.5 px-3 text-center font-mono font-bold"></td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Teks Nilai Rata-rata akhir : (   ) */}
+              <div className="my-2.5 text-xs font-bold text-slate-900">
+                Nilai Rata-rata akhir : (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
+              </div>
+
+              {/* Bagian Bawah Dua Kolom (Skala Nilai & Pengesahan Penguji) */}
+              <div className="grid grid-cols-2 gap-6 mt-4 pt-2 text-xs text-slate-900 break-inside-avoid page-break-inside-avoid">
+                {/* Kolom Kiri: Tabel Rentang Skala Nilai */}
+                <div className="space-y-1 font-mono text-[11px] leading-tight pt-1">
+                  <div className="flex gap-3"><span className="w-6 font-bold">A</span><span>91 – 100</span></div>
+                  <div className="flex gap-3"><span className="w-6 font-bold">A-</span><span>81 – 90,99</span></div>
+                  <div className="flex gap-3"><span className="w-6 font-bold">B+</span><span>71 – 80,99</span></div>
+                  <div className="flex gap-3"><span className="w-6 font-bold">B</span><span>66 – 70,99</span></div>
+                  <div className="flex gap-3"><span className="w-6 font-bold">C+</span><span>61 – 65,99</span></div>
+                  <div className="flex gap-3"><span className="w-6 font-bold">D</span><span>46 – 60,99</span></div>
+                  <div className="flex gap-3"><span className="w-6 font-bold">E</span><span>0 – 45,99</span></div>
+                </div>
+
+                {/* Kolom Kanan: Pengesahan Penguji & Barcode */}
+                <div className="flex flex-col items-center justify-between text-center min-h-[145px]">
+                  <div>
+                    <p className="text-xs">
+                      {docSettings.default_city || 'Bantul'}, {resolvedDate || '22 Juni 2026'}
+                    </p>
+                    <p className="font-bold text-xs mt-0.5">Penguji 2</p>
+                  </div>
+
+                  <div className="my-1 h-14 flex items-center justify-center">
+                    <div className="h-12 w-36 border-b border-dotted border-slate-400" />
+                  </div>
+
+                  <div>
+                    <p className="font-bold text-xs underline decoration-dotted">
+                      (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
+                    </p>
+                  </div>
+
+                  {/* Kotak Persegi Barcode / QR Code di Pojok Kanan Bawah Sesuai Gambar */}
+                  <div className="self-end mt-2 h-9 w-9 border border-slate-400 p-0.5 rounded flex items-center justify-center bg-white shadow-2xs">
+                    <QRCodeSVG value={verificationUrl} size={32} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : template.content_mode !== 'text_only' && template.table_enabled !== false ? (
             <div className="w-full my-2 document-content">
               {children ? (
                 children
@@ -681,7 +837,7 @@ export function UniversalDocumentContainer({
                 </div>
               ) : null}
             </div>
-          )}
+          ) : null}
 
           {/* 5. SUB-BAB CATATAN & TATA TERTIB */}
           {template.rules_note_enabled && template.rules_note_text && (
@@ -694,7 +850,7 @@ export function UniversalDocumentContainer({
           )}
 
           {/* 6. BLOK TANDA TANGAN & PENGESAHAN (Mengalir proporsional beberapa cm setelah konten terakhir) */}
-          {(template.signatures || []).filter((s) => s.enabled).length > 0 && (
+          {!isFormatPenilaianSidang && (template.signatures || []).filter((s) => s.enabled).length > 0 && (
             <div className={`${getSignatureSpacingClass(template.signature_spacing)} pt-2 break-inside-avoid page-break-inside-avoid text-xs signature-block`}>
               {template.show_signature_date !== false && docSettings.show_signature_date !== false && (
                 <div className={`text-xs text-slate-700 mb-2 ${enabledSignatures.length === 1 && singleAlign === 'left' ? 'text-left pl-2 sm:pl-8' : enabledSignatures.length === 1 && singleAlign === 'center' ? 'text-center' : 'text-right'}`}>
@@ -908,7 +1064,7 @@ export function UniversalDocumentContainer({
         </div>
 
         {/* QR CODE TEPAT 1 CM (10mm) DI ATAS SUDUT KIRI ATAS FOOTER */}
-        {docSettings.qr_code_enabled !== false && docSettings.qr_code_position === 'footer' && (
+        {!isFormatPenilaianSidang && docSettings.qr_code_enabled !== false && docSettings.qr_code_position === 'footer' && (
           <div className="mt-auto mb-[10mm] flex justify-start items-end z-10 print:mb-[10mm] break-inside-avoid page-break-inside-avoid">
             <div className="flex items-center gap-2 p-1.5 rounded border border-slate-300 bg-white/95 print:bg-transparent print:border-slate-400 shadow-xs">
               <QRCodeSVG

@@ -541,20 +541,16 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     rules_note_title: '',
     rules_note_text: '',
     columns: [
-      { id: 'no', label: 'No', enabled: true },
-      { id: 'criterion_name', label: 'Komponen / Aspek Penilaian Rubrik', enabled: true },
-      { id: 'weight', label: 'Bobot (%)', enabled: true },
-      { id: 'examiner_scores', label: 'Skor Penguji', enabled: true },
-      { id: 'weighted_score', label: 'Nilai Tertimbang', enabled: true },
+      { id: 'no', label: 'NO', enabled: true },
+      { id: 'komponen_penilaian', label: 'KOMPONEN PENILAIAN', enabled: true },
+      { id: 'nilai_angka', label: 'NILAI ANGKA', enabled: true },
     ],
     show_signature_date: true,
     signature_spacing: 'normal',
-    single_signature_align: 'center',
+    single_signature_align: 'right',
     font_family: 'Times New Roman',
     signatures: [
-      { id: 'examiner_1', role_label: 'Penguji I', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
-      { id: 'examiner_2', role_label: 'Penguji II', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
-      { id: 'chairperson', role_label: 'Ketua Sidang', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
+      { id: 'examiner', role_label: 'Penguji 2', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
     ],
     copies_enabled: false,
     copies_list: [],
@@ -792,6 +788,27 @@ export function useDocumentTemplatesConfig() {
               (parsed[key]?.body_text_template?.includes('Dengan ini menerangkan bahwa mahasiswa') || parsed[key]?.document_title === 'SURAT PENGESAHAN PROPOSAL')
             ) {
               merged[key] = { ...defaultDocumentTemplates.surat_pengesahan_proposal, ...parsed[key], document_title: 'NOTA DINAS', show_kop: false, show_footer: false, show_student_info: false, content_mode: 'text_only', table_enabled: false, show_signature_date: false, body_text_template: defaultDocumentTemplates.surat_pengesahan_proposal.body_text_template };
+              continue;
+            }
+
+            // Normalisasi lembar_nilai_sidang: pastikan memakai format standar resmi (13 kriteria rubrik terarah, 3 kolom NO/KOMPONEN/NILAI ANGKA, 1 tanda tangan kanan)
+            if (
+              key === 'lembar_nilai_sidang' &&
+              (parsed[key]?.columns?.some((c: any) => c.id === 'examiner_scores' || c.id === 'weighted_score') ||
+                (parsed[key]?.signatures?.length ?? 0) > 1 ||
+                parsed[key]?.document_title !== 'FORMAT PENILAIAN')
+            ) {
+              merged[key] = {
+                ...defaultDocumentTemplates.lembar_nilai_sidang,
+                ...parsed[key],
+                document_title: 'FORMAT PENILAIAN',
+                document_subtitle: '',
+                columns: defaultDocumentTemplates.lembar_nilai_sidang.columns,
+                signatures: defaultDocumentTemplates.lembar_nilai_sidang.signatures,
+                student_bio_fields: defaultDocumentTemplates.lembar_nilai_sidang.student_bio_fields,
+                single_signature_align: 'right',
+                table_enabled: true,
+              };
               continue;
             }
 
