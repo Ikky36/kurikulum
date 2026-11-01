@@ -185,6 +185,12 @@ export function UniversalDocumentContainer({
   const effectiveOrientation = template.orientation || docSettings.orientation || 'portrait';
   const isPortrait = effectiveOrientation === 'portrait';
 
+  // Identifikasi format penilaian sidang tugas akhir resmi
+  const isFormatPenilaianSidang =
+    templateCode === 'lembar_nilai_sidang' ||
+    template?.code === 'lembar_nilai_sidang' ||
+    template?.document_role === 'lembar_nilai_sidang';
+
   // Resolve effective date mechanism: 'last_signature' vs 'today'
   const effectiveDateSource = template.date_source || docSettings.date_source || 'last_signature';
 

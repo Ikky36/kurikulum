@@ -1629,7 +1629,9 @@ const { error } = await supabase.from('academic_years').update({ is_active: isAc
             {/* Kop & Dokumen Tab */}
             {canAccessTheme && (
               <TabsContent value="document-layout" className="mt-0">
-                <DocumentSettingsTab />
+                <ErrorBoundary>
+                  <DocumentSettingsTab />
+                </ErrorBoundary>
               </TabsContent>
             )}
 
