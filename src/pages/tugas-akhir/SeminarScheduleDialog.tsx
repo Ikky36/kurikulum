@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -79,6 +79,19 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
   const [room, setRoom] = useState<string>('');
   const [status, setStatus] = useState<string>('scheduled');
 
+  // Query Master Dosen Tamu Terdaftar
+  const { data: externalExaminersList } = useQuery({
+    queryKey: ['ta_external_examiners_list'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ta_external_examiners')
+        .select('*')
+        .order('name');
+      if (error) return [];
+      return data || [];
+    },
+  });
+
   // Chairperson state
   const [chairpersonType, setChairpersonType] = useState<'internal' | 'external'>('internal');
   const [chairpersonId, setChairpersonId] = useState<string>('');
@@ -86,6 +99,7 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
   const [chairpersonNip, setChairpersonNip] = useState<string>('');
   const [chairpersonInstitution, setChairpersonInstitution] = useState<string>('STITMA Yogyakarta');
   const [chairpersonToken, setChairpersonToken] = useState<string>('');
+  const [chairpersonSignatureUrl, setChairpersonSignatureUrl] = useState<string | null>(null);
 
   // Dynamic Examiners state
   const [examiners, setExaminers] = useState<FormExaminerItem[]>([]);
@@ -108,6 +122,7 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
     setChairpersonNip(seminar.chairperson_nip || '');
     setChairpersonInstitution(seminar.chairperson_institution || 'STITMA Yogyakarta');
     setChairpersonToken(seminar.chairperson_access_token || generateAssessmentToken('ch'));
+    setChairpersonSignatureUrl(seminar.chairperson_signature_url || null);
 
     // Examiners setup
     if (seminar.ta_examiners && seminar.ta_examiners.length > 0) {
@@ -283,6 +298,7 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
           chairperson_nip: chairpersonType === 'internal' ? (dosenList.find((d) => d.id === chairpersonId)?.nip || chairpersonNip) : chairpersonNip.trim(),
           chairperson_institution: chairpersonType === 'internal' ? 'STITMA Yogyakarta' : (chairpersonInstitution.trim() || 'STITMA Yogyakarta'),
           chairperson_access_token: finalChairToken,
+          chairperson_signature_url: chairpersonSignatureUrl || seminar.chairperson_signature_url || null,
           final_score: averageScore,
           final_grade: gradeResult?.grade || null,
         })
@@ -328,6 +344,7 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
           examiner_nip: resolvedNip,
           examiner_institution: resolvedInst,
           access_token: token,
+          signature_url: ex.signature_url || null,
           order_index: i + 1,
         };
 
@@ -339,10 +356,38 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
           await supabase.from('ta_examiners').insert(examinerPayload);
         }
       }
+
+      // Simpan dosen tamu ke master ta_external_examiners jika ada input baru
+      try {
+        if (chairpersonType === 'external' && chairpersonName.trim()) {
+          await supabase.from('ta_external_examiners').upsert({
+            name: chairpersonName.trim(),
+            nip: chairpersonNip.trim() || null,
+            institution: chairpersonInstitution.trim() || 'Luar Kampus',
+            signature_url: chairpersonSignatureUrl || null,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'name' });
+        }
+
+        for (const ex of examiners) {
+          if (ex.examiner_type === 'external' && ex.examiner_name.trim()) {
+            await supabase.from('ta_external_examiners').upsert({
+              name: ex.examiner_name.trim(),
+              nip: ex.examiner_nip.trim() || null,
+              institution: ex.examiner_institution.trim() || 'Luar Kampus',
+              signature_url: ex.signature_url || null,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'name' });
+          }
+        }
+      } catch (upsertErr) {
+        console.warn('Upsert ta_external_examiners notice:', upsertErr);
+      }
     },
     onSuccess: () => {
       toast.success('Jadwal, Penguji & Tautan Evaluasi berhasil disimpan!');
       queryClient.invalidateQueries({ queryKey: ['admin_ta_seminars'] });
+      queryClient.invalidateQueries({ queryKey: ['ta_external_examiners_list'] });
       onSaved();
       // Pindahkan tab ke 'tautan' agar admin langsung bisa membagikan link
       setDialogTab('tautan');
@@ -503,16 +548,54 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
                     </Select>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="sm:col-span-1">
-                      <Label className="text-xs">Nama Lengkap & Gelar</Label>
-                      <Input
-                        placeholder="Contoh: Dr. H. Ahmad Fauzi, M.Ag."
-                        value={chairpersonName}
-                        onChange={(e) => setChairpersonName(e.target.value)}
-                        className="mt-1 text-xs"
-                      />
-                    </div>
+                  <div className="space-y-3">
+                    {externalExaminersList && externalExaminersList.length > 0 && (
+                      <div className="bg-muted/40 p-2.5 rounded-lg border space-y-1">
+                        <Label className="text-[11px] font-semibold text-primary flex items-center justify-between">
+                          <span>⚡ Pilih Cepat dari Dosen Tamu yang Pernah Diundang:</span>
+                          {chairpersonSignatureUrl && (
+                            <Badge variant="outline" className="text-[10px] text-emerald-700 bg-emerald-50 border-emerald-300 font-medium">
+                              ✓ TTD Tersimpan Siap Pakai
+                            </Badge>
+                          )}
+                        </Label>
+                        <Select
+                          onValueChange={(selectedId) => {
+                            const found = externalExaminersList.find((x: any) => x.id === selectedId);
+                            if (found) {
+                              setChairpersonName(found.name);
+                              setChairpersonNip(found.nip || '');
+                              setChairpersonInstitution(found.institution || 'STITMA Yogyakarta');
+                              if (found.signature_url) {
+                                setChairpersonSignatureUrl(found.signature_url);
+                              }
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="h-8 text-xs bg-background">
+                            <SelectValue placeholder="-- Pilih Dosen Tamu Tersimpan --" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {externalExaminersList.map((ext: any) => (
+                              <SelectItem key={ext.id} value={ext.id} className="text-xs">
+                                {ext.name} ({ext.institution || 'Luar Kampus'}) {ext.signature_url ? '• ✓ TTD Siap' : ''}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="sm:col-span-1">
+                        <Label className="text-xs">Nama Lengkap & Gelar</Label>
+                        <Input
+                          placeholder="Contoh: Dr. H. Ahmad Fauzi, M.Ag."
+                          value={chairpersonName}
+                          onChange={(e) => setChairpersonName(e.target.value)}
+                          className="mt-1 text-xs"
+                        />
+                      </div>
                     <div>
                       <Label className="text-xs">NIP / NIDN (Opsional)</Label>
                       <Input
@@ -532,7 +615,8 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
                       />
                     </div>
                   </div>
-                )}
+                </div>
+              )}
               </div>
 
               {/* SEKSI: DEWAN PENGUJI DINAMIS */}
@@ -638,16 +722,54 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
                           </Select>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
-                          <div>
-                            <Label className="text-[11px]">Nama Dosen Tamu & Gelar</Label>
-                            <Input
-                              placeholder="Dr. Contoh Penguji, M.Pd."
-                              value={ex.examiner_name}
-                              onChange={(e) => handleUpdateExaminer(index, { examiner_name: e.target.value })}
-                              className="mt-0.5 text-xs h-8"
-                            />
-                          </div>
+                        <div className="space-y-2 pt-1">
+                          {externalExaminersList && externalExaminersList.length > 0 && (
+                            <div className="bg-muted/40 p-2 rounded-lg border space-y-1">
+                              <div className="flex items-center justify-between text-[11px] font-semibold text-primary">
+                                <span>⚡ Pilih dari Dosen Tamu Terdaftar:</span>
+                                {ex.signature_url && (
+                                  <Badge variant="outline" className="text-[10px] text-emerald-700 bg-emerald-50 border-emerald-300 font-medium">
+                                    ✓ TTD Tersimpan
+                                  </Badge>
+                                )}
+                              </div>
+                              <Select
+                                onValueChange={(selectedId) => {
+                                  const found = externalExaminersList.find((x: any) => x.id === selectedId);
+                                  if (found) {
+                                    handleUpdateExaminer(index, {
+                                      examiner_name: found.name,
+                                      examiner_nip: found.nip || '',
+                                      examiner_institution: found.institution || 'STITMA Yogyakarta',
+                                      signature_url: found.signature_url || null,
+                                    });
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="h-7 text-xs bg-background">
+                                  <SelectValue placeholder="-- Pilih Dosen Tamu Tersimpan --" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {externalExaminersList.map((ext: any) => (
+                                    <SelectItem key={ext.id} value={ext.id} className="text-xs">
+                                      {ext.name} ({ext.institution || 'Luar Kampus'}) {ext.signature_url ? '• ✓ TTD Siap' : ''}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <div>
+                              <Label className="text-[11px]">Nama Dosen Tamu & Gelar</Label>
+                              <Input
+                                placeholder="Dr. Contoh Penguji, M.Pd."
+                                value={ex.examiner_name}
+                                onChange={(e) => handleUpdateExaminer(index, { examiner_name: e.target.value })}
+                                className="mt-0.5 text-xs h-8"
+                              />
+                            </div>
                           <div>
                             <Label className="text-[11px]">NIP / NIDN (Opsional)</Label>
                             <Input
@@ -665,6 +787,7 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
                               onChange={(e) => handleUpdateExaminer(index, { examiner_institution: e.target.value })}
                               className="mt-0.5 text-xs h-8"
                             />
+                          </div>
                           </div>
                         </div>
                       )}

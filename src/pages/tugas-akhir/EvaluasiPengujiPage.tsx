@@ -112,6 +112,18 @@ export const EvaluasiPengujiPage: React.FC = () => {
         setSignatureUrl(examinerData.signature_url);
       } else if (userProfile?.signature_url && examinerData.dosen_id === user?.id) {
         setSignatureUrl(userProfile.signature_url);
+      } else if (examinerData.examiner_type === 'external' && examinerData.examiner_name) {
+        // Cek tanda tangan tersimpan di master ta_external_examiners
+        supabase
+          .from('ta_external_examiners')
+          .select('signature_url')
+          .eq('name', examinerData.examiner_name.trim())
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data?.signature_url) {
+              setSignatureUrl(data.signature_url);
+            }
+          });
       }
 
       // Existing scores from scores_detail
@@ -157,6 +169,19 @@ export const EvaluasiPengujiPage: React.FC = () => {
         .eq('id', examinerData.id);
 
       if (exError) throw exError;
+
+      // 1b. Jika Penguji Tamu (Eksternal), simpan/perbarui TTD ke master ta_external_examiners
+      if (examinerData.examiner_type === 'external' && examinerData.examiner_name) {
+        await supabase
+          .from('ta_external_examiners')
+          .upsert({
+            name: examinerData.examiner_name.trim(),
+            nip: examinerData.examiner_nip?.trim() || null,
+            institution: examinerData.examiner_institution?.trim() || 'Luar Kampus',
+            signature_url: signatureUrl,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'name' });
+      }
 
       // 2. Trigger calculation of seminar final score if all examiners have graded
       const seminarId = examinerData.seminar_id;

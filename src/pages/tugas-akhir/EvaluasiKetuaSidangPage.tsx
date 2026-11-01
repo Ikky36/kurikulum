@@ -105,6 +105,18 @@ export const EvaluasiKetuaSidangPage: React.FC = () => {
         setSignatureUrl(seminarData.chairperson_signature_url);
       } else if (userProfile?.signature_url && seminarData.chairperson_id === user?.id) {
         setSignatureUrl(userProfile.signature_url);
+      } else if (seminarData.chairperson_type === 'external' && seminarData.chairperson_name) {
+        // Cek tanda tangan tersimpan di master ta_external_examiners
+        supabase
+          .from('ta_external_examiners')
+          .select('signature_url')
+          .eq('name', seminarData.chairperson_name.trim())
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data?.signature_url) {
+              setSignatureUrl(data.signature_url);
+            }
+          });
       }
 
       // Default deadline to 14 days from now if empty
@@ -157,6 +169,19 @@ export const EvaluasiKetuaSidangPage: React.FC = () => {
         .eq('id', seminarData.id);
 
       if (semError) throw semError;
+
+      // Simpan / perbarui ke master ta_external_examiners jika Ketua Sidang Tamu
+      if (seminarData.chairperson_type === 'external' && seminarData.chairperson_name) {
+        await supabase
+          .from('ta_external_examiners')
+          .upsert({
+            name: seminarData.chairperson_name.trim(),
+            nip: seminarData.chairperson_nip?.trim() || null,
+            institution: seminarData.chairperson_institution?.trim() || 'Luar Kampus',
+            signature_url: signatureUrl,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'name' });
+      }
     },
     onSuccess: () => {
       toast.success('Berita Acara sidang berhasil disahkan dan ditandatangani!');

@@ -142,13 +142,21 @@ export const DigitalSignatureBox: React.FC<DigitalSignatureBoxProps> = ({
           .from('avatars')
           .upload(fileName, blob, { contentType: 'image/png', upsert: true });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.warn('Storage upload notice (using Data URL fallback):', uploadError);
+          const dataUrl = canvas.toDataURL('image/png');
+          onSignatureChange(dataUrl);
+          toast.success('Tanda tangan digital berhasil dibubuhkan!');
+          return;
+        }
 
         const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
         onSignatureChange(urlData.publicUrl);
         toast.success('Tanda tangan digital berhasil dibubuhkan!');
       } catch (err: any) {
-        toast.error('Gagal mengunggah tanda tangan: ' + err.message);
+        const dataUrl = canvas.toDataURL('image/png');
+        onSignatureChange(dataUrl);
+        toast.success('Tanda tangan digital berhasil dibubuhkan!');
       } finally {
         setIsUploading(false);
       }
@@ -181,13 +189,36 @@ export const DigitalSignatureBox: React.FC<DigitalSignatureBoxProps> = ({
         .from('avatars')
         .upload(fileName, file, { contentType: file.type, upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        console.warn('Storage upload notice (using Data URL fallback):', uploadError);
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            onSignatureChange(reader.result);
+            toast.success('Berkas tanda tangan berhasil dimuat!');
+          }
+        };
+        reader.readAsDataURL(file);
+        return;
+      }
 
       const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(fileName);
       onSignatureChange(urlData.publicUrl);
       toast.success('Berkas tanda tangan berhasil diunggah!');
     } catch (err: any) {
-      toast.error('Gagal mengunggah gambar: ' + err.message);
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          onSignatureChange(reader.result);
+          toast.success('Berkas tanda tangan berhasil dimuat!');
+        } else {
+          toast.error('Gagal mengunggah gambar: ' + err.message);
+        }
+      };
+      reader.onerror = () => {
+        toast.error('Gagal mengunggah gambar: ' + err.message);
+      };
+      reader.readAsDataURL(file);
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
