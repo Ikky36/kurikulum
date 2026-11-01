@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, CheckCircle2, XCircle, Users, ExternalLink, Plus, Trash2, Save, Calendar, Clock, MapPin, Search } from 'lucide-react';
+import { Eye, CheckCircle2, XCircle, Users, ExternalLink, Plus, Trash2, Save, Calendar, Clock, MapPin, Search, Share2, ShieldCheck } from 'lucide-react';
 import { TableSortHeader, SortConfig, sortData } from '@/components/ui/table-sort-header';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
@@ -24,6 +24,7 @@ import { useAcademicPeriod } from '@/hooks/useAcademicPeriod';
 import { calculateSemester } from '@/utils/academicHelpers';
 import { StudentSemesterBadge } from '@/components/ui/semester-badge';
 import { cleanCommentsForDisplay, serializeApprovalsToComments, parseApprovalsFromComments } from '@/lib/documentApprovals';
+import { SeminarScheduleDialog } from './SeminarScheduleDialog';
 
 export default function TugasAkhirAdmin() {
   const { activeAcademicYear, activeSemester } = useAcademicPeriod();
@@ -50,10 +51,6 @@ export default function TugasAkhirAdmin() {
   // STATE FOR SEMINAR
   const [selectedSeminar, setSelectedSeminar] = useState<any>(null);
   const [isSeminarDetailOpen, setIsSeminarDetailOpen] = useState(false);
-  const [seminarScheduleDate, setSeminarScheduleDate] = useState<string>('');
-  const [seminarRoom, setSeminarRoom] = useState<string>('');
-  const [seminarStatus, setSeminarStatus] = useState<string>('pending');
-  const [formExaminers, setFormExaminers] = useState<Array<{ id: string, role: string }>>([{ id: '', role: 'Penguji 1' }]);
 
   const queryClient = useQueryClient();
 
@@ -88,15 +85,16 @@ export default function TugasAkhirAdmin() {
     }
   });
 
-  const { data: seminars, isLoading: seminarsLoading } = useQuery({
+  const { data: seminars, isLoading: seminarsLoading, refetch: refetchSeminars } = useQuery({
     queryKey: ['admin_ta_seminars'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('ta_seminars')
         .select(`
           *,
-          ta_submissions(title, profiles:student_id(full_name, nim)),
-          ta_examiners(role, dosen_id, profiles(full_name))
+          chairperson:chairperson_id(id, full_name, nip, email),
+          ta_submissions(id, title, student_id, profiles:student_id(full_name, nim, program)),
+          ta_examiners(*, profiles:dosen_id(id, full_name, nip, email))
         `)
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -200,42 +198,6 @@ export default function TugasAkhirAdmin() {
     }
   });
 
-  const seminarMutation = useMutation({
-    mutationFn: async () => {
-      const { error: updateError } = await supabase
-        .from('ta_seminars')
-        .update({
-          schedule_date: seminarScheduleDate || null,
-          room: seminarRoom,
-          status: seminarStatus
-        })
-        .eq('id', selectedSeminar.id);
-      
-      if (updateError) throw updateError;
-
-      // Update examiners
-      await supabase.from('ta_examiners').delete().eq('seminar_id', selectedSeminar.id);
-      const validExaminers = formExaminers.filter(e => e.id !== '');
-      if (validExaminers.length > 0) {
-        const insertData = validExaminers.map(ex => ({
-          seminar_id: selectedSeminar.id,
-          dosen_id: ex.id,
-          role: ex.role
-        }));
-        const { error: exError } = await supabase.from('ta_examiners').insert(insertData);
-        if (exError) throw exError;
-      }
-    },
-    onSuccess: () => {
-      toast.success('Jadwal seminar berhasil diperbarui');
-      queryClient.invalidateQueries({ queryKey: ['admin_ta_seminars'] });
-      setIsSeminarDetailOpen(false);
-    },
-    onError: (error: any) => {
-      toast.error(error.message || 'Gagal memperbarui jadwal seminar');
-    }
-  });
-
   const deleteSubmissionMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('ta_submissions').delete().eq('id', id);
@@ -253,14 +215,6 @@ export default function TugasAkhirAdmin() {
 
   const openSeminarDetail = (seminar: any) => {
     setSelectedSeminar(seminar);
-    setSeminarScheduleDate(seminar.schedule_date ? seminar.schedule_date.substring(0, 16) : '');
-    setSeminarRoom(seminar.room || '');
-    setSeminarStatus(seminar.status || 'pending');
-    if (seminar.ta_examiners && seminar.ta_examiners.length > 0) {
-      setFormExaminers(seminar.ta_examiners.map((ex: any) => ({ id: ex.dosen_id, role: ex.role })));
-    } else {
-      setFormExaminers([{ id: '', role: 'Penguji 1' }]);
-    }
     setIsSeminarDetailOpen(true);
   };
 
@@ -785,7 +739,7 @@ export default function TugasAkhirAdmin() {
                         <div className="flex justify-between items-start gap-2">
                           <div className="min-w-0">
                             <div className="font-semibold text-sm truncate">{sem.ta_submissions?.profiles?.full_name}</div>
-                            <div className="text-xs text-muted-foreground">{sem.ta_submissions?.profiles?.nim}</div>
+                            <div className="text-xs text-muted-foreground">{sem.ta_submissions?.profiles?.nim} • {sem.ta_submissions?.profiles?.program || 'PBA'}</div>
                           </div>
                           <Badge variant={
                             sem.status === 'scheduled' ? 'default' :
@@ -799,7 +753,7 @@ export default function TugasAkhirAdmin() {
                         </div>
 
                         <div>
-                          <Badge className="capitalize text-xs font-normal mb-1">{sem.type}</Badge>
+                          <Badge className="capitalize text-xs font-normal mb-1">{sem.type === 'sempro' ? 'Seminar Proposal' : 'Sidang Munaqasyah'}</Badge>
                           <p className="text-xs font-medium text-foreground/90 line-clamp-2">{sem.ta_submissions?.title}</p>
                         </div>
 
@@ -812,7 +766,7 @@ export default function TugasAkhirAdmin() {
                               </div>
                               <div className="flex items-center text-muted-foreground">
                                 <Clock className="w-3.5 h-3.5 mr-1.5" />
-                                {new Date(sem.schedule_date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                {new Date(sem.schedule_date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
                               </div>
                               {sem.room && (
                                 <div className="flex items-center font-medium text-primary mt-0.5">
@@ -825,20 +779,55 @@ export default function TugasAkhirAdmin() {
                           )}
                         </div>
 
+                        {/* Info Ketua Sidang */}
+                        <div className="text-xs bg-card p-2 rounded border">
+                          <span className="text-muted-foreground block text-[10px] font-semibold uppercase">Ketua Sidang:</span>
+                          <span className="font-medium text-foreground flex items-center gap-1 mt-0.5">
+                            <ShieldCheck className="w-3 h-3 text-primary" />
+                            {sem.chairperson?.full_name || sem.chairperson_name || <em className="text-muted-foreground">Belum diplot</em>}
+                            {sem.chairperson_type === 'external' && <Badge variant="outline" className="text-[9px] px-1 py-0">Tamu</Badge>}
+                          </span>
+                        </div>
+
+                        {/* Info Dewan Penguji */}
                         <div className="text-xs">
-                          <span className="text-muted-foreground block text-[10px]">Dosen Penguji:</span>
+                          <span className="text-muted-foreground block text-[10px] font-semibold uppercase">Dewan Penguji ({sem.ta_examiners?.length || 0}):</span>
                           {sem.ta_examiners?.length > 0 ? (
-                            <span className="font-medium text-foreground">
-                              {sem.ta_examiners.map((ex: any) => ex.profiles?.full_name).filter(Boolean).join(', ')}
-                            </span>
+                            <div className="space-y-0.5 mt-0.5">
+                              {sem.ta_examiners.map((ex: any, i: number) => (
+                                <div key={i} className="flex items-center justify-between text-xs">
+                                  <span className="truncate">
+                                    • {ex.profiles?.full_name || ex.examiner_name || ex.role}
+                                    <span className="text-[10px] text-muted-foreground ml-1">({ex.role})</span>
+                                  </span>
+                                  {ex.score !== undefined && ex.score !== null && (
+                                    <Badge variant="secondary" className="text-[10px] px-1 py-0 h-4">
+                                      {ex.score}
+                                    </Badge>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           ) : (
                             <span className="text-muted-foreground italic">Belum diplot</span>
                           )}
                         </div>
 
-                        <div className="pt-2 border-t">
-                          <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={() => openSeminarDetail(sem)}>
-                            <Calendar className="w-3.5 h-3.5 mr-1.5" /> Atur Jadwal & Penguji
+                        {sem.final_score !== null && sem.final_score !== undefined && (
+                          <div className="flex items-center justify-between text-xs pt-1 border-t">
+                            <span className="font-semibold text-muted-foreground">Skor Akhir:</span>
+                            <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-300 font-bold">
+                              {sem.final_score} ({sem.final_grade || 'Lulus'})
+                            </Badge>
+                          </div>
+                        )}
+
+                        <div className="pt-2 border-t flex gap-2">
+                          <Button variant="outline" size="sm" className="flex-1 h-8 text-xs" onClick={() => openSeminarDetail(sem)}>
+                            <Calendar className="w-3.5 h-3.5 mr-1" /> Atur Jadwal
+                          </Button>
+                          <Button size="sm" className="h-8 text-xs gap-1" onClick={() => openSeminarDetail(sem)}>
+                            <Share2 className="w-3.5 h-3.5" /> Tautan
                           </Button>
                         </div>
                       </div>
@@ -854,19 +843,20 @@ export default function TugasAkhirAdmin() {
                         <TableHead>Mahasiswa</TableHead>
                         <TableHead>Jenis Ujian</TableHead>
                         <TableHead>Jadwal & Ruangan</TableHead>
-                        <TableHead>Dosen Penguji</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead>Ketua Sidang</TableHead>
+                        <TableHead>Dewan Penguji</TableHead>
+                        <TableHead>Status & Nilai</TableHead>
                         <TableHead className="text-right">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {seminarsLoading ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-10">Memuat data seminar...</TableCell>
+                          <TableCell colSpan={7} className="text-center py-10">Memuat data seminar...</TableCell>
                         </TableRow>
                       ) : !seminars || seminars.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                          <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
                             Belum ada pengajuan seminar atau ujian
                           </TableCell>
                         </TableRow>
@@ -876,57 +866,101 @@ export default function TugasAkhirAdmin() {
                             <TableCell>
                               <div className="font-medium">{sem.ta_submissions?.profiles?.full_name}</div>
                               <div className="text-xs text-muted-foreground">{sem.ta_submissions?.profiles?.nim}</div>
+                              <div className="text-[11px] text-muted-foreground max-w-[200px] truncate" title={sem.ta_submissions?.title}>
+                                {sem.ta_submissions?.title}
+                              </div>
                             </TableCell>
                             <TableCell>
-                              <Badge className="capitalize">{sem.type}</Badge>
+                              <Badge variant="secondary" className="capitalize">
+                                {sem.type === 'sempro' ? 'Sempro' : 'Sidang TA'}
+                              </Badge>
                             </TableCell>
                             <TableCell>
                               {sem.schedule_date ? (
-                                <div className="space-y-1">
-                                  <div className="flex items-center text-sm font-medium">
-                                    <Calendar className="w-3 h-3 mr-1" />
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center text-xs font-semibold">
+                                    <Calendar className="w-3 h-3 mr-1 text-primary" />
                                     {new Date(sem.schedule_date).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}
                                   </div>
-                                  <div className="flex items-center text-xs text-muted-foreground">
+                                  <div className="flex items-center text-[11px] text-muted-foreground">
                                     <Clock className="w-3 h-3 mr-1" />
-                                    {new Date(sem.schedule_date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                    {new Date(sem.schedule_date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB
                                   </div>
                                   {sem.room && (
-                                    <div className="flex items-center text-xs font-medium text-primary mt-1">
+                                    <div className="flex items-center text-[11px] font-medium text-primary">
                                       <MapPin className="w-3 h-3 mr-1" /> {sem.room}
                                     </div>
                                   )}
                                 </div>
                               ) : (
-                                <span className="text-sm text-muted-foreground italic">Belum dijadwalkan</span>
+                                <span className="text-xs text-muted-foreground italic">Belum dijadwalkan</span>
                               )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="text-xs space-y-0.5">
+                                <div className="font-medium flex items-center gap-1">
+                                  <ShieldCheck className="w-3 h-3 text-primary shrink-0" />
+                                  <span className="truncate max-w-[140px]">
+                                    {sem.chairperson?.full_name || sem.chairperson_name || <em className="text-muted-foreground">Belum diplot</em>}
+                                  </span>
+                                </div>
+                                {sem.chairperson_type === 'external' && (
+                                  <Badge variant="outline" className="text-[9px] px-1 py-0">Dosen Tamu</Badge>
+                                )}
+                                {sem.chairperson_signed_at && (
+                                  <Badge className="bg-emerald-500/10 text-emerald-700 text-[9px] px-1 py-0">Disahkan</Badge>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell>
                               {sem.ta_examiners?.length > 0 ? (
-                                <ul className="text-sm">
+                                <div className="space-y-1 text-xs">
                                   {sem.ta_examiners.map((ex: any, i: number) => (
-                                    <li key={i}>- {ex.profiles?.full_name}</li>
+                                    <div key={i} className="flex items-center justify-between gap-2 max-w-[190px]">
+                                      <span className="truncate text-xs">
+                                        • {ex.profiles?.full_name || ex.examiner_name || ex.role}
+                                      </span>
+                                      {ex.score !== undefined && ex.score !== null ? (
+                                        <Badge variant="secondary" className="text-[10px] px-1 py-0 shrink-0 font-semibold text-emerald-700">
+                                          {ex.score}
+                                        </Badge>
+                                      ) : (
+                                        <span className="text-[10px] text-muted-foreground shrink-0">-</span>
+                                      )}
+                                    </div>
                                   ))}
-                                </ul>
+                                </div>
                               ) : (
-                                <span className="text-sm text-muted-foreground italic">Belum diplot</span>
+                                <span className="text-xs text-muted-foreground italic">Belum diplot</span>
                               )}
                             </TableCell>
                             <TableCell>
-                              <Badge variant={
-                                sem.status === 'scheduled' ? 'default' :
-                                sem.status === 'finished' ? 'secondary' :
-                                sem.status === 'rejected' ? 'destructive' : 'outline'
-                              }>
-                                {sem.status === 'scheduled' ? 'Terjadwal' :
-                                 sem.status === 'finished' ? 'Selesai' :
-                                 sem.status === 'rejected' ? 'Ditolak' : 'Menunggu'}
-                              </Badge>
+                              <div className="space-y-1">
+                                <Badge variant={
+                                  sem.status === 'scheduled' ? 'default' :
+                                  sem.status === 'finished' ? 'secondary' :
+                                  sem.status === 'rejected' ? 'destructive' : 'outline'
+                                } className="text-[11px]">
+                                  {sem.status === 'scheduled' ? 'Terjadwal' :
+                                   sem.status === 'finished' ? 'Selesai' :
+                                   sem.status === 'rejected' ? 'Ditolak' : 'Menunggu'}
+                                </Badge>
+                                {sem.final_score !== null && sem.final_score !== undefined && (
+                                  <div className="text-xs font-bold text-emerald-700">
+                                    Skor: {sem.final_score} ({sem.final_grade || 'Lulus'})
+                                  </div>
+                                )}
+                              </div>
                             </TableCell>
                             <TableCell className="text-right">
-                              <Button variant="outline" size="sm" onClick={() => openSeminarDetail(sem)}>
-                                <Calendar className="w-4 h-4 mr-2" /> Atur Jadwal
-                              </Button>
+                              <div className="flex items-center justify-end gap-1.5">
+                                <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={() => openSeminarDetail(sem)}>
+                                  <Calendar className="w-3.5 h-3.5" /> Atur
+                                </Button>
+                                <Button size="sm" className="h-8 text-xs gap-1" onClick={() => openSeminarDetail(sem)}>
+                                  <Share2 className="w-3.5 h-3.5" /> Tautan
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))
@@ -937,144 +971,18 @@ export default function TugasAkhirAdmin() {
               </CardContent>
             </Card>
 
-            <Dialog open={isSeminarDetailOpen} onOpenChange={setIsSeminarDetailOpen}>
-              <DialogContent className="w-[calc(100vw-1.5rem)] sm:w-full max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6 overflow-hidden">
-                <DialogHeader className="pr-6 text-left">
-                  <DialogTitle className="text-base sm:text-xl font-bold">Atur Jadwal Ujian & Penguji</DialogTitle>
-                  <DialogDescription className="text-xs sm:text-sm">
-                    Atur waktu, tempat, dan dosen penguji untuk ujian ini.
-                  </DialogDescription>
-                </DialogHeader>
-
-                {selectedSeminar && (
-                  <div className="space-y-4 py-2 sm:py-4 flex-1 min-w-0 max-w-full overflow-y-auto overflow-x-hidden pr-1 sm:pr-2">
-                    <div className="p-3 sm:p-4 bg-muted/50 rounded-lg border">
-                      <Label className="text-xs text-muted-foreground">Mahasiswa</Label>
-                      <p className="font-semibold text-sm sm:text-base">{selectedSeminar.ta_submissions?.profiles?.full_name}</p>
-                      <p className="text-xs sm:text-sm text-muted-foreground mb-3">{selectedSeminar.ta_submissions?.profiles?.nim}</p>
-                      
-                      <Label className="text-xs text-muted-foreground">Jenis Ujian</Label>
-                      <p className="font-medium capitalize text-sm">{selectedSeminar.type}</p>
-                      
-                      <Label className="text-xs text-muted-foreground mt-3 block">Topik / Judul</Label>
-                      <p className="text-xs sm:text-sm font-medium whitespace-normal text-justify mt-1 break-words">{selectedSeminar.ta_submissions?.title}</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                      <div>
-                        <Label className="text-xs sm:text-sm">Tanggal & Waktu Ujian</Label>
-                        <Input 
-                          type="datetime-local" 
-                          value={seminarScheduleDate} 
-                          onChange={(e) => setSeminarScheduleDate(e.target.value)}
-                          className="mt-1 text-sm"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-xs sm:text-sm">Ruangan / Lokasi</Label>
-                        <Input 
-                          type="text" 
-                          placeholder="Cth: Ruang Sidang 1" 
-                          value={seminarRoom} 
-                          onChange={(e) => setSeminarRoom(e.target.value)}
-                          className="mt-1 text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <Label className="text-xs sm:text-sm">Status Ujian</Label>
-                      <Select value={seminarStatus} onValueChange={setSeminarStatus}>
-                        <SelectTrigger className="mt-1">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Menunggu Penjadwalan</SelectItem>
-                          <SelectItem value="scheduled">Terjadwal (Disetujui)</SelectItem>
-                          <SelectItem value="finished">Selesai (Nilai Keluar)</SelectItem>
-                          <SelectItem value="rejected">Ditolak / Batal</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="pt-4 border-t border-border">
-                      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-3">
-                        <Label className="text-sm font-semibold">Plotting Dosen Penguji</Label>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="sm" 
-                          className="w-full sm:w-auto h-8 text-xs"
-                          onClick={() => setFormExaminers([...formExaminers, { id: '', role: `Penguji ${formExaminers.length + 1}` }])}
-                        >
-                          <Plus className="w-3.5 h-3.5 mr-1" /> Tambah Penguji
-                        </Button>
-                      </div>
-
-                      <div className="space-y-3">
-                        {formExaminers.map((ex, index) => (
-                          <div key={index} className="flex gap-2 items-end">
-                            <div className="flex-1 min-w-0">
-                              <Label className="text-xs text-muted-foreground">{ex.role}</Label>
-                              <Select 
-                                value={ex.id} 
-                                onValueChange={(val) => {
-                                  const newExs = [...formExaminers];
-                                  newExs[index].id = val;
-                                  setFormExaminers(newExs);
-                                }}
-                              >
-                                <SelectTrigger className="w-full min-w-0">
-                                  <SelectValue placeholder="Pilih dosen penguji" />
-                                </SelectTrigger>
-                                <SelectContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
-                                  {dosenList?.map((dosen) => (
-                                    <SelectItem key={dosen.id} value={dosen.id}>
-                                      {dosen.full_name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <Button 
-                              type="button" 
-                              variant="ghost" 
-                              size="icon" 
-                              className="text-destructive shrink-0 h-10 w-10 border border-transparent hover:border-destructive/20"
-                              onClick={() => {
-                                const newExs = [...formExaminers];
-                                newExs.splice(index, 1);
-                                setFormExaminers(newExs);
-                              }}
-                              disabled={formExaminers.length === 1}
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <DialogFooter className="mt-3 pt-3 border-t flex flex-col-reverse sm:flex-row sm:items-center sm:justify-end gap-2">
-                  <Button 
-                    variant="outline" 
-                    className="w-full sm:w-auto"
-                    onClick={() => setIsSeminarDetailOpen(false)}
-                  >
-                    Batal
-                  </Button>
-                  <Button 
-                    className="w-full sm:w-auto"
-                    onClick={() => seminarMutation.mutate()} 
-                    disabled={seminarMutation.isPending}
-                  >
-                    {seminarMutation.isPending ? 'Menyimpan...' : <><Save className="w-4 h-4 mr-2" /> Simpan Penjadwalan</>}
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+            {/* Modal Dialog Komprehensif: Jadwal, Penguji & Tautan Evaluasi */}
+            {selectedSeminar && (
+              <SeminarScheduleDialog
+                open={isSeminarDetailOpen}
+                onOpenChange={setIsSeminarDetailOpen}
+                seminar={selectedSeminar}
+                dosenList={dosenList || []}
+                onSaved={() => {
+                  refetchSeminars();
+                }}
+              />
+            )}
           </TabsContent>
 
           {/* TAB 3: PENGATURAN FASE */}

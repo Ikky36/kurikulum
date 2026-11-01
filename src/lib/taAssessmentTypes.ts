@@ -383,3 +383,116 @@ export function useTaRubricsConfig() {
     resetToDefault,
   };
 }
+
+// Helper: Generate token unik untuk penguji atau ketua sidang
+export function generateAssessmentToken(prefix: 'ex' | 'ch' = 'ex'): string {
+  const randPart = typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID().replace(/-/g, '').slice(0, 24)
+    : Math.random().toString(36).substring(2) + Date.now().toString(36);
+  return `${prefix}_${randPart}`;
+}
+
+// Helper: Membangun URL tautan evaluasi penguji atau ketua sidang
+export function getAssessmentUrl(role: 'penguji' | 'ketua-sidang', token: string): string {
+  if (typeof window === 'undefined') return '';
+  const origin = window.location.origin;
+  return `${origin}/evaluasi-ta/${role}?token=${encodeURIComponent(token)}`;
+}
+
+// Helper: Membangun pesan WhatsApp rapi untuk Penguji
+export function buildExaminerWhatsAppMessage(params: {
+  examinerName: string;
+  examinerRole: string;
+  studentName: string;
+  studentNim: string;
+  studentProdi?: string;
+  taTitle: string;
+  seminarType: 'sempro' | 'sidang';
+  scheduleDate?: string | null;
+  room?: string | null;
+  token: string;
+}): string {
+  const phaseLabel = params.seminarType === 'sempro' ? 'Seminar Proposal Skripsi' : 'Sidang Munaqasyah Skripsi';
+  const evaluationUrl = getAssessmentUrl('penguji', params.token);
+
+  let dateStr = 'Belum ditentukan';
+  let timeStr = '-';
+  if (params.scheduleDate) {
+    const d = new Date(params.scheduleDate);
+    dateStr = d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+  }
+
+  return `*UNDANGAN & TAUTAN PENILAIAN ${phaseLabel.toUpperCase()}*
+_STITMA Yogyakarta_
+
+Kepada Yth.
+*${params.examinerName}*
+Bertindak sebagai: *${params.examinerRole}*
+
+Dengan hormat, kami memohon kesediaan Bapak/Ibu untuk menguji pada agenda ujian mahasiswa berikut:
+
+👤 *Mahasiswa:* ${params.studentName} (${params.studentNim})
+📚 *Program Studi:* ${params.studentProdi || 'Pendidikan Bahasa Arab'}
+📝 *Judul Tugas Akhir:*
+"${params.taTitle}"
+
+🗓️ *Hari/Tanggal:* ${dateStr}
+⏰ *Pukul:* ${timeStr}
+📍 *Ruangan:* ${params.room || 'Ruang Sidang STITMA'}
+
+Silakan membuka tautan evaluasi berikut untuk mengisi nilai rubrik dan membubuhkan tanda tangan secara langsung tanpa perlu login:
+👉 ${evaluationUrl}
+
+Atas perhatian, bimbingan, dan kerja samanya, kami ucapkan terima kasih.
+_Panitia Ujian Tugas Akhir STITMA Yogyakarta_`;
+}
+
+// Helper: Membangun pesan WhatsApp rapi untuk Ketua Sidang
+export function buildChairpersonWhatsAppMessage(params: {
+  chairpersonName: string;
+  studentName: string;
+  studentNim: string;
+  studentProdi?: string;
+  taTitle: string;
+  seminarType: 'sempro' | 'sidang';
+  scheduleDate?: string | null;
+  room?: string | null;
+  token: string;
+}): string {
+  const phaseLabel = params.seminarType === 'sempro' ? 'Seminar Proposal Skripsi' : 'Sidang Munaqasyah Skripsi';
+  const chairpersonUrl = getAssessmentUrl('ketua-sidang', params.token);
+
+  let dateStr = 'Belum ditentukan';
+  let timeStr = '-';
+  if (params.scheduleDate) {
+    const d = new Date(params.scheduleDate);
+    dateStr = d.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    timeStr = d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+  }
+
+  return `*UNDANGAN & PENGESAHAN KETUA SIDANG - ${phaseLabel.toUpperCase()}*
+_STITMA Yogyakarta_
+
+Kepada Yth.
+*${params.chairpersonName}*
+Bertindak sebagai: *Ketua Sidang*
+
+Dengan hormat, kami mengundang Bapak/Ibu untuk memimpin jalannya agenda ${phaseLabel} mahasiswa berikut:
+
+👤 *Mahasiswa:* ${params.studentName} (${params.studentNim})
+📚 *Program Studi:* ${params.studentProdi || 'Pendidikan Bahasa Arab'}
+📝 *Judul Tugas Akhir:*
+"${params.taTitle}"
+
+🗓️ *Hari/Tanggal:* ${dateStr}
+⏰ *Pukul:* ${timeStr}
+📍 *Ruangan:* ${params.room || 'Ruang Sidang STITMA'}
+
+Melalui tautan di bawah ini, Bapak/Ibu dapat memantau perolehan skor dari dewan penguji secara real-time, menetapkan status kelulusan, dan mengesahkan Berita Acara tanpa perlu login:
+👉 ${chairpersonUrl}
+
+Atas kesediaan dan kerja samanya, kami ucapkan terima kasih.
+_Panitia Ujian Tugas Akhir STITMA Yogyakarta_`;
+}
+

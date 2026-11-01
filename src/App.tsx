@@ -25,6 +25,8 @@ import QuizTaking from "./pages/QuizTaking";
 import ElearningRecap from "./pages/ElearningRecap";
 import TugasAkhir from "./pages/TugasAkhir";
 import VerifikasiDokumenPublic from "./pages/VerifikasiDokumenPublic";
+import EvaluasiPengujiPage from "./pages/tugas-akhir/EvaluasiPengujiPage";
+import EvaluasiKetuaSidangPage from "./pages/tugas-akhir/EvaluasiKetuaSidangPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -60,6 +62,8 @@ function AppContent() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/verifikasi-dokumen" element={<VerifikasiDokumenPublic />} />
           <Route path="/v" element={<VerifikasiDokumenPublic />} />
+          <Route path="/evaluasi-ta/penguji" element={<EvaluasiPengujiPage />} />
+          <Route path="/evaluasi-ta/ketua-sidang" element={<EvaluasiKetuaSidangPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
