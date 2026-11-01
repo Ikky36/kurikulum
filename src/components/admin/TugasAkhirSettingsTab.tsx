@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TaRubricManagerCard } from '@/components/admin/TaRubricManagerCard';
 
 export const TugasAkhirSettingsTab = () => {
   const queryClient = useQueryClient();
@@ -610,6 +611,9 @@ export const TugasAkhirSettingsTab = () => {
           </Tabs>
         </CardContent>
       </Card>
+
+      {/* Card 3: Rubrik Penilaian Seminar Proposal & Sidang Tugas Akhir */}
+      <TaRubricManagerCard />
     </div>
   );
 };
