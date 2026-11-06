@@ -46,12 +46,17 @@ export const SeminarRegistrationForm = ({
   const kbApproval = getDocApproval(approvalState, 'kartu_bimbingan_ta');
   const isKbApproved = Boolean(kbApproval.signers?.advisor_1?.is_approved || kbApproval.signers?.kaprodi?.is_approved);
 
-  // Filter requirements specific to this phase and TA type
+  // Filter requirements specific to this phase and TA type, including general requirements (umum)
   const reqsToEval = requirements.filter(req => {
-    if (req.phase !== phase) return false;
+    const isApplicablePhase = req.phase === 'umum' || req.phase === phase;
+    if (!isApplicablePhase) return false;
     if (req.is_general) return true;
     if (submission?.type_id && req.type_id === submission.type_id) return true;
     return false;
+  }).sort((a, b) => {
+    if (a.phase === 'umum' && b.phase !== 'umum') return -1;
+    if (a.phase !== 'umum' && b.phase === 'umum') return 1;
+    return (a.order_num ?? 0) - (b.order_num ?? 0);
   });
 
   // Derived values for checks
@@ -189,6 +194,11 @@ export const SeminarRegistrationForm = ({
                     <Label className="text-base font-medium">
                       {req.name} {req.is_required && <span className="text-destructive">*</span>}
                     </Label>
+                    {req.phase === 'umum' && (
+                      <Badge variant="outline" className="text-[10px] h-5 px-1.5 border-blue-300 text-blue-700 bg-blue-50/70 dark:bg-blue-950/30 dark:text-blue-300 font-medium">
+                        Syarat Umum
+                      </Badge>
+                    )}
                     {autoCheck && (
                       isMet 
                         ? <CheckCircle2 className="w-5 h-5 text-green-500" />

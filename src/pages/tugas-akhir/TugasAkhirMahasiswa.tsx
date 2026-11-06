@@ -1591,7 +1591,7 @@ export default function TugasAkhirMahasiswa() {
                     />
                   </div>
                   
-                  {taRequirements?.filter(r => r.phase === 'pengajuan_judul' && (r.is_general || r.type_id === selectedType) && r.req_type === 'document').map(req => (
+                  {taRequirements?.filter(r => (r.phase === 'umum' || r.phase === 'pengajuan_judul') && (r.is_general || r.type_id === selectedType) && r.req_type === 'document').map(req => (
                     <div className="space-y-2" key={req.id}>
                       <Label>{req.name} {req.is_required && <span className="text-destructive">*</span>}</Label>
                       <Input 
@@ -1604,7 +1604,7 @@ export default function TugasAkhirMahasiswa() {
                     </div>
                   ))}
 
-                  {taRequirements?.filter(r => r.phase === 'pengajuan_judul' && (r.is_general || r.type_id === selectedType) && r.req_type === 'document').length === 0 && (
+                  {taRequirements?.filter(r => (r.phase === 'umum' || r.phase === 'pengajuan_judul') && (r.is_general || r.type_id === selectedType) && r.req_type === 'document').length === 0 && (
                      <div className="space-y-2">
                        <Label>Link Dokumen Proposal (Google Drive, dll)</Label>
                        <Input 

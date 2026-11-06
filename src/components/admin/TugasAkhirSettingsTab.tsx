@@ -79,6 +79,7 @@ export const TugasAkhirSettingsTab = () => {
 
   const openAddReq = () => {
     resetReqForm();
+    setReqPhase(activeTab);
     setIsReqDialogOpen(true);
   };
 
@@ -274,6 +275,78 @@ export const TugasAkhirSettingsTab = () => {
       toast.error('Gagal memperbarui pengaturan: ' + err.message);
     }
   });
+
+  const renderReqRow = (req: any, index: number, arr: any[], isInheritedUmum = false) => (
+    <TableRow key={req.id} className={isInheritedUmum ? 'bg-blue-50/20 dark:bg-blue-950/10' : undefined}>
+      <TableCell className="font-medium">
+        <div className="flex items-center gap-2">
+          <span>{req.name}</span>
+        </div>
+      </TableCell>
+      <TableCell>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {isInheritedUmum && (
+            <Badge variant="outline" className="border-blue-400 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 text-[11px] font-semibold">
+              Syarat Umum
+            </Badge>
+          )}
+          <Badge variant={req.is_general ? 'default' : 'outline'} className="text-[11px]">
+            {req.is_general ? 'Semua Jenis' : `Khusus: ${req.ta_types?.name}`}
+          </Badge>
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge variant="secondary" className="capitalize text-[11px]">
+          {req.req_type === 'document' ? 'Input URL/Link' : 
+           req.req_type === 'auto_fill' ? 'Auto-Fill Data' :
+           req.req_type === 'min_sks' ? 'Syarat SKS' : 
+           req.req_type === 'min_semester' ? 'Syarat Semester' :
+           req.req_type === 'predicate' ? 'Syarat Nilai (Predikat)' :
+           req.req_type === 'course' ? 'Lulus Matkul' : req.req_type}
+        </Badge>
+      </TableCell>
+      <TableCell className="text-sm">
+        {req.req_type === 'min_sks' && `Min ${req.req_value?.min} SKS`}
+        {req.req_type === 'min_semester' && `Min Sem ${req.req_value?.min}`}
+        {req.req_type === 'predicate' && `Max ${req.req_value?.max_count} MK (${instrumenPenilaian?.find((i:any) => i.id === req.req_value?.predicate_id)?.predikat})`}
+        {req.req_type === 'course' && `Matkul ID: ${req.req_value?.course_ids?.[0]}`}
+        {req.req_type === 'document' && '-'}
+        {req.req_type === 'auto_fill' && (
+          req.req_value?.field === 'doc_pengesahan_sempro'
+            ? 'Dokumen: Pengesahan Sempro'
+            : req.req_value?.field === 'doc_pengesahan_ta'
+            ? 'Dokumen: Pengesahan TA'
+            : req.req_value?.field === 'doc_kartu_bimbingan'
+            ? 'Dokumen: Kartu Bimbingan'
+            : `Field: ${req.req_value?.field}`
+        )}
+      </TableCell>
+      <TableCell>
+        <Switch 
+          checked={req.is_required} 
+          onCheckedChange={(checked) => updateReqInlineMutation.mutate({ id: req.id, field: 'is_required', value: checked })}
+        />
+      </TableCell>
+      <TableCell>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-7 w-7" disabled={index === 0} onClick={() => moveRequirementMutation.mutate({ list: arr, index, direction: 'up' })}>
+            <ArrowUp className="w-4 h-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" disabled={index === arr.length - 1} onClick={() => moveRequirementMutation.mutate({ list: arr, index, direction: 'down' })}>
+            <ArrowDown className="w-4 h-4" />
+          </Button>
+          <Button variant="outline" size="icon" className="h-8 w-8 ml-1 mr-1" onClick={() => openEditReq(req)}>
+            <Edit className="w-4 h-4" />
+          </Button>
+          <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => {
+            if (confirm('Hapus persyaratan ini?')) deleteReqMutation.mutate(req.id);
+          }}>
+            <Trash2 className="w-4 h-4" />
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
 
   if (typesLoading || reqsLoading) return <div>Memuat pengaturan...</div>;
 
@@ -550,71 +623,74 @@ export const TugasAkhirSettingsTab = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {taRequirements?.filter(r => r.phase === activeTab).length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Belum ada persyaratan di fase ini.</TableCell>
-                      </TableRow>
+                    {activeTab === 'umum' ? (
+                      taRequirements?.filter(r => r.phase === 'umum').length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center text-muted-foreground py-8">Belum ada persyaratan di fase ini.</TableCell>
+                        </TableRow>
+                      ) : (
+                        taRequirements?.filter(r => r.phase === 'umum').map((req: any, index: number, arr: any[]) =>
+                          renderReqRow(req, index, arr, false)
+                        )
+                      )
+                    ) : (
+                      <>
+                        {/* Kelompok Syarat Umum */}
+                        <TableRow className="bg-blue-50/70 dark:bg-blue-950/30 hover:bg-blue-50/70 border-b border-blue-100 dark:border-blue-900/40">
+                          <TableCell colSpan={6} className="py-2.5 px-4">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold uppercase tracking-wider text-blue-900 dark:text-blue-200 flex items-center gap-1.5">
+                                📋 Syarat Umum (Berlaku Otomatis untuk Semua Fase)
+                              </span>
+                              <Badge variant="outline" className="text-[11px] bg-background text-blue-700 dark:text-blue-300 border-blue-200 font-medium">
+                                {(taRequirements?.filter(r => r.phase === 'umum') || []).length} Syarat Umum
+                              </Badge>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+
+                        {(taRequirements?.filter(r => r.phase === 'umum') || []).length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center text-muted-foreground py-4 text-xs italic">
+                              Belum ada syarat umum yang disetel di tab Pra-Syarat Umum.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          (taRequirements?.filter(r => r.phase === 'umum') || []).map((req: any, index: number, arr: any[]) =>
+                            renderReqRow(req, index, arr, true)
+                          )
+                        )}
+
+                        {/* Kelompok Syarat Khusus Fase */}
+                        <TableRow className="bg-muted/40 hover:bg-muted/40 border-y">
+                          <TableCell colSpan={6} className="py-2.5 px-4">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-semibold uppercase tracking-wider text-foreground flex items-center gap-1.5">
+                                🎯 Syarat Khusus Fase: {
+                                  activeTab === 'pengajuan_judul' ? 'Pengajuan Judul' :
+                                  activeTab === 'sempro' ? 'Seminar Proposal' : 'Sidang Akhir'
+                                }
+                              </span>
+                              <Badge variant="secondary" className="text-[11px]">
+                                {(taRequirements?.filter(r => r.phase === activeTab) || []).length} Syarat Khusus
+                              </Badge>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+
+                        {(taRequirements?.filter(r => r.phase === activeTab) || []).length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center text-muted-foreground py-6 text-sm">
+                              Belum ada syarat khusus tambahan untuk fase ini. Tekan tombol &quot;+ Tambah Syarat&quot; untuk menambahkan syarat khusus.
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          (taRequirements?.filter(r => r.phase === activeTab) || []).map((req: any, index: number, arr: any[]) =>
+                            renderReqRow(req, index, arr, false)
+                          )
+                        )}
+                      </>
                     )}
-                    {taRequirements?.filter(r => r.phase === activeTab).map((req: any, index: number, arr: any[]) => (
-                      <TableRow key={req.id}>
-                        <TableCell className="font-medium">{req.name}</TableCell>
-                        <TableCell>
-                          <Badge variant={req.is_general ? 'default' : 'outline'}>
-                            {req.is_general ? 'Semua Jenis' : `Khusus: ${req.ta_types?.name}`}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="capitalize">
-                            {req.req_type === 'document' ? 'Input URL/Link' : 
-                             req.req_type === 'auto_fill' ? 'Auto-Fill Data' :
-                             req.req_type === 'min_sks' ? 'Syarat SKS' : 
-                             req.req_type === 'min_semester' ? 'Syarat Semester' :
-                             req.req_type === 'predicate' ? 'Syarat Nilai (Predikat)' :
-                             req.req_type === 'course' ? 'Lulus Matkul' : req.req_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {req.req_type === 'min_sks' && `Min ${req.req_value?.min} SKS`}
-                          {req.req_type === 'min_semester' && `Min Sem ${req.req_value?.min}`}
-                          {req.req_type === 'predicate' && `Max ${req.req_value?.max_count} MK (${instrumenPenilaian?.find((i:any) => i.id === req.req_value?.predicate_id)?.predikat})`}
-                          {req.req_type === 'course' && `Matkul ID: ${req.req_value?.course_ids?.[0]}`}
-                          {req.req_type === 'document' && '-'}
-                          {req.req_type === 'auto_fill' && (
-                            req.req_value?.field === 'doc_pengesahan_sempro'
-                              ? 'Dokumen: Pengesahan Sempro'
-                              : req.req_value?.field === 'doc_pengesahan_ta'
-                              ? 'Dokumen: Pengesahan TA'
-                              : req.req_value?.field === 'doc_kartu_bimbingan'
-                              ? 'Dokumen: Kartu Bimbingan'
-                              : `Field: ${req.req_value?.field}`
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Switch 
-                            checked={req.is_required} 
-                            onCheckedChange={(checked) => updateReqInlineMutation.mutate({ id: req.id, field: 'is_required', value: checked })}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={index === 0} onClick={() => moveRequirementMutation.mutate({ list: arr, index, direction: 'up' })}>
-                              <ArrowUp className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={index === arr.length - 1} onClick={() => moveRequirementMutation.mutate({ list: arr, index, direction: 'down' })}>
-                              <ArrowDown className="w-4 h-4" />
-                            </Button>
-                            <Button variant="outline" size="icon" className="h-8 w-8 ml-1 mr-1" onClick={() => openEditReq(req)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="destructive" size="icon" className="h-8 w-8" onClick={() => {
-                              if (confirm('Hapus persyaratan ini?')) deleteReqMutation.mutate(req.id);
-                            }}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
                   </TableBody>
                 </Table>
               </div>
