@@ -200,6 +200,12 @@ export function UniversalDocumentContainer({
 
   const isFormatPenilaian = isFormatPenilaianSidang || isFormatPenilaianSempro;
 
+  // Identifikasi format berita acara seminar proposal resmi
+  const isFormatBeritaAcaraSempro =
+    templateCode === 'berita_acara_sempro' ||
+    template?.code === 'berita_acara_sempro' ||
+    template?.document_role === 'berita_acara_sempro';
+
   const examinerSignatureUrl =
     signaturesData?.examiner?.signature_url ||
     signaturesData?.examiner_1?.signature_url ||
@@ -602,14 +608,29 @@ export function UniversalDocumentContainer({
           )}
 
           {/* 2. JUDUL DOKUMEN */}
-          <div className="text-center my-3">
+          <div className="text-center my-3 font-serif">
             <h1 className="text-base sm:text-lg font-bold tracking-wide uppercase text-slate-900 font-serif">
-              {isFormatPenilaian ? 'FORMAT PENILAIAN' : finalTitle}
+              {isFormatPenilaian
+                ? 'FORMAT PENILAIAN'
+                : isFormatBeritaAcaraSempro
+                ? 'BERITA ACARA SEMINAR PROPOSAL TUGAS AKHIR'
+                : finalTitle}
             </h1>
-            {!isFormatPenilaian && finalSubtitle && (
-              <h2 className="text-xs sm:text-sm font-semibold tracking-normal text-slate-700 uppercase mt-0.5">
-                {finalSubtitle}
-              </h2>
+            {isFormatBeritaAcaraSempro ? (
+              <>
+                <h2 className="text-xs sm:text-sm font-semibold tracking-normal text-slate-800 mt-0.5">
+                  Program Studi {resolvedVariables.program_studi || studentInfo?.program || 'Pendidikan Bahasa Arab'}
+                </h2>
+                <h3 className="text-xs sm:text-sm font-semibold tracking-normal text-slate-800">
+                  {docSettings.institution_name || 'Sekolah Tinggi Ilmu Tarbiyah Madani'}
+                </h3>
+              </>
+            ) : (
+              !isFormatPenilaian && finalSubtitle && (
+                <h2 className="text-xs sm:text-sm font-semibold tracking-normal text-slate-700 uppercase mt-0.5">
+                  {finalSubtitle}
+                </h2>
+              )
             )}
           </div>
 
@@ -640,7 +661,7 @@ export function UniversalDocumentContainer({
                 </div>
               </div>
             </div>
-          ) : template.show_student_info ? (
+          ) : isFormatBeritaAcaraSempro ? null : template.show_student_info ? (
             <div className="mb-4 p-3 bg-slate-50 border border-slate-300 rounded text-xs leading-relaxed">
               <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
                 {(template.student_bio_fields && template.student_bio_fields.length > 0
@@ -684,7 +705,7 @@ export function UniversalDocumentContainer({
           ) : null}
 
           {/* 3.b TEKS NARASI / SURAT KETERANGAN */}
-          {template.content_mode !== 'table_only' && template.body_text_enabled !== false && template.body_text_template && (
+          {!isFormatBeritaAcaraSempro && template.content_mode !== 'table_only' && template.body_text_enabled !== false && template.body_text_template && (
             template.body_text_template.includes('<') && template.body_text_template.includes('>') ? (
               <div
                 className="my-3 text-xs sm:text-sm leading-relaxed text-slate-800 document-rich-content"
@@ -1015,6 +1036,202 @@ export function UniversalDocumentContainer({
                 </div>
               </div>
             </div>
+          ) : isFormatBeritaAcaraSempro && !children ? (
+            <div className="w-full my-2 font-serif text-slate-900 text-xs space-y-3">
+              {/* Paragraf Pembuka */}
+              <p className="text-justify leading-relaxed">
+                Pada hari ini telah dilangsungkan Seminar Proposal Tugas Akhir Program Studi{' '}
+                {resolvedVariables.program_studi || studentInfo?.program || docSettings.program_name || 'Pendidikan Bahasa Arab'}{' '}
+                {docSettings.institution_name || 'Sekolah Tinggi Ilmu Tarbiyah Madani'} untuk mahasiswa tersebut di bawah ini:
+              </p>
+
+              {/* Data Mahasiswa */}
+              <div className="space-y-1.5 py-1">
+                <div className="flex">
+                  <span className="w-36 font-normal shrink-0">Nama</span>
+                  <span className="w-4 text-center shrink-0">:</span>
+                  <span className="font-normal flex-1">
+                    {resolvedVariables.nama_mahasiswa || studentInfo?.name || 'Bagas Irawan'}
+                  </span>
+                </div>
+                <div className="flex">
+                  <span className="w-36 font-normal shrink-0">NIM</span>
+                  <span className="w-4 text-center shrink-0">:</span>
+                  <span className="font-normal flex-1">
+                    {resolvedVariables.nim || studentInfo?.nim || '221.372.104'}
+                  </span>
+                </div>
+                <div className="flex">
+                  <span className="w-36 font-normal shrink-0">Judul Tugas Akhir</span>
+                  <span className="w-4 text-center shrink-0">:</span>
+                  <span className="font-normal uppercase flex-1 leading-relaxed">
+                    {resolvedVariables.judul_tugas_akhir || resolvedVariables.topic_title || studentInfo?.judul_tugas_akhir || 'EFEKTIVITAS KOMBINASI FLASHCARD DAN TALKING STICK PADA SISWA KELAS V PUTRA MITQ JAMILURRAHMAN'}
+                  </span>
+                </div>
+                <div className="flex pt-1">
+                  <span className="w-36 font-normal shrink-0">Dengan Nilai</span>
+                  <span className="w-4 text-center shrink-0">:</span>
+                  <span className="font-bold flex-1">
+                    {resolvedVariables.skor_akhir && resolvedVariables.skor_akhir !== '-'
+                      ? `${resolvedVariables.skor_akhir} ( ${resolvedVariables.predikat_huruf || determineGradeFromScore(Number(resolvedVariables.skor_akhir) || 0).grade} )`
+                      : '91 ( A )'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Jadwal Pelaksanaan */}
+              <div className="space-y-1.5 py-1">
+                <p className="italic">
+                  Yang <em>Insya Allah</em> akan dilaksanakan pada:
+                </p>
+                <div className="flex">
+                  <span className="w-36 font-normal shrink-0">Tanggal</span>
+                  <span className="w-4 text-center shrink-0">:</span>
+                  <span className="font-normal flex-1">
+                    {resolvedVariables.tanggal_ujian || resolvedDate || '25 December 2025'}
+                  </span>
+                </div>
+                <div className="flex">
+                  <span className="w-36 font-normal shrink-0">Pukul</span>
+                  <span className="w-4 text-center shrink-0">:</span>
+                  <span className="font-normal flex-1">
+                    {resolvedVariables.jam_ujian || '09.00-10.00'}
+                  </span>
+                </div>
+                <div className="flex">
+                  <span className="w-36 font-normal shrink-0">Tempat</span>
+                  <span className="w-4 text-center shrink-0">:</span>
+                  <span className="font-normal flex-1">
+                    {resolvedVariables.ruangan_ujian || 'Ruang Rapat Ketua STITMA'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Tabel Tim Penguji */}
+              <div className="space-y-2 pt-1">
+                <p className="font-normal">Dengan Tim Penguji Seminar Proposal Sebagai berikut:</p>
+                <table className="w-full border-collapse border border-slate-900 text-xs">
+                  <thead>
+                    <tr className="bg-slate-50/50">
+                      <th className="border border-slate-900 py-1.5 px-2 w-12 text-center font-bold">No</th>
+                      <th className="border border-slate-900 py-1.5 px-3 text-left font-bold">Nama</th>
+                      <th className="border border-slate-900 py-1.5 px-3 w-56 text-center font-bold">Tanda Tangan</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td className="border border-slate-900 py-2.5 px-2 text-center align-middle font-normal">1</td>
+                      <td className="border border-slate-900 py-2.5 px-3 align-middle">
+                        <div className="flex items-center justify-between">
+                          <span>{resolvedVariables.nama_ketua_sidang || 'Zulkifli Hayad, M.Pd.'}</span>
+                          <span className="text-slate-600 font-normal">(Ketua Sidang)</span>
+                        </div>
+                      </td>
+                      <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">
+                        {signaturesData?.chairperson?.signature_url ? (
+                          <img
+                            src={signaturesData.chairperson.signature_url}
+                            alt="TTD Ketua Sidang"
+                            className="h-10 max-w-[140px] mx-auto object-contain"
+                          />
+                        ) : (
+                          <div className="h-8 w-36 border-b border-dotted border-slate-400 mx-auto" />
+                        )}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-900 py-2.5 px-2 text-center align-middle font-normal">2</td>
+                      <td className="border border-slate-900 py-2.5 px-3 align-middle">
+                        <div className="flex items-center justify-between">
+                          <span>{examinerName || 'Dr. Syaiful Anam, M.Pd'}</span>
+                          <span className="text-slate-600 font-normal">(Penguji)</span>
+                        </div>
+                      </td>
+                      <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">
+                        {examinerSignatureUrl ? (
+                          <img
+                            src={examinerSignatureUrl}
+                            alt="TTD Penguji"
+                            className="h-10 max-w-[140px] mx-auto object-contain"
+                          />
+                        ) : (
+                          <div className="h-8 w-36 border-b border-dotted border-slate-400 mx-auto" />
+                        )}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="border border-slate-900 py-2.5 px-2 text-center align-middle font-normal">3</td>
+                      <td className="border border-slate-900 py-2.5 px-3 align-middle">
+                        <div className="flex items-center justify-between">
+                          <span>&nbsp;</span>
+                          <span className="text-slate-400 font-normal">(Penguji)</span>
+                        </div>
+                      </td>
+                      <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">
+                        <div className="h-8 w-36 mx-auto" />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Tanda Tangan Bawah (Penguji & Dosen Pembimbing) */}
+              <div className="grid grid-cols-2 gap-8 mt-8 pt-4 text-xs font-serif break-inside-avoid page-break-inside-avoid">
+                <div className="text-center flex flex-col items-center justify-between min-h-[140px]">
+                  <div>
+                    <p className="font-normal text-xs">Penguji,</p>
+                  </div>
+                  <div className="my-1 h-14 flex items-center justify-center">
+                    {examinerSignatureUrl ? (
+                      <img
+                        src={examinerSignatureUrl}
+                        alt="Tanda Tangan Penguji"
+                        className="max-h-14 max-w-[140px] object-contain"
+                      />
+                    ) : (
+                      <div className="h-12 w-36 border-b border-dotted border-slate-400" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-bold text-xs underline decoration-dotted">
+                      (&nbsp;{examinerName ? examinerName : '.........................................'}&nbsp;)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-center flex flex-col items-center justify-between min-h-[140px]">
+                  <div>
+                    <p className="text-xs">{docSettings.default_city || 'Bantul'}, {resolvedDate || '25 December 2025'}</p>
+                    <p className="font-normal text-xs mt-0.5">Dosen Pembimbing,</p>
+                  </div>
+                  <div className="my-1 h-14 flex items-center justify-center">
+                    {signaturesData?.advisor_1?.signature_url || signaturesData?.kaprodi?.signature_url ? (
+                      <img
+                        src={signaturesData?.advisor_1?.signature_url || signaturesData?.kaprodi?.signature_url}
+                        alt="Tanda Tangan Dosen Pembimbing"
+                        className="max-h-14 max-w-[140px] object-contain"
+                      />
+                    ) : (
+                      <div className="h-12 w-36 border-b border-dotted border-slate-400" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-bold text-xs underline decoration-dotted">
+                      (&nbsp;{signaturesData?.advisor_1?.name || signaturesData?.kaprodi?.name || 'Zulkifli Hayad, M.Pd.'}&nbsp;)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* QR Code Verifikasi */}
+              {verificationUrl && (
+                <div className="pt-2 flex justify-start">
+                  <div className="border border-slate-300 p-1 rounded bg-white shadow-2xs">
+                    <QRCodeSVG value={verificationUrl} size={48} />
+                  </div>
+                </div>
+              )}
+            </div>
           ) : template.content_mode !== 'text_only' && template.table_enabled !== false ? (
             <div className="w-full my-2 document-content">
               {children ? (
@@ -1059,7 +1276,7 @@ export function UniversalDocumentContainer({
           )}
 
           {/* 6. BLOK TANDA TANGAN & PENGESAHAN (Mengalir proporsional beberapa cm setelah konten terakhir) */}
-          {!isFormatPenilaian && (template.signatures || []).filter((s) => s.enabled).length > 0 && (
+          {!isFormatPenilaian && !isFormatBeritaAcaraSempro && (template.signatures || []).filter((s) => s.enabled).length > 0 && (
             <div className={`${getSignatureSpacingClass(template.signature_spacing)} pt-2 break-inside-avoid page-break-inside-avoid text-xs signature-block`}>
               {template.show_signature_date !== false && docSettings.show_signature_date !== false && (
                 <div className={`text-xs text-slate-700 mb-2 ${enabledSignatures.length === 1 && singleAlign === 'left' ? 'text-left pl-2 sm:pl-8' : enabledSignatures.length === 1 && singleAlign === 'center' ? 'text-center' : 'text-right'}`}>

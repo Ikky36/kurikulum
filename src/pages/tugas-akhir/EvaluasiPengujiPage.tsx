@@ -47,6 +47,12 @@ export const EvaluasiPengujiPage: React.FC = () => {
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [isSubmittedSuccess, setIsSubmittedSuccess] = useState(false);
   const [isDocModalOpen, setIsDocModalOpen] = useState(false);
+  const [selectedDocType, setSelectedDocType] = useState<'surat_tugas' | 'berita_acara' | 'lembar_nilai'>('lembar_nilai');
+
+  const openDocumentModal = (docType: 'surat_tugas' | 'berita_acara' | 'lembar_nilai') => {
+    setSelectedDocType(docType);
+    setIsDocModalOpen(true);
+  };
 
   // Helper pengisian nilai kolom secara langsung (tanpa slider)
   const handleScoreChange = (critId: string, valStr: string) => {
@@ -87,7 +93,8 @@ export const EvaluasiPengujiPage: React.FC = () => {
             ta_submissions(
               id,
               title,
-              profiles:student_id(full_name, nim, program)
+              profiles:student_id(full_name, nim, program),
+              ta_advisors(role, profiles:dosen_id(id, full_name, nip, signature_url))
             ),
             ta_examiners(*, profiles:dosen_id(full_name, nip))
           )
@@ -292,17 +299,38 @@ export const EvaluasiPengujiPage: React.FC = () => {
               </p>
             </div>
 
-            <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+            <div className="flex items-center gap-1.5 self-start sm:self-auto flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsDocModalOpen(true)}
-                className="text-xs h-8 gap-1.5"
+                onClick={() => openDocumentModal('surat_tugas')}
+                className="text-xs h-8 gap-1.5 border-slate-300 hover:border-blue-500 hover:text-blue-700 dark:hover:text-blue-300 bg-background"
+                title="Lihat / Cetak Surat Tugas"
               >
-                <Printer className="w-3.5 h-3.5" />
-                Lihat Format Dokumen
+                <FileCheck className="w-3.5 h-3.5 text-blue-600" />
+                Surat Tugas
               </Button>
-              <Badge variant="outline" className="text-xs px-3 py-1 font-semibold bg-primary/5 text-primary border-primary/30">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openDocumentModal('berita_acara')}
+                className="text-xs h-8 gap-1.5 border-slate-300 hover:border-emerald-500 hover:text-emerald-700 dark:hover:text-emerald-300 bg-background"
+                title="Lihat / Cetak Berita Acara"
+              >
+                <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                Berita Acara
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openDocumentModal('lembar_nilai')}
+                className="text-xs h-8 gap-1.5 border-slate-300 hover:border-amber-500 hover:text-amber-700 dark:hover:text-amber-300 bg-background"
+                title="Lihat / Cetak Formulir Penilaian"
+              >
+                <Award className="w-3.5 h-3.5 text-amber-600" />
+                Formulir Penilaian
+              </Button>
+              <Badge variant="outline" className="text-xs px-2.5 py-1 font-semibold bg-primary/5 text-primary border-primary/30">
                 {seminarType === 'sempro' ? 'Seminar Proposal' : 'Sidang Munaqasyah'}
               </Badge>
             </div>
@@ -317,15 +345,33 @@ export const EvaluasiPengujiPage: React.FC = () => {
                 <p>
                   Dikirimkan pada: {new Date(examinerData.signed_at).toLocaleString('id-ID')}. Anda masih dapat memperbarui nilai selama sidang belum dikunci oleh Ketua Sidang.
                 </p>
-                <div className="pt-2">
+                <div className="pt-2 flex flex-wrap gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsDocModalOpen(true)}
-                    className="h-7 text-xs gap-1.5 bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-200"
+                    onClick={() => openDocumentModal('surat_tugas')}
+                    className="h-7 text-xs gap-1.5 bg-white text-blue-800 border-blue-300 hover:bg-blue-50 dark:bg-slate-900 dark:text-blue-200"
                   >
-                    <Printer className="w-3.5 h-3.5" />
-                    Cetak / Simpan PDF Lembar Nilai
+                    <FileCheck className="w-3 h-3 text-blue-600" />
+                    Cetak Surat Tugas
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openDocumentModal('berita_acara')}
+                    className="h-7 text-xs gap-1.5 bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-50 dark:bg-slate-900 dark:text-emerald-200"
+                  >
+                    <FileText className="w-3 h-3 text-emerald-600" />
+                    Cetak Berita Acara
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openDocumentModal('lembar_nilai')}
+                    className="h-7 text-xs gap-1.5 bg-white text-amber-800 border-amber-300 hover:bg-amber-50 dark:bg-slate-900 dark:text-amber-200"
+                  >
+                    <Award className="w-3 h-3 text-amber-600" />
+                    Cetak Formulir Penilaian
                   </Button>
                 </div>
               </div>
@@ -678,6 +724,7 @@ export const EvaluasiPengujiPage: React.FC = () => {
           <SeminarDocumentViewerModal
             open={isDocModalOpen}
             onOpenChange={setIsDocModalOpen}
+            initialDocType={selectedDocType}
             seminar={{
               ...seminar,
               ta_examiners: (seminar.ta_examiners && seminar.ta_examiners.length > 0)
@@ -704,7 +751,6 @@ export const EvaluasiPengujiPage: React.FC = () => {
                     },
                   ],
             }}
-            initialDocType="lembar_nilai"
           />
         )}
       </div>
