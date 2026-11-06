@@ -22,8 +22,10 @@ import {
   Award,
   Sparkles,
   ExternalLink,
+  Printer,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { SeminarDocumentViewerModal } from '@/components/document/SeminarDocumentViewerModal';
 import {
   useTaRubricsConfig,
   calculateExaminerScore,
@@ -44,6 +46,7 @@ export const EvaluasiPengujiPage: React.FC = () => {
   const [revisionNotes, setRevisionNotes] = useState<string>('');
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
   const [isSubmittedSuccess, setIsSubmittedSuccess] = useState(false);
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
   // Helper pengisian nilai kolom secara langsung (tanpa slider)
   const handleScoreChange = (critId: string, valStr: string) => {
@@ -85,7 +88,8 @@ export const EvaluasiPengujiPage: React.FC = () => {
               id,
               title,
               profiles:student_id(full_name, nim, program)
-            )
+            ),
+            ta_examiners(*, profiles:dosen_id(full_name, nip))
           )
         `)
         .eq('access_token', token)
@@ -288,9 +292,20 @@ export const EvaluasiPengujiPage: React.FC = () => {
               </p>
             </div>
 
-            <Badge variant="outline" className="text-xs px-3 py-1 font-semibold self-start sm:self-auto bg-primary/5 text-primary border-primary/30">
-              {seminarType === 'sempro' ? 'Seminar Proposal' : 'Sidang Munaqasyah'}
-            </Badge>
+            <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDocModalOpen(true)}
+                className="text-xs h-8 gap-1.5"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Lihat Format Dokumen
+              </Button>
+              <Badge variant="outline" className="text-xs px-3 py-1 font-semibold bg-primary/5 text-primary border-primary/30">
+                {seminarType === 'sempro' ? 'Seminar Proposal' : 'Sidang Munaqasyah'}
+              </Badge>
+            </div>
           </div>
 
           {/* Banner Status Pengiriman */}
@@ -302,6 +317,17 @@ export const EvaluasiPengujiPage: React.FC = () => {
                 <p>
                   Dikirimkan pada: {new Date(examinerData.signed_at).toLocaleString('id-ID')}. Anda masih dapat memperbarui nilai selama sidang belum dikunci oleh Ketua Sidang.
                 </p>
+                <div className="pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsDocModalOpen(true)}
+                    className="h-7 text-xs gap-1.5 bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-200"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    Cetak / Simpan PDF Lembar Nilai
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -646,6 +672,41 @@ export const EvaluasiPengujiPage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Modal Cetak Dokumen Lembar Nilai */}
+        {seminar && (
+          <SeminarDocumentViewerModal
+            open={isDocModalOpen}
+            onOpenChange={setIsDocModalOpen}
+            seminar={{
+              ...seminar,
+              ta_examiners: (seminar.ta_examiners && seminar.ta_examiners.length > 0)
+                ? seminar.ta_examiners.map((ex: any) =>
+                    ex.id === examinerData.id
+                      ? {
+                          ...ex,
+                          score: scoreResult.finalScore,
+                          scores_detail: scoreResult.details,
+                          revision_notes: revisionNotes,
+                          signature_url: signatureUrl,
+                          signed_at: examinerData.signed_at || new Date().toISOString(),
+                        }
+                      : ex
+                  )
+                : [
+                    {
+                      ...examinerData,
+                      score: scoreResult.finalScore,
+                      scores_detail: scoreResult.details,
+                      revision_notes: revisionNotes,
+                      signature_url: signatureUrl,
+                      signed_at: examinerData.signed_at || new Date().toISOString(),
+                    },
+                  ],
+            }}
+            initialDocType="lembar_nilai"
+          />
+        )}
       </div>
     </div>
   );

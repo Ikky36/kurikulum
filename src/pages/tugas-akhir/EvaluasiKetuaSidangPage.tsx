@@ -24,8 +24,10 @@ import {
   FileCheck,
   Send,
   FileText,
+  Printer,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { SeminarDocumentViewerModal } from '@/components/document/SeminarDocumentViewerModal';
 import {
   useTaRubricsConfig,
   determineGradeFromScore,
@@ -44,6 +46,7 @@ export const EvaluasiKetuaSidangPage: React.FC = () => {
   const [revisionDeadline, setRevisionDeadline] = useState<string>('');
   const [officialNotes, setOfficialNotes] = useState<string>('');
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
   // 1. Fetch Seminar & Examiners by Chairperson Token
   const { data: seminarData, isLoading, error, refetch } = useQuery({
@@ -241,9 +244,20 @@ export const EvaluasiKetuaSidangPage: React.FC = () => {
               </p>
             </div>
 
-            <Badge variant="outline" className="text-xs px-3 py-1 font-semibold self-start sm:self-auto bg-primary/5 text-primary border-primary/30">
-              {seminarType === 'sempro' ? 'Seminar Proposal' : 'Sidang Munaqasyah'}
-            </Badge>
+            <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDocModalOpen(true)}
+                className="text-xs h-8 gap-1.5"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                Lihat Dokumen Sidang
+              </Button>
+              <Badge variant="outline" className="text-xs px-3 py-1 font-semibold bg-primary/5 text-primary border-primary/30">
+                {seminarType === 'sempro' ? 'Seminar Proposal' : 'Sidang Munaqasyah'}
+              </Badge>
+            </div>
           </div>
 
           {/* Banner Status Pengesahan */}
@@ -255,6 +269,17 @@ export const EvaluasiKetuaSidangPage: React.FC = () => {
                 <p>
                   Ditandatangani oleh Ketua Sidang pada {new Date(seminarData.chairperson_signed_at).toLocaleString('id-ID')}. Status kelulusan dan nilai telah resmi terbit.
                 </p>
+                <div className="pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsDocModalOpen(true)}
+                    className="h-7 text-xs gap-1.5 bg-white text-emerald-800 border-emerald-300 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-200"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    Cetak / Simpan PDF Berita Acara & Lembar Nilai
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -564,6 +589,24 @@ export const EvaluasiKetuaSidangPage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Modal Cetak Dokumen Seminar / Sidang */}
+        {seminarData && (
+          <SeminarDocumentViewerModal
+            open={isDocModalOpen}
+            onOpenChange={setIsDocModalOpen}
+            seminar={{
+              ...seminarData,
+              chairperson_signature_url: signatureUrl || seminarData.chairperson_signature_url,
+              final_score: averageScore !== null ? averageScore : seminarData.final_score,
+              final_grade: gradeResult?.grade || seminarData.final_grade,
+              result_status: resultStatus || seminarData.result_status,
+              revision_deadline: revisionDeadline || seminarData.revision_deadline,
+              official_notes: officialNotes || seminarData.official_notes,
+            }}
+            initialDocType="berita_acara"
+          />
+        )}
       </div>
     </div>
   );
