@@ -538,7 +538,7 @@ export const EvaluasiPengujiPage: React.FC = () => {
                         )}
                       </div>
                       {crit.description && (
-                        <p className="text-xs text-muted-foreground leading-relaxed pl-7">
+                        <p className="text-xs text-muted-foreground leading-relaxed pl-7 whitespace-pre-line">
                           {crit.description}
                         </p>
                       )}

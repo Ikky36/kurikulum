@@ -170,7 +170,7 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
   }
 
   // Template override with dynamic committee signatures
-  const isIndividualExaminerSheet = activeDocType === 'lembar_nilai' && !isSempro && selectedExaminerIndex !== 'rekap';
+  const isIndividualExaminerSheet = activeDocType === 'lembar_nilai' && selectedExaminerIndex !== 'rekap';
   const activeExaminer = isIndividualExaminerSheet && examiners.length > 0
     ? (examiners[selectedExaminerIndex as number] || examiners[0])
     : null;
@@ -178,12 +178,12 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
   // Template override with dynamic committee signatures
   const templateOverride: SingleDocumentTemplate = {
     ...baseTemplate,
-    document_title: (activeDocType === 'lembar_nilai' && !isSempro) ? 'FORMAT PENILAIAN' : baseTemplate.document_title,
-    document_subtitle: (activeDocType === 'lembar_nilai' && !isSempro) ? '' : baseTemplate.document_subtitle,
+    document_title: activeDocType === 'lembar_nilai' ? 'FORMAT PENILAIAN' : baseTemplate.document_title,
+    document_subtitle: activeDocType === 'lembar_nilai' ? '' : baseTemplate.document_subtitle,
     show_kop: true,
     show_footer: true,
     show_student_info: true,
-    student_bio_fields: (activeDocType === 'lembar_nilai' && !isSempro)
+    student_bio_fields: activeDocType === 'lembar_nilai'
       ? [
           { key: 'nama_mahasiswa', label: 'Nama Mahasiswa' },
           { key: 'nim', label: 'NIM' },
@@ -266,8 +266,8 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
             </div>
           </div>
 
-          {/* Sub-selector Penguji jika Lembar Nilai Sidang */}
-          {activeDocType === 'lembar_nilai' && !isSempro && examiners.length > 0 && (
+          {/* Sub-selector Penguji jika Lembar Nilai */}
+          {activeDocType === 'lembar_nilai' && examiners.length > 0 && (
             <div className="flex items-center gap-1.5 overflow-x-auto pt-1 border-t">
               <span className="text-[11px] font-bold text-muted-foreground uppercase shrink-0">
                 Pilih Format Lembar:
@@ -340,6 +340,204 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
               isIndividualExaminerSheet && activeExaminer ? (
                 // FORMAT PENILAIAN INDIVIDUAL PENGUJI (Sesuai Format Resmi Dokumen)
                 (() => {
+                  if (isSempro) {
+                    const semproRubricCriteria = [
+                      {
+                        no: 1,
+                        id: 'sempro_crit_1',
+                        title: 'PENDAHULUAN',
+                        weight: 20,
+                        bullets: [
+                          'Ketajaman Perumusan Masalah',
+                          'Kesesuaian Tujuan Penelitian dengan Masalah Penelitian',
+                          'Manfaat Penelitian',
+                        ],
+                      },
+                      {
+                        no: 2,
+                        id: 'sempro_crit_2',
+                        title: 'TINJAUAN PUSTAKA',
+                        weight: 20,
+                        bullets: [
+                          'Relevansi dengan Masalah Penelitian',
+                          'Cara Mengutip',
+                          'Kemutakhiran Sumber Pustaka',
+                          'Cara Penyusunan Daftar Pustaka',
+                        ],
+                      },
+                      {
+                        no: 3,
+                        id: 'sempro_crit_3',
+                        title: 'METODOLOGI PENELITIAN',
+                        weight: 30,
+                        bullets: [
+                          'Kesesuaian Rancangan dengan Masalah Penelitian',
+                          'Ketepatan Instrumen Penelitian',
+                          'Ketepatan Metode Analisis Data',
+                        ],
+                      },
+                      {
+                        no: 4,
+                        id: 'sempro_crit_4',
+                        title: 'LISAN',
+                        weight: 15,
+                        bullets: [
+                          'Pemahaman Materi dan Kelancaran Presentasi',
+                          'Ketepatan dan Pemahaman Jawaban',
+                        ],
+                      },
+                      {
+                        no: 5,
+                        id: 'sempro_crit_5',
+                        title: 'UMUM',
+                        weight: 15,
+                        bullets: [
+                          'Sistematika Proposal',
+                          'Keterbacaan',
+                          'Penggunaan Bahasa',
+                        ],
+                      },
+                    ];
+
+                    const getScoreVal = (critId: string, idx: number) => {
+                      if (!activeExaminer || !Array.isArray(activeExaminer.scores_detail)) return '-';
+                      const item = activeExaminer.scores_detail.find(
+                        (s: any) => s.criterion_id === critId || s.criterion_id === `sempro_crit_${idx + 1}`
+                      );
+                      if (item && item.raw_score !== undefined && item.raw_score !== null) {
+                        return item.raw_score;
+                      }
+                      const fallbackItem = activeExaminer.scores_detail[idx];
+                      if (fallbackItem && fallbackItem.raw_score !== undefined && fallbackItem.raw_score !== null) {
+                        return fallbackItem.raw_score;
+                      }
+                      return '-';
+                    };
+
+                    let finalScoreExaminer = '-';
+                    if (activeExaminer.score !== undefined && activeExaminer.score !== null) {
+                      finalScoreExaminer = Number(activeExaminer.score).toFixed(1);
+                    }
+                    const gradeExaminer = determineGradeFromScore(Number(finalScoreExaminer) || 0, 66);
+                    const defaultCity = docSettings.default_city || 'Bantul';
+                    const verificationUrl = typeof window !== 'undefined'
+                      ? `${window.location.origin}/v?doc=lembar_nilai_sempro&id=${seminar.id}`
+                      : '';
+
+                    return (
+                      <div className="my-2 space-y-3 font-serif text-slate-900">
+                        {/* TABEL FORMAT PENILAIAN */}
+                        <table className="w-full border-collapse border border-slate-900 text-xs text-slate-900">
+                          <thead>
+                            <tr className="bg-slate-50/50 border-b border-slate-900 text-slate-900 font-bold text-center">
+                              <th className="border border-slate-900 py-1.5 px-2 w-12 text-center font-bold">No</th>
+                              <th className="border border-slate-900 py-1.5 px-3 text-center font-bold">
+                                Kriteria Penilaian
+                              </th>
+                              <th className="border border-slate-900 py-1.5 px-3 w-20 text-center font-bold">
+                                Bobot
+                              </th>
+                              <th className="border border-slate-900 py-1.5 px-3 w-24 text-center font-bold">
+                                Nilai
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {semproRubricCriteria.map((crit, idx) => (
+                              <tr key={crit.id} className="hover:bg-slate-50/40">
+                                <td className="border border-slate-900 py-2 px-2 text-center align-top font-normal">{crit.no}</td>
+                                <td className="border border-slate-900 py-2 px-3 align-top">
+                                  <div className="font-bold uppercase text-slate-900">{crit.title}</div>
+                                  <ul className="mt-1 space-y-0.5 text-slate-800 list-none pl-0">
+                                    {crit.bullets.map((b, bIdx) => (
+                                      <li key={bIdx}>- {b}</li>
+                                    ))}
+                                  </ul>
+                                </td>
+                                <td className="border border-slate-900 py-2 px-3 text-center align-middle font-normal">
+                                  {crit.weight}
+                                </td>
+                                <td className="border border-slate-900 py-2 px-3 text-center align-middle font-mono font-medium">
+                                  {getScoreVal(crit.id, idx)}
+                                </td>
+                              </tr>
+                            ))}
+
+                            {/* Catatan Penguji */}
+                            <tr>
+                              <td colSpan={4} className="border border-slate-900 py-2 px-3 align-top">
+                                <div className="font-normal text-slate-900">Catatan Penguji :</div>
+                                <div className="min-h-[45px] mt-1 text-slate-800 whitespace-pre-wrap">
+                                  {activeExaminer.revision_notes || '-'}
+                                </div>
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+
+                        {/* Teks Nilai Rata-rata akhir */}
+                        <div className="my-2.5 text-xs font-bold text-slate-900">
+                          Nilai Rata-rata akhir : (&nbsp;&nbsp;{finalScoreExaminer !== '-' ? `${finalScoreExaminer} ( ${gradeExaminer.grade} )` : '          '}&nbsp;&nbsp;)
+                        </div>
+
+                        {/* Bagian Bawah Dua Kolom (Skala Nilai & Pengesahan Penguji) */}
+                        <div className="grid grid-cols-2 gap-6 mt-4 pt-2 text-xs text-slate-900 break-inside-avoid page-break-inside-avoid">
+                          {/* Kolom Kiri: Tabel Rentang Skala Nilai */}
+                          <div className="space-y-1 font-mono text-[11px] leading-tight pt-1">
+                            <div className="flex gap-3"><span className="w-6 font-bold">A</span><span>91 – 100</span></div>
+                            <div className="flex gap-3"><span className="w-6 font-bold">A-</span><span>81 – 90,99</span></div>
+                            <div className="flex gap-3"><span className="w-6 font-bold">B+</span><span>71 – 80,99</span></div>
+                            <div className="flex gap-3"><span className="w-6 font-bold">B</span><span>66 – 70,99</span></div>
+                            <div className="flex gap-3"><span className="w-6 font-bold">C+</span><span>61 – 65,99</span></div>
+                            <div className="flex gap-3"><span className="w-6 font-bold">D</span><span>46 – 60,99</span></div>
+                            <div className="flex gap-3"><span className="w-6 font-bold">E</span><span>0 – 45,99</span></div>
+                          </div>
+
+                          {/* Kolom Kanan: Pengesahan Penguji & Barcode */}
+                          <div className="flex flex-col items-center justify-between text-center min-h-[145px]">
+                            <div>
+                              <p className="text-xs">
+                                {defaultCity}, {dateFormatted}
+                              </p>
+                              <p className="font-bold text-xs mt-0.5">
+                                {activeExaminer?.role || 'Penguji'}
+                              </p>
+                            </div>
+
+                            <div className="my-1 h-14 flex items-center justify-center">
+                              {activeExaminer?.signature_url ? (
+                                <img
+                                  src={activeExaminer.signature_url}
+                                  alt="Tanda Tangan Penguji"
+                                  className="max-h-14 max-w-[140px] object-contain"
+                                />
+                              ) : (
+                                <div className="h-12 w-32 border-b border-dotted border-slate-400" />
+                              )}
+                            </div>
+
+                            <div>
+                              <p className="font-bold text-xs underline decoration-dotted">
+                                (&nbsp;{activeExaminer?.examiner_name || activeExaminer?.profiles?.full_name || '.........................................'}&nbsp;)
+                              </p>
+                              {(activeExaminer?.examiner_nip || activeExaminer?.profiles?.nip) && (
+                                <p className="text-[10px] text-slate-600 font-mono mt-0.5">
+                                  NIP/NIDN: {activeExaminer.examiner_nip || activeExaminer.profiles?.nip}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* QR Code Verifikasi Dokumen di Pojok Kanan Bawah */}
+                            {verificationUrl && (
+                              <div className="self-end mt-2 pt-1 border border-slate-300 p-1 rounded bg-white">
+                                <QRCodeSVG value={verificationUrl} size={36} />
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
                   const criteriaA = criteria.filter((c: any) => c.category === 'A' || c.order_index <= 7);
                   const criteriaB = criteria.filter((c: any) => c.category === 'B' || c.order_index > 7);
 

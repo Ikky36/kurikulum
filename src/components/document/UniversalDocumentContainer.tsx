@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Printer, X, Download, ShieldCheck, Info, QrCode } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import DOMPurify from 'dompurify';
+import { determineGradeFromScore } from '@/lib/taAssessmentTypes';
 
 export interface DocumentSignatureData {
   name: string;
@@ -190,6 +191,26 @@ export function UniversalDocumentContainer({
     templateCode === 'lembar_nilai_sidang' ||
     template?.code === 'lembar_nilai_sidang' ||
     template?.document_role === 'lembar_nilai_sidang';
+
+  // Identifikasi format penilaian seminar proposal resmi
+  const isFormatPenilaianSempro =
+    templateCode === 'lembar_nilai_sempro' ||
+    template?.code === 'lembar_nilai_sempro' ||
+    template?.document_role === 'lembar_nilai_sempro';
+
+  const isFormatPenilaian = isFormatPenilaianSidang || isFormatPenilaianSempro;
+
+  const examinerSignatureUrl =
+    signaturesData?.examiner?.signature_url ||
+    signaturesData?.examiner_1?.signature_url ||
+    signaturesData?.penguji?.signature_url ||
+    null;
+
+  const examinerName =
+    signaturesData?.examiner?.name ||
+    signaturesData?.examiner_1?.name ||
+    signaturesData?.penguji?.name ||
+    null;
 
   // Resolve effective date mechanism: 'last_signature' vs 'today'
   const effectiveDateSource = template.date_source || docSettings.date_source || 'last_signature';
@@ -583,9 +604,9 @@ export function UniversalDocumentContainer({
           {/* 2. JUDUL DOKUMEN */}
           <div className="text-center my-3">
             <h1 className="text-base sm:text-lg font-bold tracking-wide uppercase text-slate-900 font-serif">
-              {isFormatPenilaianSidang ? 'FORMAT PENILAIAN' : finalTitle}
+              {isFormatPenilaian ? 'FORMAT PENILAIAN' : finalTitle}
             </h1>
-            {!isFormatPenilaianSidang && finalSubtitle && (
+            {!isFormatPenilaian && finalSubtitle && (
               <h2 className="text-xs sm:text-sm font-semibold tracking-normal text-slate-700 uppercase mt-0.5">
                 {finalSubtitle}
               </h2>
@@ -593,28 +614,28 @@ export function UniversalDocumentContainer({
           </div>
 
           {/* 3. BIODATA MAHASISWA & METADATA (DINAMIS DARI DATABASE) */}
-          {isFormatPenilaianSidang ? (
+          {isFormatPenilaian ? (
             <div className="mb-4 text-xs font-serif leading-relaxed text-slate-900">
               <div className="space-y-1">
                 <div className="flex">
                   <span className="w-36 font-normal text-slate-900 shrink-0">Nama Mahasiswa</span>
                   <span className="w-4 text-center shrink-0">:</span>
                   <span className="font-normal text-slate-900 flex-1">
-                    {resolvedVariables.nama_mahasiswa || studentInfo?.name || 'Muhammad Zaid'}
+                    {resolvedVariables.nama_mahasiswa || studentInfo?.name || (isFormatPenilaianSempro ? 'Bagas Irawan' : 'Muhammad Zaid')}
                   </span>
                 </div>
                 <div className="flex">
                   <span className="w-36 font-normal text-slate-900 shrink-0">NIM</span>
                   <span className="w-4 text-center shrink-0">:</span>
                   <span className="font-normal text-slate-900 flex-1">
-                    {resolvedVariables.nim || studentInfo?.nim || '221.372.115'}
+                    {resolvedVariables.nim || studentInfo?.nim || (isFormatPenilaianSempro ? '221.372.104' : '221.372.115')}
                   </span>
                 </div>
                 <div className="flex">
                   <span className="w-36 font-normal text-slate-900 shrink-0">Judul Tugas Akhir</span>
                   <span className="w-4 text-center shrink-0">:</span>
                   <span className="font-normal text-slate-900 flex-1 leading-relaxed">
-                    {resolvedVariables.judul_tugas_akhir || resolvedVariables.topic_title || studentInfo?.judul_tugas_akhir || 'Implementasi Pembelajaran Nahwu Kelas VIII C Salafiyah Wustho Islamic Centre Bin Baz Tahun Ajaran 2025/2026'}
+                    {resolvedVariables.judul_tugas_akhir || resolvedVariables.topic_title || studentInfo?.judul_tugas_akhir || (isFormatPenilaianSempro ? 'EFEKTIVITAS KOMBINASI FLASHCARD DAN TALKING STICK PADA SISWA KELAS V PUTRA MITQ JAMILURRAHMAN' : 'Implementasi Pembelajaran Nahwu Kelas VIII C Salafiyah Wustho Islamic Centre Bin Baz Tahun Ajaran 2025/2026')}
                   </span>
                 </div>
               </div>
@@ -812,6 +833,188 @@ export function UniversalDocumentContainer({
                 </div>
               </div>
             </div>
+          ) : isFormatPenilaianSempro && !children ? (
+            <div className="w-full my-2 font-serif text-slate-900">
+              {/* TABEL FORMAT PENILAIAN RESMI SEMINAR PROPOSAL */}
+              <table className="w-full border-collapse border border-slate-900 text-xs">
+                <thead>
+                  <tr className="border-b border-slate-900 text-slate-900 font-bold text-center">
+                    <th className="border border-slate-900 py-1.5 px-2 w-12 text-center font-bold">No</th>
+                    <th className="border border-slate-900 py-1.5 px-3 text-center font-bold">
+                      Kriteria Penilaian
+                    </th>
+                    <th className="border border-slate-900 py-1.5 px-3 w-20 text-center font-bold">
+                      Bobot
+                    </th>
+                    <th className="border border-slate-900 py-1.5 px-3 w-24 text-center font-bold">
+                      Nilai
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {/* 1. PENDAHULUAN */}
+                  <tr>
+                    <td className="border border-slate-900 py-2 px-2 text-center align-top font-normal">1</td>
+                    <td className="border border-slate-900 py-2 px-3 align-top">
+                      <div className="font-bold uppercase text-slate-900">PENDAHULUAN</div>
+                      <ul className="mt-1 space-y-0.5 text-slate-800 list-none pl-0">
+                        <li>- Ketajaman Perumusan Masalah</li>
+                        <li>- Kesesuaian Tujuan Penelitian dengan Masalah Penelitian</li>
+                        <li>- Manfaat Penelitian</li>
+                      </ul>
+                    </td>
+                    <td className="border border-slate-900 py-2 px-3 text-center align-middle font-normal">
+                      20
+                    </td>
+                    <td className="border border-slate-900 py-2 px-3 text-center align-middle font-mono font-medium">
+                      {resolvedVariables.score_1 || resolvedVariables.score_sempro_crit_1 || ''}
+                    </td>
+                  </tr>
+
+                  {/* 2. TINJAUAN PUSTAKA */}
+                  <tr>
+                    <td className="border border-slate-900 py-2 px-2 text-center align-top font-normal">2</td>
+                    <td className="border border-slate-900 py-2 px-3 align-top">
+                      <div className="font-bold uppercase text-slate-900">TINJAUAN PUSTAKA</div>
+                      <ul className="mt-1 space-y-0.5 text-slate-800 list-none pl-0">
+                        <li>- Relevansi dengan Masalah Penelitian</li>
+                        <li>- Cara Mengutip</li>
+                        <li>- Kemutakhiran Sumber Pustaka</li>
+                        <li>- Cara Penyusunan Daftar Pustaka</li>
+                      </ul>
+                    </td>
+                    <td className="border border-slate-900 py-2 px-3 text-center align-middle font-normal">
+                      20
+                    </td>
+                    <td className="border border-slate-900 py-2 px-3 text-center align-middle font-mono font-medium">
+                      {resolvedVariables.score_2 || resolvedVariables.score_sempro_crit_2 || ''}
+                    </td>
+                  </tr>
+
+                  {/* 3. METODOLOGI PENELITIAN */}
+                  <tr>
+                    <td className="border border-slate-900 py-2 px-2 text-center align-top font-normal">3</td>
+                    <td className="border border-slate-900 py-2 px-3 align-top">
+                      <div className="font-bold uppercase text-slate-900">METODOLOGI PENELITIAN</div>
+                      <ul className="mt-1 space-y-0.5 text-slate-800 list-none pl-0">
+                        <li>- Kesesuaian Rancangan dengan Masalah Penelitian</li>
+                        <li>- Ketepatan Instrumen Penelitian</li>
+                        <li>- Ketepatan Metode Analisis Data</li>
+                      </ul>
+                    </td>
+                    <td className="border border-slate-900 py-2 px-3 text-center align-middle font-normal">
+                      30
+                    </td>
+                    <td className="border border-slate-900 py-2 px-3 text-center align-middle font-mono font-medium">
+                      {resolvedVariables.score_3 || resolvedVariables.score_sempro_crit_3 || ''}
+                    </td>
+                  </tr>
+
+                  {/* 4. LISAN */}
+                  <tr>
+                    <td className="border border-slate-900 py-2 px-2 text-center align-top font-normal">4</td>
+                    <td className="border border-slate-900 py-2 px-3 align-top">
+                      <div className="font-bold uppercase text-slate-900">LISAN</div>
+                      <ul className="mt-1 space-y-0.5 text-slate-800 list-none pl-0">
+                        <li>- Pemahaman Materi dan Kelancaran Presentasi</li>
+                        <li>- Ketepatan dan Pemahaman Jawaban</li>
+                      </ul>
+                    </td>
+                    <td className="border border-slate-900 py-2 px-3 text-center align-middle font-normal">
+                      15
+                    </td>
+                    <td className="border border-slate-900 py-2 px-3 text-center align-middle font-mono font-medium">
+                      {resolvedVariables.score_4 || resolvedVariables.score_sempro_crit_4 || ''}
+                    </td>
+                  </tr>
+
+                  {/* 5. UMUM */}
+                  <tr>
+                    <td className="border border-slate-900 py-2 px-2 text-center align-top font-normal">5</td>
+                    <td className="border border-slate-900 py-2 px-3 align-top">
+                      <div className="font-bold uppercase text-slate-900">UMUM</div>
+                      <ul className="mt-1 space-y-0.5 text-slate-800 list-none pl-0">
+                        <li>- Sistematika Proposal</li>
+                        <li>- Keterbacaan</li>
+                        <li>- Penggunaan Bahasa</li>
+                      </ul>
+                    </td>
+                    <td className="border border-slate-900 py-2 px-3 text-center align-middle font-normal">
+                      15
+                    </td>
+                    <td className="border border-slate-900 py-2 px-3 text-center align-middle font-mono font-medium">
+                      {resolvedVariables.score_5 || resolvedVariables.score_sempro_crit_5 || ''}
+                    </td>
+                  </tr>
+
+                  {/* Catatan Penguji */}
+                  <tr>
+                    <td colSpan={4} className="border border-slate-900 py-2 px-3 align-top">
+                      <div className="font-normal text-slate-900">Catatan Penguji :</div>
+                      <div className="min-h-[45px] mt-1 text-slate-800 whitespace-pre-wrap">
+                        {resolvedVariables.catatan_penguji || resolvedVariables.catatan_revisi_penguji || ''}
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+
+              {/* Teks Nilai Rata-rata akhir */}
+              <div className="my-3 text-xs font-bold text-slate-900">
+                Nilai Rata-rata akhir : {
+                  resolvedVariables.skor_akhir && resolvedVariables.skor_akhir !== '-'
+                    ? `${resolvedVariables.skor_akhir} ( ${resolvedVariables.predikat_huruf || determineGradeFromScore(Number(resolvedVariables.skor_akhir) || 0).grade} )`
+                    : '91 ( A )'
+                }
+              </div>
+
+              {/* Bagian Bawah Dua Kolom (Skala Nilai & Pengesahan Penguji) */}
+              <div className="grid grid-cols-2 gap-6 mt-4 pt-2 text-xs text-slate-900 break-inside-avoid page-break-inside-avoid">
+                {/* Kolom Kiri: Tabel Rentang Skala Nilai */}
+                <div className="space-y-1 font-mono text-[11px] leading-tight pt-1">
+                  <div className="flex gap-3"><span className="w-6 font-bold">A</span><span>91 – 100</span></div>
+                  <div className="flex gap-3"><span className="w-6 font-bold">A-</span><span>81 – 90,99</span></div>
+                  <div className="flex gap-3"><span className="w-6 font-bold">B+</span><span>71 – 80,99</span></div>
+                  <div className="flex gap-3"><span className="w-6 font-bold">B</span><span>66 – 70,99</span></div>
+                  <div className="flex gap-3"><span className="w-6 font-bold">C+</span><span>61 – 65,99</span></div>
+                  <div className="flex gap-3"><span className="w-6 font-bold">D</span><span>46 – 60,99</span></div>
+                  <div className="flex gap-3"><span className="w-6 font-bold">E</span><span>0 – 45,99</span></div>
+                </div>
+
+                {/* Kolom Kanan: Pengesahan Penguji & Barcode */}
+                <div className="flex flex-col items-center justify-between text-center min-h-[145px]">
+                  <div>
+                    <p className="text-xs">
+                      {docSettings.default_city || 'Bantul'}, {resolvedDate || '25 December 2025'}
+                    </p>
+                    <p className="font-bold text-xs mt-0.5">Penguji</p>
+                  </div>
+
+                  <div className="my-1 h-14 flex items-center justify-center">
+                    {examinerSignatureUrl ? (
+                      <img
+                        src={examinerSignatureUrl}
+                        alt="Tanda Tangan Penguji"
+                        className="max-h-14 max-w-[140px] object-contain"
+                      />
+                    ) : (
+                      <div className="h-12 w-36 border-b border-dotted border-slate-400" />
+                    )}
+                  </div>
+
+                  <div>
+                    <p className="font-bold text-xs underline decoration-dotted">
+                      (&nbsp;{examinerName ? examinerName : '\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0\u00a0'}&nbsp;)
+                    </p>
+                  </div>
+
+                  {/* Kotak Persegi Barcode / QR Code di Pojok Kanan Bawah Sesuai Gambar */}
+                  <div className="self-end mt-2 h-9 w-9 border border-slate-400 p-0.5 rounded flex items-center justify-center bg-white shadow-2xs">
+                    <QRCodeSVG value={verificationUrl} size={32} />
+                  </div>
+                </div>
+              </div>
+            </div>
           ) : template.content_mode !== 'text_only' && template.table_enabled !== false ? (
             <div className="w-full my-2 document-content">
               {children ? (
@@ -856,7 +1059,7 @@ export function UniversalDocumentContainer({
           )}
 
           {/* 6. BLOK TANDA TANGAN & PENGESAHAN (Mengalir proporsional beberapa cm setelah konten terakhir) */}
-          {!isFormatPenilaianSidang && (template.signatures || []).filter((s) => s.enabled).length > 0 && (
+          {!isFormatPenilaian && (template.signatures || []).filter((s) => s.enabled).length > 0 && (
             <div className={`${getSignatureSpacingClass(template.signature_spacing)} pt-2 break-inside-avoid page-break-inside-avoid text-xs signature-block`}>
               {template.show_signature_date !== false && docSettings.show_signature_date !== false && (
                 <div className={`text-xs text-slate-700 mb-2 ${enabledSignatures.length === 1 && singleAlign === 'left' ? 'text-left pl-2 sm:pl-8' : enabledSignatures.length === 1 && singleAlign === 'center' ? 'text-center' : 'text-right'}`}>
@@ -1070,7 +1273,7 @@ export function UniversalDocumentContainer({
         </div>
 
         {/* QR CODE TEPAT 1 CM (10mm) DI ATAS SUDUT KIRI ATAS FOOTER */}
-        {!isFormatPenilaianSidang && docSettings.qr_code_enabled !== false && docSettings.qr_code_position === 'footer' && (
+        {!isFormatPenilaian && docSettings.qr_code_enabled !== false && docSettings.qr_code_position === 'footer' && (
           <div className="mt-auto mb-[10mm] flex justify-start items-end z-10 print:mb-[10mm] break-inside-avoid page-break-inside-avoid">
             <div className="flex items-center gap-2 p-1.5 rounded border border-slate-300 bg-white/95 print:bg-transparent print:border-slate-400 shadow-xs">
               <QRCodeSVG

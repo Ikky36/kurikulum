@@ -2062,9 +2062,13 @@ export function DocumentTemplateCustomizer() {
 
                 {/* 2. AREA KONTEN DOKUMEN */}
                 {(() => {
-                  const isMiniPenilaian =
+                  const isMiniPenilaianSidang =
                     currentTemplate.code === 'lembar_nilai_sidang' ||
                     currentTemplate.document_role === 'lembar_nilai_sidang';
+                  const isMiniPenilaianSempro =
+                    currentTemplate.code === 'lembar_nilai_sempro' ||
+                    currentTemplate.document_role === 'lembar_nilai_sempro';
+                  const isMiniPenilaian = isMiniPenilaianSidang || isMiniPenilaianSempro;
 
                   return (
                     <div className={`py-1 text-[7px] space-y-1.5 ${currentTemplate.signature_spacing === 'bottom' ? 'flex-1 flex flex-col justify-between' : 'w-full flex flex-col'}`}>
@@ -2091,17 +2095,17 @@ export function DocumentTemplateCustomizer() {
                             <div className="flex">
                               <span className="w-18 shrink-0">Nama Mahasiswa</span>
                               <span className="w-1.5 text-center">:</span>
-                              <span className="flex-1 font-medium">{dummyContext.nama_mahasiswa || 'Muhammad Zaid'}</span>
+                              <span className="flex-1 font-medium">{dummyContext.nama_mahasiswa || (isMiniPenilaianSempro ? 'Bagas Irawan' : 'Muhammad Zaid')}</span>
                             </div>
                             <div className="flex">
                               <span className="w-18 shrink-0">NIM</span>
                               <span className="w-1.5 text-center">:</span>
-                              <span className="flex-1 font-medium">{dummyContext.nim || '221.372.115'}</span>
+                              <span className="flex-1 font-medium">{dummyContext.nim || (isMiniPenilaianSempro ? '221.372.104' : '221.372.115')}</span>
                             </div>
                             <div className="flex">
                               <span className="w-18 shrink-0">Judul Tugas Akhir</span>
                               <span className="w-1.5 text-center">:</span>
-                              <span className="flex-1 leading-tight line-clamp-2">{dummyContext.judul_tugas_akhir || 'Implementasi Pembelajaran Nahwu Kelas VIII C Salafiyah Wustho...'}</span>
+                              <span className="flex-1 leading-tight line-clamp-2">{dummyContext.judul_tugas_akhir || (isMiniPenilaianSempro ? 'EFEKTIVITAS KOMBINASI FLASHCARD DAN TALKING STICK PADA SISWA KELAS V PUTRA MITQ JAMILURRAHMAN' : 'Implementasi Pembelajaran Nahwu Kelas VIII C Salafiyah Wustho...')}</span>
                             </div>
                           </div>
                         ) : currentTemplate.show_student_info ? (
@@ -2140,7 +2144,102 @@ export function DocumentTemplateCustomizer() {
                         )}
 
                         {/* Tabel Data Dummy */}
-                        {isMiniPenilaian ? (
+                        {isMiniPenilaianSempro ? (
+                          <div className="w-full text-[5.5px] font-serif text-slate-900 space-y-1">
+                            <table className="w-full border-collapse border border-slate-900">
+                              <thead>
+                                <tr className="border-b border-slate-900 font-bold text-center">
+                                  <th className="border border-slate-900 p-0.5 w-4">No</th>
+                                  <th className="border border-slate-900 p-0.5">Kriteria Penilaian</th>
+                                  <th className="border border-slate-900 p-0.5 w-7">Bobot</th>
+                                  <th className="border border-slate-900 p-0.5 w-7">Nilai</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  <td className="border border-slate-900 p-0.5 text-center align-top">1</td>
+                                  <td className="border border-slate-900 p-0.5 align-top">
+                                    <div className="font-bold">PENDAHULUAN</div>
+                                    <div className="text-[4.5px] text-slate-600 pl-1">- Ketajaman Perumusan Masalah...</div>
+                                  </td>
+                                  <td className="border border-slate-900 p-0.5 text-center">20</td>
+                                  <td className="border border-slate-900 p-0.5 text-center font-mono font-medium">92</td>
+                                </tr>
+                                <tr>
+                                  <td className="border border-slate-900 p-0.5 text-center align-top">2</td>
+                                  <td className="border border-slate-900 p-0.5 align-top">
+                                    <div className="font-bold">TINJAUAN PUSTAKA</div>
+                                    <div className="text-[4.5px] text-slate-600 pl-1">- Relevansi dengan Masalah...</div>
+                                  </td>
+                                  <td className="border border-slate-900 p-0.5 text-center">20</td>
+                                  <td className="border border-slate-900 p-0.5 text-center font-mono font-medium">90</td>
+                                </tr>
+                                <tr>
+                                  <td className="border border-slate-900 p-0.5 text-center align-top">3</td>
+                                  <td className="border border-slate-900 p-0.5 align-top">
+                                    <div className="font-bold">METODOLOGI PENELITIAN</div>
+                                    <div className="text-[4.5px] text-slate-600 pl-1">- Kesesuaian Rancangan...</div>
+                                  </td>
+                                  <td className="border border-slate-900 p-0.5 text-center">30</td>
+                                  <td className="border border-slate-900 p-0.5 text-center font-mono font-medium">91</td>
+                                </tr>
+                                <tr>
+                                  <td className="border border-slate-900 p-0.5 text-center align-top">4</td>
+                                  <td className="border border-slate-900 p-0.5 align-top">
+                                    <div className="font-bold">LISAN</div>
+                                    <div className="text-[4.5px] text-slate-600 pl-1">- Pemahaman Materi & Kelancaran...</div>
+                                  </td>
+                                  <td className="border border-slate-900 p-0.5 text-center">15</td>
+                                  <td className="border border-slate-900 p-0.5 text-center font-mono font-medium">92</td>
+                                </tr>
+                                <tr>
+                                  <td className="border border-slate-900 p-0.5 text-center align-top">5</td>
+                                  <td className="border border-slate-900 p-0.5 align-top">
+                                    <div className="font-bold">UMUM</div>
+                                    <div className="text-[4.5px] text-slate-600 pl-1">- Sistematika Proposal, Keterbacaan...</div>
+                                  </td>
+                                  <td className="border border-slate-900 p-0.5 text-center">15</td>
+                                  <td className="border border-slate-900 p-0.5 text-center font-mono font-medium">90</td>
+                                </tr>
+                                <tr>
+                                  <td colSpan={4} className="border border-slate-900 p-0.5">
+                                    <div>Catatan Penguji :</div>
+                                    <div className="h-3 text-[4.5px] text-slate-500 italic pl-1">Proposal sangat baik dan siap dilanjutkan.</div>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
+
+                            <div className="font-bold text-[5.5px] my-1">
+                              Nilai Rata-rata akhir : 91 ( A )
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 mt-1.5 text-[5px]">
+                              {/* Skala Kiri */}
+                              <div className="space-y-0.5 font-mono text-[4.5px] leading-tight">
+                                <div><strong className="w-3 inline-block">A</strong> 91 – 100</div>
+                                <div><strong className="w-3 inline-block">A-</strong> 81 – 90,99</div>
+                                <div><strong className="w-3 inline-block">B+</strong> 71 – 80,99</div>
+                                <div><strong className="w-3 inline-block">B</strong> 66 – 70,99</div>
+                                <div><strong className="w-3 inline-block">C+</strong> 61 – 65,99</div>
+                                <div><strong className="w-3 inline-block">D</strong> 46 – 60,99</div>
+                                <div><strong className="w-3 inline-block">E</strong> 0 – 45,99</div>
+                              </div>
+                              {/* Pengesahan Kanan */}
+                              <div className="flex flex-col items-center justify-between text-center min-h-[50px]">
+                                <div>
+                                  <p>{docSettings.default_city || 'Bantul'}, 25 December 2025</p>
+                                  <p className="font-bold mt-0.5">Penguji</p>
+                                </div>
+                                <div className="border-b border-dotted border-slate-400 w-16 my-1"></div>
+                                <p className="font-bold underline decoration-dotted">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</p>
+                                <div className="self-end mt-1 h-3.5 w-3.5 border border-slate-400 flex items-center justify-center bg-white text-[3.5px] font-mono">
+                                  QR
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ) : isMiniPenilaianSidang ? (
                           <div className="w-full text-[5.5px] font-serif text-slate-900 space-y-1">
                             <table className="w-full border-collapse border border-slate-900">
                               <thead>

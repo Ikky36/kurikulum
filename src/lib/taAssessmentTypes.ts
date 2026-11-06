@@ -30,41 +30,49 @@ export type AllTaRubricsConfig = Record<'sempro' | 'sidang', TaRubricConfig>;
 export const defaultTaRubrics: AllTaRubricsConfig = {
   sempro: {
     id: 'sempro',
-    title: 'Rubrik Penilaian Seminar Proposal Skripsi',
-    description: 'Rubrik evaluasi kesiapan naskah proposal tugas akhir, kajian teoritis, dan ketepatan metodologi penelitian mahasiswa.',
-    min_passing_score: 65,
+    title: 'Format Penilaian Seminar Proposal',
+    description: 'Format penilaian seminar proposal mencakup pendahuluan, tinjauan pustaka, metodologi penelitian, lisan, dan umum.',
+    min_passing_score: 66,
     criteria: [
       {
         id: 'sempro_crit_1',
-        name: 'Latar Belakang & Perumusan Masalah',
-        description: 'Kejelasan urgensi penelitian, orisinalitas/kebaruan ide, ketajaman perumusan masalah, dan tujuan penelitian yang terukur.',
-        weight: 25,
+        name: 'PENDAHULUAN',
+        description: '- Ketajaman Perumusan Masalah\n- Kesesuaian Tujuan Penelitian dengan Masalah Penelitian\n- Manfaat Penelitian',
+        weight: 20,
         max_score: 100,
         order_index: 1,
       },
       {
         id: 'sempro_crit_2',
-        name: 'Kajian Pustaka & Kerangka Teoritik',
-        description: 'Relevansi dan kemutakhiran literatur (jurnal bereputasi 5-10 tahun terakhir), kedalaman sintesis teori, dan kerangka berpikir logis.',
-        weight: 25,
+        name: 'TINJAUAN PUSTAKA',
+        description: '- Relevansi dengan Masalah Penelitian\n- Cara Mengutip\n- Kemutakhiran Sumber Pustaka\n- Cara Penyusunan Daftar Pustaka',
+        weight: 20,
         max_score: 100,
         order_index: 2,
       },
       {
         id: 'sempro_crit_3',
-        name: 'Metodologi Penelitian & Instrumen',
-        description: 'Ketepatan pemilihan metode, rancangan populasi/sampel/subjek, keabsahan instrumen pengumpulan data, dan teknik analisis data.',
+        name: 'METODOLOGI PENELITIAN',
+        description: '- Kesesuaian Rancangan dengan Masalah Penelitian\n- Ketepatan Instrumen Penelitian\n- Ketepatan Metode Analisis Data',
         weight: 30,
         max_score: 100,
         order_index: 3,
       },
       {
         id: 'sempro_crit_4',
-        name: 'Penguasaan Materi & Presentasi Ilmiah',
-        description: 'Kelancaran penyampaian presentasi, kemampuan argumentasi ilmiah dalam menjawab pertanyaan dewan penguji, dan etika akademik.',
-        weight: 20,
+        name: 'LISAN',
+        description: '- Pemahaman Materi dan Kelancaran Presentasi\n- Ketepatan dan Pemahaman Jawaban',
+        weight: 15,
         max_score: 100,
         order_index: 4,
+      },
+      {
+        id: 'sempro_crit_5',
+        name: 'UMUM',
+        description: '- Sistematika Proposal\n- Keterbacaan\n- Penggunaan Bahasa',
+        weight: 15,
+        max_score: 100,
+        order_index: 5,
       },
     ],
   },
@@ -410,11 +418,18 @@ export function useTaRubricsConfig() {
       if (data?.setting_value) {
         try {
           const parsed = JSON.parse(data.setting_value);
+          const semproCriteria =
+            parsed.sempro?.criteria &&
+            parsed.sempro.criteria.length === 5 &&
+            parsed.sempro.criteria[0]?.name === 'PENDAHULUAN'
+              ? parsed.sempro.criteria
+              : defaultTaRubrics.sempro.criteria;
+
           return {
             sempro: {
               ...defaultTaRubrics.sempro,
               ...(parsed.sempro || {}),
-              criteria: parsed.sempro?.criteria || defaultTaRubrics.sempro.criteria,
+              criteria: semproCriteria,
             },
             sidang: {
               ...defaultTaRubrics.sidang,

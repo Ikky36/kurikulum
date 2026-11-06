@@ -569,19 +569,18 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
 
   lembar_nilai_sempro: {
     code: 'lembar_nilai_sempro',
-    name: 'Lembar Nilai Seminar Proposal',
+    name: 'Format Penilaian Seminar Proposal',
     orientation: 'portrait',
     data_source_module: 'tugas_akhir',
-    document_title: 'LEMBAR PENILAIAN SEMINAR PROPOSAL SKRIPSI',
-    document_subtitle: 'REKAPITULASI SKOR RUBRIK DEWAN PENGUJI',
+    document_title: 'FORMAT PENILAIAN',
+    document_subtitle: '',
     show_kop: true,
     show_footer: true,
     show_student_info: true,
     student_bio_fields: [
       { key: 'nama_mahasiswa', label: 'Nama Mahasiswa' },
       { key: 'nim', label: 'NIM' },
-      { key: 'program_studi', label: 'Program Studi' },
-      { key: 'judul_tugas_akhir', label: 'Judul Proposal' },
+      { key: 'judul_tugas_akhir', label: 'Judul Tugas Akhir' },
     ],
     content_mode: 'all',
     body_text_enabled: false,
@@ -592,19 +591,16 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     rules_note_text: '',
     columns: [
       { id: 'no', label: 'No', enabled: true },
-      { id: 'criterion_name', label: 'Komponen / Aspek Penilaian Rubrik', enabled: true },
-      { id: 'weight', label: 'Bobot (%)', enabled: true },
-      { id: 'examiner_scores', label: 'Skor Penguji', enabled: true },
-      { id: 'weighted_score', label: 'Nilai Tertimbang', enabled: true },
+      { id: 'kriteria_penilaian', label: 'Kriteria Penilaian', enabled: true },
+      { id: 'bobot', label: 'Bobot', enabled: true },
+      { id: 'nilai', label: 'Nilai', enabled: true },
     ],
     show_signature_date: true,
     signature_spacing: 'normal',
-    single_signature_align: 'center',
+    single_signature_align: 'right',
     font_family: 'Times New Roman',
     signatures: [
-      { id: 'examiner_1', role_label: 'Penguji I', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
-      { id: 'examiner_2', role_label: 'Penguji II', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
-      { id: 'chairperson', role_label: 'Ketua Sidang', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
+      { id: 'examiner', role_label: 'Penguji', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
     ],
     copies_enabled: false,
     copies_list: [],
@@ -891,6 +887,27 @@ export function useDocumentTemplatesConfig() {
               (parsed[key]?.body_text_template?.includes('Dengan ini menerangkan bahwa mahasiswa') || parsed[key]?.document_title === 'SURAT PENGESAHAN TUGAS AKHIR')
             ) {
               merged[key] = { ...defaultDocumentTemplates.surat_pengesahan_tugas_akhir, ...parsed[key], document_title: 'NOTA DINAS', show_kop: false, show_footer: false, show_student_info: false, content_mode: 'text_only', table_enabled: false, show_signature_date: false, body_text_template: defaultDocumentTemplates.surat_pengesahan_tugas_akhir.body_text_template };
+              continue;
+            }
+
+            // Normalisasi lembar_nilai_sempro: pastikan memakai format standar resmi (5 kriteria rubrik berbobot, 4 kolom No/Kriteria Penilaian/Bobot/Nilai, 1 tanda tangan kanan)
+            if (
+              key === 'lembar_nilai_sempro' &&
+              (parsed[key]?.columns?.some((c: any) => c.id === 'examiner_scores' || c.id === 'weighted_score') ||
+                (parsed[key]?.signatures?.length ?? 0) > 1 ||
+                parsed[key]?.document_title !== 'FORMAT PENILAIAN')
+            ) {
+              merged[key] = {
+                ...defaultDocumentTemplates.lembar_nilai_sempro,
+                ...parsed[key],
+                document_title: 'FORMAT PENILAIAN',
+                document_subtitle: '',
+                columns: defaultDocumentTemplates.lembar_nilai_sempro.columns,
+                signatures: defaultDocumentTemplates.lembar_nilai_sempro.signatures,
+                student_bio_fields: defaultDocumentTemplates.lembar_nilai_sempro.student_bio_fields,
+                single_signature_align: 'right',
+                table_enabled: true,
+              };
               continue;
             }
 
