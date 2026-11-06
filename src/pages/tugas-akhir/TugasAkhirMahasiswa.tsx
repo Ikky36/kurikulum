@@ -307,6 +307,25 @@ export default function TugasAkhirMahasiswa() {
         if (!hasPassedAll && req.is_required) {
           errors.push(`${req.name}: Anda belum lulus mata kuliah prasyarat.`);
         }
+      } else if (req.req_type === 'auto_fill') {
+        const field = req.req_value?.field;
+        const currentApprovalState = parseApprovalsFromComments(mySubmission?.comments);
+        if (field === 'doc_pengesahan_sempro' && req.is_required) {
+          const app = getDocApproval(currentApprovalState, 'surat_pengesahan_proposal');
+          if (!app.signers?.advisor_1?.is_approved) {
+            errors.push(`${req.name}: Surat Pengesahan Proposal belum disahkan oleh Dosen Pembimbing.`);
+          }
+        } else if (field === 'doc_pengesahan_ta' && req.is_required) {
+          const app = getDocApproval(currentApprovalState, 'surat_pengesahan_tugas_akhir');
+          if (!app.signers?.advisor_1?.is_approved) {
+            errors.push(`${req.name}: Surat Pengesahan Tugas Akhir belum disahkan oleh Dosen Pembimbing.`);
+          }
+        } else if (field === 'doc_kartu_bimbingan' && req.is_required) {
+          const app = getDocApproval(currentApprovalState, 'kartu_bimbingan_ta');
+          if (!app.signers?.advisor_1?.is_approved && !app.signers?.kaprodi?.is_approved) {
+            errors.push(`${req.name}: Kartu Bimbingan belum disahkan resmi.`);
+          }
+        }
       }
     });
 
@@ -323,7 +342,7 @@ export default function TugasAkhirMahasiswa() {
     } else {
       setValidationErrors([]);
     }
-  }, [selectedType, taRequirements, instrumenPenilaian, myGrades, myProfile]);
+  }, [selectedType, taRequirements, instrumenPenilaian, myGrades, myProfile, mySubmission]);
 
   const submitMutation = useMutation({
     mutationFn: async () => {

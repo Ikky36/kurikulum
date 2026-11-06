@@ -3,6 +3,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Eye, AlertCircle } from 'lucide-react';
+import { parseApprovalsFromComments, getDocApproval } from '@/lib/documentApprovals';
+import { KartuBimbinganViewerModal } from '@/components/document/KartuBimbinganViewerModal';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -29,6 +33,18 @@ export const SeminarRegistrationForm = ({
 }: SeminarRegistrationFormProps) => {
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState<Record<string, string>>({});
+  const [viewDocCode, setViewDocCode] = useState<string | null>(null);
+
+  // Parse document approval states from submission
+  const approvalState = parseApprovalsFromComments(submission?.comments);
+  const semproApproval = getDocApproval(approvalState, 'surat_pengesahan_proposal');
+  const isSemproApproved = Boolean(semproApproval.signers?.advisor_1?.is_approved);
+
+  const taApproval = getDocApproval(approvalState, 'surat_pengesahan_tugas_akhir');
+  const isTaApproved = Boolean(taApproval.signers?.advisor_1?.is_approved);
+
+  const kbApproval = getDocApproval(approvalState, 'kartu_bimbingan_ta');
+  const isKbApproved = Boolean(kbApproval.signers?.advisor_1?.is_approved || kbApproval.signers?.kaprodi?.is_approved);
 
   // Filter requirements specific to this phase and TA type
   const reqsToEval = requirements.filter(req => {
@@ -59,6 +75,24 @@ export const SeminarRegistrationForm = ({
       case 'ta_advisors': 
         return submission?.ta_advisors?.map((a: any) => a.profiles?.full_name).join(', ') || 'Belum diplot';
       case 'ta_phase': return phase === 'sempro' ? 'Seminar Proposal' : 'Sidang Akhir';
+      case 'doc_pengesahan_sempro':
+        return isSemproApproved
+          ? 'Telah Disahkan Resmi oleh Dosen Pembimbing'
+          : semproApproval.requested
+          ? 'Menunggu Pengesahan Dosen Pembimbing'
+          : 'Belum Diajukan / Belum Disahkan';
+      case 'doc_pengesahan_ta':
+        return isTaApproved
+          ? 'Telah Disahkan Resmi oleh Dosen Pembimbing'
+          : taApproval.requested
+          ? 'Menunggu Pengesahan Dosen Pembimbing'
+          : 'Belum Diajukan / Belum Disahkan';
+      case 'doc_kartu_bimbingan':
+        return isKbApproved
+          ? 'Telah Disahkan Resmi oleh Pembimbing & Kaprodi'
+          : kbApproval.requested
+          ? 'Menunggu Pengesahan Resmi'
+          : 'Belum Diajukan / Belum Disahkan';
       default: return '';
     }
   };
@@ -76,7 +110,13 @@ export const SeminarRegistrationForm = ({
       const courseIds = req.req_value?.course_ids || [];
       return courseIds.every((id: string) => passedCourseIds.includes(id));
     }
-    if (req.req_type === 'auto_fill') return true; // Always valid
+    if (req.req_type === 'auto_fill') {
+      const field = req.req_value?.field;
+      if (field === 'doc_pengesahan_sempro') return isSemproApproved;
+      if (field === 'doc_pengesahan_ta') return isTaApproved;
+      if (field === 'doc_kartu_bimbingan') return isKbApproved;
+      return true; // Profil & info TA selalu valid
+    }
     if (req.req_type === 'document') {
       return !!formData[req.id] && formData[req.id].trim().length > 0;
     }
@@ -139,7 +179,8 @@ export const SeminarRegistrationForm = ({
         ) : (
           reqsToEval.map(req => {
             const isMet = evaluateReq(req);
-            const autoCheck = ['min_semester', 'min_sks', 'predicate', 'course'].includes(req.req_type);
+            const isDocField = ['doc_pengesahan_sempro', 'doc_pengesahan_ta', 'doc_kartu_bimbingan'].includes(req.req_value?.field);
+            const autoCheck = ['min_semester', 'min_sks', 'predicate', 'course'].includes(req.req_type) || isDocField;
             
             return (
               <div key={req.id} className="p-4 rounded-lg border bg-card text-card-foreground shadow-sm">
@@ -161,11 +202,45 @@ export const SeminarRegistrationForm = ({
 
                 {/* Render specific inputs */}
                 {req.req_type === 'auto_fill' && (
-                  <Input 
-                    value={getAutoFillValue(req.req_value?.field)} 
-                    disabled 
-                    className="bg-muted" 
-                  />
+                  <div className="space-y-2">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                      <Input 
+                        value={getAutoFillValue(req.req_value?.field)} 
+                        disabled 
+                        className={`bg-muted font-medium flex-1 ${
+                          isDocField
+                            ? (isMet ? 'text-emerald-700 dark:text-emerald-300 font-semibold' : 'text-amber-700 dark:text-amber-300')
+                            : ''
+                        }`} 
+                      />
+                      {isDocField && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            const docKey =
+                              req.req_value?.field === 'doc_pengesahan_sempro'
+                                ? 'surat_pengesahan_proposal'
+                                : req.req_value?.field === 'doc_pengesahan_ta'
+                                ? 'surat_pengesahan_tugas_akhir'
+                                : 'kartu_bimbingan_ta';
+                            setViewDocCode(docKey);
+                          }}
+                          className="shrink-0 h-10 gap-1.5"
+                        >
+                          <Eye className="w-4 h-4 text-primary" />
+                          Pratinjau Dokumen
+                        </Button>
+                      )}
+                    </div>
+                    {isDocField && !isMet && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        Dokumen ini wajib disahkan terlebih dahulu oleh Dosen Pembimbing di tab Bimbingan Tugas Akhir sebelum pendaftaran dapat dikirimkan.
+                      </p>
+                    )}
+                  </div>
                 )}
                 
                 {req.req_type === 'document' && (
@@ -206,6 +281,17 @@ export const SeminarRegistrationForm = ({
           {submitRegistrationMutation.isPending ? 'Memproses...' : 'Kirim Pendaftaran'}
         </Button>
       </CardFooter>
+
+      {/* Modal Pratinjau Dokumen Pengesahan / Kartu Bimbingan */}
+      {viewDocCode && submission && (
+        <KartuBimbinganViewerModal
+          open={!!viewDocCode}
+          onOpenChange={(open) => !open && setViewDocCode(null)}
+          submission={submission}
+          studentProfile={profile}
+          templateCode={viewDocCode}
+        />
+      )}
     </Card>
   );
 };

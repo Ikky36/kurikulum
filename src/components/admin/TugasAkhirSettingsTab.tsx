@@ -504,6 +504,9 @@ export const TugasAkhirSettingsTab = () => {
                         <SelectItem value="ta_type">Tugas Akhir: Jenis</SelectItem>
                         <SelectItem value="ta_advisors">Tugas Akhir: Dosen Pembimbing</SelectItem>
                         <SelectItem value="ta_phase">Tugas Akhir: Fase Saat Ini</SelectItem>
+                        <SelectItem value="doc_pengesahan_sempro">Dokumen: Pengesahan Seminar Proposal</SelectItem>
+                        <SelectItem value="doc_pengesahan_ta">Dokumen: Pengesahan Tugas Akhir</SelectItem>
+                        <SelectItem value="doc_kartu_bimbingan">Dokumen: Kartu Bimbingan</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -576,7 +579,15 @@ export const TugasAkhirSettingsTab = () => {
                           {req.req_type === 'predicate' && `Max ${req.req_value?.max_count} MK (${instrumenPenilaian?.find((i:any) => i.id === req.req_value?.predicate_id)?.predikat})`}
                           {req.req_type === 'course' && `Matkul ID: ${req.req_value?.course_ids?.[0]}`}
                           {req.req_type === 'document' && '-'}
-                          {req.req_type === 'auto_fill' && `Field: ${req.req_value?.field}`}
+                          {req.req_type === 'auto_fill' && (
+                            req.req_value?.field === 'doc_pengesahan_sempro'
+                              ? 'Dokumen: Pengesahan Sempro'
+                              : req.req_value?.field === 'doc_pengesahan_ta'
+                              ? 'Dokumen: Pengesahan TA'
+                              : req.req_value?.field === 'doc_kartu_bimbingan'
+                              ? 'Dokumen: Kartu Bimbingan'
+                              : `Field: ${req.req_value?.field}`
+                          )}
                         </TableCell>
                         <TableCell>
                           <Switch 
