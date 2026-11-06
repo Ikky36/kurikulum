@@ -1194,6 +1194,10 @@ export default function TugasAkhirMahasiswa() {
                   const isProposalRequested = Boolean(proposalApproval.requested);
                   const isProposalApproved = Boolean(proposalApproval.signers?.advisor_1?.is_approved);
 
+                  const taApproval = getDocApproval(approvalState, 'surat_pengesahan_tugas_akhir');
+                  const isTaRequested = Boolean(taApproval.requested);
+                  const isTaApproved = Boolean(taApproval.signers?.advisor_1?.is_approved);
+
                   return (
                     <Card>
                       <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b pb-4">
@@ -1409,16 +1413,67 @@ export default function TugasAkhirMahasiswa() {
                             </Button>
                           )}
 
-                          {/* 2. Ajukan Pengesahan Laporan TA (Belum aktif karena dokumennya belum dikostum) */}
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            disabled 
-                            className="w-full sm:w-auto justify-center gap-1.5 text-xs text-muted-foreground h-9 px-3.5"
-                            title="Belum aktif karena dokumennya belum dikostum"
-                          >
-                            <Send className="w-3.5 h-3.5 shrink-0" /> Ajukan Pengesahan Laporan TA
-                          </Button>
+                          {/* 2. Pengesahan Tugas Akhir (Nota Dinas) */}
+                          {isTaApproved ? (
+                            <Button
+                              variant="default"
+                              size="sm"
+                              className="w-full sm:w-auto justify-center gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm h-9 px-3.5"
+                              onClick={() => {
+                                setPrintTemplateCode('surat_pengesahan_tugas_akhir');
+                                setIsPrintModalOpen(true);
+                              }}
+                              title="Cetak Surat Pengesahan Tugas Akhir yang telah disahkan resmi oleh Dosen Pembimbing"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> Cetak Pengesahan Tugas Akhir
+                            </Button>
+                          ) : isTaRequested ? (
+                            <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                disabled
+                                className="w-full sm:w-auto justify-center gap-1.5 text-xs bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800 h-9 px-3.5"
+                              >
+                                <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" /> Pengesahan Tugas Akhir Diajukan
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="w-full sm:w-auto justify-center h-9 px-2.5 text-xs text-muted-foreground hover:text-destructive gap-1"
+                                disabled={cancelRequestApproval.isPending}
+                                title="Tarik kembali permohonan pengesahan Tugas Akhir"
+                                onClick={() => {
+                                  if (window.confirm('Tarik kembali permohonan pengesahan Tugas Akhir?')) {
+                                    cancelRequestApproval.mutate({
+                                      submissionId: mySubmission.id,
+                                      docCode: 'surat_pengesahan_tugas_akhir',
+                                    });
+                                  }
+                                }}
+                              >
+                                <Undo2 className="w-3.5 h-3.5 mr-1" /> Tarik
+                              </Button>
+                            </div>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full sm:w-auto justify-center gap-1.5 text-xs text-primary border-primary/30 hover:bg-primary/5 h-9 px-3.5"
+                              disabled={requestApproval.isPending}
+                              onClick={() => {
+                                if (window.confirm('Ajukan permohonan pengesahan Tugas Akhir (Nota Dinas) kepada Dosen Pembimbing? Setelah diajukan, Dosen Pembimbing dapat memeriksa dan memberikan pengesahan resmi.')) {
+                                  requestApproval.mutate({
+                                    submissionId: mySubmission.id,
+                                    docCode: 'surat_pengesahan_tugas_akhir',
+                                  });
+                                }
+                              }}
+                              title="Ajukan permohonan pengesahan Tugas Akhir kepada Dosen Pembimbing"
+                            >
+                              <Send className="w-3.5 h-3.5 shrink-0" /> Ajukan Pengesahan Tugas Akhir
+                            </Button>
+                          )}
 
                           {/* 3. Ajukan Pengesahan Kartu Bimbingan TA */}
                           {!isApprovalRequested ? (

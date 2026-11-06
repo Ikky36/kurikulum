@@ -162,6 +162,9 @@ export default function VerifikasiDokumenPublic() {
       case 'pengesahan_proposal':
       case 'surat_pengesahan_proposal':
         return 'Lembar Pengesahan Proposal Tugas Akhir';
+      case 'pengesahan_tugas_akhir':
+      case 'surat_pengesahan_tugas_akhir':
+        return 'Surat Pengesahan Tugas Akhir (Nota Dinas)';
       case 'krs':
         return 'Kartu Rencana Studi (KRS)';
       case 'kartu_bimbingan_dpa':

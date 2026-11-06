@@ -631,7 +631,7 @@ export function DocumentTemplateCustomizer() {
                   <Label className="text-xs">Peruntukan Fitur Dokumen di Aplikasi</Label>
                   <Select value={newDocRole} onValueChange={(val) => {
                     setNewDocRole(val);
-                    if (val === 'kartu_bimbingan_ta' || val === 'surat_pengesahan_proposal') {
+                    if (val === 'kartu_bimbingan_ta' || val === 'surat_pengesahan_proposal' || val === 'surat_pengesahan_tugas_akhir') {
                       setNewDocModule('tugas_akhir');
                     } else if (val === 'krs' || val === 'kartu_bimbingan_dpa') {
                       setNewDocModule('akademik');
@@ -648,6 +648,10 @@ export function DocumentTemplateCustomizer() {
                       <SelectItem value="surat_pengesahan_proposal">
                         <span className="font-semibold text-xs">Surat Pengesahan Proposal TA</span>
                         <span className="text-[10px] text-muted-foreground block">Terkoneksi ke tombol Cetak Pengesahan Proposal TA</span>
+                      </SelectItem>
+                      <SelectItem value="surat_pengesahan_tugas_akhir">
+                        <span className="font-semibold text-xs">Surat Pengesahan Tugas Akhir</span>
+                        <span className="text-[10px] text-muted-foreground block">Terkoneksi ke tombol Cetak Pengesahan Naskah Tugas Akhir / Skripsi</span>
                       </SelectItem>
                       <SelectItem value="krs">
                         <span className="font-semibold text-xs">Kartu Rencana Studi (KRS)</span>
@@ -1942,6 +1946,7 @@ export function DocumentTemplateCustomizer() {
                   <SelectContent>
                     <SelectItem value="kartu_bimbingan_ta">Kartu Bimbingan Tugas Akhir (Slot Utama TA)</SelectItem>
                     <SelectItem value="surat_pengesahan_proposal">Surat Pengesahan Proposal TA (Slot Proposal)</SelectItem>
+                    <SelectItem value="surat_pengesahan_tugas_akhir">Surat Pengesahan Tugas Akhir (Slot Naskah TA)</SelectItem>
                     <SelectItem value="krs">Kartu Rencana Studi / KRS (Slot Akademik)</SelectItem>
                     <SelectItem value="kartu_bimbingan_dpa">Kartu Bimbingan Akademik / DPA (Slot Perwalian)</SelectItem>
                     <SelectItem value="custom">Dokumen Kustom Mandiri</SelectItem>

@@ -91,6 +91,7 @@ export interface SingleDocumentTemplate {
   document_role?:
     | 'kartu_bimbingan_ta'
     | 'surat_pengesahan_proposal'
+    | 'surat_pengesahan_tugas_akhir'
     | 'krs'
     | 'kartu_bimbingan_dpa'
     | 'berita_acara_sempro'
@@ -339,6 +340,99 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     copies_enabled: false,
     copies_list: [],
     placement_targets: ['mahasiswa_tugas_akhir', 'dosen_bimbingan_ta', 'admin_tugas_akhir'],
+    document_role: 'surat_pengesahan_proposal',
+  },
+
+  surat_pengesahan_tugas_akhir: {
+    code: 'surat_pengesahan_tugas_akhir',
+    name: 'Surat Pengesahan Tugas Akhir',
+    orientation: 'portrait',
+    data_source_module: 'tugas_akhir',
+    document_title: 'NOTA DINAS',
+    document_subtitle: '',
+    show_kop: false,
+    show_footer: false,
+    show_student_info: false,
+    content_mode: 'text_only',
+    body_text_enabled: true,
+    body_text_template: `<div style="display: flex; justify-content: flex-end; margin-bottom: 1.25rem; font-size: 13px;">
+  <span>{{kota_institusi}}, {{tanggal_cetak}}</span>
+</div>
+
+<div style="margin-bottom: 1.5rem; line-height: 1.6; font-size: 13px;">
+  <div>Lamp : -</div>
+  <div>Hal : Naskah Skripsi Sdri. {{nama_mahasiswa}}</div>
+</div>
+
+<div style="margin-bottom: 1.5rem; line-height: 1.5; font-size: 13px;">
+  <div>Kepada Yth.</div>
+  <div style="font-weight: 700;">Ketua {{nama_kampus}}</div>
+  <div>Di tempat</div>
+</div>
+
+<div style="margin-bottom: 1rem; font-style: italic; font-size: 13px;">
+  Assalamu'alaikum Warahmatullahi Wabarakatuh
+</div>
+
+<div style="text-indent: 2.5rem; text-align: justify; margin-bottom: 1rem; line-height: 1.7; font-size: 13px;">
+  Setelah membaca, meneliti, dan memberikan bimbingan, perbaikan dan penyempurnaan terhadap naskah skripsi saudari:
+</div>
+
+<table style="margin: 0.5rem 0 1rem 2.5rem; border-collapse: collapse; line-height: 1.8; font-size: 13px;">
+  <tbody>
+    <tr>
+      <td style="width: 85px; vertical-align: top;">Nama</td>
+      <td style="width: 15px; text-align: center; vertical-align: top;">:</td>
+      <td style="font-weight: 600; vertical-align: top;">{{nama_mahasiswa}}</td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">NIM</td>
+      <td style="text-align: center; vertical-align: top;">:</td>
+      <td style="vertical-align: top;">{{nim}}</td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">Prodi</td>
+      <td style="text-align: center; vertical-align: top;">:</td>
+      <td style="vertical-align: top;">{{program_studi}}</td>
+    </tr>
+    <tr>
+      <td style="vertical-align: top;">Judul</td>
+      <td style="text-align: center; vertical-align: top;">:</td>
+      <td style="vertical-align: top; font-style: italic;">"{{judul_tugas_akhir}}".</td>
+    </tr>
+  </tbody>
+</table>
+
+<div style="text-align: justify; margin-bottom: 1rem; line-height: 1.7; font-size: 13px;">
+  Kami berpendapat bahwa naskah skripsi tersebut telah memenuhi syarat dan layak untuk diajukan dalam sidang munaqasyah tugas akhir.
+</div>
+
+<div style="margin-top: 1rem; font-style: italic; font-size: 13px;">
+  Wassalamu'alaikum Warahmatullahi Wabarakatuh
+</div>`,
+    table_enabled: false,
+    rules_note_enabled: false,
+    rules_note_title: '',
+    rules_note_text: '',
+    columns: [],
+    show_signature_date: false,
+    signature_spacing: 'normal',
+    single_signature_align: 'right',
+    font_family: 'Times New Roman',
+    signatures: [
+      {
+        id: 'advisor_1',
+        role_type: 'advisor_1',
+        role_label: 'Dosen Pembimbing',
+        enabled: true,
+        use_digital_signature: true,
+        signer_status: 'menyetujui',
+      },
+    ],
+    copies_enabled: false,
+    copies_list: [],
+    placement_targets: ['mahasiswa_tugas_akhir', 'dosen_bimbingan_ta', 'admin_tugas_akhir'],
+    document_role: 'surat_pengesahan_tugas_akhir',
   },
 
   berita_acara_sempro: {
@@ -791,6 +885,15 @@ export function useDocumentTemplatesConfig() {
               continue;
             }
 
+            // Jika template surat_pengesahan_tugas_akhir di database masih memakai template generik awal
+            if (
+              key === 'surat_pengesahan_tugas_akhir' &&
+              (parsed[key]?.body_text_template?.includes('Dengan ini menerangkan bahwa mahasiswa') || parsed[key]?.document_title === 'SURAT PENGESAHAN TUGAS AKHIR')
+            ) {
+              merged[key] = { ...defaultDocumentTemplates.surat_pengesahan_tugas_akhir, ...parsed[key], document_title: 'NOTA DINAS', show_kop: false, show_footer: false, show_student_info: false, content_mode: 'text_only', table_enabled: false, show_signature_date: false, body_text_template: defaultDocumentTemplates.surat_pengesahan_tugas_akhir.body_text_template };
+              continue;
+            }
+
             // Normalisasi lembar_nilai_sidang: pastikan memakai format standar resmi (13 kriteria rubrik terarah, 3 kolom NO/KOMPONEN/NILAI ANGKA, 1 tanda tangan kanan)
             if (
               key === 'lembar_nilai_sidang' &&
@@ -896,16 +999,30 @@ export function useDocumentTemplatesConfig() {
     }
 
     // 3. Jika mencari template Surat Pengesahan Proposal TA
-    if (code === 'surat_pengesahan_proposal' || code.includes('proposal')) {
+    if (code === 'surat_pengesahan_proposal' || (code.includes('proposal') && code.includes('pengesahan'))) {
       const proposalTemplate = Object.values(map).find(
         (t) =>
           t.document_role === 'surat_pengesahan_proposal' ||
           t.code === 'surat_pengesahan_proposal' ||
           t.code.includes('proposal') ||
           t.name?.toLowerCase().includes('proposal') ||
-          (t.data_source_module === 'tugas_akhir' && !t.table_enabled)
+          (t.data_source_module === 'tugas_akhir' && !t.table_enabled && !t.code.includes('tugas_akhir'))
       );
       if (proposalTemplate) return proposalTemplate;
+    }
+
+    // 3.b Jika mencari template Surat Pengesahan Tugas Akhir
+    if (
+      code === 'surat_pengesahan_tugas_akhir' ||
+      (code.includes('pengesahan') && (code.includes('tugas_akhir') || code.includes('skripsi') || code.includes('munaqasyah')) && !code.includes('proposal'))
+    ) {
+      const taPengesahanTemplate = Object.values(map).find(
+        (t) =>
+          t.document_role === 'surat_pengesahan_tugas_akhir' ||
+          t.code === 'surat_pengesahan_tugas_akhir' ||
+          (t.name?.toLowerCase().includes('pengesahan') && (t.name?.toLowerCase().includes('tugas akhir') || t.name?.toLowerCase().includes('skripsi')) && !t.name?.toLowerCase().includes('proposal'))
+      );
+      if (taPengesahanTemplate) return taPengesahanTemplate;
     }
 
     // 4. Jika mencari template KRS

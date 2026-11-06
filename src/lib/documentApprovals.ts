@@ -39,7 +39,14 @@ export function normalizeDocKey(docCode?: string | null): string {
   if (!docCode) return 'kartu_bimbingan_ta';
   const lower = docCode.toLowerCase();
   if (lower.includes('proposal')) return 'surat_pengesahan_proposal';
-  if (lower.includes('laporan')) return 'surat_pengesahan_laporan';
+  if (
+    lower.includes('surat_pengesahan_tugas_akhir') ||
+    lower.includes('pengesahan_tugas_akhir') ||
+    (lower.includes('pengesahan') && (lower.includes('tugas_akhir') || lower.includes('skripsi') || lower.includes('munaqasyah') || lower.includes('laporan')))
+  ) {
+    return 'surat_pengesahan_tugas_akhir';
+  }
+  if (lower.includes('laporan')) return 'surat_pengesahan_tugas_akhir';
   if (lower.includes('kartu') || lower.includes('bimbingan') || lower.includes('konsultasi') || lower.includes('kendali') || lower.includes('skripsi')) return 'kartu_bimbingan_ta';
   return lower;
 }
