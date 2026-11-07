@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,7 +37,8 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export const EvaluasiKetuaSidangPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const { token: routeToken } = useParams<{ token?: string }>();
+  const token = (routeToken || searchParams.get('token') || searchParams.get('t') || '').trim();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -137,6 +138,14 @@ export const EvaluasiKetuaSidangPage: React.FC = () => {
       }
     }
   }, [seminarData, userProfile]);
+
+  useEffect(() => {
+    if (seminarData?.ta_submissions?.profiles?.full_name) {
+      document.title = `Ketua Sidang - ${seminarData.ta_submissions.profiles.full_name} | STITMA`;
+    } else {
+      document.title = 'Portal Pengesahan Ketua Sidang | STITMA';
+    }
+  }, [seminarData]);
 
   // Calculate live average from examiners
   const examiners = seminarData?.ta_examiners || [];
@@ -611,7 +620,7 @@ export const EvaluasiKetuaSidangPage: React.FC = () => {
                 title="Tanda Tangan Pengesahan Berita Acara (Ketua Sidang)"
                 signerName={seminarData.chairperson_name || 'Ketua Sidang'}
                 defaultAccountSignature={userProfile?.signature_url}
-                folderPrefix="evaluasi_ketua_sidang"
+                folderPrefix="evaluasi_ta/ketua_sidang"
               />
             </div>
 

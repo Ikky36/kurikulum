@@ -535,9 +535,10 @@ export function generateAssessmentToken(prefix: 'ex' | 'ch' = 'ex'): string {
 
 // Helper: Membangun URL tautan evaluasi penguji atau ketua sidang
 export function getAssessmentUrl(role: 'penguji' | 'ketua-sidang', token: string): string {
-  if (typeof window === 'undefined') return '';
-  const origin = window.location.origin;
-  return `${origin}/evaluasi-ta/${role}?token=${encodeURIComponent(token)}`;
+  if (!token) return '';
+  if (typeof window === 'undefined') return `/evaluasi-ta/${role}?token=${encodeURIComponent(token)}`;
+  const origin = window.location.origin || `${window.location.protocol}//${window.location.host}`;
+  return `${origin}/evaluasi-ta/${role}?token=${encodeURIComponent(token.trim())}`;
 }
 
 // Helper: Membangun pesan WhatsApp rapi untuk Penguji

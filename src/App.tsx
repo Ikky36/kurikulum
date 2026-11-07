@@ -63,7 +63,17 @@ function AppContent() {
           <Route path="/verifikasi-dokumen" element={<VerifikasiDokumenPublic />} />
           <Route path="/v" element={<VerifikasiDokumenPublic />} />
           <Route path="/evaluasi-ta/penguji" element={<EvaluasiPengujiPage />} />
+          <Route path="/evaluasi-ta/penguji/:token" element={<EvaluasiPengujiPage />} />
           <Route path="/evaluasi-ta/ketua-sidang" element={<EvaluasiKetuaSidangPage />} />
+          <Route path="/evaluasi-ta/ketua-sidang/:token" element={<EvaluasiKetuaSidangPage />} />
+          <Route path="/tugas-akhir/evaluasi-penguji" element={<EvaluasiPengujiPage />} />
+          <Route path="/tugas-akhir/evaluasi-penguji/:token" element={<EvaluasiPengujiPage />} />
+          <Route path="/tugas-akhir/evaluasi-ketua-sidang" element={<EvaluasiKetuaSidangPage />} />
+          <Route path="/tugas-akhir/evaluasi-ketua-sidang/:token" element={<EvaluasiKetuaSidangPage />} />
+          <Route path="/evaluasi-penguji" element={<EvaluasiPengujiPage />} />
+          <Route path="/evaluasi-penguji/:token" element={<EvaluasiPengujiPage />} />
+          <Route path="/evaluasi-ketua-sidang" element={<EvaluasiKetuaSidangPage />} />
+          <Route path="/evaluasi-ketua-sidang/:token" element={<EvaluasiKetuaSidangPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

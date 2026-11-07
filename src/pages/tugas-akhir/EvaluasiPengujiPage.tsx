@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,7 +37,8 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export const EvaluasiPengujiPage: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token');
+  const { token: routeToken } = useParams<{ token?: string }>();
+  const token = (routeToken || searchParams.get('token') || searchParams.get('t') || '').trim();
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
@@ -173,6 +174,14 @@ export const EvaluasiPengujiPage: React.FC = () => {
       setRawScores(scoresMap);
     }
   }, [examinerData, userProfile]);
+
+  useEffect(() => {
+    if (examinerData?.ta_seminars?.ta_submissions?.profiles?.full_name) {
+      document.title = `Evaluasi Penguji - ${examinerData.ta_seminars.ta_submissions.profiles.full_name} | STITMA`;
+    } else {
+      document.title = 'Portal Evaluasi Penguji Tugas Akhir | STITMA';
+    }
+  }, [examinerData]);
 
   // Calculate live scores
   const scoreResult = calculateExaminerScore(criteria, rawScores);
@@ -695,7 +704,7 @@ export const EvaluasiPengujiPage: React.FC = () => {
                 title="Tanda Tangan Pengesahan Nilai"
                 signerName={examinerData.examiner_name || examinerData.profiles?.full_name || 'Penguji'}
                 defaultAccountSignature={userProfile?.signature_url}
-                folderPrefix="evaluasi_penguji"
+                folderPrefix="evaluasi_ta/penguji"
               />
             </div>
 

@@ -227,15 +227,28 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
     }
   };
 
-  // Salin Tautan ke Clipboard
+  // Salin Tautan ke Clipboard (dengan fallback cross-device / non-HTTPS)
   const handleCopyLink = (url: string, tokenId: string) => {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(url);
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(url);
+      } else {
+        const textArea = document.createElement('textarea');
+        textArea.value = url;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        textArea.remove();
+      }
       setCopiedToken(tokenId);
       toast.success('Tautan berhasil disalin ke clipboard!');
       setTimeout(() => setCopiedToken(null), 3000);
-    } else {
-      toast.error('Browser tidak mendukung salin otomatis');
+    } catch {
+      toast.error('Gagal menyalin tautan otomatis');
     }
   };
 
@@ -879,6 +892,17 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
                         </Button>
                         <Button
                           type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs gap-1 border border-input hover:bg-muted"
+                          title="Buka Tautan di Tab Baru"
+                          onClick={() => window.open(url, '_blank')}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Buka
+                        </Button>
+                        <Button
+                          type="button"
                           variant="default"
                           size="sm"
                           className="h-8 text-xs gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
@@ -973,6 +997,17 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
                               Salin
                             </>
                           )}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 text-xs gap-1 border border-input hover:bg-muted"
+                          title="Buka Tautan di Tab Baru"
+                          onClick={() => window.open(url, '_blank')}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Buka
                         </Button>
                         <Button
                           type="button"
