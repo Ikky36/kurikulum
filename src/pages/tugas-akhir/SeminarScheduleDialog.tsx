@@ -298,6 +298,11 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
       // Pastikan token ketua sidang ada
       const finalChairToken = chairpersonToken || generateAssessmentToken('ch');
 
+      // Sematkan metadata mahasiswa agar dapat dibaca penguji eksternal / guest
+      const studentMetadata = `<!-- STUDENT_INFO: ${JSON.stringify({ name: studentName, nim: studentNim, prodi: studentProdi })} -->`;
+      const baseOfficialNotes = (seminar.official_notes || '').replace(/<!-- STUDENT_INFO:.*?-->/gs, '').trim();
+      const mergedOfficialNotes = baseOfficialNotes ? `${baseOfficialNotes}\n${studentMetadata}` : studentMetadata;
+
       // 1. Update Seminar
       const { error: semError } = await supabase
         .from('ta_seminars')
@@ -314,6 +319,7 @@ export const SeminarScheduleDialog: React.FC<SeminarScheduleDialogProps> = ({
           chairperson_signature_url: chairpersonSignatureUrl || seminar.chairperson_signature_url || null,
           final_score: averageScore,
           final_grade: gradeResult?.grade || null,
+          official_notes: mergedOfficialNotes,
         })
         .eq('id', seminar.id);
 

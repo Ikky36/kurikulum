@@ -6,7 +6,7 @@ import { UniversalDocumentContainer, DocumentSignatureData } from './UniversalDo
 import { QRCodeSVG } from 'qrcode.react';
 import { useDocumentTemplatesConfig, SingleDocumentTemplate } from '@/lib/documentTemplateTypes';
 import { useDocumentSettings } from '@/lib/documentSettings';
-import { useTaRubricsConfig, determineGradeFromScore } from '@/lib/taAssessmentTypes';
+import { useTaRubricsConfig, determineGradeFromScore, extractStudentInfoFromSeminar } from '@/lib/taAssessmentTypes';
 import { FileText, Award, FileCheck, Printer, CheckCircle2 } from 'lucide-react';
 
 export interface SeminarDocumentViewerModalProps {
@@ -38,7 +38,13 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
 
   const isSempro = seminar.type === 'sempro';
   const submission = seminar.ta_submissions;
-  const student = submission?.profiles;
+  const resolvedStudent = extractStudentInfoFromSeminar(seminar);
+  const student = {
+    full_name: resolvedStudent.fullName,
+    nim: resolvedStudent.nim,
+    program: resolvedStudent.program,
+    ...submission?.profiles,
+  };
   const examiners = Array.isArray(seminar.ta_examiners) ? seminar.ta_examiners : [];
 
   // 1. Resolve active template code

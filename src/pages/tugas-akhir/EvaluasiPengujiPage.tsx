@@ -18,6 +18,7 @@ import {
   Save,
   Send,
   FileCheck,
+  FileText,
   UserCheck,
   Award,
   Sparkles,
@@ -30,6 +31,7 @@ import {
   useTaRubricsConfig,
   calculateExaminerScore,
   determineGradeFromScore,
+  extractStudentInfoFromSeminar,
   TaExaminerScoreItem,
 } from '@/lib/taAssessmentTypes';
 import { DigitalSignatureBox } from '@/components/tugas-akhir/DigitalSignatureBox';
@@ -176,8 +178,9 @@ export const EvaluasiPengujiPage: React.FC = () => {
   }, [examinerData, userProfile]);
 
   useEffect(() => {
-    if (examinerData?.ta_seminars?.ta_submissions?.profiles?.full_name) {
-      document.title = `Evaluasi Penguji - ${examinerData.ta_seminars.ta_submissions.profiles.full_name} | STITMA`;
+    const sInfo = extractStudentInfoFromSeminar(examinerData?.ta_seminars);
+    if (sInfo.fullName && sInfo.fullName !== 'Mahasiswa') {
+      document.title = `Evaluasi Penguji - ${sInfo.fullName} | STITMA`;
     } else {
       document.title = 'Portal Evaluasi Penguji Tugas Akhir | STITMA';
     }
@@ -287,6 +290,7 @@ export const EvaluasiPengujiPage: React.FC = () => {
   const seminar = examinerData.ta_seminars;
   const submission = seminar?.ta_submissions;
   const student = submission?.profiles;
+  const studentInfo = extractStudentInfoFromSeminar(seminar);
   const isLocked = seminar?.is_locked;
   const isAlreadySigned = !!examinerData.signed_at;
 
@@ -394,10 +398,10 @@ export const EvaluasiPengujiPage: React.FC = () => {
                 Data Mahasiswa
               </span>
               <p className="font-bold text-base text-foreground">
-                {student?.full_name || 'Mahasiswa'}
+                {studentInfo.fullName}
               </p>
               <p className="text-muted-foreground">
-                NIM: <strong className="text-foreground">{student?.nim || '-'}</strong> • Prodi: {student?.program || 'PBA'}
+                NIM: <strong className="text-foreground">{studentInfo.nim}</strong> • Prodi: {studentInfo.program}
               </p>
               <div className="pt-1.5 border-t mt-1.5">
                 <span className="text-[11px] font-semibold text-muted-foreground block">Judul Tugas Akhir:</span>

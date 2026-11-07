@@ -31,6 +31,7 @@ import { SeminarDocumentViewerModal } from '@/components/document/SeminarDocumen
 import {
   useTaRubricsConfig,
   determineGradeFromScore,
+  extractStudentInfoFromSeminar,
 } from '@/lib/taAssessmentTypes';
 import { DigitalSignatureBox } from '@/components/tugas-akhir/DigitalSignatureBox';
 import { useAuth } from '@/contexts/AuthContext';
@@ -140,8 +141,9 @@ export const EvaluasiKetuaSidangPage: React.FC = () => {
   }, [seminarData, userProfile]);
 
   useEffect(() => {
-    if (seminarData?.ta_submissions?.profiles?.full_name) {
-      document.title = `Ketua Sidang - ${seminarData.ta_submissions.profiles.full_name} | STITMA`;
+    const sInfo = extractStudentInfoFromSeminar(seminarData);
+    if (sInfo.fullName && sInfo.fullName !== 'Mahasiswa') {
+      document.title = `Ketua Sidang - ${sInfo.fullName} | STITMA`;
     } else {
       document.title = 'Portal Pengesahan Ketua Sidang | STITMA';
     }
@@ -240,6 +242,7 @@ export const EvaluasiKetuaSidangPage: React.FC = () => {
 
   const submission = seminarData.ta_submissions;
   const student = submission?.profiles;
+  const studentInfo = extractStudentInfoFromSeminar(seminarData);
   const isAlreadySigned = !!seminarData.chairperson_signed_at;
 
   return (
@@ -346,10 +349,10 @@ export const EvaluasiKetuaSidangPage: React.FC = () => {
                 Data Mahasiswa Diuji
               </span>
               <p className="font-bold text-base text-foreground">
-                {student?.full_name || 'Mahasiswa'}
+                {studentInfo.fullName}
               </p>
               <p className="text-muted-foreground">
-                NIM: <strong className="text-foreground">{student?.nim || '-'}</strong> • Prodi: {student?.program || 'PBA'}
+                NIM: <strong className="text-foreground">{studentInfo.nim}</strong> • Prodi: {studentInfo.program}
               </p>
               <div className="pt-1.5 border-t mt-1.5">
                 <span className="text-[11px] font-semibold text-muted-foreground block">Judul Tugas Akhir:</span>

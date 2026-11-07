@@ -541,6 +541,44 @@ export function getAssessmentUrl(role: 'penguji' | 'ketua-sidang', token: string
   return `${origin}/evaluasi-ta/${role}?token=${encodeURIComponent(token.trim())}`;
 }
 
+// Helper: Ekstraksi informasi mahasiswa yang andal (termasuk untuk akses publik anon via seminar token)
+export function extractStudentInfoFromSeminar(seminar: any): {
+  fullName: string;
+  nim: string;
+  program: string;
+} {
+  const profile = seminar?.ta_submissions?.profiles;
+  if (profile?.full_name && profile.full_name !== 'Mahasiswa') {
+    return {
+      fullName: profile.full_name,
+      nim: profile.nim || '-',
+      program: profile.program || 'Pendidikan Bahasa Arab',
+    };
+  }
+
+  // Cek official_notes seminar atau comments submission untuk metadata STUDENT_INFO
+  const textToScan = `${seminar?.official_notes || ''} ${seminar?.ta_submissions?.comments || ''}`;
+  const match = textToScan.match(/<!-- STUDENT_INFO:\s*(\{.*?\})\s*-->/);
+  if (match) {
+    try {
+      const parsed = JSON.parse(match[1]);
+      if (parsed.name && parsed.name !== 'Mahasiswa') {
+        return {
+          fullName: parsed.name || parsed.fullName || 'Mahasiswa',
+          nim: parsed.nim || '-',
+          program: parsed.prodi || parsed.program || 'Pendidikan Bahasa Arab',
+        };
+      }
+    } catch {}
+  }
+
+  return {
+    fullName: profile?.full_name || 'Mahasiswa',
+    nim: profile?.nim || '-',
+    program: profile?.program || 'Pendidikan Bahasa Arab',
+  };
+}
+
 // Helper: Membangun pesan WhatsApp rapi untuk Penguji
 export function buildExaminerWhatsAppMessage(params: {
   examinerName: string;
