@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 import { useGlobalRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { TutorialChatButton } from "@/components/chat/TutorialChatButton";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MataKuliah from "./pages/MataKuliah";
@@ -42,40 +43,42 @@ function AppContent() {
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/kurikulum" element={<Kurikulum />} />
-          <Route path="/mata-kuliah" element={<MataKuliah />} />
-          <Route path="/mata-kuliah/:courseId" element={<CourseDetail />} />
-          <Route path="/nilai-mahasiswa/:studentId" element={<StudentGrades />} />
-          <Route path="/e-learning" element={<ELearning />} />
-          <Route path="/e-learning/recap" element={<ElearningRecap />} />
-          <Route path="/quiz/:assignmentId" element={<QuizTaking />} />
-          <Route path="/krs" element={<KrsMahasiswa />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
-          <Route path="/dashboard/dosen" element={<DashboardDosen />} />
-          <Route path="/dashboard/admin" element={<DashboardAdmin />} />
-          <Route path="/settings" element={<Settings />} />
-          <Route path="/tugas-akhir" element={<TugasAkhir />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/verifikasi-dokumen" element={<VerifikasiDokumenPublic />} />
-          <Route path="/v" element={<VerifikasiDokumenPublic />} />
-          <Route path="/evaluasi-ta/penguji" element={<EvaluasiPengujiPage />} />
-          <Route path="/evaluasi-ta/penguji/:token" element={<EvaluasiPengujiPage />} />
-          <Route path="/evaluasi-ta/ketua-sidang" element={<EvaluasiKetuaSidangPage />} />
-          <Route path="/evaluasi-ta/ketua-sidang/:token" element={<EvaluasiKetuaSidangPage />} />
-          <Route path="/tugas-akhir/evaluasi-penguji" element={<EvaluasiPengujiPage />} />
-          <Route path="/tugas-akhir/evaluasi-penguji/:token" element={<EvaluasiPengujiPage />} />
-          <Route path="/tugas-akhir/evaluasi-ketua-sidang" element={<EvaluasiKetuaSidangPage />} />
-          <Route path="/tugas-akhir/evaluasi-ketua-sidang/:token" element={<EvaluasiKetuaSidangPage />} />
-          <Route path="/evaluasi-penguji" element={<EvaluasiPengujiPage />} />
-          <Route path="/evaluasi-penguji/:token" element={<EvaluasiPengujiPage />} />
-          <Route path="/evaluasi-ketua-sidang" element={<EvaluasiKetuaSidangPage />} />
-          <Route path="/evaluasi-ketua-sidang/:token" element={<EvaluasiKetuaSidangPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/kurikulum" element={<Kurikulum />} />
+            <Route path="/mata-kuliah" element={<MataKuliah />} />
+            <Route path="/mata-kuliah/:courseId" element={<CourseDetail />} />
+            <Route path="/nilai-mahasiswa/:studentId" element={<StudentGrades />} />
+            <Route path="/e-learning" element={<ELearning />} />
+            <Route path="/e-learning/recap" element={<ElearningRecap />} />
+            <Route path="/quiz/:assignmentId" element={<QuizTaking />} />
+            <Route path="/krs" element={<KrsMahasiswa />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/dashboard/mahasiswa" element={<DashboardMahasiswa />} />
+            <Route path="/dashboard/dosen" element={<DashboardDosen />} />
+            <Route path="/dashboard/admin" element={<DashboardAdmin />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/tugas-akhir" element={<TugasAkhir />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/verifikasi-dokumen" element={<VerifikasiDokumenPublic />} />
+            <Route path="/v" element={<VerifikasiDokumenPublic />} />
+            <Route path="/evaluasi-ta/penguji" element={<EvaluasiPengujiPage />} />
+            <Route path="/evaluasi-ta/penguji/:token" element={<EvaluasiPengujiPage />} />
+            <Route path="/evaluasi-ta/ketua-sidang" element={<EvaluasiKetuaSidangPage />} />
+            <Route path="/evaluasi-ta/ketua-sidang/:token" element={<EvaluasiKetuaSidangPage />} />
+            <Route path="/tugas-akhir/evaluasi-penguji" element={<EvaluasiPengujiPage />} />
+            <Route path="/tugas-akhir/evaluasi-penguji/:token" element={<EvaluasiPengujiPage />} />
+            <Route path="/tugas-akhir/evaluasi-ketua-sidang" element={<EvaluasiKetuaSidangPage />} />
+            <Route path="/tugas-akhir/evaluasi-ketua-sidang/:token" element={<EvaluasiKetuaSidangPage />} />
+            <Route path="/evaluasi-penguji" element={<EvaluasiPengujiPage />} />
+            <Route path="/evaluasi-penguji/:token" element={<EvaluasiPengujiPage />} />
+            <Route path="/evaluasi-ketua-sidang" element={<EvaluasiKetuaSidangPage />} />
+            <Route path="/evaluasi-ketua-sidang/:token" element={<EvaluasiKetuaSidangPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </ErrorBoundary>
       </BrowserRouter>
       <TutorialChatButton />
     </>
@@ -83,13 +86,15 @@ function AppContent() {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <TooltipProvider>
-        <AppContent />
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <TooltipProvider>
+          <AppContent />
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

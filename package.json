@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "verify:tags": "node scripts/verify-jsx-tags.cjs",
+    "build": "node scripts/verify-jsx-tags.cjs && vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"
