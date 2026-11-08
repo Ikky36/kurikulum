@@ -1137,17 +1137,18 @@ export function UniversalDocumentContainer({
                     <tr className="bg-slate-50/50">
                       <th className="border border-slate-900 py-1.5 px-2 w-12 text-center font-bold">No</th>
                       <th className="border border-slate-900 py-1.5 px-3 text-left font-bold">Nama</th>
-                      <th className="border border-slate-900 py-1.5 px-3 w-56 text-center font-bold">Tanda Tangan</th>
+                      <th className="border border-slate-900 py-1.5 px-3 w-36 text-center font-bold">Jabatan</th>
+                      <th className="border border-slate-900 py-1.5 px-3 w-48 text-center font-bold">Tanda Tangan</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr>
                       <td className="border border-slate-900 py-2.5 px-2 text-center align-middle font-normal">1</td>
-                      <td className="border border-slate-900 py-2.5 px-3 align-middle">
-                        <div className="flex items-center justify-between">
-                          <span>{resolvedVariables.nama_ketua_sidang || 'Zulkifli Hayad, M.Pd.'}</span>
-                          <span className="text-slate-600 font-normal">(Ketua Sidang)</span>
-                        </div>
+                      <td className="border border-slate-900 py-2.5 px-3 align-middle font-normal">
+                        {resolvedVariables.nama_ketua_sidang || 'Zulkifli Hayad, M.Pd.'}
+                      </td>
+                      <td className="border border-slate-900 py-2.5 px-3 text-center align-middle font-normal">
+                        Ketua Sidang
                       </td>
                       <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">
                         {signaturesData?.chairperson?.signature_url ? (
@@ -1163,11 +1164,11 @@ export function UniversalDocumentContainer({
                     </tr>
                     <tr>
                       <td className="border border-slate-900 py-2.5 px-2 text-center align-middle font-normal">2</td>
-                      <td className="border border-slate-900 py-2.5 px-3 align-middle">
-                        <div className="flex items-center justify-between">
-                          <span>{examinerName || 'Dr. Syaiful Anam, M.Pd'}</span>
-                          <span className="text-slate-600 font-normal">(Penguji)</span>
-                        </div>
+                      <td className="border border-slate-900 py-2.5 px-3 align-middle font-normal">
+                        {examinerName || 'Dr. Syaiful Anam, M.Pd'}
+                      </td>
+                      <td className="border border-slate-900 py-2.5 px-3 text-center align-middle font-normal">
+                        Penguji
                       </td>
                       <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">
                         {examinerSignatureUrl ? (
@@ -1180,11 +1181,6 @@ export function UniversalDocumentContainer({
                           <div className="h-8 w-36 border-b border-slate-900 mx-auto" />
                         )}
                       </td>
-                    </tr>
-                    <tr>
-                      <td className="border border-slate-900 py-2.5 px-2 text-center align-middle font-normal">3</td>
-                      <td className="border border-slate-900 py-2.5 px-3 align-middle">&nbsp;</td>
-                      <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">&nbsp;</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1237,6 +1233,25 @@ export function UniversalDocumentContainer({
                   </div>
                 </div>
               </div>
+
+              {/* 1 Barcode / QR Code Verifikasi Keabsahan Dokumen Digital */}
+              {docSettings.qr_code_enabled !== false && verificationUrl && (
+                <div className="pt-3 flex justify-start items-center">
+                  <div className="flex items-center gap-2 p-1.5 rounded border border-slate-300 bg-white shadow-2xs">
+                    <QRCodeSVG
+                      value={verificationUrl}
+                      size={docSettings.qr_code_size === 'small' ? 40 : docSettings.qr_code_size === 'large' ? 60 : 48}
+                      level="L"
+                    />
+                    {docSettings.qr_code_show_label !== false && (
+                      <div className="text-[9.5px] text-slate-600 leading-tight font-sans">
+                        <p className="font-semibold text-slate-800">Pindai Verifikasi</p>
+                        <p>Keabsahan Dokumen Digital</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           ) : template.content_mode !== 'text_only' && template.table_enabled !== false ? (
             <div className="w-full my-2 document-content">

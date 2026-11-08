@@ -510,38 +510,26 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     <tr style="background-color: #f8fafc;">
       <th style="border: 1px solid #1e293b; padding: 6px; text-align: center; width: 45px;">No</th>
       <th style="border: 1px solid #1e293b; padding: 6px; text-align: center;">Nama</th>
-      <th style="border: 1px solid #1e293b; padding: 6px; text-align: center; width: 180px;">Tanda Tangan</th>
+      <th style="border: 1px solid #1e293b; padding: 6px; text-align: center; width: 140px;">Jabatan</th>
+      <th style="border: 1px solid #1e293b; padding: 6px; text-align: center; width: 160px;">Tanda Tangan</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td style="border: 1px solid #1e293b; padding: 8px; text-align: center;">1</td>
-      <td style="border: 1px solid #1e293b; padding: 8px 12px;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>{{nama_ketua_sidang}}</span>
-          <span style="color: #475569;">(Ketua Sidang)</span>
-        </div>
-      </td>
+      <td style="border: 1px solid #1e293b; padding: 8px 12px;">{{nama_ketua_sidang}}</td>
+      <td style="border: 1px solid #1e293b; padding: 8px; text-align: center;">Ketua Sidang</td>
       <td style="border: 1px solid #1e293b; padding: 8px; text-align: center;">
         <div style="height: 24px; border-bottom: 1px solid #1e293b; width: 85%; margin: 0 auto;"></div>
       </td>
     </tr>
     <tr>
       <td style="border: 1px solid #1e293b; padding: 8px; text-align: center;">2</td>
-      <td style="border: 1px solid #1e293b; padding: 8px 12px;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span>{{nama_penguji_1}}</span>
-          <span style="color: #475569;">(Penguji)</span>
-        </div>
-      </td>
+      <td style="border: 1px solid #1e293b; padding: 8px 12px;">{{nama_penguji_1}}</td>
+      <td style="border: 1px solid #1e293b; padding: 8px; text-align: center;">Penguji</td>
       <td style="border: 1px solid #1e293b; padding: 8px; text-align: center;">
         <div style="height: 24px; border-bottom: 1px solid #1e293b; width: 85%; margin: 0 auto;"></div>
       </td>
-    </tr>
-    <tr>
-      <td style="border: 1px solid #1e293b; padding: 8px; text-align: center;">3</td>
-      <td style="border: 1px solid #1e293b; padding: 8px 12px;">&nbsp;</td>
-      <td style="border: 1px solid #1e293b; padding: 8px; text-align: center;">&nbsp;</td>
     </tr>
   </tbody>
 </table>
@@ -1029,7 +1017,9 @@ export function useDocumentTemplatesConfig() {
                 parsed[key]?.rules_note_enabled === true ||
                 (parsed[key]?.signatures?.length ?? 0) > 0 ||
                 parsed[key]?.document_title !== 'BERITA ACARA SEMINAR PROPOSAL TUGAS AKHIR' ||
-                parsed[key]?.body_text_template?.includes('Dewan Penguji telah melakukan evaluasi komprehensif'))
+                parsed[key]?.body_text_template?.includes('Dewan Penguji telah melakukan evaluasi komprehensif') ||
+                !parsed[key]?.body_text_template?.includes('Jabatan') ||
+                parsed[key]?.body_text_template?.includes('(Ketua Sidang)'))
             ) {
               merged[key] = {
                 ...defaultDocumentTemplates.berita_acara_sempro,

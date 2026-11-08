@@ -486,18 +486,19 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
                           <tr className="bg-slate-50/50">
                             <th className="border border-slate-900 py-1.5 px-2 w-12 text-center font-bold">No</th>
                             <th className="border border-slate-900 py-1.5 px-3 text-left font-bold">Nama</th>
-                            <th className="border border-slate-900 py-1.5 px-3 w-56 text-center font-bold">Tanda Tangan</th>
+                            <th className="border border-slate-900 py-1.5 px-3 w-36 text-center font-bold">Jabatan</th>
+                            <th className="border border-slate-900 py-1.5 px-3 w-48 text-center font-bold">Tanda Tangan</th>
                           </tr>
                         </thead>
                         <tbody>
                           {/* 1. Ketua Sidang */}
                           <tr>
                             <td className="border border-slate-900 py-2.5 px-2 text-center align-middle font-normal">1</td>
-                            <td className="border border-slate-900 py-2.5 px-3 align-middle">
-                              <div className="flex items-center justify-between">
-                                <span className="font-normal">{signaturesData['chairperson']?.name || 'Zulkifli Hayad, M.Pd.'}</span>
-                                <span className="text-slate-600 font-normal">(Ketua Sidang)</span>
-                              </div>
+                            <td className="border border-slate-900 py-2.5 px-3 align-middle font-normal">
+                              {signaturesData['chairperson']?.name || 'Zulkifli Hayad, M.Pd.'}
+                            </td>
+                            <td className="border border-slate-900 py-2.5 px-3 text-center align-middle font-normal">
+                              Ketua Sidang
                             </td>
                             <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">
                               {signaturesData['chairperson']?.signature_url ? (
@@ -512,44 +513,48 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
                             </td>
                           </tr>
 
-                          {/* 2. Para Penguji */}
-                          {examiners.map((ex: any, idx: number) => {
-                            const exName = ex.examiner_name || ex.profiles?.full_name || `Penguji ${idx + 1}`;
-                            const exRole = ex.role || 'Penguji';
-                            return (
-                              <tr key={idx}>
-                                <td className="border border-slate-900 py-2.5 px-2 text-center align-middle font-normal">
-                                  {idx + 2}
-                                </td>
-                                <td className="border border-slate-900 py-2.5 px-3 align-middle">
-                                  <div className="flex items-center justify-between">
-                                    <span className="font-normal">{exName}</span>
-                                    <span className="text-slate-600 font-normal">({exRole})</span>
-                                  </div>
-                                </td>
-                                <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">
-                                  {ex.signature_url ? (
-                                    <img
-                                      src={ex.signature_url}
-                                      alt="TTD Penguji"
-                                      className="h-10 max-w-[140px] mx-auto object-contain"
-                                    />
-                                  ) : (
-                                    <div className="h-8 w-36 border-b border-slate-900 mx-auto" />
-                                  )}
-                                </td>
-                              </tr>
-                            );
-                          })}
-
-                          {/* Baris Kosong Cadangan Penguji jika jumlah tim penguji kurang dari 2 */}
-                          {examiners.length < 2 && (
+                          {/* 2. Penguji (Tepat Baris ke-2) */}
+                          {examiners.length > 0 ? (
+                            examiners.slice(0, 1).map((ex: any, idx: number) => {
+                              const exName = ex.examiner_name || ex.profiles?.full_name || `Dr. Syaiful Anam, M.Pd`;
+                              const exRole = ex.role || 'Penguji';
+                              return (
+                                <tr key={idx}>
+                                  <td className="border border-slate-900 py-2.5 px-2 text-center align-middle font-normal">
+                                    2
+                                  </td>
+                                  <td className="border border-slate-900 py-2.5 px-3 align-middle font-normal">
+                                    {exName}
+                                  </td>
+                                  <td className="border border-slate-900 py-2.5 px-3 text-center align-middle font-normal">
+                                    {exRole}
+                                  </td>
+                                  <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">
+                                    {ex.signature_url ? (
+                                      <img
+                                        src={ex.signature_url}
+                                        alt="TTD Penguji"
+                                        className="h-10 max-w-[140px] mx-auto object-contain"
+                                      />
+                                    ) : (
+                                      <div className="h-8 w-36 border-b border-slate-900 mx-auto" />
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          ) : (
                             <tr>
-                              <td className="border border-slate-900 py-2.5 px-2 text-center align-middle font-normal">
-                                {examiners.length + 2}
+                              <td className="border border-slate-900 py-2.5 px-2 text-center align-middle font-normal">2</td>
+                              <td className="border border-slate-900 py-2.5 px-3 align-middle font-normal">
+                                Dr. Syaiful Anam, M.Pd
                               </td>
-                              <td className="border border-slate-900 py-2.5 px-3 align-middle">&nbsp;</td>
-                              <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">&nbsp;</td>
+                              <td className="border border-slate-900 py-2.5 px-3 text-center align-middle font-normal">
+                                Penguji
+                              </td>
+                              <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">
+                                <div className="h-8 w-36 border-b border-slate-900 mx-auto" />
+                              </td>
                             </tr>
                           )}
                         </tbody>
@@ -605,6 +610,25 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
                         </div>
                       </div>
                     </div>
+
+                    {/* 1 Barcode / QR Code Verifikasi Keabsahan Dokumen Digital */}
+                    {docSettings.qr_code_enabled !== false && verificationUrl && (
+                      <div className="pt-3 flex justify-start items-center">
+                        <div className="flex items-center gap-2 p-1.5 rounded border border-slate-300 bg-white shadow-2xs">
+                          <QRCodeSVG
+                            value={verificationUrl}
+                            size={docSettings.qr_code_size === 'small' ? 40 : docSettings.qr_code_size === 'large' ? 60 : 48}
+                            level="L"
+                          />
+                          {docSettings.qr_code_show_label !== false && (
+                            <div className="text-[9.5px] text-slate-600 leading-tight font-sans">
+                              <p className="font-semibold text-slate-800">Pindai Verifikasi</p>
+                              <p>Keabsahan Dokumen Digital</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })()
