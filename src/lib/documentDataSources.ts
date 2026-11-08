@@ -65,6 +65,13 @@ export const DOCUMENT_DATA_SOURCE_MODULES: Record<string, DocumentModuleDefiniti
       { key: 'nidn_pembimbing_1', label: 'NIDN Pembimbing I', category: 'dosen', exampleValue: '0712057801' },
       { key: 'nama_pembimbing_2', label: 'Nama Dosen Pembimbing II', category: 'dosen', exampleValue: 'Ust. Zulkifli Hayad, M.Pd.' },
       { key: 'nidn_pembimbing_2', label: 'NIDN Pembimbing II', category: 'dosen', exampleValue: '0728098902' },
+      { key: 'nama_ketua_sidang', label: 'Nama Ketua Sidang', category: 'dosen', exampleValue: 'Muhammad Syafii Tampubolon, M.Pd.' },
+
+      { key: 'nomor_surat', label: 'Nomor Surat Tugas Resmi', category: 'institusi', exampleValue: '154/q.a/B/STITMA/X/2026' },
+      { key: 'tanggal_ujian', label: 'Tanggal Ujian / Seminar', category: 'tugas_akhir', exampleValue: '02 November 2026' },
+      { key: 'jam_ujian', label: 'Pukul / Waktu Ujian', category: 'tugas_akhir', exampleValue: '09.30 - Selesai' },
+      { key: 'ruangan_ujian', label: 'Ruangan / Tempat Ujian', category: 'tugas_akhir', exampleValue: 'Ruang Sidang Lt 2 Masjid' },
+      { key: 'tabel_penugasan_penguji', label: 'Tabel Penugasan Tim Penguji', category: 'tugas_akhir', exampleValue: '' },
 
       { key: 'tanggal_cetak', label: 'Tanggal Cetak (Otomatis Hari Ini)', category: 'institusi', exampleValue: '21 Oktober 2026' },
       { key: 'kota_institusi', label: 'Kota Kampus', category: 'institusi', exampleValue: 'Ponorogo' },

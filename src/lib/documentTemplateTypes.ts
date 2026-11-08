@@ -653,60 +653,72 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     name: 'Surat Tugas Seminar Proposal',
     orientation: 'portrait',
     data_source_module: 'tugas_akhir',
-    document_title: 'SURAT TUGAS PENGUJI SEMINAR PROPOSAL',
-    document_subtitle: 'NOMOR: {{nomor_surat}}',
+    document_title: 'SURAT TUGAS MENGUJI SEMINAR PROPOSAL TUGAS AKHIR',
+    document_subtitle: 'Nomor: {{nomor_surat}}',
     show_kop: true,
     show_footer: true,
     show_student_info: false,
     content_mode: 'text_only',
     body_text_enabled: true,
-    body_text_template: `<div style="text-align: justify; line-height: 1.7; font-size: 13px; margin-bottom: 1rem;">
-  Ketua Program Studi Pendidikan Bahasa Arab Sekolah Tinggi Ilmu Tarbiyah Madani (STITMA) Yogyakarta, dengan ini memberikan tugas pengujian kepada:
+    body_text_template: `<div style="margin-bottom: 0.75rem; font-size: 13px;">
+  Kaprodi {{program_studi}}, menugaskan saudara:
+</div>
+
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 13px;" border="1">
+  <thead>
+    <tr style="background-color: #f8fafc;">
+      <th style="border: 1px solid #1e293b; padding: 6px; text-align: center; width: 45px;">No</th>
+      <th style="border: 1px solid #1e293b; padding: 6px; text-align: center;">Nama</th>
+      <th style="border: 1px solid #1e293b; padding: 6px; text-align: center; width: 140px;">Tugas</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{tabel_penugasan_penguji}}
+  </tbody>
+</table>
+
+<div style="margin-bottom: 0.5rem; font-size: 13px;">
+  Sebagai Dewan Penguji Seminar Proposal Saudara/i:
 </div>
 
 <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 13px;">
   <tbody>
     <tr>
-      <td style="width: 140px; padding: 4px 0; font-weight: 600;">Ketua Sidang</td>
-      <td style="width: 15px; text-align: center;">:</td>
-      <td style="font-weight: 700;">{{nama_ketua_sidang}}</td>
+      <td style="width: 140px; padding: 3px 0; vertical-align: top;">Nama</td>
+      <td style="width: 15px; text-align: center; vertical-align: top;">:</td>
+      <td style="font-weight: 600; vertical-align: top;">{{nama_mahasiswa}}</td>
     </tr>
     <tr>
-      <td style="padding: 4px 0; font-weight: 600;">Dewan Penguji</td>
-      <td style="text-align: center;">:</td>
-      <td>{{daftar_nama_penguji}}</td>
+      <td style="padding: 3px 0; vertical-align: top;">NIM</td>
+      <td style="text-align: center; vertical-align: top;">:</td>
+      <td style="vertical-align: top;">{{nim}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 3px 0; vertical-align: top;">Judul Tugas Akhir</td>
+      <td style="text-align: center; vertical-align: top;">:</td>
+      <td style="font-weight: 600; text-transform: uppercase; line-height: 1.5; vertical-align: top;">{{judul_tugas_akhir}}</td>
     </tr>
   </tbody>
 </table>
 
-<div style="text-align: justify; line-height: 1.7; font-size: 13px; margin-bottom: 1rem;">
-  Untuk melaksanakan pengujian pada Seminar Proposal Skripsi mahasiswa:
+<div style="margin-bottom: 0.5rem; font-size: 13px;">
+  Yang <em>insya Allah</em> akan dilaksanakan pada:
 </div>
 
 <table style="width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 13px;">
   <tbody>
     <tr>
-      <td style="width: 140px; padding: 4px 0;">Nama Mahasiswa</td>
+      <td style="width: 140px; padding: 3px 0;">Tanggal</td>
       <td style="width: 15px; text-align: center;">:</td>
-      <td style="font-weight: 600;">{{nama_mahasiswa}}</td>
+      <td>{{tanggal_ujian}}</td>
     </tr>
     <tr>
-      <td style="padding: 4px 0;">NIM / Program Studi</td>
+      <td style="padding: 3px 0;">Pukul</td>
       <td style="text-align: center;">:</td>
-      <td>{{nim}} / {{program_studi}}</td>
+      <td>{{jam_ujian}}</td>
     </tr>
     <tr>
-      <td style="padding: 4px 0;">Judul Proposal</td>
-      <td style="text-align: center;">:</td>
-      <td style="font-style: italic;">"{{judul_tugas_akhir}}"</td>
-    </tr>
-    <tr>
-      <td style="padding: 4px 0;">Hari / Tanggal / Jam</td>
-      <td style="text-align: center;">:</td>
-      <td>{{hari_ujian}}, {{tanggal_ujian}} WIB</td>
-    </tr>
-    <tr>
-      <td style="padding: 4px 0;">Ruangan / Tempat</td>
+      <td style="padding: 3px 0;">Tempat</td>
       <td style="text-align: center;">:</td>
       <td>{{ruangan_ujian}}</td>
     </tr>
@@ -714,7 +726,7 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
 </table>
 
 <div style="text-align: justify; line-height: 1.6; font-size: 13px; margin-bottom: 1rem;">
-  Demikian surat tugas ini dibuat untuk dilaksanakan dengan penuh rasa tanggung jawab dan amanah ilmiah.
+  Demikian surat tugas ini disampaikan untuk dilaksanakan sebagaimana mestinya.
 </div>`,
     table_enabled: false,
     rules_note_enabled: false,
@@ -726,10 +738,10 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     single_signature_align: 'right',
     font_family: 'Times New Roman',
     signatures: [
-      { id: 'kaprodi', role_label: 'Ketua Program Studi', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
+      { id: 'kaprodi', role_label: 'Kaprodi {{program_studi}}', enabled: true, use_digital_signature: true },
     ],
     copies_enabled: false,
-    copies_list: ['Ketua STITMA', 'Dosen yang bersangkutan', 'Arsip BAAK'],
+    copies_list: [],
     placement_targets: ['admin_tugas_akhir', 'dosen_penguji'],
     document_role: 'surat_tugas_sempro',
   },
@@ -928,6 +940,33 @@ export function useDocumentTemplatesConfig() {
                 student_bio_fields: defaultDocumentTemplates.lembar_nilai_sidang.student_bio_fields,
                 single_signature_align: 'right',
                 table_enabled: true,
+              };
+              continue;
+            }
+
+            // Normalisasi surat_tugas_sempro: pastikan memakai format resmi SURAT TUGAS MENGUJI SEMINAR PROPOSAL TUGAS AKHIR
+            if (
+              key === 'surat_tugas_sempro' &&
+              (parsed[key]?.document_title === 'SURAT TUGAS PENGUJI SEMINAR PROPOSAL' ||
+                parsed[key]?.document_subtitle === 'NOMOR: {{nomor_surat}}' ||
+                parsed[key]?.body_text_template?.includes('memberikan tugas pengujian kepada:') ||
+                parsed[key]?.document_title !== 'SURAT TUGAS MENGUJI SEMINAR PROPOSAL TUGAS AKHIR')
+            ) {
+              merged[key] = {
+                ...defaultDocumentTemplates.surat_tugas_sempro,
+                ...parsed[key],
+                document_title: 'SURAT TUGAS MENGUJI SEMINAR PROPOSAL TUGAS AKHIR',
+                document_subtitle: 'Nomor: {{nomor_surat}}',
+                show_kop: true,
+                show_footer: true,
+                show_student_info: false,
+                content_mode: 'text_only',
+                body_text_enabled: true,
+                body_text_template: defaultDocumentTemplates.surat_tugas_sempro.body_text_template,
+                table_enabled: false,
+                signatures: defaultDocumentTemplates.surat_tugas_sempro.signatures,
+                single_signature_align: 'right',
+                show_signature_date: true,
               };
               continue;
             }

@@ -105,16 +105,16 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
 
   if (activeDocType === 'surat_tugas') {
     // Surat Tugas signed by Kaprodi / Dekan
+    const prodiName = student?.program || docSettings.program_name || 'Pendidikan Bahasa Arab';
     dynamicSignatures.push({
       id: 'kaprodi',
-      role_label: 'Ketua Program Studi',
+      role_label: `Kaprodi ${prodiName}`,
       enabled: true,
       use_digital_signature: true,
-      signer_status: 'mengetahui' as const,
     });
     signaturesData['kaprodi'] = {
-      name: docSettings.kaprodi_name || 'Ketua Program Studi',
-      id_number: docSettings.kaprodi_nidn || '',
+      name: docSettings.kaprodi_name || 'Zulkifli Hayad, M.Pd.',
+      id_number: docSettings.kaprodi_nidn || '2127099202',
       signature_url: docSettings.kaprodi_signature_url,
       signed_at: seminar.schedule_date || new Date().toISOString(),
       is_approved: true,
@@ -192,6 +192,43 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
   const pengujiSignature = primaryExaminer?.signature_url;
   const pengujiNip = primaryExaminer?.examiner_nip || primaryExaminer?.profiles?.nip || '';
 
+  const isCustomSemproSuratTugas = activeDocType === 'surat_tugas' && isSempro;
+
+  // Penugasan Penguji rows for Surat Tugas
+  const chairName = seminar.chairperson_name || seminar.chairperson?.full_name || 'Muhammad Syafii Tampubolon, M.Pd.';
+  let penugasanRows = `
+    <tr>
+      <td style="border: 1px solid #1e293b; padding: 6px; text-align: center;">1</td>
+      <td style="border: 1px solid #1e293b; padding: 6px 10px;">${chairName}</td>
+      <td style="border: 1px solid #1e293b; padding: 6px 10px; text-align: center;">Ketua Sidang</td>
+    </tr>
+  `;
+
+  if (examiners.length > 0) {
+    examiners.forEach((ex: any, idx: number) => {
+      const exName = ex.examiner_name || ex.profiles?.full_name || `Dosen Penguji ${idx + 1}`;
+      const roleLabel = examiners.length > 1 ? `Penguji ${idx + 1}` : 'Penguji';
+      penugasanRows += `
+        <tr>
+          <td style="border: 1px solid #1e293b; padding: 6px; text-align: center;">${idx + 2}</td>
+          <td style="border: 1px solid #1e293b; padding: 6px 10px;">${exName}</td>
+          <td style="border: 1px solid #1e293b; padding: 6px 10px; text-align: center;">${ex.role || roleLabel}</td>
+        </tr>
+      `;
+    });
+  } else {
+    penugasanRows += `
+      <tr>
+        <td style="border: 1px solid #1e293b; padding: 6px; text-align: center;">2</td>
+        <td style="border: 1px solid #1e293b; padding: 6px 10px;">Zulkifli Hayad, M.Pd</td>
+        <td style="border: 1px solid #1e293b; padding: 6px 10px; text-align: center;">Penguji</td>
+      </tr>
+    `;
+  }
+
+  const defaultNomorSurat = `154/q.a/B/STITMA/X/${new Date().getFullYear()}`;
+  const nomorSurat = seminar.decree_number || seminar.letter_number || defaultNomorSurat;
+
   // Template override with dynamic committee signatures
   const templateOverride: SingleDocumentTemplate = {
     ...baseTemplate,
@@ -199,15 +236,20 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
       ? 'BERITA ACARA SEMINAR PROPOSAL TUGAS AKHIR'
       : activeDocType === 'lembar_nilai'
       ? 'FORMAT PENILAIAN'
+      : isCustomSemproSuratTugas
+      ? 'SURAT TUGAS MENGUJI SEMINAR PROPOSAL TUGAS AKHIR'
       : baseTemplate.document_title,
     document_subtitle: isCustomSemproBeritaAcara
       ? `Program Studi ${student?.program || docSettings.program_name || 'Pendidikan Bahasa Arab'}\n${docSettings.institution_name || 'Sekolah Tinggi Ilmu Tarbiyah Madani'}`
       : activeDocType === 'lembar_nilai'
       ? ''
+      : isCustomSemproSuratTugas
+      ? `Nomor: ${nomorSurat}`
       : baseTemplate.document_subtitle,
     show_kop: true,
     show_footer: true,
-    show_student_info: !isCustomSemproBeritaAcara && activeDocType !== 'lembar_nilai',
+    show_student_info: !isCustomSemproBeritaAcara && activeDocType !== 'lembar_nilai' && !isCustomSemproSuratTugas,
+    single_signature_align: 'right',
     student_bio_fields: activeDocType === 'lembar_nilai'
       ? [
           { key: 'nama_mahasiswa', label: 'Nama Mahasiswa' },
@@ -223,19 +265,20 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
     nama_mahasiswa: student?.full_name || 'Mahasiswa',
     nim: student?.nim || '-',
     program_studi: student?.program || docSettings.program_name || 'Pendidikan Bahasa Arab',
-    judul_tugas_akhir: submission?.title || '-',
+    judul_tugas_akhir: (submission?.title || '-').toUpperCase(),
     hari_ujian: dayStr,
     tanggal_ujian: dateFormatted,
-    jam_ujian: timeStr,
-    ruangan_ujian: seminar.room || 'Ruang Sidang STITMA',
+    jam_ujian: timeStr ? `${timeStr} - Selesai` : '09.30 - Selesai',
+    ruangan_ujian: seminar.room || 'Ruang Sidang Lt 2 Masjid',
     skor_akhir: seminar.final_score !== null && seminar.final_score !== undefined ? String(seminar.final_score) : '-',
     predikat_huruf: seminar.final_grade || 'Lulus',
     status_kelulusan: statusKelulusanLabel,
     batas_waktu_revisi: deadlineFormatted,
     catatan_revisi_penguji: compiledNotes || 'Naskah disetujui tanpa catatan perbaikan.',
-    nama_ketua_sidang: seminar.chairperson_name || seminar.chairperson?.full_name || 'Dosen Penguji',
+    nama_ketua_sidang: chairName,
     daftar_nama_penguji: examinerNamesStr,
-    nomor_surat: `ST-0${seminar.id.substring(0, 3)}/PBA-STITMA/TA/${new Date().getFullYear()}`,
+    tabel_penugasan_penguji: penugasanRows,
+    nomor_surat: nomorSurat,
   };
 
   const studentInfo = {

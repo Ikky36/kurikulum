@@ -169,8 +169,8 @@ export function UniversalDocumentContainer({
     defaultDocumentTemplates[templateCode] ||
     defaultDocumentTemplates.kartu_bimbingan_ta;
 
-  const finalTitle = documentTitle || template.document_title;
-  const finalSubtitle = documentSubtitle || template.document_subtitle;
+  const rawTitle = documentTitle || template.document_title;
+  const rawSubtitle = documentSubtitle || template.document_subtitle;
 
   // Resolusi margin efektif dokumen (mengakomodasi tanpa kop surat vs dengan kop surat vs kustom template)
   const {
@@ -304,22 +304,41 @@ export function UniversalDocumentContainer({
 
   // Kamus lengkap variabel database yang siap diisi
   const resolvedVariables: Record<string, any> = {
-    nama_mahasiswa: studentInfo?.name || '',
-    nim: studentInfo?.nim || '',
-    program_studi: studentInfo?.program || docSettings.program_name || '',
-    fakultas: docSettings.faculty_name || '',
+    nama_mahasiswa: studentInfo?.name || variables?.nama_mahasiswa || 'Rizki Sanjaya',
+    nim: studentInfo?.nim || variables?.nim || '231.372.118',
+    program_studi: studentInfo?.program || variables?.program_studi || docSettings.program_name || 'Pendidikan Bahasa Arab',
+    fakultas: docSettings.faculty_name || 'Fakultas Tarbiyah',
     sistem_kuliah: studentInfo?.sistem_kuliah || 'Reguler',
     semester: studentInfo?.semester || '',
     semester_aktif: studentInfo?.semester || '',
     tahun_akademik: studentInfo?.academic_year || '',
     tahun_angkatan: studentInfo?.academic_year?.split('/')[0] || studentInfo?.angkatan || '2023',
     nama_kampus: docSettings.institution_line_2 || '',
-    kota_institusi: docSettings.default_city || 'Ponorogo',
-    nama_kaprodi: docSettings.kaprodi_name || '',
-    nidn_kaprodi: docSettings.kaprodi_nidn || '',
+    kota_institusi: docSettings.default_city || 'Bantul',
+    nama_kaprodi: docSettings.kaprodi_name || 'Zulkifli Hayad, M.Pd.',
+    nidn_kaprodi: docSettings.kaprodi_nidn || '2127099202',
     nama_dekan: docSettings.dekan_name || '',
     nidn_dekan: docSettings.dekan_nidn || '',
     tanggal_cetak: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }),
+    nomor_surat: variables?.nomor_surat || `154/q.a/B/STITMA/X/${new Date().getFullYear()}`,
+    tanggal_ujian: variables?.tanggal_ujian || '02 November 2026',
+    jam_ujian: variables?.jam_ujian || '09.30 - Selesai',
+    ruangan_ujian: variables?.ruangan_ujian || 'Ruang Sidang Lt 2 Masjid',
+    judul_tugas_akhir: (variables?.judul_tugas_akhir || studentInfo?.judul_tugas_akhir || 'PENGGUNAAN BAHAN AJAR DALAM PEMBELAJARAN NAHWU KELAS VII, VIII, DAN IX DI MTS JAMILURROHMAN AS-SALAFY BANTUL YOGYAKARTA TAHUN AJARAN 2026/2027').toUpperCase(),
+    nama_ketua_sidang: variables?.nama_ketua_sidang || 'Muhammad Syafii Tampubolon, M.Pd.',
+    daftar_nama_penguji: variables?.daftar_nama_penguji || 'Zulkifli Hayad, M.Pd',
+    tabel_penugasan_penguji: variables?.tabel_penugasan_penguji || `
+      <tr>
+        <td style="border: 1px solid #1e293b; padding: 6px; text-align: center;">1</td>
+        <td style="border: 1px solid #1e293b; padding: 6px 10px;">Muhammad Syafii Tampubolon, M.Pd.</td>
+        <td style="border: 1px solid #1e293b; padding: 6px 10px; text-align: center;">Ketua Sidang</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #1e293b; padding: 6px; text-align: center;">2</td>
+        <td style="border: 1px solid #1e293b; padding: 6px 10px;">Zulkifli Hayad, M.Pd</td>
+        <td style="border: 1px solid #1e293b; padding: 6px 10px; text-align: center;">Penguji</td>
+      </tr>
+    `,
     ...Object.fromEntries(
       metadataItems
         .filter((m) => typeof m.value === 'string' || typeof m.value === 'number')
@@ -327,6 +346,9 @@ export function UniversalDocumentContainer({
     ),
     ...(variables || {}),
   };
+
+  const finalTitle = interpolateVariables(rawTitle || '', resolvedVariables);
+  const finalSubtitle = interpolateVariables(rawSubtitle || '', resolvedVariables);
 
   // Tautan URL resmi untuk pemindaian QR Code Verifikasi Keabsahan
   const verificationUrl = (() => {
@@ -627,7 +649,7 @@ export function UniversalDocumentContainer({
               </>
             ) : (
               !isFormatPenilaian && finalSubtitle && (
-                <h2 className="text-xs sm:text-sm font-semibold tracking-normal text-slate-700 uppercase mt-0.5">
+                <h2 className="text-xs sm:text-sm font-semibold tracking-normal text-slate-700 mt-0.5">
                   {finalSubtitle}
                 </h2>
               )
@@ -1279,8 +1301,18 @@ export function UniversalDocumentContainer({
           {!isFormatPenilaian && !isFormatBeritaAcaraSempro && (template.signatures || []).filter((s) => s.enabled).length > 0 && (
             <div className={`${getSignatureSpacingClass(template.signature_spacing)} pt-2 break-inside-avoid page-break-inside-avoid text-xs signature-block`}>
               {template.show_signature_date !== false && docSettings.show_signature_date !== false && (
-                <div className={`text-xs text-slate-700 mb-2 ${enabledSignatures.length === 1 && singleAlign === 'left' ? 'text-left pl-2 sm:pl-8' : enabledSignatures.length === 1 && singleAlign === 'center' ? 'text-center' : 'text-right'}`}>
-                  {docSettings.default_city || 'Ponorogo'}, {resolvedDate}
+                <div className={`text-xs text-slate-800 mb-1.5 ${
+                  enabledSignatures.length === 1 && singleAlign === 'right'
+                    ? 'flex justify-end pr-2 sm:pr-8'
+                    : enabledSignatures.length === 1 && singleAlign === 'left'
+                    ? 'flex justify-start pl-2 sm:pl-8'
+                    : enabledSignatures.length === 1 && singleAlign === 'center'
+                    ? 'text-center'
+                    : 'text-right'
+                }`}>
+                  <div className={enabledSignatures.length === 1 ? 'min-w-[140px] max-w-[200px] text-center' : 'text-right'}>
+                    {docSettings.default_city || 'Bantul'}, {resolvedDate}
+                  </div>
                 </div>
               )}
 
@@ -1435,7 +1467,9 @@ export function UniversalDocumentContainer({
                             {sig.signer_status === 'mengetahui' ? 'Mengetahui,' : 'Menyetujui,'}
                           </p>
                         )}
-                        <p className="text-xs text-slate-600 mb-1 font-medium">{sig.role_label},</p>
+                        <p className="text-xs text-slate-800 mb-1 font-medium whitespace-pre-line">
+                          {interpolateVariables(sig.role_label || '', resolvedVariables).replace(/,\s*$/, '')}
+                        </p>
 
                         {/* Kotak Gambar Tanda Tangan */}
                         <div className="h-16 w-32 flex items-center justify-center my-1 relative">

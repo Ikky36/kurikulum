@@ -530,6 +530,47 @@ export function DocumentTemplateCustomizer() {
 
   // Dummy context for live preview
   const dummyContext = getDummyContextForModule(activeModule.id, docSettings);
+  if (!dummyContext.nomor_surat) {
+    dummyContext.nomor_surat = `154/q.a/B/STITMA/X/${new Date().getFullYear()}`;
+  }
+  if (!dummyContext.tanggal_ujian) {
+    dummyContext.tanggal_ujian = '02 November 2026';
+  }
+  if (!dummyContext.jam_ujian) {
+    dummyContext.jam_ujian = '09.30 - Selesai';
+  }
+  if (!dummyContext.ruangan_ujian) {
+    dummyContext.ruangan_ujian = 'Ruang Sidang Lt 2 Masjid';
+  }
+  if (!dummyContext.nama_mahasiswa) {
+    dummyContext.nama_mahasiswa = 'Rizki Sanjaya';
+  }
+  if (!dummyContext.nim) {
+    dummyContext.nim = '231.372.118';
+  }
+  if (!dummyContext.judul_tugas_akhir) {
+    dummyContext.judul_tugas_akhir = 'PENGGUNAAN BAHAN AJAR DALAM PEMBELAJARAN NAHWU KELAS VII, VIII, DAN IX DI MTS JAMILURROHMAN AS-SALAFY BANTUL YOGYAKARTA TAHUN AJARAN 2026/2027';
+  }
+  if (!dummyContext.nama_ketua_sidang) {
+    dummyContext.nama_ketua_sidang = 'Muhammad Syafii Tampubolon, M.Pd.';
+  }
+  if (!dummyContext.daftar_nama_penguji) {
+    dummyContext.daftar_nama_penguji = 'Zulkifli Hayad, M.Pd';
+  }
+  if (!dummyContext.tabel_penugasan_penguji) {
+    dummyContext.tabel_penugasan_penguji = `
+      <tr>
+        <td style="border: 1px solid #1e293b; padding: 4px; text-align: center;">1</td>
+        <td style="border: 1px solid #1e293b; padding: 4px 6px;">Muhammad Syafii Tampubolon, M.Pd.</td>
+        <td style="border: 1px solid #1e293b; padding: 4px 6px; text-align: center;">Ketua Sidang</td>
+      </tr>
+      <tr>
+        <td style="border: 1px solid #1e293b; padding: 4px; text-align: center;">2</td>
+        <td style="border: 1px solid #1e293b; padding: 4px 6px;">Zulkifli Hayad, M.Pd</td>
+        <td style="border: 1px solid #1e293b; padding: 4px 6px; text-align: center;">Penguji</td>
+      </tr>
+    `;
+  }
   const previewBodyText = interpolateVariables(currentTemplate.body_text_template || '', dummyContext);
 
   const isPortrait = (currentTemplate.orientation || 'portrait') === 'portrait';
@@ -2082,10 +2123,10 @@ export function DocumentTemplateCustomizer() {
                         </div>
                         {!isMiniPenilaian && currentTemplate.document_subtitle && (
                           <div
-                            className="text-center font-semibold text-[7px] uppercase tracking-normal text-slate-700 mb-1"
+                            className="text-center font-semibold text-[7px] tracking-normal text-slate-700 mb-1"
                             style={{ fontFamily: 'inherit' }}
                           >
-                            {currentTemplate.document_subtitle}
+                            {interpolateVariables(currentTemplate.document_subtitle, dummyContext)}
                           </div>
                         )}
 
@@ -2349,7 +2390,7 @@ export function DocumentTemplateCustomizer() {
                         }>
                           {currentTemplate.show_signature_date !== false && docSettings.show_signature_date !== false && (
                             <div className="text-right text-[6px] text-slate-500 mb-0.5">
-                              {docSettings.default_city || 'Ponorogo'}, 21 Oktober 2026
+                              {docSettings.default_city || 'Bantul'}, 02 November 2026
                             </div>
                           )}
                           {(() => {
@@ -2371,7 +2412,9 @@ export function DocumentTemplateCustomizer() {
                                       {sig.signer_status === 'mengetahui' ? 'Mengetahui,' : 'Menyetujui,'}
                                     </span>
                                   )}
-                                  <p className="text-[5.5px] text-slate-600">{sig.role_label},</p>
+                                  <p className="text-[5.5px] text-slate-700 font-medium whitespace-pre-line">
+                                    {interpolateVariables(sig.role_label || '', dummyContext).replace(/,\s*$/, '')}
+                                  </p>
                                   <div className="h-5 flex items-center justify-center font-serif text-[6px] italic text-slate-400">
                                     {sig.use_digital_signature ? (
                                       (sig.id === 'kaprodi' && docSettings.kaprodi_signature_url) ? (
