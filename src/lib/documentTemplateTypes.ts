@@ -444,59 +444,137 @@ export const defaultDocumentTemplates: AllDocumentTemplatesMap = {
     document_subtitle: 'Program Studi Pendidikan Bahasa Arab\nSekolah Tinggi Ilmu Tarbiyah Madani',
     show_kop: true,
     show_footer: true,
-    show_student_info: true,
-    student_bio_fields: [
-      { key: 'nama_mahasiswa', label: 'Nama Mahasiswa' },
-      { key: 'nim', label: 'NIM' },
-      { key: 'program_studi', label: 'Program Studi' },
-      { key: 'judul_tugas_akhir', label: 'Judul Proposal' },
-    ],
+    show_student_info: false,
+    student_bio_fields: [],
     content_mode: 'text_only',
     body_text_enabled: true,
-    body_text_template: `<div style="text-align: justify; line-height: 1.7; font-size: 13px; margin-bottom: 1rem;">
-  Pada hari ini, <strong>{{hari_ujian}}</strong> tanggal <strong>{{tanggal_ujian}}</strong>, telah diselenggarakan Seminar Proposal Skripsi bagi mahasiswa yang tercantum di atas. Dewan Penguji telah melakukan evaluasi komprehensif terhadap naskah proposal dan penguasaan materi penelitian, dengan hasil keputusan persidangan sebagai berikut:
+    body_text_template: `<div style="text-align: justify; line-height: 1.7; font-size: 13px; margin-bottom: 0.75rem;">
+  Pada hari ini telah dilangsungkan Seminar Proposal Tugas Akhir Program Studi {{program_studi}} {{nama_kampus}} untuk mahasiswa tersebut di bawah ini:
 </div>
 
-<table style="width: 100%; border-collapse: collapse; margin-bottom: 1.25rem; font-size: 13px;">
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 0.75rem; font-size: 13px;">
   <tbody>
     <tr>
-      <td style="width: 180px; padding: 4px 0; font-weight: 600;">Nilai Rata-rata Akhir</td>
+      <td style="width: 140px; padding: 2px 0;">Nama</td>
       <td style="width: 15px; text-align: center;">:</td>
-      <td style="font-weight: 700; color: #1e3a8a;">{{skor_akhir}} (Predikat: {{predikat_huruf}})</td>
+      <td>{{nama_mahasiswa}}</td>
     </tr>
     <tr>
-      <td style="padding: 4px 0; font-weight: 600;">Keputusan Dewan Penguji</td>
+      <td style="padding: 2px 0;">NIM</td>
       <td style="text-align: center;">:</td>
-      <td style="font-weight: 700;">{{status_kelulusan}}</td>
+      <td>{{nim}}</td>
     </tr>
     <tr>
-      <td style="padding: 4px 0; font-weight: 600;">Batas Akhir Perbaikan</td>
+      <td style="padding: 2px 0; vertical-align: top;">Judul Tugas Akhir</td>
+      <td style="text-align: center; vertical-align: top;">:</td>
+      <td style="text-transform: uppercase; line-height: 1.4; vertical-align: top;">{{judul_tugas_akhir}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 2px 0;">Dengan Nilai</td>
       <td style="text-align: center;">:</td>
-      <td>{{batas_waktu_revisi}}</td>
+      <td>{{nilai_sempro}}</td>
     </tr>
   </tbody>
 </table>
 
-<div style="text-align: justify; line-height: 1.6; font-size: 13px; margin-bottom: 1rem;">
-  Demikian Berita Acara Seminar Proposal ini dibuat dengan sebenarnya untuk dipergunakan sebagaimana mestinya dan menjadi syarat mutlak dalam melanjutkan tahapan riset skripsi.
-</div>`,
+<div style="margin-bottom: 0.5rem; font-size: 13px;">
+  Yang <em>Insya Allah</em> akan dilaksanakan pada:
+</div>
+
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 0.75rem; font-size: 13px;">
+  <tbody>
+    <tr>
+      <td style="width: 140px; padding: 2px 0;">Tanggal</td>
+      <td style="width: 15px; text-align: center;">:</td>
+      <td>{{tanggal_ujian}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 2px 0;">Pukul</td>
+      <td style="text-align: center;">:</td>
+      <td>{{jam_ujian}}</td>
+    </tr>
+    <tr>
+      <td style="padding: 2px 0;">Tempat</td>
+      <td style="text-align: center;">:</td>
+      <td>{{ruangan_ujian}}</td>
+    </tr>
+  </tbody>
+</table>
+
+<div style="margin-bottom: 0.5rem; font-size: 13px;">
+  Dengan Tim Penguji Seminar Proposal Sebagai berikut:
+</div>
+
+<table style="width: 100%; border-collapse: collapse; margin-bottom: 1.5rem; font-size: 13px;" border="1">
+  <thead>
+    <tr style="background-color: #f8fafc;">
+      <th style="border: 1px solid #1e293b; padding: 6px; text-align: center; width: 45px;">No</th>
+      <th style="border: 1px solid #1e293b; padding: 6px; text-align: center;">Nama</th>
+      <th style="border: 1px solid #1e293b; padding: 6px; text-align: center; width: 180px;">Tanda Tangan</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td style="border: 1px solid #1e293b; padding: 8px; text-align: center;">1</td>
+      <td style="border: 1px solid #1e293b; padding: 8px 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span>{{nama_ketua_sidang}}</span>
+          <span style="color: #475569;">(Ketua Sidang)</span>
+        </div>
+      </td>
+      <td style="border: 1px solid #1e293b; padding: 8px; text-align: center;">
+        <div style="height: 24px; border-bottom: 1px solid #1e293b; width: 85%; margin: 0 auto;"></div>
+      </td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #1e293b; padding: 8px; text-align: center;">2</td>
+      <td style="border: 1px solid #1e293b; padding: 8px 12px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span>{{nama_penguji_1}}</span>
+          <span style="color: #475569;">(Penguji)</span>
+        </div>
+      </td>
+      <td style="border: 1px solid #1e293b; padding: 8px; text-align: center;">
+        <div style="height: 24px; border-bottom: 1px solid #1e293b; width: 85%; margin: 0 auto;"></div>
+      </td>
+    </tr>
+    <tr>
+      <td style="border: 1px solid #1e293b; padding: 8px; text-align: center;">3</td>
+      <td style="border: 1px solid #1e293b; padding: 8px 12px;">&nbsp;</td>
+      <td style="border: 1px solid #1e293b; padding: 8px; text-align: center;">&nbsp;</td>
+    </tr>
+  </tbody>
+</table>
+
+<table style="width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 1.5rem;">
+  <tbody>
+    <tr>
+      <td style="width: 50%; text-align: center; vertical-align: top;">
+        <div>Penguji,</div>
+        <div style="height: 50px;"></div>
+        <div>(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</div>
+      </td>
+      <td style="width: 50%; text-align: center; vertical-align: top;">
+        <div>{{kota_institusi}}, {{tanggal_ujian}}</div>
+        <div style="margin-top: 2px;">Dosen Pembimbing,</div>
+        <div style="height: 50px;"></div>
+        <div>({{nama_pembimbing_1}})</div>
+      </td>
+    </tr>
+  </tbody>
+</table>`,
     table_enabled: false,
-    rules_note_enabled: true,
-    rules_note_title: 'Catatan & Arahan Revisi Dewan Penguji:',
-    rules_note_text: '{{catatan_revisi_penguji}}',
+    rules_note_enabled: false,
+    rules_note_title: '',
+    rules_note_text: '',
     columns: [],
-    show_signature_date: true,
+    show_signature_date: false,
     signature_spacing: 'normal',
     single_signature_align: 'center',
     font_family: 'Times New Roman',
-    signatures: [
-      { id: 'chairperson', role_label: 'Ketua Sidang', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
-      { id: 'examiner_1', role_label: 'Penguji I', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
-      { id: 'examiner_2', role_label: 'Penguji II', enabled: true, use_digital_signature: true, signer_status: 'menyetujui' },
-      { id: 'kaprodi', role_label: 'Ketua Program Studi', enabled: true, use_digital_signature: true, signer_status: 'mengetahui' },
-    ],
+    signatures: [],
     copies_enabled: false,
-    copies_list: ['Arsip Program Studi', 'Dosen Pembimbing', 'Mahasiswa Bersangkutan'],
+    copies_list: [],
     placement_targets: ['mahasiswa_tugas_akhir', 'admin_tugas_akhir', 'dosen_penguji'],
     document_role: 'berita_acara_sempro',
   },
@@ -940,6 +1018,38 @@ export function useDocumentTemplatesConfig() {
                 student_bio_fields: defaultDocumentTemplates.lembar_nilai_sidang.student_bio_fields,
                 single_signature_align: 'right',
                 table_enabled: true,
+              };
+              continue;
+            }
+
+            // Normalisasi berita_acara_sempro: pastikan memakai format resmi BERITA ACARA SEMINAR PROPOSAL TUGAS AKHIR
+            if (
+              key === 'berita_acara_sempro' &&
+              (parsed[key]?.document_title === 'BERITA ACARA SEMINAR PROPOSAL SKRIPSI' ||
+                parsed[key]?.rules_note_enabled === true ||
+                (parsed[key]?.signatures?.length ?? 0) > 0 ||
+                parsed[key]?.document_title !== 'BERITA ACARA SEMINAR PROPOSAL TUGAS AKHIR' ||
+                parsed[key]?.body_text_template?.includes('Dewan Penguji telah melakukan evaluasi komprehensif'))
+            ) {
+              merged[key] = {
+                ...defaultDocumentTemplates.berita_acara_sempro,
+                ...parsed[key],
+                document_title: 'BERITA ACARA SEMINAR PROPOSAL TUGAS AKHIR',
+                document_subtitle: 'Program Studi Pendidikan Bahasa Arab\nSekolah Tinggi Ilmu Tarbiyah Madani',
+                show_kop: true,
+                show_footer: true,
+                show_student_info: false,
+                content_mode: 'text_only',
+                body_text_enabled: true,
+                body_text_template: defaultDocumentTemplates.berita_acara_sempro.body_text_template,
+                table_enabled: false,
+                rules_note_enabled: false,
+                rules_note_title: '',
+                rules_note_text: '',
+                signatures: [],
+                copies_enabled: false,
+                copies_list: [],
+                show_signature_date: false,
               };
               continue;
             }

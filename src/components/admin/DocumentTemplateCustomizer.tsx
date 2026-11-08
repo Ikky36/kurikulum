@@ -530,46 +530,62 @@ export function DocumentTemplateCustomizer() {
 
   // Dummy context for live preview
   const dummyContext = getDummyContextForModule(activeModule.id, docSettings);
-  if (!dummyContext.nomor_surat) {
-    dummyContext.nomor_surat = `154/q.a/B/STITMA/X/${new Date().getFullYear()}`;
-  }
-  if (!dummyContext.tanggal_ujian) {
-    dummyContext.tanggal_ujian = '02 November 2026';
-  }
-  if (!dummyContext.jam_ujian) {
-    dummyContext.jam_ujian = '09.30 - Selesai';
-  }
-  if (!dummyContext.ruangan_ujian) {
-    dummyContext.ruangan_ujian = 'Ruang Sidang Lt 2 Masjid';
-  }
-  if (!dummyContext.nama_mahasiswa) {
-    dummyContext.nama_mahasiswa = 'Rizki Sanjaya';
-  }
-  if (!dummyContext.nim) {
-    dummyContext.nim = '231.372.118';
-  }
-  if (!dummyContext.judul_tugas_akhir) {
-    dummyContext.judul_tugas_akhir = 'PENGGUNAAN BAHAN AJAR DALAM PEMBELAJARAN NAHWU KELAS VII, VIII, DAN IX DI MTS JAMILURROHMAN AS-SALAFY BANTUL YOGYAKARTA TAHUN AJARAN 2026/2027';
-  }
-  if (!dummyContext.nama_ketua_sidang) {
-    dummyContext.nama_ketua_sidang = 'Muhammad Syafii Tampubolon, M.Pd.';
-  }
-  if (!dummyContext.daftar_nama_penguji) {
-    dummyContext.daftar_nama_penguji = 'Zulkifli Hayad, M.Pd';
-  }
-  if (!dummyContext.tabel_penugasan_penguji) {
-    dummyContext.tabel_penugasan_penguji = `
-      <tr>
-        <td style="border: 1px solid #1e293b; padding: 4px; text-align: center;">1</td>
-        <td style="border: 1px solid #1e293b; padding: 4px 6px;">Muhammad Syafii Tampubolon, M.Pd.</td>
-        <td style="border: 1px solid #1e293b; padding: 4px 6px; text-align: center;">Ketua Sidang</td>
-      </tr>
-      <tr>
-        <td style="border: 1px solid #1e293b; padding: 4px; text-align: center;">2</td>
-        <td style="border: 1px solid #1e293b; padding: 4px 6px;">Zulkifli Hayad, M.Pd</td>
-        <td style="border: 1px solid #1e293b; padding: 4px 6px; text-align: center;">Penguji</td>
-      </tr>
-    `;
+  if (currentTemplate.code === 'berita_acara_sempro') {
+    dummyContext.nama_mahasiswa = 'Bagas Irawan';
+    dummyContext.nim = '221.372.104';
+    dummyContext.judul_tugas_akhir = 'EFEKTIVITAS KOMBINASI FLASHCARD DAN TALKING STICK PADA SISWA KELAS V PUTRA MITQ JAMILURRAHMAN';
+    dummyContext.tanggal_ujian = '25 December 2025';
+    dummyContext.jam_ujian = '09.00-10.00';
+    dummyContext.ruangan_ujian = 'Ruang Rapat Ketua STITMA';
+    dummyContext.nama_ketua_sidang = 'Zulkifli Hayad, M.Pd.';
+    dummyContext.daftar_nama_penguji = 'Dr. Syaiful Anam, M.Pd';
+    dummyContext.nama_penguji_1 = 'Dr. Syaiful Anam, M.Pd';
+    dummyContext.nama_pembimbing_1 = 'Zulkifli Hayad, M.Pd.';
+    dummyContext.skor_akhir = '';
+    dummyContext.nilai_huruf = '';
+    dummyContext.kota_institusi = docSettings.default_city || 'Bantul';
+  } else {
+    if (!dummyContext.nomor_surat) {
+      dummyContext.nomor_surat = `154/q.a/B/STITMA/X/${new Date().getFullYear()}`;
+    }
+    if (!dummyContext.tanggal_ujian) {
+      dummyContext.tanggal_ujian = '02 November 2026';
+    }
+    if (!dummyContext.jam_ujian) {
+      dummyContext.jam_ujian = '09.30 - Selesai';
+    }
+    if (!dummyContext.ruangan_ujian) {
+      dummyContext.ruangan_ujian = 'Ruang Sidang Lt 2 Masjid';
+    }
+    if (!dummyContext.nama_mahasiswa) {
+      dummyContext.nama_mahasiswa = 'Rizki Sanjaya';
+    }
+    if (!dummyContext.nim) {
+      dummyContext.nim = '231.372.118';
+    }
+    if (!dummyContext.judul_tugas_akhir) {
+      dummyContext.judul_tugas_akhir = 'PENGGUNAAN BAHAN AJAR DALAM PEMBELAJARAN NAHWU KELAS VII, VIII, DAN IX DI MTS JAMILURROHMAN AS-SALAFY BANTUL YOGYAKARTA TAHUN AJARAN 2026/2027';
+    }
+    if (!dummyContext.nama_ketua_sidang) {
+      dummyContext.nama_ketua_sidang = 'Muhammad Syafii Tampubolon, M.Pd.';
+    }
+    if (!dummyContext.daftar_nama_penguji) {
+      dummyContext.daftar_nama_penguji = 'Zulkifli Hayad, M.Pd';
+    }
+    if (!dummyContext.tabel_penugasan_penguji) {
+      dummyContext.tabel_penugasan_penguji = `
+        <tr>
+          <td style="border: 1px solid #1e293b; padding: 4px; text-align: center;">1</td>
+          <td style="border: 1px solid #1e293b; padding: 4px 6px;">Muhammad Syafii Tampubolon, M.Pd.</td>
+          <td style="border: 1px solid #1e293b; padding: 4px 6px; text-align: center;">Ketua Sidang</td>
+        </tr>
+        <tr>
+          <td style="border: 1px solid #1e293b; padding: 4px; text-align: center;">2</td>
+          <td style="border: 1px solid #1e293b; padding: 4px 6px;">Zulkifli Hayad, M.Pd</td>
+          <td style="border: 1px solid #1e293b; padding: 4px 6px; text-align: center;">Penguji</td>
+        </tr>
+      `;
+    }
   }
   const previewBodyText = interpolateVariables(currentTemplate.body_text_template || '', dummyContext);
 
@@ -2495,8 +2511,8 @@ export function DocumentTemplateCustomizer() {
           templateCode={currentTemplate.code}
           templateOverride={currentTemplate}
           studentInfo={{
-            name: dummyContext.nama_mahasiswa || 'Ahmad Fauzi Mubarak',
-            nim: dummyContext.nim || '4220261109',
+            name: dummyContext.nama_mahasiswa || (currentTemplate.code === 'berita_acara_sempro' ? 'Bagas Irawan' : 'Rizki Sanjaya'),
+            nim: dummyContext.nim || (currentTemplate.code === 'berita_acara_sempro' ? '221.372.104' : '231.372.118'),
             program: dummyContext.program_studi || 'Pendidikan Bahasa Arab',
             sistem_kuliah: 'Reguler',
             semester: dummyContext.semester || 'VII',
@@ -2515,8 +2531,8 @@ export function DocumentTemplateCustomizer() {
             templateOverride={currentTemplate}
             onClose={() => setShowFullPreviewModal(false)}
             studentInfo={{
-              name: dummyContext.nama_mahasiswa || 'Ahmad Fauzi Mubarak',
-              nim: dummyContext.nim || '4220261109',
+              name: dummyContext.nama_mahasiswa || (currentTemplate.code === 'berita_acara_sempro' ? 'Bagas Irawan' : 'Rizki Sanjaya'),
+              nim: dummyContext.nim || (currentTemplate.code === 'berita_acara_sempro' ? '221.372.104' : '231.372.118'),
               program: dummyContext.program_studi || 'Pendidikan Bahasa Arab',
               sistem_kuliah: 'Reguler',
               semester: dummyContext.semester || 'VII',

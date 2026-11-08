@@ -249,6 +249,9 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
     show_kop: true,
     show_footer: true,
     show_student_info: !isCustomSemproBeritaAcara && activeDocType !== 'lembar_nilai' && !isCustomSemproSuratTugas,
+    rules_note_enabled: isCustomSemproBeritaAcara ? false : baseTemplate.rules_note_enabled,
+    rules_note_title: isCustomSemproBeritaAcara ? '' : baseTemplate.rules_note_title,
+    rules_note_text: isCustomSemproBeritaAcara ? '' : baseTemplate.rules_note_text,
     single_signature_align: 'right',
     student_bio_fields: activeDocType === 'lembar_nilai'
       ? [
@@ -445,7 +448,11 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
                       <div className="flex pt-0.5">
                         <span className="w-36 font-normal shrink-0">Dengan Nilai</span>
                         <span className="w-4 text-center shrink-0">:</span>
-                        <span className="font-bold flex-1">{finalScoreFormatted}</span>
+                        <span className="font-normal flex-1">
+                          {seminar.final_score !== null && seminar.final_score !== undefined
+                            ? `${seminar.final_score} ( ${seminar.final_grade || determineGradeFromScore(Number(seminar.final_score) || 0, 66).grade} )`
+                            : ''}
+                        </span>
                       </div>
                     </div>
 
@@ -500,7 +507,7 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
                                   className="h-10 max-w-[140px] mx-auto object-contain"
                                 />
                               ) : (
-                                <div className="h-8 w-36 border-b border-dotted border-slate-400 mx-auto" />
+                                <div className="h-8 w-36 border-b border-slate-900 mx-auto" />
                               )}
                             </td>
                           </tr>
@@ -528,7 +535,7 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
                                       className="h-10 max-w-[140px] mx-auto object-contain"
                                     />
                                   ) : (
-                                    <div className="h-8 w-36 border-b border-dotted border-slate-400 mx-auto" />
+                                    <div className="h-8 w-36 border-b border-slate-900 mx-auto" />
                                   )}
                                 </td>
                               </tr>
@@ -541,15 +548,8 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
                               <td className="border border-slate-900 py-2.5 px-2 text-center align-middle font-normal">
                                 {examiners.length + 2}
                               </td>
-                              <td className="border border-slate-900 py-2.5 px-3 align-middle">
-                                <div className="flex items-center justify-between">
-                                  <span>&nbsp;</span>
-                                  <span className="text-slate-400 font-normal">(Penguji)</span>
-                                </div>
-                              </td>
-                              <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">
-                                <div className="h-8 w-36 mx-auto" />
-                              </td>
+                              <td className="border border-slate-900 py-2.5 px-3 align-middle">&nbsp;</td>
+                              <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">&nbsp;</td>
                             </tr>
                           )}
                         </tbody>
@@ -571,16 +571,13 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
                               className="max-h-14 max-w-[140px] object-contain"
                             />
                           ) : (
-                            <div className="h-12 w-36 border-b border-dotted border-slate-400" />
+                            <div className="h-12 w-36" />
                           )}
                         </div>
                         <div>
-                          <p className="font-bold text-xs underline decoration-dotted">
-                            (&nbsp;{pengujiName ? pengujiName : '.........................................'}&nbsp;)
+                          <p className="font-normal text-xs">
+                            (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
                           </p>
-                          {pengujiNip && (
-                            <p className="text-[10px] text-slate-600 font-mono mt-0.5">NIP/NIDN: {pengujiNip}</p>
-                          )}
                         </div>
                       </div>
 
@@ -598,28 +595,16 @@ export const SeminarDocumentViewerModal: React.FC<SeminarDocumentViewerModalProp
                               className="max-h-14 max-w-[140px] object-contain"
                             />
                           ) : (
-                            <div className="h-12 w-36 border-b border-dotted border-slate-400" />
+                            <div className="h-12 w-36" />
                           )}
                         </div>
                         <div>
-                          <p className="font-bold text-xs underline decoration-dotted">
-                            (&nbsp;{pembimbingName ? pembimbingName : 'Zulkifli Hayad, M.Pd.'}&nbsp;)
+                          <p className="font-normal text-xs">
+                            ({pembimbingName ? pembimbingName : 'Zulkifli Hayad, M.Pd.'})
                           </p>
-                          {pembimbingNip && (
-                            <p className="text-[10px] text-slate-600 font-mono mt-0.5">NIP/NIDN: {pembimbingNip}</p>
-                          )}
                         </div>
                       </div>
                     </div>
-
-                    {/* QR Code Verifikasi Dokumen */}
-                    {verificationUrl && (
-                      <div className="pt-2 flex justify-start">
-                        <div className="border border-slate-300 p-1 rounded bg-white shadow-2xs">
-                          <QRCodeSVG value={verificationUrl} size={48} />
-                        </div>
-                      </div>
-                    )}
                   </div>
                 );
               })()

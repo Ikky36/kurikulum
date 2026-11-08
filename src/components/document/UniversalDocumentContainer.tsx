@@ -1093,10 +1093,10 @@ export function UniversalDocumentContainer({
                 <div className="flex pt-1">
                   <span className="w-36 font-normal shrink-0">Dengan Nilai</span>
                   <span className="w-4 text-center shrink-0">:</span>
-                  <span className="font-bold flex-1">
+                  <span className="font-normal flex-1">
                     {resolvedVariables.skor_akhir && resolvedVariables.skor_akhir !== '-'
                       ? `${resolvedVariables.skor_akhir} ( ${resolvedVariables.predikat_huruf || determineGradeFromScore(Number(resolvedVariables.skor_akhir) || 0).grade} )`
-                      : '91 ( A )'}
+                      : ''}
                   </span>
                 </div>
               </div>
@@ -1157,7 +1157,7 @@ export function UniversalDocumentContainer({
                             className="h-10 max-w-[140px] mx-auto object-contain"
                           />
                         ) : (
-                          <div className="h-8 w-36 border-b border-dotted border-slate-400 mx-auto" />
+                          <div className="h-8 w-36 border-b border-slate-900 mx-auto" />
                         )}
                       </td>
                     </tr>
@@ -1177,21 +1177,14 @@ export function UniversalDocumentContainer({
                             className="h-10 max-w-[140px] mx-auto object-contain"
                           />
                         ) : (
-                          <div className="h-8 w-36 border-b border-dotted border-slate-400 mx-auto" />
+                          <div className="h-8 w-36 border-b border-slate-900 mx-auto" />
                         )}
                       </td>
                     </tr>
                     <tr>
                       <td className="border border-slate-900 py-2.5 px-2 text-center align-middle font-normal">3</td>
-                      <td className="border border-slate-900 py-2.5 px-3 align-middle">
-                        <div className="flex items-center justify-between">
-                          <span>&nbsp;</span>
-                          <span className="text-slate-400 font-normal">(Penguji)</span>
-                        </div>
-                      </td>
-                      <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">
-                        <div className="h-8 w-36 mx-auto" />
-                      </td>
+                      <td className="border border-slate-900 py-2.5 px-3 align-middle">&nbsp;</td>
+                      <td className="border border-slate-900 py-1.5 px-3 text-center align-middle">&nbsp;</td>
                     </tr>
                   </tbody>
                 </table>
@@ -1211,12 +1204,12 @@ export function UniversalDocumentContainer({
                         className="max-h-14 max-w-[140px] object-contain"
                       />
                     ) : (
-                      <div className="h-12 w-36 border-b border-dotted border-slate-400" />
+                      <div className="h-12 w-36" />
                     )}
                   </div>
                   <div>
-                    <p className="font-bold text-xs underline decoration-dotted">
-                      (&nbsp;{examinerName ? examinerName : '.........................................'}&nbsp;)
+                    <p className="font-normal text-xs">
+                      (&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)
                     </p>
                   </div>
                 </div>
@@ -1234,25 +1227,16 @@ export function UniversalDocumentContainer({
                         className="max-h-14 max-w-[140px] object-contain"
                       />
                     ) : (
-                      <div className="h-12 w-36 border-b border-dotted border-slate-400" />
+                      <div className="h-12 w-36" />
                     )}
                   </div>
                   <div>
-                    <p className="font-bold text-xs underline decoration-dotted">
-                      (&nbsp;{signaturesData?.advisor_1?.name || signaturesData?.kaprodi?.name || 'Zulkifli Hayad, M.Pd.'}&nbsp;)
+                    <p className="font-normal text-xs">
+                      ({signaturesData?.advisor_1?.name || signaturesData?.kaprodi?.name || resolvedVariables.nama_pembimbing_1 || 'Zulkifli Hayad, M.Pd.'})
                     </p>
                   </div>
                 </div>
               </div>
-
-              {/* QR Code Verifikasi */}
-              {verificationUrl && (
-                <div className="pt-2 flex justify-start">
-                  <div className="border border-slate-300 p-1 rounded bg-white shadow-2xs">
-                    <QRCodeSVG value={verificationUrl} size={48} />
-                  </div>
-                </div>
-              )}
             </div>
           ) : template.content_mode !== 'text_only' && template.table_enabled !== false ? (
             <div className="w-full my-2 document-content">
@@ -1288,7 +1272,7 @@ export function UniversalDocumentContainer({
           ) : null}
 
           {/* 5. SUB-BAB CATATAN & TATA TERTIB */}
-          {template.rules_note_enabled && template.rules_note_text && (
+          {!isFormatBeritaAcaraSempro && template.rules_note_enabled && template.rules_note_text && (
             <div className="my-4 p-2.5 bg-slate-50 border border-slate-200 rounded text-[10px] sm:text-xs text-slate-700 leading-normal break-inside-avoid page-break-inside-avoid">
               <p className="font-bold text-slate-900 mb-1">{template.rules_note_title}</p>
               <div className="whitespace-pre-line space-y-0.5">
@@ -1524,7 +1508,7 @@ export function UniversalDocumentContainer({
         </div>
 
         {/* QR CODE TEPAT 1 CM (10mm) DI ATAS SUDUT KIRI ATAS FOOTER */}
-        {!isFormatPenilaian && docSettings.qr_code_enabled !== false && docSettings.qr_code_position === 'footer' && (
+        {!isFormatPenilaian && !isFormatBeritaAcaraSempro && docSettings.qr_code_enabled !== false && docSettings.qr_code_position === 'footer' && (
           <div className="mt-auto mb-[10mm] flex justify-start items-end z-10 print:mb-[10mm] break-inside-avoid page-break-inside-avoid">
             <div className="flex items-center gap-2 p-1.5 rounded border border-slate-300 bg-white/95 print:bg-transparent print:border-slate-400 shadow-xs">
               <QRCodeSVG
